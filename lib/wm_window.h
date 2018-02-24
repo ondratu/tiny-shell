@@ -55,6 +55,8 @@ class WMWindow: public WMWidget {
 
     void on_focus_out(const XEvent &e, void *data);
 
+    void on_property_notify(const XEvent &e, void *data);
+
   protected:
     Window child;
     std::list<std::shared_ptr<WMWidget>> children;

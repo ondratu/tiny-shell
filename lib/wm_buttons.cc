@@ -71,7 +71,6 @@ void WMCloseButton::set_events()
 
 void WMCloseButton::on_expose(const XEvent &e, void *data)
 {
-    printf("expose ...\n");
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
 

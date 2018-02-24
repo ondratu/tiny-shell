@@ -1,5 +1,7 @@
 #pragma once
 
+#include <X11/Xft/Xft.h>
+
 #include <string>
 
 #include "wm_widget.h"
@@ -13,10 +15,10 @@ class WMTitle: public WMWidget {
 
     virtual void set_events();
 
-    inline const std::string get_title() const
-    { return title; }
+    inline const std::string get_text() const
+    { return text; }
 
-    void set_title(const std::string &title);
+    void set_text(const std::string &text);
 
     Signal on_drag_begin;
     Signal on_drag_end;
@@ -28,5 +30,8 @@ class WMTitle: public WMWidget {
     void on_motion_notify(const XEvent &e, void *data);
     void on_expose(const XEvent &e, void *data);
 
-    std::string title;
+    std::string text;
+    // GC gc;
+    // XFontStruct * font;
+    XftFont *xft_font;      // internally reference-counted
 };

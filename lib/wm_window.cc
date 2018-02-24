@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <list>
+#include <cstring>
 
 #include "wm_window.h"
 #include "wm_theme.h"
@@ -97,7 +98,12 @@ WMWindow::WMWindow(Display * display, Window parent, Window child,
     XAddToSaveSet(display, child);
     XReparentWindow(display, child, window,
                     WM_WIN_BORDER, WM_WIN_BORDER+WM_WIN_HEADER);
-
+    char * window_name;
+    if (XFetchName(display, child, &window_name))
+    {
+        title->set_text(window_name);
+        free(window_name);
+    }
 }
 
 WMWindow::~WMWindow()
@@ -143,12 +149,17 @@ void WMWindow::set_events()
     XSelectInput(display, window,
         SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
 
+    XSelectInput(display, child,
+        PropertyChangeMask);
+
     connect(ButtonPress,
             static_cast<event_signal_t>(&WMWindow::on_button_press));
     connect(FocusIn,
             static_cast<event_signal_t>(&WMWindow::on_focus_in));
     connect(FocusOut,
             static_cast<event_signal_t>(&WMWindow::on_focus_out));
+    connect_window(PropertyNotify, child,
+            static_cast<event_signal_t>(&WMWindow::on_property_notify));
 
     if (resizable)
     {
@@ -378,4 +389,21 @@ void WMWindow::on_focus_out(const XEvent &e, void* data)
         ButtonPressMask,
         GrabModeSync, GrabModeSync,
         None, None);
+}
+
+void WMWindow::on_property_notify(const XEvent &e, void *data)
+{
+    char *atom_name = XGetAtomName(display, e.xproperty.atom);
+    if (std::strcmp(atom_name, "WM_NAME") == 0)
+    {
+        char * window_name;
+        if (XFetchName(display, child, &window_name))
+        {
+            // FIXME: some windows (like urxvt) sends it bad
+            // may be just LC_CTYPE... but not work..
+            title->set_text(window_name);
+            free(window_name);
+        }
+    }
+    XFree(atom_name);
 }

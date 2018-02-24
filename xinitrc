@@ -5,4 +5,4 @@ xclock &
 xeyes &
 xterm &
 
-exec ./src/tiny-shell
+exec ./tiny-shell

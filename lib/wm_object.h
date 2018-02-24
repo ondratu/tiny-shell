@@ -55,7 +55,7 @@ class WMObject {
 
   protected:
     void connect_window (int event_type, Window window,
-            event_signal_t signal, void * data);
+            event_signal_t signal, void * data=nullptr);
 
     void disconnect_window (int event_type, Window window);
 };

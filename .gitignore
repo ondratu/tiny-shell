@@ -1,0 +1,7 @@
+*.d
+*.a
+.pkg_check
+.syntastic_cpp_config
+tiny-shell
+demo
+wm_test

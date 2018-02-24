@@ -14,6 +14,26 @@ WMWindow::WMWindow(Display * display, Window parent, Window child,
                  1, WM_BORDER_FG, WM_BACKGROUND),
         child(child), moving(false), resizing(false)
 {
+    /*
+    Window ionly = XCreateWindow(display,
+            parent,
+            x-100, y-100, width+200, height+200, 0,
+            CopyFromParent, InputOnly, CopyFromParent,
+            CopyFromParent, 0);
+    XMapWindow(display, ionly);
+    XDefineCursor(display, ionly,
+                  XCreateFontCursor(display, XC_clock));
+
+    Window right = XCreateWindow(display,
+            ionly,
+            x+width, y, 100, height, 0,
+            CopyFromParent, InputOnly, CopyFromParent,
+            CopyFromParent, 0);
+    XMapWindow(display, right);
+    XDefineCursor(display, right,
+                  XCreateFontCursor(display, XC_right_side));
+    */
+
     bool resizable = true;
     hints = XAllocSizeHints();
     long int size_retun;
