@@ -31,7 +31,7 @@ class Signal {
   public:
     Signal();
 
-    void operator ()(Object * owner, const XEvent &e);
+    void operator ()(Object * owner, const XEvent &e, void *data=nullptr);
 
     operator bool () const
     {
@@ -39,7 +39,7 @@ class Signal {
     }
 
     void connect(Object * object, object_signal_t method,
-                 void * data = nullptr);
+                 void *data=nullptr);
 
   private:
     Object *object;           // method owner

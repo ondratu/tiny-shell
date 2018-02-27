@@ -1,33 +1,54 @@
 #pragma once
 
-#include "wm_widget.h"
+#include "buttons.h"
 
-class WMButton: public WMWidget {
+namespace wm {
+
+class Button: public tiny::Button {
   public:
-    WMButton(Display *display, Window parent,
-             int x, int y, uint32_t width, uint32_t height);
+    Button();
 
-    virtual ~WMButton();
+    virtual ~Button();
 
-    virtual void set_events();
-
-    Signal on_click;
+    virtual void set_events(long mask=0);
 
   protected:
     virtual void on_enter_notify(const XEvent &e, void *data);
     virtual void on_leave_notify(const XEvent &e, void *data);
-    virtual void on_button_release(const XEvent &e, void *data);
+    virtual void on_expose(const XEvent &e, void *data) = 0;
 };
 
-class WMCloseButton: public WMButton {
+
+class CloseButton: public Button {
   public:
-    WMCloseButton(Display * display, Window parent,
-                  int x, int y, uint32_t width, uint32_t height);
+    CloseButton();
 
-    ~WMCloseButton();
-
-    virtual void set_events();
+    virtual ~CloseButton();
 
   protected:
     virtual void on_expose(const XEvent &e, void *data);
 };
+
+
+class MaximizeButton: public Button {
+  public:
+    MaximizeButton();
+
+    virtual ~MaximizeButton();
+
+  protected:
+    virtual void on_expose(const XEvent &e, void *data);
+};
+
+
+class MinimizeButton: public Button {
+  public:
+    MinimizeButton();
+
+    virtual ~MinimizeButton();
+
+  protected:
+    virtual void on_expose(const XEvent &e, void *data);
+};
+
+}

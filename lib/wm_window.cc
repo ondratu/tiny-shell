@@ -1,17 +1,47 @@
 #include <algorithm>
-#include <list>
 #include <cstring>
 
 #include "wm_window.h"
-#include "wm_theme.h"
 
-WMWindow::WMWindow(Display * display, Window parent, Window child,
-                   int x, int y, uint32_t width, uint32_t height):
-        WMWidget(display, parent, x, y, width, height,
-                 1, WM_WIN_BORDER_COLOR, WM_WIN_BACKGROUND),
-        child(child)
+namespace wm {
+
+Window::Window(::Window child, uint32_t width, uint32_t height):
+    tiny::Container(width, height+WM_WIN_HEADER),
+    child(child),
+    header(width, WM_WIN_HEADER),
+    shadow(width, height+WM_WIN_HEADER)
 {
     hints = XAllocSizeHints();
+}
+
+Window::~Window(){
+    printf("Window::~Window\n");
+    if (hints){
+        XFree(hints);
+    }
+
+    XUngrabButton(display, Button1, AnyModifier, window);
+
+    disconnect(ButtonPress);
+    disconnect(FocusIn);
+    disconnect(FocusOut);
+    disconnect_window(PropertyNotify, child);
+}
+
+Window* Window::create(Display *display, ::Window parent, ::Window child){
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, child, &attrs);
+    auto win = new Window(child, attrs.width, attrs.height);
+    // TODO: move down under panel
+    win->realize(display, parent, attrs.x, attrs.y);
+    win->map_all();
+
+    return win;
+}
+
+void Window::realize(Display *display, ::Window parent, int x, int y)
+{
+    tiny::Container::realize(display, parent, x, y);
 
     {   // Detect window, if is resizable
         long int size_retun;
@@ -22,179 +52,96 @@ WMWindow::WMWindow(Display * display, Window parent, Window child,
                  (hints->min_height == hints->min_height) &&
                  (hints->min_width > 0 && hints->min_height > 0)))
         {
-            resizable = false;
+            is_resizable = false;
         }
     }
 
-    if (resizable)      // resizable window have some additional widgets
-    {
-        left_top = std::shared_ptr<WMCorner>(
-            new WMCorner(display, window,
-                         0,
-                         0,
-                         WMCorner::Type::LeftTop));
-        children.push_back(left_top);
-
-        right_top = std::shared_ptr<WMCorner>(
-            new WMCorner(display, window,
-                         width-2*WM_WIN_CORNER,
-                         0,
-                         WMCorner::Type::RightTop));
-        children.push_back(right_top);
-
-        left_bottom = std::shared_ptr<WMCorner>(
-            new WMCorner(display, window,
-                         0,
-                         height-2*WM_WIN_BORDER,
-                         WMCorner::Type::LeftBottom));
-        children.push_back(left_bottom);
-
-        right_bottom = std::shared_ptr<WMCorner>(
-            new WMCorner(display, window,
-                         width-2*WM_WIN_BORDER,
-                         height-2*WM_WIN_BORDER,
-                         WMCorner::Type::RightBottom));
-        children.push_back(right_bottom);
+    if (is_resizable){
+        shadow.realize(display, parent, x, y);
     }
 
-    title = std::shared_ptr<WMTitle>(
-        new WMTitle(display, window,
-                    WM_WIN_BORDER, WM_WIN_BORDER,
-                    width-2*WM_WIN_BORDER, WM_WIN_HEADER));
-    children.push_back(title);
-
-    close_btn = std::shared_ptr<WMCloseButton>(
-        new WMCloseButton(display, window,
-                    width-WM_WIN_BORDER-WM_WIN_HEADER+1, WM_WIN_BORDER+1,
-                    WM_WIN_HEADER-4, WM_WIN_HEADER-4));
-    children.push_back(close_btn);
-    XSetWindowAttributes attrs;
-    attrs.win_gravity = NorthEastGravity;
-    XChangeWindowAttributes(display, close_btn->get_window(), CWWinGravity,
-                            &attrs);
-
-    if (resizable)
-    {
-        maxim_btn = std::shared_ptr<WMButton>(
-            new WMButton(display, window,
-                width-WM_WIN_BORDER-2*WM_WIN_HEADER+1, WM_WIN_BORDER+1,
-                WM_WIN_HEADER-4, WM_WIN_HEADER-4));
-        children.push_back(maxim_btn);
-        attrs.win_gravity = NorthEastGravity;
-        XChangeWindowAttributes(display, maxim_btn->get_window(),
-                                CWWinGravity, &attrs);
+    add(&header, 0, 0);
+    header.push_back(&cls_btn,
+            WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
+    if (is_resizable){
+        header.push_back(&max_btn,
+                WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
     }
-
-    minim_btn = std::shared_ptr<WMButton>(
-        new WMButton(display, window,
-            width-WM_WIN_BORDER-3*WM_WIN_HEADER+1, WM_WIN_BORDER+1,
-            WM_WIN_HEADER-4, WM_WIN_HEADER-4));
-    children.push_back(minim_btn);
-    attrs.win_gravity = NorthEastGravity;
-    XChangeWindowAttributes(display, minim_btn->get_window(), CWWinGravity,
-                            &attrs);
+    header.push_back(&min_btn,
+            WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
 
     XSetWindowBorderWidth(display, child, 0);
     XAddToSaveSet(display, child);
-    XReparentWindow(display, child, window,
-                    WM_WIN_BORDER, WM_WIN_BORDER+WM_WIN_HEADER);
+    XReparentWindow(display, child, window, 0, WM_WIN_HEADER);
     char * window_name;
     if (XFetchName(display, child, &window_name))
     {
-        title->set_text(window_name);
+        header.set_title(window_name);
         free(window_name);
     }
 }
 
-WMWindow::~WMWindow()
+void Window::set_events(long mask)
 {
-    if (hints) {
-        XFree(hints);
-    }
+    // SubstructureNotifyMask so, wm::Manager can catch UnmapNotify
+    tiny::Container::set_events(mask|SubstructureNotifyMask|FocusChangeMask);
 
-    XUngrabButton(display, Button1, AnyModifier, window);
+    XSelectInput(display, child, PropertyChangeMask);
 
-    disconnect(ButtonPress);
-    disconnect(FocusIn);
-    disconnect(FocusOut);
-}
-
-WMWindow* WMWindow::create(Display *display, Window parent, Window child)
-{
-    XWindowAttributes attrs;
-    XGetWindowAttributes(display, child, &attrs);
-    auto win = new WMWindow(
-        display, parent, child,
-        attrs.x-WM_WIN_BORDER,
-        attrs.y-WM_WIN_BORDER,
-        attrs.width+WM_WIN_CORNER,
-        attrs.height+WM_WIN_CORNER+WM_WIN_HEADER);
-    win->set_events();
-    win->map_all();
-
-    return win;
-}
-
-void WMWindow::map_all()
-{
-    for (auto w: children){
-        w->map();
-    }
-
-    map();
-}
-
-void WMWindow::set_events()
-{
+/*
     XSelectInput(display, window,
         SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
 
-    XSelectInput(display, child,
-        PropertyChangeMask);
-
-    connect(ButtonPress,
-            static_cast<event_signal_t>(&WMWindow::on_button_press));
-    connect(FocusIn,
-            static_cast<event_signal_t>(&WMWindow::on_focus_in));
-    connect(FocusOut,
-            static_cast<event_signal_t>(&WMWindow::on_focus_out));
-    connect_window(PropertyNotify, child,
-            static_cast<event_signal_t>(&WMWindow::on_property_notify));
-
-    if (resizable)
-    {
-        for (auto corner: {left_top, left_bottom, right_top, right_bottom}){
-            corner->on_drag_begin.connect(
-                this,
-                static_cast<object_signal_t>(&WMWindow::on_corner_drag_begin));
-            corner->on_drag_motion.connect(
-                this,
-                static_cast<object_signal_t>(&WMWindow::on_corner_drag_motion));
-        }
-    }
-
-    title->on_drag_begin.connect(
-        this,
-        static_cast<object_signal_t>(&WMWindow::on_title_drag_begin));
-    title->on_drag_motion.connect(
-        this,
-        static_cast<object_signal_t>(&WMWindow::on_title_drag_motion));
-
-    close_btn->on_click.connect(
-        this,
-        static_cast<object_signal_t>(&WMWindow::on_close_click));
     minim_btn->on_click.connect(
         this,
         static_cast<object_signal_t>(&WMWindow::on_minimize_click));
-
-    for (auto w: children){
-        w->set_events();
     }
+*/
+
+    connect(ButtonPress,
+            static_cast<tiny::event_signal_t>(&Window::on_button_press));
+    connect(FocusIn,
+            static_cast<tiny::event_signal_t>(&Window::on_focus_in));
+    connect(FocusOut,
+            static_cast<tiny::event_signal_t>(&Window::on_focus_out));
+    connect_window(PropertyNotify, child,
+            static_cast<tiny::event_signal_t>(&Window::on_property_notify));
+
+    header.get_title_box()->on_drag_begin.connect(
+        this,
+        static_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
+    header.get_title_box()->on_drag_motion.connect(
+        this,
+        static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
+
+    if (is_resizable)
+    {
+        shadow.on_move_resize_begin.connect(
+            this,
+            static_cast<tiny::object_signal_t>(&Window::on_move_resize_begin));
+        shadow.on_move_resize_motion.connect(
+            this,
+            static_cast<tiny::object_signal_t>(&Window::on_move_resize_motion));
+    }
+
+
+    cls_btn.on_click.connect(this,
+            static_cast<tiny::object_signal_t>(&Window::on_close_click));
 }
 
-void WMWindow::set_focus()
+void Window::map_all(){
+    shadow.map_all();
+    tiny::Container::map_all();
+
+    // set_focus();
+    XRaiseWindow(display, shadow.get_window());     // shadow is lower
+    XRaiseWindow(display, window);
+}
+
+void Window::set_focus()
 {
     XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
+    XRaiseWindow(display, shadow.get_window());
     XRaiseWindow(display, window);
 
     const Atom WM_TAKE_FOCUS = XInternAtom(
@@ -220,8 +167,9 @@ void WMWindow::set_focus()
     }
 }
 
-void WMWindow::close()
+void Window::close()
 {
+    printf("doing close...");
     const Atom WM_DELETE_WINDOW = XInternAtom(
         display, "WM_DELETE_WINDOW", false);
     const Atom WM_PROTOCOLS = XInternAtom(
@@ -245,7 +193,7 @@ void WMWindow::close()
     }
 }
 
-void WMWindow::minimize()
+void Window::minimize()
 {
     printf("minimize\n");
     // TODO: set state
@@ -254,43 +202,19 @@ void WMWindow::minimize()
     XSetInputFocus(display, parent, RevertToPointerRoot, CurrentTime);
 }
 
-void WMWindow::restore()
+void Window::restore()
 {
     printf("restore\n");
     is_minimized = false;
     map();
 }
 
-void WMWindow::on_close_click(WMObject *o, const XEvent &e, void *data)
-{
+void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
     close();
 }
 
-void WMWindow::on_minimize_click(WMObject *o, const XEvent &e, void *data)
+void Window::on_move_resize_begin(tiny::Object *o, const XEvent &e, void *data)
 {
-    minimize();
-}
-
-void WMWindow::on_title_drag_begin(WMObject *o, const XEvent &e, void *data)
-{
-    set_focus();     // check if is not have focus yet
-
-    start_event = e;
-    XGetWindowAttributes(display, window, &start_attrs);
-}
-
-void WMWindow::on_title_drag_motion(WMObject *o, const XEvent &e, void *data)
-{
-    int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-    int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-
-    XMoveWindow(display, window,
-        start_attrs.x + xdiff, start_attrs.y + ydiff);
-}
-
-void WMWindow::on_corner_drag_begin(WMObject *o, const XEvent &e, void * data)
-{
-    resizing = true;
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);
     long int size_retun;
@@ -308,62 +232,87 @@ void WMWindow::on_corner_drag_begin(WMObject *o, const XEvent &e, void * data)
     }
 }
 
-void WMWindow::on_corner_drag_motion(WMObject *o, const XEvent &e, void * data)
+void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
 {
-    if (!resizing){
-        fprintf(stderr, "Undefined state in WMWindow::corner_motion\n");
-        return;     // undefined state
+    uint16_t mask = reinterpret_cast<size_t>(data);
+    int xdiff = 0;
+    int ydiff = 0;
+
+    if (mask & (tiny::Position::Left|tiny::Position::Right)){
+        xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+    }
+    if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
+        ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
     }
 
-    if (static_cast<WMCorner*>(o)->get_type() == WMCorner::Type::RightBottom) {
-        int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-        int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+    int width = start_attrs.width;
+    int height = start_attrs.height;
 
-        int width = start_attrs.width+xdiff;
-        int height = start_attrs.height+ydiff;
+    if (mask & tiny::Position::Right){
+        width += xdiff;
+    } else {    // ::Position::Left
+        width -= xdiff;
+    }
 
-        // TODO: it exist steps
+    if (mask &tiny::Position::Bottom){
+        height += ydiff;
+    } else {    // ::Position::Top
+        height -= ydiff;
+    }
 
+    if (mask & (tiny::Position::Left|tiny::Position::Right)){
         if (std::max(hints->min_width+WM_WIN_CORNER, WM_WIN_MIN_WIDTH) > width) {
             width = std::max(hints->min_width+WM_WIN_CORNER, WM_WIN_MIN_WIDTH);
         }
         if ((0 < hints->max_width) && (hints->max_width < width)) {
             width = hints->max_width;
         }
+    }
 
+    if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
+        // TODO: it exist steps
         if (std::max(hints->min_height+WM_WIN_CORNER+WM_WIN_HEADER, WM_WIN_MIN_HEIGHT) > height) {
             height = std::max(hints->min_height+WM_WIN_CORNER+WM_WIN_HEADER, WM_WIN_MIN_HEIGHT);
         }
         if ((0 < hints->max_height) && (hints->max_height < height)) {
             height = hints->max_height;
         }
-
-        /*
-        XMoveResizeWindow(ww->display, ww->window,
-                ww->start_attrs.x, ww->start_attrs.y,
-                width, height);
-
-        XMoveResizeWindow(ww->display, ww->child,
-                WM_BORDER-1,
-                WM_BORDER+WM_HEADER,
-                width-2*WM_BORDER,
-                height-2*WM_BORDER-WM_HEADER);
-
-        XMoveResizeWindow(ww->display, ww->title->window,
-                WM_BORDER,
-                WM_BORDER,
-                width-2*WM_BORDER,
-                WM_HEADER);
-        */
-        XResizeWindow(display, window, width, height);
-        XResizeWindow(display, child,
-                width-WM_WIN_CORNER, height-WM_WIN_CORNER-WM_WIN_HEADER);
-        XResizeWindow(display, title->get_window(), // TODO: call title method
-                width-WM_WIN_CORNER, WM_WIN_HEADER);
     }
+
+    if (mask & tiny::Position::Top || mask & tiny::Position::Left) {
+        XMoveResizeWindow(display, window,
+                start_attrs.x+xdiff, start_attrs.y+ydiff,
+                width, height);
+        shadow.move_resize(start_attrs.x+xdiff, start_attrs.y+ydiff,
+                width, height);
+    } else {
+        XResizeWindow(display, window, width, height);
+        shadow.resize(width, height);
+    }
+
+    XResizeWindow(display, child, width, height-WM_WIN_HEADER);
+    header.resize(width, WM_WIN_HEADER);
 }
 
-void WMWindow::on_button_press(const XEvent &e, void* data)
+void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
+{
+    set_focus();     // check if is not have focus yet
+
+    start_event = e;
+    XGetWindowAttributes(display, window, &start_attrs);
+}
+
+void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
+{
+    int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+    int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+
+    shadow.move(start_attrs.x + xdiff, start_attrs.y + ydiff);
+    XMoveWindow(display, window,
+        start_attrs.x + xdiff, start_attrs.y + ydiff);
+}
+
+void Window::on_button_press(const XEvent &e, void* data)
 {
     printf("\ton_click\n");
     set_focus();
@@ -374,14 +323,14 @@ void WMWindow::on_button_press(const XEvent &e, void* data)
     XUngrabButton(display, Button1, AnyModifier, window);
 }
 
-void WMWindow::on_focus_in(const XEvent &e, void* data)
+void Window::on_focus_in(const XEvent &e, void* data)
 {
     printf("\ton_focus_in\n");
     // TODO: check, if grab is not clen (propagete mask??)
     XUngrabButton(display, Button1, AnyModifier, window);
 }
 
-void WMWindow::on_focus_out(const XEvent &e, void* data)
+void Window::on_focus_out(const XEvent &e, void* data)
 {
     printf("\ton_focus_out\n");
     XGrabButton(            // on click
@@ -391,7 +340,7 @@ void WMWindow::on_focus_out(const XEvent &e, void* data)
         None, None);
 }
 
-void WMWindow::on_property_notify(const XEvent &e, void *data)
+void Window::on_property_notify(const XEvent &e, void *data)
 {
     char *atom_name = XGetAtomName(display, e.xproperty.atom);
     if (std::strcmp(atom_name, "WM_NAME") == 0)
@@ -401,9 +350,11 @@ void WMWindow::on_property_notify(const XEvent &e, void *data)
         {
             // FIXME: some windows (like urxvt) sends it bad
             // may be just LC_CTYPE... but not work..
-            title->set_text(window_name);
+            header.set_title(window_name);
             free(window_name);
         }
     }
     XFree(atom_name);
 }
+
+} // namespace wm

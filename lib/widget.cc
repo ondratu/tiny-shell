@@ -9,37 +9,85 @@
 namespace tiny {
 
 
-Virtual::Virtual(uint32_t width, uint32_t height):
-    Object(), display(nullptr), parent(0), window(0),
-    width(width), height(height), is_maped(false), is_realized(false)
+Widget::Widget(Type type, uint32_t width, uint32_t height,
+        uint32_t border, uint32_t border_color, uint32_t background):
+    Object(), type(type), display(nullptr), parent(0), window(0),
+    event_mask(0), width(width), height(height), border(border),
+    border_color(border_color), background(background),
+    is_maped(false), is_realized(false)
 {}
 
-Virtual::~Virtual(){
+Widget::Widget(uint32_t width, uint32_t height,
+        uint32_t border, uint32_t border_color, uint32_t background):
+    Object(), type(Type::Normal), display(nullptr), parent(0), window(0),
+    event_mask(0), width(width), height(height), border(border),
+    border_color(border_color), background(background),
+    is_maped(false), is_realized(false)
+{}
+
+Widget::~Widget(){
     unmap();
+
+    disconnect(ResizeRequest);
+    if (window) {
+        XDestroyWindow(display, window);
+    }
 }
 
-void Virtual::connect(uint16_t event_type, event_signal_t signal, void * data)
-{
-    connect_window(event_type, window, signal, data);
+void Widget::set_events(long mask){
+    event_mask |= StructureNotifyMask|mask;
+    XSelectInput(display, window, event_mask);
+
+    connect(ConfigureNotify,
+            static_cast<tiny::event_signal_t>(&Widget::on_configure_notify));
 }
 
-void Virtual::disconnect(uint16_t event_type)
+void Widget::realize(Display * display, Window parent, int x, int y)
 {
-    disconnect_window(event_type, window);
-}
-
-void Virtual::realize(Display * display, Window parent)
-{
-    if (!window){
-        throw std::runtime_error("Window is not created.");
+    if (is_realized){
+        throw std::runtime_error("Widget is realized yet!");
     }
     this->display = display;
     this->parent = parent;
+
+    switch(type) {
+        case (Type::Normal):
+            window = XCreateSimpleWindow(
+                    display, parent,
+                    x, y, width, height,
+                    border, border_color, background);
+            break;
+        case (Type::Input):
+            // TODO: parent must bew root or InputOnly
+            window = XCreateWindow(
+                    display, parent,
+                    x, y, width, height, 0,
+                    CopyFromParent, InputOnly, CopyFromParent,
+                    CopyFromParent, nullptr);
+            break;
+        case (Type::Transparent):
+            XVisualInfo vinfo;
+            XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor,
+                    &vinfo);
+
+            XSetWindowAttributes attr;
+            attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
+            attr.border_pixel = border_color;
+            attr.background_pixel = background;
+
+            window = XCreateWindow(
+                    display, parent,
+                    x, y, width, height, border,
+                    vinfo.depth, InputOutput, vinfo.visual,
+                    CWColormap | CWBorderPixel | CWBackPixel, &attr);
+            break;
+    }
+
     is_realized = true;
     set_events();
 }
 
-void Virtual::map()
+void Widget::map()
 {
     if (is_realized){
         XMapWindow(display, window);
@@ -49,11 +97,11 @@ void Virtual::map()
     }
 }
 
-void Virtual::map_all(){
+void Widget::map_all(){
     map();
 }
 
-void Virtual::unmap()
+void Widget::unmap()
 {
     if (is_realized && is_maped){
         XUnmapWindow(display, window);
@@ -61,96 +109,30 @@ void Virtual::unmap()
     }
 }
 
-
-
-Widget::Widget(uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color,
-        uint32_t background):
-    Virtual(width, height),
-        border(border), border_color(border_color), background(background)
-{}
-
-Widget::~Widget(){
-    XDestroyWindow(display, window);
-}
-
-void Widget::realize(Display * display, Window parent, int x, int y)
+void Widget::resize(uint32_t width, uint32_t height)
 {
-    window = XCreateSimpleWindow(
-        display, parent,
-        x, y, width, height,
-        border, border_color, background);
-    Virtual::realize(display, parent);
+    if (is_realized){
+        XResizeWindow(display, window, width, height);
+        // width and height are set by on_configure_notify
+    } else {
+        this->width = width;
+        this->height = height;
+    }
 }
 
-
-InputWidget::InputWidget( uint32_t width, uint32_t height):
-    Virtual(width, height)
-{}
-
-InputWidget::~InputWidget(){
-    XDestroyWindow(display, window);
-}
-
-void InputWidget::realize(Display * display, Window parent, int x, int y)
+void Widget::connect(uint16_t event_type, event_signal_t signal, void * data)
 {
-    // TODO: parent must bew root or InputOnly
-    window = XCreateWindow(
-        display, parent,
-        x, y, width, height, 0,
-        CopyFromParent, InputOnly, CopyFromParent,
-        CopyFromParent, nullptr);
-    Virtual::realize(display, parent);
+    connect_window(event_type, window, signal, data);
 }
 
-
-Transparent::Transparent(
-        uint32_t width, uint32_t height,
-        uint32_t border, uint64_t border_color, uint64_t background):
-    Virtual(width, height), border(border), border_color(border_color),
-    background(background)
-{}
-
-Transparent::~Transparent(){
-    XDestroyWindow(display, window);
-}
-
-void Transparent::realize(Display * display, Window parent, int x, int y)
+void Widget::disconnect(uint16_t event_type)
 {
-    // TODO: check to support transparent
-    XVisualInfo vinfo;
-    XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor, &vinfo);
-
-    XSetWindowAttributes attr;
-    attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
-    attr.border_pixel = border_color;
-    attr.background_pixel = background;
-
-    window = XCreateWindow(
-        display, parent,
-        x, y, width, height, border,
-        vinfo.depth, InputOutput, vinfo.visual,
-        CWColormap | CWBorderPixel | CWBackPixel, &attr);
-
-    Virtual::realize(display, parent);
+    disconnect_window(event_type, window);
 }
 
-bool Transparent::is_supported(Display * display)
-{
-    // TODO
-    return false;
-}
-
-
-
-ContainerInterface::ContainerInterface()
-{}
-
-ContainerInterface::~ContainerInterface()
-{}
-
-void ContainerInterface::add(Widget * widget){
-    children.push_back(widget);
+void Widget::on_configure_notify(const XEvent &e, void *){
+    width = e.xconfigure.width;
+    height = e.xconfigure.height;
 }
 
 

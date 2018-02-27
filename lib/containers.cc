@@ -1,11 +1,47 @@
+#include <X11/cursorfont.h>
+
 #include "containers.h"
 
 namespace tiny {
 
+uint32_t Position::get_cursor_shape(uint16_t mask)
+{
+    switch(mask) {
+        case Top:
+            return XC_top_side;
+        case Right:
+            return XC_right_side;
+        case Bottom:
+            return XC_bottom_side;
+        case Left:
+            return XC_left_side;
+
+        case Top|Right:
+            return XC_top_right_corner;
+        case Bottom|Right:
+            return XC_bottom_right_corner;
+        case Top|Left:
+            return XC_top_left_corner;
+        case Bottom|Left:
+            return XC_bottom_left_corner;
+
+        // TODO: Left|Right
+        // TODO: Top|Bottom
+
+        default:
+            return XC_arrow;
+    }
+}
+
+
 Container::Container(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
-    Widget(width, height, border, border_color, background),
-    ContainerInterface()
+    Widget(Widget::Type::Normal, width, height, border, border_color, background)
+{}
+
+Container::Container(Widget::Type type, uint32_t width, uint32_t height,
+        uint32_t border, uint32_t border_color, uint32_t background):
+    Widget(type, width, height, border, border_color, background)
 {}
 
 Container::~Container()
@@ -19,21 +55,19 @@ void Container::map_all(){
     }
 }
 
-void Container::set_events(){
-}
-
 void Container::add(Widget * widget, int x, int y, int gravity)
 {
     if (!is_realized) {
         throw std::runtime_error("Box must be realized");
     }
-    ContainerInterface::add(widget);
     widget->realize(display, window, x, y);
     if (gravity != NorthWestGravity){
         XSetWindowAttributes attrs;
         attrs.win_gravity = gravity;
-        XChangeWindowAttributes(display, window, CWWinGravity , &attrs);
+        XChangeWindowAttributes(display, widget->get_window(), CWWinGravity,
+                &attrs);
     }
+    children.push_back(widget);
 }
 
 
@@ -44,14 +78,23 @@ Box::Box(Type type, uint32_t width, uint32_t height,
     type(type), start_offset(0)
 {
     if (type == Type::Horizontal) {
-        end_offset = width;
+        end_offset = width-1;
     } else { // Type::Vertical
-        end_offset = height;
+        end_offset = height-1;
     }
 }
 
 Box::~Box()
 {}
+
+void Box::resize(uint32_t width, uint32_t height){
+    if (type == Type::Horizontal){
+        end_offset += width - this->width;
+    } else { // Type::Vertical
+        end_offset += height - this->height;
+    }
+    Container::resize(width, height);
+}
 
 void Box::push_start(Widget * widget, int x_spacing, int y_spacing, int gravity)
 {

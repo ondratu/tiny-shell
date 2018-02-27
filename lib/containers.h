@@ -10,21 +10,35 @@
 
 namespace tiny {
 
-class Container: public Widget, public ContainerInterface {
+class Position {
+  public:
+    enum {Top=1, Right=2, Bottom=4, Left=8};
+
+    static uint32_t get_cursor_shape(uint16_t mask);
+};
+
+
+class Container: public Widget {
   public:
     Container(uint32_t width, uint32_t height,
             uint32_t border=WIDGET_BORDER,
             uint32_t border_color=WIDGET_BORDER_COLOR,
             uint32_t background=WIDGET_BACKGROUND);
+    Container(Widget::Type type, uint32_t width, uint32_t height,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
+
 
     virtual ~Container();
 
     virtual void map_all();
 
-    virtual void set_events();
-
     virtual void add(Widget * widget, int x=0, int y=0,
             int gravity=NorthWestGravity);
+
+  protected:
+    std::list<Widget*> children;
 };
 
 
@@ -39,10 +53,16 @@ class Box: public Container {
 
     virtual ~Box();
 
-    // TODO: on resize correct end_offset!
+    virtual void resize(uint32_t widget, uint32_t height);
 
     inline Type get_type() const
     { return type; }
+
+    inline uint32_t get_start_offset() const
+    { return start_offset; }
+
+    inline uint32_t get_end_offset() const
+    { return end_offset; }
 
     virtual void push_start(Widget * widget, int x_spacing=0, int y_spacing=0,
             int gravity=AutoGravity);

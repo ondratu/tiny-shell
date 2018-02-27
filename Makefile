@@ -35,6 +35,9 @@ $(TARGET): lib/libtiny.a main.o
 demo: lib/libtiny.a demo.o
 	$(CXX) $(LDFLAGS) demo.o -L./lib -ltiny -o demo
 
+input_only: lib/libtiny.a input_only.o
+	$(CXX) $(LDFLAGS) input_only.o -L./lib -ltiny -o input_only
+
 wm_test: lib/libtiny.a wm_test.o
 	$(CXX) $(LDFLAGS) wm_test.o -L./lib -ltiny -o wm_test
 

@@ -1,27 +1,25 @@
 #pragma once
 
-#include <X11/Xutil.h>
-
-#include <memory>
-#include <list>
-
-#include "wm_widget.h"
-#include "wm_title.h"
-#include "wm_corner.h"
+#include "containers.h"
+#include "wm_header.h"
 #include "wm_buttons.h"
+#include "wm_edge.h"
 
-class WMWindow: public WMWidget {
+namespace wm {
+
+class Window: public tiny::Container {
   public:
-    WMWindow(Display * display, Window parent, Window child,
-             int x, int y, uint32_t width, uint32_t height);
+    Window(::Window child, uint32_t width, uint32_t height);
 
-    virtual ~WMWindow();
+    ~Window();
 
-    static WMWindow * create(Display * display, Window parent, Window child);
+    static Window * create(Display * display, ::Window parent, ::Window child);
+
+    virtual void realize(Display * display, ::Window parent, int x, int y);
+
+    virtual void set_events(long mask=0);
 
     virtual void map_all();
-
-    virtual void set_events();
 
     inline const bool get_minimized() const
     { return is_minimized; }
@@ -36,18 +34,23 @@ class WMWindow: public WMWidget {
     void restore();
 
     /* signal handlers */
-    void on_close_click(WMObject *o, const XEvent &e, void *data);
+    void on_close_click(tiny::Object *o, const XEvent &e, void * data);
 
-    void on_minimize_click(WMObject *o, const XEvent &e, void *data);
+    void on_minimize_click(tiny::Object *o, const XEvent &e, void * data);
 
-    void on_title_drag_begin(WMObject *o, const XEvent &e, void *data);
+    void on_maximize_click(tiny::Object *o, const XEvent &e, void * data);
 
-    void on_title_drag_motion(WMObject *o, const XEvent &e, void *data);
+    void on_resize(tiny::Object *o, const XEvent &e, void * data);
 
-    void on_corner_drag_begin(WMObject *o, const XEvent &e, void *data);
+    void on_move_resize_begin(tiny::Object *o, const XEvent &e, void * data);
 
-    void on_corner_drag_motion(WMObject *o, const XEvent &e, void *data);
+    void on_move_resize_motion(tiny::Object *o, const XEvent &e, void * data);
 
+    void on_window_drag_begin(tiny::Object *o, const XEvent &e, void * data);
+
+    void on_window_drag_motion(tiny::Object *o, const XEvent &e, void * data);
+
+  protected:
     /* event handlers */
     void on_button_press(const XEvent &e, void *data);
 
@@ -57,29 +60,21 @@ class WMWindow: public WMWidget {
 
     void on_property_notify(const XEvent &e, void *data);
 
-  protected:
-    Window child;
-    std::list<std::shared_ptr<WMWidget>> children;
-
-    std::shared_ptr<WMTitle> title;
-
-    std::shared_ptr<WMCloseButton> close_btn;
-    std::shared_ptr<WMButton> maxim_btn;
-    std::shared_ptr<WMButton> minim_btn;
-
-    std::shared_ptr<WMCorner> left_top;
-    std::shared_ptr<WMCorner> left_bottom;
-    std::shared_ptr<WMCorner> right_top;
-    std::shared_ptr<WMCorner> right_bottom;
-
-  private:
-    bool resizable = true;
-
     bool is_minimized = false;
-    bool resizing = false;
+    bool is_resizable = true;
+
+    ::Window child;
+    XSizeHints * hints;
 
     XEvent start_event;                 // state before moving/resizing
     XWindowAttributes start_attrs;
 
-    XSizeHints * hints;
+    Header header;
+    CloseButton cls_btn;
+    MinimizeButton min_btn;
+    MaximizeButton max_btn;
+    BackWindow shadow;
 };
+
+
+} // namespace wm

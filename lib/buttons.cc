@@ -1,5 +1,3 @@
-#include <X11/cursorfont.h>
-
 #include "buttons.h"
 
 namespace tiny {
@@ -18,13 +16,14 @@ Button::~Button()
     disconnect(ButtonRelease);
 }
 
-void Button::set_events()
+void Button::set_events(long mask)
 {
-    XSelectInput(display, window, EnterWindowMask|LeaveWindowMask);
+    Widget::set_events(EnterWindowMask|LeaveWindowMask|mask);
+
     XGrabButton(display, Button1, AnyModifier, window, false,
             ButtonReleaseMask,
             GrabModeAsync, GrabModeAsync,
-            None, XCreateFontCursor(display, XC_hand2));
+            None, None);
 
     connect(EnterNotify,
             static_cast<event_signal_t>(&Button::on_enter_notify));
@@ -32,6 +31,7 @@ void Button::set_events()
             static_cast<event_signal_t>(&Button::on_leave_notify));
     connect(ButtonRelease,
             static_cast<event_signal_t>(&Button::on_button_release));
+
 }
 
 void Button::on_enter_notify(const XEvent &e, void *){
@@ -62,10 +62,9 @@ LabelButton::LabelButton(uint32_t width, uint32_t height,
 LabelButton::~LabelButton()
 {}
 
-void LabelButton::set_events()
+void LabelButton::set_events(long mask)
 {
-    Button::set_events();
-    XSelectInput(display, window, ExposureMask|EnterWindowMask|LeaveWindowMask);
+    Button::set_events(ExposureMask|mask);
 
     connect(Expose,
             static_cast<event_signal_t>(&LabelButton::on_expose));
@@ -74,13 +73,13 @@ void LabelButton::set_events()
 void LabelButton::realize(Display * display, Window parent, int x, int y)
 {
     Button::realize(display, parent, x, y);
-    this->font = XftFontOpenName(display, screen, font_name.c_str());
+    font = XftFontOpenName(display, screen, font_name.c_str());
 }
 
 void LabelButton::set_text(const std::string &text)
 {
     this->text = text;
-    if (font){
+    if (is_maped){
         on_expose(XEvent(), nullptr);
     }
 }

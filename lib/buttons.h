@@ -14,7 +14,7 @@ class Button: public Widget {
 
     virtual ~Button();
 
-    virtual void set_events();
+    virtual void set_events(long mask=0);
 
     inline bool get_active()
     { return is_active; }
@@ -42,7 +42,7 @@ class LabelButton: public Button {
 
     virtual void realize(Display * display, Window parent, int x, int y);
 
-    virtual void set_events();
+    virtual void set_events(long mask=0);
 
     void set_text(const std::string &text);
 
@@ -63,9 +63,8 @@ class LabelButton: public Button {
     std::string normal_color;
     std::string active_color;
 
-    XftFont *font;
-
   private:
+    XftFont *font;
     const int screen;       // XXX: this is zero for now
 };
 

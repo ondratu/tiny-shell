@@ -2,6 +2,8 @@
 *.a
 .pkg_check
 .syntastic_cpp_config
+tags
 tiny-shell
 demo
 wm_test
+input_only

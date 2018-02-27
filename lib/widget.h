@@ -9,13 +9,23 @@
 
 namespace tiny {
 
-class Virtual: public Object {
+class Widget: public Object {
   public:
-    Virtual(uint32_t width, uint32_t height);
+    enum class Type {Normal, Transparent, Input};
 
-    virtual ~Virtual();
+    Widget(Type type, uint32_t width, uint32_t height,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
 
-    virtual void realize(Display * display, Window parent);
+    Widget(uint32_t width, uint32_t height,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
+
+    virtual ~Widget();
+
+    virtual void realize(Display * display, Window parent, int x, int y);
 
     inline const Window get_window() const
     { return window; }
@@ -29,7 +39,7 @@ class Virtual: public Object {
     inline uint32_t get_height() const
     { return height; }
 
-    virtual void set_events() = 0;
+    virtual void set_events(long mask=0);
 
     virtual void map();
 
@@ -37,86 +47,32 @@ class Virtual: public Object {
 
     virtual void unmap();
 
+    // Generate ResizeRequest and Expose when Expose when size is smaller
+    virtual void resize(uint32_t width, uint32_t height);
+
   protected:
     void connect(uint16_t event_type, event_signal_t signal,
             void * data = nullptr);
 
     void disconnect(uint16_t event_type);
 
+    virtual void on_configure_notify(const XEvent &e, void *);
 
+    Type type;
     Display * display;
     Window parent;
     Window window;
 
+    long event_mask;
     uint32_t width;
     uint32_t height;
+
+    uint32_t border;
+    uint32_t border_color;
+    uint32_t background;
 
     bool is_maped;
     bool is_realized;
 };
-
-
-class Widget: public Virtual {
-  public:
-    Widget(uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
-
-    virtual ~Widget();
-
-    virtual void realize(Display * display, Window parent, int x, int y);
-
-
-  protected:
-    uint32_t border;
-    uint32_t border_color;
-    uint32_t background;
-};
-
-
-class InputWidget: public Virtual {
-  public:
-    InputWidget(uint32_t width, uint32_t height);
-
-    virtual ~InputWidget();
-
-    virtual void realize(Display * display, Window parent, int x, int y);
-};
-
-
-class Transparent: public Virtual {
-  public:
-    Transparent(
-            uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint64_t border_color=WIDGET_BORDER_COLOR,
-            uint64_t transparent=WIDGET_BACKGROUND);
-
-    virtual ~Transparent();
-
-    virtual void realize(Display * display, Window parent, int x, int y);
-
-    static bool is_supported(Display *display);
-
-  protected:
-    uint32_t border;
-    uint64_t border_color;
-    uint64_t background;
-};
-
-
-class ContainerInterface {
-  public:
-    ContainerInterface();
-
-    virtual ~ContainerInterface();
-
-    virtual void add(Widget * widget);
-
-  protected:
-    std::list<Widget*> children;
-};
-
 
 } // namespace tiny

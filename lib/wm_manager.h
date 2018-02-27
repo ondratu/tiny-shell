@@ -1,22 +1,22 @@
 #pragma once
-#include <memory>
+
 #include <map>
 #include <list>
 
-#include "wm_object.h"
+#include "object.h"
 #include "wm_window.h"
 
-class WindowManager: public WMObject {
-  public:
-    virtual ~WindowManager();
+namespace wm {
 
-    static std::unique_ptr<WindowManager> create();
+class Manager: public tiny::Object {
+  public:
+    Manager();
+
+    ~Manager();
 
     void main_loop();
 
   private:
-    WindowManager(Display* display);
-
     void set_events();
 
     void activate_next_window();
@@ -35,8 +35,10 @@ class WindowManager: public WMObject {
     void on_configure_request(const XConfigureRequestEvent &e);
 
     Display * display;
-    const Window root;
+    ::Window root;
 
-    std::map<Window, WMWindow*> wm_windows;
-    std::list<WMWindow*> wm_tops;
+    std::map<::Window, Window*> wm_windows;
+    std::list<Window*> wm_tops;
 };
+
+} // namespace wm
