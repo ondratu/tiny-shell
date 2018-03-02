@@ -280,11 +280,17 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
     }
 
     if (mask & tiny::Position::Top || mask & tiny::Position::Left) {
-        XMoveResizeWindow(display, window,
-                start_attrs.x+xdiff, start_attrs.y+ydiff,
-                width, height);
-        shadow.move_resize(start_attrs.x+xdiff, start_attrs.y+ydiff,
-                width, height);
+        int x = start_attrs.x;
+        int y = start_attrs.y;
+        if (mask & tiny::Position::Left){
+            x += xdiff;
+        }
+        if (mask & tiny::Position::Top){
+            y += ydiff;
+        }
+
+        XMoveResizeWindow(display, window, x, y, width, height);
+        shadow.move_resize(x, y, width, height);
     } else {
         XResizeWindow(display, window, width, height);
         shadow.resize(width, height);
