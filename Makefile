@@ -4,7 +4,7 @@ X11_LIBS = $(shell pkg-config --libs x11)
 XFT_CFLAGS = $(shell pkg-config --cflags xft)
 XFT_LIBS = $(shell pkg-config --libs xft)
 
-CXXFLAGS = -MMD -I./lib $(X11_CFLAGS) $(XFT_CFLAGS)
+CXXFLAGS = -MMD -std=c++11 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS)
 LDFLAGS = -O2 $(X11_LIBS) $(XFT_LIBS)
 
 PKGS = x11 xft
@@ -18,6 +18,7 @@ SRC = $(wildcard *.cc)
 OBJ = $(SRC:%.cc=%.o)
 DEP = $(OBJ:%.o=%.d)
 
+CXX=clang++-3.8
 
 TARGET = tiny-shell
 
