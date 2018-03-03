@@ -31,7 +31,9 @@ class Window: public tiny::Container {
     // XXX: could be named iconify....
     void minimize();
 
-    void restore();
+    void restore(int x=0, int y=0);
+
+    void maximize();
 
     /* signal handlers */
     void on_close_click(tiny::Object *o, const XEvent &e, void * data);
@@ -61,7 +63,13 @@ class Window: public tiny::Container {
     void on_property_notify(const XEvent &e, void *data);
 
     bool is_minimized = false;
+    bool is_maximize = false;
     bool is_resizable = true;
+
+    uint32_t state_width;
+    uint32_t state_height;
+    int state_x;
+    int state_y;
 
     ::Window child;
     XSizeHints * hints;

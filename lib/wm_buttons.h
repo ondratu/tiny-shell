@@ -36,8 +36,12 @@ class MaximizeButton: public Button {
 
     virtual ~MaximizeButton();
 
+    void set_restore(bool restore);
   protected:
     virtual void on_expose(const XEvent &e, void *data);
+
+  private:
+    bool restore;
 };
 
 

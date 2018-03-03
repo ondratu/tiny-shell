@@ -114,6 +114,9 @@ void Window::set_events(long mask)
         this,
         static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
 
+    cls_btn.on_click.connect(this,
+            static_cast<tiny::object_signal_t>(&Window::on_close_click));
+
     if (is_resizable)
     {
         shadow.on_move_resize_begin.connect(
@@ -122,11 +125,9 @@ void Window::set_events(long mask)
         shadow.on_move_resize_motion.connect(
             this,
             static_cast<tiny::object_signal_t>(&Window::on_move_resize_motion));
+        max_btn.on_click.connect(this,
+                static_cast<tiny::object_signal_t>(&Window::on_maximize_click));
     }
-
-
-    cls_btn.on_click.connect(this,
-            static_cast<tiny::object_signal_t>(&Window::on_close_click));
 }
 
 void Window::map_all(){
@@ -195,26 +196,76 @@ void Window::close()
 
 void Window::minimize()
 {
-    printf("minimize\n");
     // TODO: set state
     is_minimized = true;
     unmap();
     XSetInputFocus(display, parent, RevertToPointerRoot, CurrentTime);
 }
 
-void Window::restore()
+void Window::maximize()
 {
-    printf("restore\n");
-    is_minimized = false;
-    map();
+    if (is_maximize){
+        return;
+    }
+    XWindowAttributes win_attrs;
+    XGetWindowAttributes(display, window, &win_attrs);
+    state_width = width;
+    state_height = height;
+    state_x = win_attrs.x;
+    state_y = win_attrs.y;
+
+    XWindowAttributes root_attrs;   //TODO: get_screen size
+    XGetWindowAttributes(display, parent, &root_attrs);
+
+    XSetWindowBorderWidth(display, window, 0);
+    XMoveResizeWindow(display, window, 0, 0,
+            root_attrs.width, root_attrs.height);
+    XResizeWindow(display, child,
+            root_attrs.width, root_attrs.height-WM_WIN_HEADER);
+    shadow.move_resize(0, 0, root_attrs.width, root_attrs.height);
+    header.resize(root_attrs.width, WM_WIN_HEADER);
+
+    max_btn.set_restore(true);
+    is_maximize = true;
+}
+
+void Window::restore(int x, int y)
+{
+    if (is_maximize){
+        // TODO: move state_x near to pointer (x), which is on wm_window
+        // TODO: move statr_y near to pointer (y), which is on wm_window
+
+        shadow.move_resize(0, 0, state_width, state_height);
+        header.resize(state_width, WM_WIN_HEADER);
+        XResizeWindow(display, child,
+                state_width, state_height-WM_WIN_HEADER);
+        XMoveResizeWindow(display, window,
+                state_x, (y ? y : state_y), state_width, state_height);
+        XSetWindowBorderWidth(display, window, 1);
+
+        max_btn.set_restore(false);
+        is_maximize = false;
+    } else {
+        map();
+        is_minimized = false;
+    }
 }
 
 void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
     close();
 }
 
+void Window::on_maximize_click(tiny::Object *o, const XEvent &e, void *data){
+    if (is_maximize){
+        restore();
+    } else {
+        maximize();
+    }
+}
+
 void Window::on_move_resize_begin(tiny::Object *o, const XEvent &e, void *data)
 {
+    is_maximize = false;
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);
     long int size_retun;
@@ -237,12 +288,23 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
     uint16_t mask = reinterpret_cast<size_t>(data);
     int xdiff = 0;
     int ydiff = 0;
+    int mod;
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
         xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+        mod = xdiff % hints->width_inc;
+        if (mod) {
+            xdiff -= (hints->width_inc - std::abs(mod));
+        }
     }
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+        mod = ydiff % hints->height_inc;
+        if (mod) {
+            printf("mod: %d, ydiff: %d, height_inc: %d start: %d\n",
+                    mod, ydiff, hints->height_inc, start_attrs.height);
+            ydiff -= (hints->height_inc - std::abs(mod));
+        }
     }
 
     int width = start_attrs.width;
@@ -303,6 +365,9 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
 void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
 {
     set_focus();     // check if is not have focus yet
+    if (is_maximize){
+        restore(e.xmotion.x, e.xmotion.y);
+    }
 
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);

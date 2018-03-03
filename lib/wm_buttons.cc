@@ -63,7 +63,7 @@ void CloseButton::on_expose(const XEvent &e, void *data)
 
 
 
-MaximizeButton::MaximizeButton():Button()
+MaximizeButton::MaximizeButton():Button(), restore(false)
 {}
 
 MaximizeButton::~MaximizeButton()
@@ -81,19 +81,34 @@ void MaximizeButton::on_expose(const XEvent &e, void *data)
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
 
-    XPoint points[5] = {
-        tiny::x_point(mid_x-3, mid_y-3),
-        tiny::x_point(mid_x+3, mid_y-3),
-        tiny::x_point(mid_x+3, mid_y+3),
-        tiny::x_point(mid_x-3, mid_y+3),
-        tiny::x_point(mid_x-3, mid_y-3)};
-
-    // maybe CoordModePrevious
-    XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
-
+    if (restore){
+        XPoint points[5] = {
+            tiny::x_point(mid_x-2, mid_y-1),
+            tiny::x_point(mid_x+2, mid_y-1),
+            tiny::x_point(mid_x+2, mid_y+3),
+            tiny::x_point(mid_x-2, mid_y+3),
+            tiny::x_point(mid_x-2, mid_y-1)};
+        // maybe CoordModePrevious
+        XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
+    } else {
+        XPoint points[5] = {
+            tiny::x_point(mid_x-3, mid_y-3),
+            tiny::x_point(mid_x+3, mid_y-3),
+            tiny::x_point(mid_x+3, mid_y+3),
+            tiny::x_point(mid_x-3, mid_y+3),
+            tiny::x_point(mid_x-3, mid_y-3)};
+        // maybe CoordModePrevious
+        XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
+    }
     XFreeGC(display, gc);
 }
 
+void MaximizeButton::set_restore(bool _restore)
+{
+    restore = _restore;
+    XClearWindow(display, window);
+    on_expose(XEvent(), nullptr);
+}
 
 
 MinimizeButton::MinimizeButton():Button()
