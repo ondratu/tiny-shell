@@ -292,14 +292,14 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
         xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-        mod = xdiff % hints->width_inc;
+        mod = (hints->width_inc ? xdiff % hints->width_inc : 0);
         if (mod) {
             xdiff -= (hints->width_inc - std::abs(mod));
         }
     }
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-        mod = ydiff % hints->height_inc;
+        mod = (hints->height_inc ? ydiff % hints->height_inc : 0);
         if (mod) {
             printf("mod: %d, ydiff: %d, height_inc: %d start: %d\n",
                     mod, ydiff, hints->height_inc, start_attrs.height);
