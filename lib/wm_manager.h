@@ -23,6 +23,9 @@ class Manager: public tiny::Object {
 
     void activate_prev_window();
 
+    /* signal event handlers */
+    void on_window_focus(tiny::Object *o, const XEvent &e, void *data);
+
     /* direct event handlers */
     void on_key_press(const XKeyEvent &e);
 
@@ -34,11 +37,13 @@ class Manager: public tiny::Object {
 
     void on_configure_request(const XConfigureRequestEvent &e);
 
-    Display * display;
+    Display *display;
     ::Window root;
+    Window *active;
 
     std::map<::Window, Window*> wm_windows;
     std::list<Window*> wm_tops;
+    bool key_done;
 };
 
 } // namespace wm

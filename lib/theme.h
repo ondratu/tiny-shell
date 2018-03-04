@@ -25,8 +25,8 @@
 #define WM_WIN_HEADER           25
 #define WM_WIN_HEADER_PADDING   2
 #define WM_WIN_HEADER_XFT_FONT  "Cantarell-12:bold"
-#define WM_WIN_HEADER_XFT_COLOR_NORMAL     "#2E3436"
-#define WM_WIN_HEADER_XFT_COLOR_DISABLE    "#4E5456"
+#define WM_WIN_HEADER_XFT_COLOR_NORMAL     "#0E1416"
+#define WM_WIN_HEADER_XFT_COLOR_DISABLE    "#6E7476"
 
 #define WM_WIN_BORDER           10
 #define WM_WIN_CORNER           WM_WIN_BORDER*2

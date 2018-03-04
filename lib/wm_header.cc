@@ -106,6 +106,14 @@ void Header::set_title(const std::string &title)
     }
 }
 
+void Header::set_disable(bool disable)
+{
+    is_disable = disable;
+    if (is_maped) {
+        on_expose(XEvent(), nullptr);
+    }
+}
+
 void Header::on_expose(const XEvent &e, void * data)
 {
     XftColor color;
