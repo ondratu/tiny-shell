@@ -12,6 +12,7 @@ Window::Window(::Window child, uint32_t width, uint32_t height):
     shadow(width, height+WM_WIN_HEADER)
 {
     hints = XAllocSizeHints();
+    header.set_disable(true);
 }
 
 Window::~Window(){
@@ -108,11 +109,11 @@ void Window::set_events(long mask)
             static_cast<tiny::event_signal_t>(&Window::on_property_notify));
 
     header.get_title_box()->on_drag_begin.connect(
-        this,
-        static_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
+            this,
+            static_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
     header.get_title_box()->on_drag_motion.connect(
-        this,
-        static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
+            this,
+            static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
 
     cls_btn.on_click.connect(this,
             static_cast<tiny::object_signal_t>(&Window::on_close_click));
@@ -141,9 +142,10 @@ void Window::map_all(){
 
 void Window::set_focus()
 {
-    XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
+    printf("Window::set_focus...\n");
     XRaiseWindow(display, shadow.get_window());
     XRaiseWindow(display, window);
+    XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
 
     const Atom WM_TAKE_FOCUS = XInternAtom(
         display, "WM_TAKE_FOCUS", false);
@@ -396,14 +398,15 @@ void Window::on_button_press(const XEvent &e, void* data)
 
 void Window::on_focus_in(const XEvent &e, void* data)
 {
-    printf("\ton_focus_in\n");
+    header.set_disable(false);
     // TODO: check, if grab is not clen (propagete mask??)
     XUngrabButton(display, Button1, AnyModifier, window);
+    on_focus(this, e, nullptr);
 }
 
 void Window::on_focus_out(const XEvent &e, void* data)
 {
-    printf("\ton_focus_out\n");
+    header.set_disable(true);
     XGrabButton(            // on click
         display, Button1, AnyModifier, window, true,
         ButtonPressMask,

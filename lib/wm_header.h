@@ -43,6 +43,8 @@ class Header: public tiny::Box {
     inline TitleBox* get_title_box()
     { return &title_box; }
 
+    void set_disable(bool disable);
+
   protected:
         void on_expose(const XEvent &e, void *data);
 

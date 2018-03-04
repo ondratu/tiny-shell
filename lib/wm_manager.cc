@@ -24,17 +24,30 @@ Manager::Manager():
     ::Window *rv_child;
     uint32_t rv_ccount;
 
+    XGrabServer(display);       // lock the X server for new events
+    ::Window active;
+    int revert;
+    XGetInputFocus(display, &active, &revert);
+    printf("active window is :%x\n", active);
+
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
     for (uint32_t i = 0; i < rv_ccount; ++i){
         Window * window = Window::create(display, root, rv_child[i]);
         wm_windows[rv_child[i]] = window;
         wm_tops.push_back(window);
+        window->on_focus.connect(this,
+                static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
+        if (active == rv_child[i]){
+            printf("yippie find the active winodow\n");
+            window->set_focus();
+        }
     }
     XFree(rv_child);
 
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
     XClearWindow(display, root);
     set_events();
+    XUngrabServer(display);     // unlock the X server
 }
 
 Manager::~Manager(){
@@ -54,24 +67,12 @@ void Manager::set_events()
             display, XKeysymToKeycode(display, XK_Tab),
             Mod1Mask|ShiftMask, root, true, GrabModeAsync, GrabModeAsync);
 
-    XGrabKey(           // Tab              // XXX Debug only
-            display, XKeysymToKeycode(display, XK_F2),
-            AnyModifier, root, true, GrabModeAsync, GrabModeAsync);
-    XGrabKey(           // Shift + Tab      // XXX Debug only
-            display, XKeysymToKeycode(display, XK_F2),
-            ShiftMask, root, true, GrabModeAsync, GrabModeAsync);
-
     XGrabKey(           // Alt + F4
             display, XKeysymToKeycode(display, XK_F4),
             Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
-    XGrabKey(           // Shift + Tab
-            display, XKeysymToKeycode(display, XK_F4),
-            ShiftMask, root, true, GrabModeAsync, GrabModeAsync);
-
-    // ShiftMask not work without AnyModifier
-    XGrabKey(           // Shift + Tab      // XXX Debug only
-            display, XKeysymToKeycode(display, XK_F4),
-            AnyModifier, root, true, GrabModeAsync, GrabModeAsync);
+    XGrabKey(           // Alt + F2
+            display, XKeysymToKeycode(display, XK_F2),
+            Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
 }
 
 void Manager::main_loop()
@@ -122,14 +123,10 @@ void Manager::activate_next_window()
         return;     // no window to activate
     }
 
-    ::Window active;
-    int revert;
-    XGetInputFocus(display, &active, &revert);
-
     Window * next = *wm_tops.cbegin();
     for (auto it = wm_tops.cbegin(); it != wm_tops.cend(); ++it){
-        if (active == (*it)->get_window()){
-            if (++it == wm_tops.cend()){
+        if (active == *it) {
+            if (++it == wm_tops.cend()) {
                 it = wm_tops.cbegin();
             }
             next = *it;
@@ -137,15 +134,9 @@ void Manager::activate_next_window()
         }
     }
 
-    printf("next is minimized: %d\n", next->get_minimized());
     if (next->get_minimized()){
         next->restore();
     }
-
-    // FIXME: Not work / pointer is out, applications not accept kayboard
-
-    // XRaiseWindow(display, next->window);
-    // XSetInputFocus(display, next->window, RevertToPointerRoot, CurrentTime);
     next->set_focus();
 }
 
@@ -155,14 +146,10 @@ void Manager::activate_prev_window()
         return;     // no window to activate
     }
 
-    ::Window active;
-    int revert;
-    XGetInputFocus(display, &active, &revert);
-
     Window* prev = *wm_tops.crbegin();
-    for (auto it = wm_tops.crbegin(); it != wm_tops.crend(); ++it){
-        if (active == (*it)->get_window()){
-            if (++it == wm_tops.crend()){
+    for (auto it = wm_tops.crbegin(); it != wm_tops.crend(); ++it) {
+        if (active == *it) {
+            if (++it == wm_tops.crend()) {
                 it = wm_tops.crbegin();
             }
             prev = *it;
@@ -172,54 +159,71 @@ void Manager::activate_prev_window()
     if (prev->get_minimized()){
         prev->restore();
     }
-    //XRaiseWindow(display, prev->window);
-    //XSetInputFocus(display, prev->window, RevertToPointerRoot, CurrentTime);
     prev->set_focus();
+}
+
+void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
+    active = static_cast<Window*>(o);
 }
 
 void Manager::on_key_press(const XKeyEvent &e)
 {
+    printf("\tManager::on_key_press\n");
     /* Alt F4 */
-    if (e.keycode == XKeysymToKeycode(display, XK_F4) &&
-       ((e.state & ShiftMask) == ShiftMask ||      // XXX: debug only
-        (e.state & Mod1Mask) == Mod1Mask))
+    if (e.keycode == XKeysymToKeycode(display, XK_F4))
     {
         ::Window active;
         int revert;
         XGetInputFocus(display, &active, &revert);
         if (active > 1){    // not to close root window
             // TODO: do_close_window(active);
+            printf("close the window...\n");
         }
+        key_done = true;
+        return;
     }
 
-    fprintf(stderr, "Unhalded key event: %u\n", e.keycode);
+    /* Alt F2 */
+    if (e.keycode == XKeysymToKeycode(display, XK_F2))
+    {
+        printf("TODO: run dialog\n");
+        key_done = true;
+        return;
+    }
+    fprintf(stderr, "%d Manager::on_key_press Unhalded key event: %x\n",
+            e.time, e.keycode);
+    key_done = false;
 }
 
 void Manager::on_key_release(const XKeyEvent &e)
 {
+    printf("%d Manager::on_key_release %x\n", e.time, e.keycode);
+    if (key_done){
+        return;         // key is handled in on_key_press
+    }
+
     /* Alt + Tab or Alt + Shift + Tab */
-    if (e.keycode == XKeysymToKeycode(display, XK_Tab) ||
-        e.keycode == XKeysymToKeycode(display, XK_F2))
+    if (e.keycode == XKeysymToKeycode(display, XK_Tab))
     {
-        if (e.type == KeyRelease){
-            if ((e.state & ShiftMask) == ShiftMask){
-                printf("call activate_prev_window\n");
-                activate_prev_window();
-            } else {
-                printf("call activate_next_window\n");
-                activate_next_window();
-            }
+        if (e.state & ShiftMask){
+            printf("call activate_prev_window\n");
+            activate_prev_window();
+        } else {
+            printf("call activate_next_window\n");
+            activate_next_window();
         }
         return;
     }
 
-    fprintf(stderr, "Unhalded key event: %u\n", e.keycode);
+    fprintf(stderr, "%d Manager::on_key_release Unhalded key event: %x\n",
+            e.time, e.keycode);
 }
 
 void Manager::on_unmap_notify(const XUnmapEvent &e)
 {
     // TODO: could be append to signal handlers on wm_window.window
     if (wm_windows.count(e.window)){
+        activate_prev_window();
         Window * window = wm_windows[e.window];
         wm_tops.remove(window);
         delete (window);
@@ -233,6 +237,9 @@ void Manager::on_map_request(const XMapRequestEvent &e)
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
     XMapWindow(display, e.window);
+    window->on_focus.connect(this,
+            static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
+    window->set_focus();
 }
 
 void Manager::on_configure_request(const XConfigureRequestEvent &e)
