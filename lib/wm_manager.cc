@@ -25,20 +25,16 @@ Manager::Manager():
     uint32_t rv_ccount;
 
     XGrabServer(display);       // lock the X server for new events
-    ::Window active;
-    int revert;
-    XGetInputFocus(display, &active, &revert);
-    printf("active window is :%x\n", active);
-
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
-    for (uint32_t i = 0; i < rv_ccount; ++i){
+    rv_ccount -= 1;
+    for (uint32_t i = 0; i <= rv_ccount; ++i){
+        printf("wm %x\n", rv_child[i]);
         Window * window = Window::create(display, root, rv_child[i]);
         wm_windows[rv_child[i]] = window;
         wm_tops.push_back(window);
         window->on_focus.connect(this,
                 static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
-        if (active == rv_child[i]){
-            printf("yippie find the active winodow\n");
+        if (i == rv_ccount){
             window->set_focus();
         }
     }
@@ -163,6 +159,7 @@ void Manager::activate_prev_window()
 }
 
 void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
+    printf("Manager::on_window_focus\n");
     active = static_cast<Window*>(o);
 }
 
