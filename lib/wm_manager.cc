@@ -18,6 +18,20 @@ Manager::Manager():
     root = XDefaultRootWindow(display);
 
     XDefineCursor(display, root, XCreateFontCursor(display, XC_arrow));
+
+    ::Window rv_root;
+    ::Window rv_parent;
+    ::Window *rv_child;
+    uint32_t rv_ccount;
+
+    XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
+    for (uint32_t i = 0; i < rv_ccount; ++i){
+        Window * window = Window::create(display, root, rv_child[i]);
+        wm_windows[rv_child[i]] = window;
+        wm_tops.push_back(window);
+    }
+    XFree(rv_child);
+
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
     XClearWindow(display, root);
     set_events();
