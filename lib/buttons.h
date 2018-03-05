@@ -1,6 +1,7 @@
 #pragma once
 
 #include "widget.h"
+#include "containers.h"
 
 namespace tiny {
 
@@ -66,6 +67,27 @@ class LabelButton: public Button {
   private:
     XftFont *font;
     const int screen;       // XXX: this is zero for now
+};
+
+
+class MenuButton: public LabelButton {
+  public:
+    MenuButton(uint32_t width, uint32_t height, const std::string &text,
+            const std::string &font=WIDGET_XFT_FONT,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
+
+    ~MenuButton();
+
+    virtual void set_events(long mask=0);
+
+    void set_popover(Popover *popover);
+
+  private:
+    virtual void do_popup(Object *o, const XEvent &e, void *data);
+
+    Popover *popover;
 };
 
 } // namespace

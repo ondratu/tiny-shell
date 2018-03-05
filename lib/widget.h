@@ -39,6 +39,12 @@ class Widget: public Object {
     inline uint32_t get_height() const
     { return height; }
 
+    inline bool get_maped() const
+    { return is_maped; }
+
+    inline bool get_realized() const
+    { return is_realized; }
+
     virtual void set_events(long mask=0);
 
     virtual void map();
@@ -64,6 +70,7 @@ class Widget: public Object {
     Window window;
 
     long event_mask;
+    bool event_done;
     uint32_t width;
     uint32_t height;
 

@@ -1,5 +1,7 @@
 #include <X11/cursorfont.h>
 
+#include <sys/time.h>
+
 #include "containers.h"
 
 namespace tiny {
@@ -120,6 +122,74 @@ void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
         add(widget, x_spacing, end_offset,
                 (gravity == AutoGravity ? SouthEastGravity : gravity));
     }
+}
+
+
+
+Popover::Popover(uint32_t width, uint32_t height,
+        uint32_t border, uint32_t border_color, uint32_t background):
+    Box(Box::Type::Vertical, width, height, border, border_color, background)
+{}
+
+Popover::Popover(Box::Type type, uint32_t width, uint32_t height,
+        uint32_t border, uint32_t border_color, uint32_t background):
+    Box(type, width, height, border, border_color, background),
+    time_from_unmap(0)
+{}
+
+Popover::~Popover()
+{
+    if (event_done) {
+        disconnect(FocusOut);
+    }
+}
+
+void Popover::realize(Display *display, ::Window root, int x, int y)
+{
+    Box::realize(display, root, x, y);
+    XSetWindowAttributes attrs;
+    attrs.override_redirect = true;
+
+    XChangeWindowAttributes(display, window, CWOverrideRedirect, &attrs);
+}
+
+void Popover::set_events(long mask){
+    connect(FocusOut,
+           static_cast<event_signal_t>(&Popover::on_focus_out));
+
+    Box::set_events(mask|FocusChangeMask);
+}
+
+void Popover::popup(int x, int y)
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+ 
+    if (ms - time_from_unmap < 200){    // 200 ms timeout
+        return;
+    }
+
+    // TODO: shift x to could show on root
+    // TODO: shift y to could show on root
+
+    x -= width/2;   // center the popover under x
+
+    XMoveWindow(display, window, x, y);
+    map_all();
+    XSetInputFocus(display, window, RevertToPointerRoot, CurrentTime);
+}
+
+void Popover::popup(const XButtonEvent &be){
+    popup(be.x_root, be.y_root);
+}
+
+void Popover::on_focus_out(const XEvent &e, void *)
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    time_from_unmap = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    unmap();
 }
 
 } // namespace tiny

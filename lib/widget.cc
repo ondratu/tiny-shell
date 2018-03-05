@@ -28,7 +28,9 @@ Widget::Widget(uint32_t width, uint32_t height,
 Widget::~Widget(){
     unmap();
 
-    disconnect(ResizeRequest);
+    if (event_done){
+        disconnect(ResizeRequest);
+    }
     if (window) {
         XDestroyWindow(display, window);
     }
@@ -40,6 +42,7 @@ void Widget::set_events(long mask){
 
     connect(ConfigureNotify,
             static_cast<tiny::event_signal_t>(&Widget::on_configure_notify));
+    event_done = true;
 }
 
 void Widget::realize(Display * display, Window parent, int x, int y)

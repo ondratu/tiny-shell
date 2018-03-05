@@ -79,4 +79,31 @@ class Box: public Container {
 };
 
 
+class Popover: public Box {
+  public:
+    Popover(uint32_t width, uint32_t height,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
+    Popover(Box::Type type, uint32_t width, uint32_t height,
+            uint32_t border=WIDGET_BORDER,
+            uint32_t border_color=WIDGET_BORDER_COLOR,
+            uint32_t background=WIDGET_BACKGROUND);
+
+    virtual ~Popover();
+
+    virtual void realize(Display *display, ::Window root, int x = 0, int y=0);
+
+    virtual void set_events(long mask=0);
+
+    void popup(int x, int y);
+    void popup(const XButtonEvent &be);
+
+  protected:
+    void on_focus_out(const XEvent &e, void *);
+
+  private:
+    long int time_from_unmap;
+};
+
 } // namespace tiny

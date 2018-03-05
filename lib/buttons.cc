@@ -1,4 +1,5 @@
 #include "buttons.h"
+#include "containers.h"
 
 namespace tiny {
 
@@ -10,10 +11,12 @@ Button::Button(uint32_t width, uint32_t height,
 
 Button::~Button()
 {
-    XUngrabButton(display, Button1, AnyModifier, window);
-    disconnect(EnterNotify);
-    disconnect(LeaveNotify);
-    disconnect(ButtonRelease);
+    if (event_done) {
+        XUngrabButton(display, Button1, AnyModifier, window);
+        disconnect(EnterNotify);
+        disconnect(LeaveNotify);
+        disconnect(ButtonRelease);
+    }
 }
 
 void Button::set_events(long mask)
@@ -31,7 +34,6 @@ void Button::set_events(long mask)
             static_cast<event_signal_t>(&Button::on_leave_notify));
     connect(ButtonRelease,
             static_cast<event_signal_t>(&Button::on_button_release));
-
 }
 
 void Button::on_enter_notify(const XEvent &e, void *){
@@ -128,6 +130,38 @@ void LabelButton::on_expose(const XEvent &e, void * data)
 
     XftDrawDestroy(draw);
     XftColorFree(display, visual, colormap, &color);
+}
+
+
+
+MenuButton::MenuButton(uint32_t width, uint32_t height, const std::string &text,
+            const std::string &font, uint32_t border, uint32_t border_color,
+            uint32_t background):
+    LabelButton(width, height, text, font, border, border_color, background)
+{}
+
+MenuButton::~MenuButton()
+{}
+
+void MenuButton::set_events(long mask)
+{
+    on_click.connect(this,
+            static_cast<object_signal_t>(&MenuButton::do_popup));
+    LabelButton::set_events(mask);
+}
+
+void MenuButton::set_popover(Popover *popover)
+{
+    this->popover = popover;
+}
+
+void MenuButton::do_popup(Object *o, const XEvent &e, void *data)
+{
+    if (popover && !popover->get_maped()){
+        int x = e.xbutton.x_root - e.xbutton.x + width/2;
+        int y = e.xbutton.y_root - e.xbutton.y + height;
+        popover->popup(x, y);       // center x, y under Button
+    }
 }
 
 } // namespace tiny
