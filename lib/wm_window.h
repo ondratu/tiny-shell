@@ -53,9 +53,15 @@ class Window: public tiny::Container {
     void on_window_drag_motion(tiny::Object *o, const XEvent &e, void * data);
 
     tiny::Signal on_focus;
+    tiny::Signal on_drag_begin;
+    tiny::Signal on_drag_motion;
   protected:
     /* event handlers */
     void on_button_press(const XEvent &e, void *data);
+
+    void on_button_release(const XEvent &e, void *data);
+
+    void on_motion_notify(const XEvent &e, void *data);
 
     void on_focus_in(const XEvent &e, void *data);
 
