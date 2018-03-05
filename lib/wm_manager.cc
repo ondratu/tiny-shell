@@ -26,20 +26,20 @@ Manager::Manager():
 
     XGrabServer(display);       // lock the X server for new events
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
-    rv_ccount -= 1;
-    for (uint32_t i = 0; i <= rv_ccount; ++i){
-        printf("wm %x\n", rv_child[i]);
-        Window * window = Window::create(display, root, rv_child[i]);
-        wm_windows[rv_child[i]] = window;
-        wm_tops.push_back(window);
-        window->on_focus.connect(this,
-                static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
-        if (i == rv_ccount){
-            window->set_focus();
+    if (rv_ccount){
+        rv_ccount -= 1;
+        for (uint32_t i = 0; i <= rv_ccount; ++i){
+            Window * window = Window::create(display, root, rv_child[i]);
+            wm_windows[rv_child[i]] = window;
+            wm_tops.push_back(window);
+            window->on_focus.connect(this,
+                    static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
+            if (i == rv_ccount){
+                window->set_focus();
+            }
         }
+        XFree(rv_child);
     }
-    XFree(rv_child);
-
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
     XClearWindow(display, root);
     set_events();
