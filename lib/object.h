@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <map>
 
+#define TINY_LOG(format...) \
+    tiny::log((const char*) __FILE__, (const char*) __FUNCTION__, \
+              __LINE__, format)
+
 namespace tiny {
 
 class Object;
@@ -63,4 +67,9 @@ class Object {
     void disconnect_window (uint16_t event_type, Window window);
 };
 
+
+void log(const char *file, const char* function, uint32_t line,
+        const char *format, ...);
+
+void error(const char *format, ...);
 } // namespace tiny

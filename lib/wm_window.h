@@ -21,8 +21,11 @@ class Window: public tiny::Container {
 
     virtual void map_all();
 
-    inline const bool get_minimized() const
+    inline bool get_minimized() const
     { return is_minimized; }
+
+    inline ::Window get_child() const
+    { return child; }
 
     void set_focus();
 

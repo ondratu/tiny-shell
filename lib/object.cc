@@ -1,3 +1,6 @@
+#include <sys/time.h>
+#include <stdarg.h>
+
 #include "object.h"
 
 namespace tiny {
@@ -57,5 +60,38 @@ void Object::disconnect_window(uint16_t event_type, Window window)
 {
     handlers.unset_handler(event_type, window);
 }
+
+void log(const char *file, const char* function, uint32_t line,
+        const char *format, ...)
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    int64_t time_stamp = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+    char * buffer = NULL;
+    va_list args;
+    va_start(args, format);
+    vasprintf(&buffer, format, args);
+    va_end(args);
+
+    fprintf(stderr, "%ld in %s: %s (%s:%u)\n",
+            time_stamp, function, buffer, file, line);
+}
+
+void error(const char *format, ...)
+{
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    //int64_t time_stamp = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+    char * buffer = NULL;
+    va_list args;
+    va_start(args, format);
+    vasprintf(&buffer, format, args);
+    va_end(args);
+
+    fprintf(stderr, "%ld.%04ld %s\n", tp.tv_sec, tp.tv_usec, buffer);
+}
+
 
 } // namespace tiny

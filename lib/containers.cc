@@ -60,7 +60,7 @@ void Container::map_all(){
 void Container::add(Widget * widget, int x, int y, int gravity)
 {
     if (!is_realized) {
-        throw std::runtime_error("Box must be realized");
+        return error("tiny::Container must be realized");
     }
     widget->realize(display, window, x, y);
     if (gravity != NorthWestGravity){
@@ -128,7 +128,8 @@ void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
 
 Popover::Popover(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
-    Box(Box::Type::Vertical, width, height, border, border_color, background)
+    Box(Box::Type::Vertical, width, height, border, border_color, background),
+    time_from_unmap(0)
 {}
 
 Popover::Popover(Box::Type type, uint32_t width, uint32_t height,
@@ -165,7 +166,7 @@ void Popover::popup(int x, int y)
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
- 
+
     if (ms - time_from_unmap < 200){    // 200 ms timeout
         return;
     }

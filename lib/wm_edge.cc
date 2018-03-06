@@ -11,7 +11,9 @@ Edge::Edge(uint32_t width, uint32_t height, uint16_t mask):
 
 Edge::~Edge()
 {
-    XUngrabButton(display, Button1, AnyModifier, window);
+    if (event_done){
+        XUngrabButton(display, Button1, AnyModifier, window);
+    }
 }
 
 void Edge::realize(Display * display, Window parent, int x, int y)
@@ -164,13 +166,17 @@ void BackWindow::resize(uint32_t width, uint32_t height)
 }
 
 void BackWindow::move(int x, int y){
-    XMoveWindow(display, window, x-WM_WIN_BORDER, y-WM_WIN_BORDER);
+    if (is_realized){
+        XMoveWindow(display, window, x-WM_WIN_BORDER, y-WM_WIN_BORDER);
+    }
 }
 
 void BackWindow::move_resize(int x, int y, uint32_t width, uint32_t height)
 {
-    XMoveResizeWindow(display, window, x-WM_WIN_BORDER, y-WM_WIN_BORDER,
-            width+2*WM_WIN_BORDER, height+2*WM_WIN_BORDER);
+    if (is_realized){
+        XMoveResizeWindow(display, window, x-WM_WIN_BORDER, y-WM_WIN_BORDER,
+                width+2*WM_WIN_BORDER, height+2*WM_WIN_BORDER);
+    }
 }
 
 void BackWindow::on_edge_drag_begin(Object *o, const XEvent &e, void *data)

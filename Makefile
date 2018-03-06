@@ -4,7 +4,7 @@ X11_LIBS = $(shell pkg-config --libs x11)
 XFT_CFLAGS = $(shell pkg-config --cflags xft)
 XFT_LIBS = $(shell pkg-config --libs xft)
 
-CXXFLAGS = -MMD -std=c++11 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS)
+CXXFLAGS = -MMD -g -std=c++11 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS)
 LDFLAGS = -O2 $(X11_LIBS) $(XFT_LIBS)
 
 PKGS = x11 xft
@@ -41,6 +41,13 @@ input_only: lib/libtiny.a input_only.o
 
 wm_test: lib/libtiny.a wm_test.o
 	$(CXX) $(LDFLAGS) wm_test.o -L./lib -ltiny -o wm_test
+
+menu: lib/libtiny.a menu.o
+	$(CXX) $(LDFLAGS) menu.o -L./lib -ltiny -o menu
+
+test_memory: lib/libtiny.a test_memory.o
+	$(CXX) $(LDFLAGS) test_memory.o -L./lib -ltiny -o test_memory
+
 
 $(OBJ): .pkg_check
 $(LIB_OBJ): .pkg_check

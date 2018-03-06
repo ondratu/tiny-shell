@@ -48,7 +48,7 @@ void Widget::set_events(long mask){
 void Widget::realize(Display * display, Window parent, int x, int y)
 {
     if (is_realized){
-        throw std::runtime_error("Widget is realized yet!");
+        return error("tiny::Widget is realized yet!");
     }
     this->display = display;
     this->parent = parent;
@@ -92,12 +92,12 @@ void Widget::realize(Display * display, Window parent, int x, int y)
 
 void Widget::map()
 {
-    if (is_realized){
-        XMapWindow(display, window);
-        is_maped = true;
-    } else {
-        throw std::runtime_error("Window is not realized.");
+    if (!is_realized){
+        return error("tiny::Widget is not realized");
     }
+
+    XMapWindow(display, window);
+    is_maped = true;
 }
 
 void Widget::map_all(){

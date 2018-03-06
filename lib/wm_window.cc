@@ -153,18 +153,23 @@ void Window::set_events(long mask)
 }
 
 void Window::map_all(){
-    shadow.map_all();
+    if (is_resizable){
+        shadow.map_all();
+    }
     tiny::Container::map_all();
 
     // set_focus();
-    XRaiseWindow(display, shadow.get_window());     // shadow is lower
+    if (is_resizable){
+        XRaiseWindow(display, shadow.get_window());     // shadow is lower
+    }
     XRaiseWindow(display, window);
 }
 
 void Window::set_focus()
 {
-    printf("Window::set_focus...\n");
-    XRaiseWindow(display, shadow.get_window());
+    if (is_resizable){
+        XRaiseWindow(display, shadow.get_window());
+    }
     XRaiseWindow(display, window);
     XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
 
@@ -175,9 +180,10 @@ void Window::set_focus()
 
     Atom* supported;
     int count;
-    if (XGetWMProtocols(display, child, &supported, &count) &&
-            (std::find(supported, supported + sizeof(Atom)*count,
-                       WM_TAKE_FOCUS) != supported + sizeof(Atom)*count))
+    Status status = XGetWMProtocols(display, child, &supported, &count);
+    bool is_suported = (std::find(supported, supported + sizeof(Atom)*count,
+                             WM_TAKE_FOCUS) != supported + sizeof(Atom)*count);
+    if (status && is_suported)
     {
         XClientMessageEvent msg;
         msg.message_type = WM_PROTOCOLS;
@@ -189,11 +195,11 @@ void Window::set_focus()
 
         XSendEvent(display, child, false, NoEventMask, (XEvent*) &msg);
     }
+    XFree(supported);
 }
 
 void Window::close()
 {
-    printf("doing close...");
     const Atom WM_DELETE_WINDOW = XInternAtom(
         display, "WM_DELETE_WINDOW", false);
     const Atom WM_PROTOCOLS = XInternAtom(
@@ -245,7 +251,9 @@ void Window::maximize()
             root_attrs.width, root_attrs.height);
     XResizeWindow(display, child,
             root_attrs.width, root_attrs.height-WM_WIN_HEADER);
-    shadow.move_resize(0, 0, root_attrs.width, root_attrs.height);
+    if (is_resizable){
+        shadow.move_resize(0, 0, root_attrs.width, root_attrs.height);
+    }
     header.resize(root_attrs.width, WM_WIN_HEADER);
 
     max_btn.set_restore(true);
@@ -258,7 +266,9 @@ void Window::restore(int x, int y)
         // TODO: move state_x near to pointer (x), which is on wm_window
         // TODO: move statr_y near to pointer (y), which is on wm_window
 
-        shadow.move_resize(0, 0, state_width, state_height);
+        if (is_resizable) {
+            shadow.move_resize(0, 0, state_width, state_height);
+        }
         header.resize(state_width, WM_WIN_HEADER);
         XResizeWindow(display, child,
                 state_width, state_height-WM_WIN_HEADER);
@@ -401,7 +411,9 @@ void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
     int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
     int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
 
-    shadow.move(start_attrs.x + xdiff, start_attrs.y + ydiff);
+    if (is_resizable){
+        shadow.move(start_attrs.x + xdiff, start_attrs.y + ydiff);
+    }
     XMoveWindow(display, window,
         start_attrs.x + xdiff, start_attrs.y + ydiff);
 }

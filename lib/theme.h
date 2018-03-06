@@ -31,7 +31,7 @@
 #define WM_WIN_BORDER           10
 #define WM_WIN_CORNER           WM_WIN_BORDER*2
 
-#define WM_WIN_MIN_WIDTH        (WM_WIN_CORNER+WM_WIN_HEADER)
-#define WM_WIN_MIN_HEIGHT       (WM_WIN_CORNER+2*WM_WIN_HEADER)
+#define WM_WIN_MIN_WIDTH        10
+#define WM_WIN_MIN_HEIGHT       10+WM_WIN_HEADER
 
 #define WM_ROOT_BACKGROUND      0x729FCF

@@ -159,13 +159,11 @@ void Manager::activate_prev_window()
 }
 
 void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
-    printf("Manager::on_window_focus\n");
     active = static_cast<Window*>(o);
 }
 
 void Manager::on_key_press(const XKeyEvent &e)
 {
-    printf("\tManager::on_key_press\n");
     /* Alt F4 */
     if (e.keycode == XKeysymToKeycode(display, XK_F4))
     {
@@ -187,14 +185,14 @@ void Manager::on_key_press(const XKeyEvent &e)
         key_done = true;
         return;
     }
-    fprintf(stderr, "%d Manager::on_key_press Unhalded key event: %x\n",
+    fprintf(stderr, "%lu Manager::on_key_press Unhalded key event: %x\n",
             e.time, e.keycode);
     key_done = false;
 }
 
 void Manager::on_key_release(const XKeyEvent &e)
 {
-    printf("%d Manager::on_key_release %x\n", e.time, e.keycode);
+    printf("%lu Manager::on_key_release %x\n", e.time, e.keycode);
     if (key_done){
         return;         // key is handled in on_key_press
     }
@@ -212,7 +210,7 @@ void Manager::on_key_release(const XKeyEvent &e)
         return;
     }
 
-    fprintf(stderr, "%d Manager::on_key_release Unhalded key event: %x\n",
+    fprintf(stderr, "%lu Manager::on_key_release Unhalded key event: %x\n",
             e.time, e.keycode);
 }
 
