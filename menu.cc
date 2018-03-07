@@ -14,10 +14,9 @@ class Demo: public tiny::Box {
             main_button(100, 28, "Menu"),
             menu(150, 300)
     {
-        display = XOpenDisplay(NULL);
-        realize(display, DefaultRootWindow(display), 0, 0);
+        realize(XDefaultRootWindow(display), 0, 0);
 
-        menu.realize(display, DefaultRootWindow(display));
+        menu.realize(XDefaultRootWindow(display));
         push_start(&main_button);
         main_button.set_popover(&menu);
 
@@ -34,10 +33,6 @@ class Demo: public tiny::Box {
 
         set_events();
         map_all();
-    }
-
-    ~Demo(){
-        XCloseDisplay(display);
     }
 
     void set_events(){
@@ -85,6 +80,7 @@ class Demo: public tiny::Box {
 
 int main (int argc, char * argv[])
 {
+    tiny::Display::init();
     Demo demo;
     demo.main_loop();
     return 0;

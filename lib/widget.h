@@ -5,6 +5,7 @@
 #include <list>
 
 #include "object.h"
+#include "display.h"
 #include "theme.h"
 
 namespace tiny {
@@ -25,7 +26,7 @@ class Widget: public Object {
 
     virtual ~Widget();
 
-    virtual void realize(Display * display, Window parent, int x, int y);
+    virtual void realize(Window parent, int x, int y);
 
     inline const Window get_window() const
     { return window; }
@@ -65,7 +66,7 @@ class Widget: public Object {
     virtual void on_configure_notify(const XEvent &e, void *);
 
     Type type;
-    Display * display;
+    Display &display;
     Window parent;
     Window window;
 

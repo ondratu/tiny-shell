@@ -5,6 +5,10 @@
 
 #include "wm_window.h"
 
+namespace tiny {
+    extern std::shared_ptr<Display> display;
+}
+
 namespace wm {
 
 Window::Window(::Window child, uint32_t width, uint32_t height):
@@ -14,10 +18,12 @@ Window::Window(::Window child, uint32_t width, uint32_t height):
     shadow(width, height+WM_WIN_HEADER)
 {
     hints = XAllocSizeHints();
+    update_protocols();
 }
 
 Window::~Window(){
-    printf("Window::~Window\n");
+    disconnect_window(PropertyNotify, child);
+
     if (hints){
         XFree(hints);
     }
@@ -29,24 +35,23 @@ Window::~Window(){
     disconnect(MotionNotify);
     disconnect(FocusIn);
     disconnect(FocusOut);
-    disconnect_window(PropertyNotify, child);
 }
 
-Window* Window::create(Display *display, ::Window parent, ::Window child){
+Window* Window::create(::Window parent, ::Window child){
     XWindowAttributes attrs;
-    XGetWindowAttributes(display, child, &attrs);
+    XGetWindowAttributes(*tiny::display.get(), child, &attrs);
     auto win = new Window(child, attrs.width, attrs.height);
     // TODO: move down under panel
-    win->realize(display, parent, attrs.x, attrs.y);
+    win->realize(parent, attrs.x, attrs.y);
     win->on_focus_out(XEvent(), nullptr);   // disable and GrabButton
     win->map_all();
 
     return win;
 }
 
-void Window::realize(Display *display, ::Window parent, int x, int y)
+void Window::realize(::Window parent, int x, int y)
 {
-    tiny::Container::realize(display, parent, x, y);
+    tiny::Container::realize(parent, x, y);
 
     {   // Detect window, if is resizable
         long int size_retun;
@@ -62,7 +67,7 @@ void Window::realize(Display *display, ::Window parent, int x, int y)
     }
 
     if (is_resizable){
-        shadow.realize(display, parent, x, y);
+        shadow.realize(parent, x, y);
     }
 
     add(&header, 0, 0);
@@ -173,50 +178,30 @@ void Window::set_focus()
     XRaiseWindow(display, window);
     XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
 
-    const Atom WM_TAKE_FOCUS = XInternAtom(
-        display, "WM_TAKE_FOCUS", false);
-    const Atom WM_PROTOCOLS = XInternAtom(
-        display, "WM_PROTOCOLS", false);
-
-    Atom* supported;
-    int count;
-    Status status = XGetWMProtocols(display, child, &supported, &count);
-    bool is_suported = (std::find(supported, supported + sizeof(Atom)*count,
-                             WM_TAKE_FOCUS) != supported + sizeof(Atom)*count);
-    if (status && is_suported)
+    if (protocols.count(display.WM_TAKE_FOCUS))
     {
         XClientMessageEvent msg;
-        msg.message_type = WM_PROTOCOLS;
+        msg.message_type = display.WM_PROTOCOLS;
         msg.display = display;
         msg.window = child;
         msg.format = 32;
-        msg.data.l[0] = WM_TAKE_FOCUS;
+        msg.data.l[0] = display.WM_TAKE_FOCUS;
         msg.data.l[1] = CurrentTime;
 
         XSendEvent(display, child, false, NoEventMask, (XEvent*) &msg);
     }
-    XFree(supported);
 }
 
 void Window::close()
 {
-    const Atom WM_DELETE_WINDOW = XInternAtom(
-        display, "WM_DELETE_WINDOW", false);
-    const Atom WM_PROTOCOLS = XInternAtom(
-        display, "WM_PROTOCOLS", false);
-
-    Atom* supported;
-    int count;
-    if (XGetWMProtocols(display, child, &supported, &count) &&
-            (std::find(supported, supported + sizeof(Atom)*count,
-                       WM_DELETE_WINDOW) != supported + sizeof(Atom)*count))
+    if (protocols.count(display.WM_DELETE_WINDOW))
     {
         XClientMessageEvent msg;
         msg.window = child;
         msg.type = ClientMessage;
         msg.format = 32;
-        msg.message_type = WM_PROTOCOLS;
-        msg.data.l[0] = WM_DELETE_WINDOW;
+        msg.message_type = display.WM_PROTOCOLS;
+        msg.data.l[0] = display.WM_DELETE_WINDOW;
         XSendEvent(display, child, false, NoEventMask, (XEvent*) &msg);
     } else {
         XKillClient(display, child);
@@ -282,6 +267,36 @@ void Window::restore(int x, int y)
         map();
         is_minimized = false;
     }
+}
+
+void Window::update_protocols()
+{
+    protocols.clear();
+
+    Atom* supported;
+    int count;
+    Status status = XGetWMProtocols(display, child, &supported, &count);
+    for (size_t i =0; i < count; ++i){
+        protocols.insert(supported[i]);
+
+    }
+    XFree(supported);
+}
+
+void Window::update_properties()
+{
+    properties.clear();
+
+    int count;
+    Atom * props = XListProperties(display, child, &count);
+
+    for (int i=0; i < count; ++i){
+        properties.insert(props[i]);
+        char * prop_name = XGetAtomName(display, props[i]);
+        printf(" { Atom } %s\n", prop_name);
+        XFree(prop_name);
+    }
+    XFree(props);
 }
 
 void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
@@ -458,9 +473,12 @@ void Window::on_focus_out(const XEvent &e, void* data){
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
-    char *atom_name = XGetAtomName(display, e.xproperty.atom);
-    if (std::strcmp(atom_name, "WM_NAME") == 0)
-    {
+    if (e.xproperty.atom == display.WM_PROTOCOLS){
+        update_protocols();
+        return;
+    }
+
+    if (e.xproperty.atom == display.WM_NAME){
         char * window_name;
         if (XFetchName(display, child, &window_name))
         {
@@ -469,7 +487,9 @@ void Window::on_property_notify(const XEvent &e, void *data)
             header.set_title(window_name);
             free(window_name);
         }
+        return;
     }
+    char *atom_name = XGetAtomName(display, e.xproperty.atom);
     XFree(atom_name);
 }
 

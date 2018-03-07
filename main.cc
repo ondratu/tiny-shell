@@ -3,6 +3,7 @@
 int main(int argc, char** argv)
 {
     try {
+        tiny::Display::init();
         wm::Manager manager;
         manager.main_loop();
 

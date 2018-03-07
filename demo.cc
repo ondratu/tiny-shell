@@ -19,8 +19,7 @@ class Demo: public tiny::Container {
             buttons(tiny::Box::Type::Horizontal, 300-4, 30),
             close_btn(80, 27, "Close")
     {
-        display = XOpenDisplay(NULL);
-        realize(display, DefaultRootWindow(display), 0, 0);
+        realize(XDefaultRootWindow(display), 0, 0);
 
         header.set_title("Ďáblův advokát");
 
@@ -43,14 +42,10 @@ class Demo: public tiny::Container {
         map_all();
     }
 
-    ~Demo(){
-        XCloseDisplay(display);
-    }
-
     void set_events(){
         Container::set_events();
 
-        Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
+        Atom wm_delete_window = display.WM_DELETE_WINDOW;
         XSetWMProtocols(display, window, &wm_delete_window, 1);
 
         connect(ClientMessage,
@@ -59,8 +54,8 @@ class Demo: public tiny::Container {
 
     void on_client_message(const XEvent &e, void *)
     {
-        if (e.xclient.message_type == XInternAtom(display, "WM_PROTOCOLS", 1) &&
-            (Atom)e.xclient.data.l[0] == XInternAtom(display, "WM_DELETE_WINDOW", 1))
+        if (e.xclient.message_type == display.WM_PROTOCOLS &&
+            (Atom)e.xclient.data.l[0] == display.WM_DELETE_WINDOW)
         {
             printf("This is it!\n");
             keep_running = false;
@@ -103,6 +98,7 @@ class Demo: public tiny::Container {
 
 int main (int argc, char * argv[])
 {
+    tiny::Display::init();
     Demo demo;
     demo.main_loop();
     return 0;

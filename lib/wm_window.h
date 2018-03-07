@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "containers.h"
 #include "wm_header.h"
 #include "wm_buttons.h"
@@ -13,9 +15,9 @@ class Window: public tiny::Container {
 
     ~Window();
 
-    static Window * create(Display * display, ::Window parent, ::Window child);
+    static Window * create(::Window parent, ::Window child);
 
-    virtual void realize(Display * display, ::Window parent, int x, int y);
+    virtual void realize(::Window parent, int x, int y);
 
     virtual void set_events(long mask=0);
 
@@ -37,6 +39,10 @@ class Window: public tiny::Container {
     void restore(int x=0, int y=0);
 
     void maximize();
+
+    void update_protocols();
+
+    void update_properties();
 
     /* signal handlers */
     void on_close_click(tiny::Object *o, const XEvent &e, void * data);
@@ -83,6 +89,8 @@ class Window: public tiny::Container {
 
     ::Window child;
     XSizeHints * hints;
+    std::set<Atom> protocols;
+    std::set<Atom> properties;
 
     XEvent start_event;                 // state before moving/resizing
     XWindowAttributes start_attrs;

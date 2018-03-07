@@ -1,17 +1,13 @@
 #include <X11/Xutil.h>
 
-#include <assert.h>
-#include <stdexcept>
-
 #include "widget.h"
-
+#include "display.h"
 
 namespace tiny {
 
-
 Widget::Widget(Type type, uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
-    Object(), type(type), display(nullptr), parent(0), window(0),
+    Object(), type(type), display(get_display()), parent(0), window(0),
     event_mask(0), width(width), height(height), border(border),
     border_color(border_color), background(background),
     is_maped(false), is_realized(false)
@@ -19,7 +15,7 @@ Widget::Widget(Type type, uint32_t width, uint32_t height,
 
 Widget::Widget(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
-    Object(), type(Type::Normal), display(nullptr), parent(0), window(0),
+    Object(), type(Type::Normal), display(get_display()), parent(0), window(0),
     event_mask(0), width(width), height(height), border(border),
     border_color(border_color), background(background),
     is_maped(false), is_realized(false)
@@ -32,6 +28,7 @@ Widget::~Widget(){
         disconnect(ResizeRequest);
     }
     if (window) {
+        XSync(display, false);      // Wait for all Ungrab call
         XDestroyWindow(display, window);
     }
 }
@@ -45,12 +42,11 @@ void Widget::set_events(long mask){
     event_done = true;
 }
 
-void Widget::realize(Display * display, Window parent, int x, int y)
+void Widget::realize(Window parent, int x, int y)
 {
     if (is_realized){
         return error("tiny::Widget is realized yet!");
     }
-    this->display = display;
     this->parent = parent;
 
     switch(type) {

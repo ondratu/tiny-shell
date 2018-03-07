@@ -41,7 +41,7 @@ class LabelButton: public Button {
 
     virtual ~LabelButton();
 
-    virtual void realize(Display * display, Window parent, int x, int y);
+    virtual void realize(Window parent, int x, int y);
 
     virtual void set_events(long mask=0);
 

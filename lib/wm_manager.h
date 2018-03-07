@@ -37,7 +37,7 @@ class Manager: public tiny::Object {
 
     void on_configure_request(const XConfigureRequestEvent &e);
 
-    Display *display;
+    tiny::Display &display;
     ::Window root;
     Window *active;
 

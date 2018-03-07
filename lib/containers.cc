@@ -62,7 +62,7 @@ void Container::add(Widget * widget, int x, int y, int gravity)
     if (!is_realized) {
         return error("tiny::Container must be realized");
     }
-    widget->realize(display, window, x, y);
+    widget->realize(window, x, y);
     if (gravity != NorthWestGravity){
         XSetWindowAttributes attrs;
         attrs.win_gravity = gravity;
@@ -145,9 +145,9 @@ Popover::~Popover()
     }
 }
 
-void Popover::realize(Display *display, ::Window root, int x, int y)
+void Popover::realize(::Window root, int x, int y)
 {
-    Box::realize(display, root, x, y);
+    Box::realize(root, x, y);
     XSetWindowAttributes attrs;
     attrs.override_redirect = true;
 

@@ -16,9 +16,9 @@ Edge::~Edge()
     }
 }
 
-void Edge::realize(Display * display, Window parent, int x, int y)
+void Edge::realize(Window parent, int x, int y)
 {
-    Widget::realize(display, parent, x, y);
+    Widget::realize(parent, x, y);
     XDefineCursor(display, window,
             XCreateFontCursor(display, tiny::Position::get_cursor_shape(mask)));
 
@@ -141,9 +141,9 @@ void BackWindow::set_events(long mask)
         static_cast<tiny::object_signal_t>(&BackWindow::on_edge_drag_motion));
 }
 
-void BackWindow::realize(Display * display, Window parent, int x, int y)
+void BackWindow::realize(Window parent, int x, int y)
 {
-    Container::realize(display, parent, x-WM_WIN_BORDER, y-WM_WIN_BORDER);
+    Container::realize(parent, x-WM_WIN_BORDER, y-WM_WIN_BORDER);
 
     add(&corner_right_top, width-WM_WIN_CORNER, 0,
             NorthEastGravity);

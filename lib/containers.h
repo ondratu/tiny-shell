@@ -92,7 +92,7 @@ class Popover: public Box {
 
     virtual ~Popover();
 
-    virtual void realize(Display *display, ::Window root, int x = 0, int y=0);
+    virtual void realize(::Window root, int x = 0, int y=0);
 
     virtual void set_events(long mask=0);
 

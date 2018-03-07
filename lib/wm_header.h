@@ -31,7 +31,7 @@ class Header: public tiny::Box {
 
     virtual void set_events(long mask=0);
 
-    virtual void realize(Display *display, ::Window parent, int x, int y);
+    virtual void realize(::Window parent, int x, int y);
 
     virtual void resize(uint32_t width, uint32_t height);
 

@@ -72,9 +72,9 @@ void LabelButton::set_events(long mask)
             static_cast<event_signal_t>(&LabelButton::on_expose));
 }
 
-void LabelButton::realize(Display * display, Window parent, int x, int y)
+void LabelButton::realize(Window parent, int x, int y)
 {
-    Button::realize(display, parent, x, y);
+    Button::realize(parent, x, y);
     font = XftFontOpenName(display, screen, font_name.c_str());
 }
 
@@ -103,8 +103,8 @@ void LabelButton::on_expose(const XEvent &e, void * data)
     XftColor color;
     XftDraw *draw;
     XGlyphInfo extents;
-    Visual *visual = DefaultVisual(display, screen);
-    Colormap colormap = DefaultColormap(display, screen);
+    Visual *visual = XDefaultVisual(display, screen);
+    Colormap colormap = XDefaultColormap(display, screen);
 
     if (is_active){
         XftColorAllocName(display, visual, colormap, active_color.c_str(),

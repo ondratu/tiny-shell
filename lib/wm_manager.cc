@@ -1,6 +1,7 @@
 #include <X11/cursorfont.h>
 
 #include "wm_manager.h"
+#include "x_util.h"
 
 namespace tiny {
     extern Handlers handlers;
@@ -9,12 +10,9 @@ namespace tiny {
 namespace wm {
 
 Manager::Manager():
-    tiny::Object()
+    tiny::Object(),
+    display(tiny::get_display())
 {
-    display = XOpenDisplay(nullptr);
-    if (display == nullptr) {
-        throw std::runtime_error("Failed to open X display");
-    }
     root = XDefaultRootWindow(display);
 
     XDefineCursor(display, root, XCreateFontCursor(display, XC_arrow));
@@ -29,7 +27,7 @@ Manager::Manager():
     if (rv_ccount){
         rv_ccount -= 1;
         for (uint32_t i = 0; i <= rv_ccount; ++i){
-            Window * window = Window::create(display, root, rv_child[i]);
+            Window * window = Window::create(root, rv_child[i]);
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
             window->on_focus.connect(this,
@@ -54,7 +52,6 @@ void Manager::set_events()
 {
     XSelectInput(display, root,
             SubstructureNotifyMask|SubstructureRedirectMask);
-    XSync(display, false);
 
     XGrabKey(           // Alt + Tab
             display, XKeysymToKeycode(display, XK_Tab),
@@ -218,17 +215,24 @@ void Manager::on_unmap_notify(const XUnmapEvent &e)
 {
     // TODO: could be append to signal handlers on wm_window.window
     if (wm_windows.count(e.window)){
-        activate_prev_window();
         Window * window = wm_windows[e.window];
         wm_tops.remove(window);
         delete (window);
         wm_windows.erase(e.window);
+        activate_prev_window();
     }
 }
 
 void Manager::on_map_request(const XMapRequestEvent &e)
 {
-    Window * window = Window::create(display, root, e.window);
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, e.window, &attrs);
+    if (attrs.override_redirect){
+        TINY_LOG("window %lx hase override_redirect", e.window);
+        return;     // do not manage this window
+    }
+
+    Window * window = Window::create(root, e.window);
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
     XMapWindow(display, e.window);

@@ -81,9 +81,9 @@ void Header::set_events(long mask){
             static_cast<tiny::event_signal_t>(&Header::on_expose));
 }
 
-void Header::realize(Display * display, Window parent, int x, int y)
+void Header::realize(Window parent, int x, int y)
 {
-    Box::realize(display, parent, x, y);
+    Box::realize(parent, x, y);
     font = XftFontOpenName(display, screen, WM_WIN_HEADER_XFT_FONT);
 
     add(&title_box, 0, 0);
@@ -119,8 +119,8 @@ void Header::on_expose(const XEvent &e, void * data)
     XftColor color;
     XftDraw *draw;
     XGlyphInfo extents;
-    Visual *visual = DefaultVisual(display, screen);
-    Colormap colormap = DefaultColormap(display, screen);
+    Visual *visual = XDefaultVisual(display, screen);
+    Colormap colormap = XDefaultColormap(display, screen);
 
     if (is_disable){
         XftColorAllocName(display, visual, colormap,
