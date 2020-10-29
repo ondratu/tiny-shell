@@ -1,3 +1,5 @@
+#include <string>
+
 #include "buttons.h"
 #include "containers.h"
 

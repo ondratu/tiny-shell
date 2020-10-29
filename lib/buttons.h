@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "widget.h"
 #include "containers.h"
 

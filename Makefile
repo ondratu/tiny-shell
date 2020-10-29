@@ -18,7 +18,7 @@ SRC = $(wildcard *.cc)
 OBJ = $(SRC:%.cc=%.o)
 DEP = $(OBJ:%.o=%.d)
 
-CXX=clang++-3.8
+#CXX=clang++-3.8
 
 TARGET = tiny-shell
 

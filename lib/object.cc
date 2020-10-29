@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "object.h"
 
