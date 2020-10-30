@@ -18,7 +18,7 @@ SRC = $(wildcard *.cc)
 OBJ = $(SRC:%.cc=%.o)
 DEP = $(OBJ:%.o=%.d)
 
-#CXX=clang++-3.8
+# CXX=clang++-9
 
 TARGET = tiny-shell
 
@@ -31,22 +31,22 @@ lib/libtiny.a: $(LIB_OBJ)
 
 
 $(TARGET): lib/libtiny.a main.o
-	$(CXX) $(LDFLAGS) main.o -L./lib -ltiny -o tiny-shell
+	$(CXX) main.o -L./lib -ltiny -o tiny-shell $(LDFLAGS)
 
 demo: lib/libtiny.a demo.o
-	$(CXX) $(LDFLAGS) demo.o -L./lib -ltiny -o demo
+	$(CXX) demo.o -L./lib -ltiny -o demo $(LDFLAGS)
 
 input_only: lib/libtiny.a input_only.o
-	$(CXX) $(LDFLAGS) input_only.o -L./lib -ltiny -o input_only
+	$(CXX) input_only.o -L./lib -ltiny -o input_only $(LDFLAGS)
 
 wm_test: lib/libtiny.a wm_test.o
-	$(CXX) $(LDFLAGS) wm_test.o -L./lib -ltiny -o wm_test
+	$(CXX) wm_test.o -L./lib -ltiny -o wm_test $(LDFLAGS)
 
 menu: lib/libtiny.a menu.o
-	$(CXX) $(LDFLAGS) menu.o -L./lib -ltiny -o menu
+	$(CXX) menu.o -L./lib -ltiny -o menu $(LDFLAGS)
 
 test_memory: lib/libtiny.a test_memory.o
-	$(CXX) $(LDFLAGS) test_memory.o -L./lib -ltiny -o test_memory
+	$(CXX) test_memory.o -L./lib -ltiny -o test_memory $(LDFLAGS)
 
 
 $(OBJ): .pkg_check

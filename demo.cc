@@ -1,3 +1,5 @@
+#include "X11/Xatom.h"
+
 #include "containers.h"
 #include "buttons.h"
 #include "wm_header.h"
@@ -21,7 +23,20 @@ class Demo: public tiny::Container {
     {
         realize(XDefaultRootWindow(display), 0, 0);
 
-        header.set_title("Ďáblův advokát");
+        char *title_utf8 = "Ďáblův advokát";
+        char *title = "Dabluv advokat";
+
+        header.set_title(title_utf8);
+        XChangeProperty(display, window,
+                        display.WM_NAME, XA_STRING,
+                        8, PropModeReplace,
+                        reinterpret_cast<unsigned char *>(title),
+                        strlen(title));
+        XChangeProperty(display, window,
+                        display._NET_WM_NAME, display.UTF8_STRING,
+                        8, PropModeReplace,
+                        reinterpret_cast<unsigned char *>(title_utf8),
+                        strlen(title_utf8));
 
         add(&vbox);
         vbox.push_start(&header);

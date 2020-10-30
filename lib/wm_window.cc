@@ -51,6 +51,7 @@ Window* Window::create(::Window parent, ::Window child){
 
 void Window::realize(::Window parent, int x, int y)
 {
+    update_properties();
     tiny::Container::realize(parent, x, y);
 
     {   // Detect window, if is resizable
@@ -83,11 +84,14 @@ void Window::realize(::Window parent, int x, int y)
     XSetWindowBorderWidth(display, child, 0);
     XAddToSaveSet(display, child);
     XReparentWindow(display, child, window, 0, WM_WIN_HEADER);
-    char * window_name;
-    if (XFetchName(display, child, &window_name))
+    char * wm_name = get_net_wm_name();
+    if (!wm_name){
+        XFetchName(display, child, &wm_name);
+    }
+    if (wm_name)
     {
-        header.set_title(window_name);
-        free(window_name);
+        header.set_title(wm_name);
+        XFree(wm_name);
     }
 }
 
@@ -278,7 +282,6 @@ void Window::update_protocols()
     Status status = XGetWMProtocols(display, child, &supported, &count);
     for (size_t i =0; i < count; ++i){
         protocols.insert(supported[i]);
-
     }
     XFree(supported);
 }
@@ -298,6 +301,38 @@ void Window::update_properties()
     }
     XFree(props);
 }
+
+char * Window::get_net_wm_name(){
+    if (properties.count(display._NET_WM_NAME))
+    {
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems;
+        unsigned long leftover;
+        unsigned char *data = NULL;
+        if (XGetWindowProperty(display, child,
+                               display._NET_WM_NAME, 0L, BUFSIZ,
+                               false, display.UTF8_STRING,
+                               &actual_type, &actual_format,
+                               &nitems, &leftover, &data) != Success)
+        {
+            _net_wm_name = false;
+            return nullptr;
+        }
+
+        if ((actual_type == display.UTF8_STRING) && (actual_format == 8))
+        {
+            _net_wm_name = true;
+            return reinterpret_cast<char*>(data);
+        } else {
+            _net_wm_name = false;
+            XFree(data);
+        }
+
+    }
+    return nullptr;
+}
+
 
 void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
     close();
@@ -473,24 +508,36 @@ void Window::on_focus_out(const XEvent &e, void* data){
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
+    char *atom_name = XGetAtomName(display, e.xproperty.atom);
+    TINY_LOG("on_property_notify %s", atom_name);
+    XFree(atom_name);
+
     if (e.xproperty.atom == display.WM_PROTOCOLS){
         update_protocols();
         return;
     }
 
-    if (e.xproperty.atom == display.WM_NAME){
-        char * window_name;
-        if (XFetchName(display, child, &window_name))
+    if (e.xproperty.atom == display.WM_NAME && ! _net_wm_name)
+    {
+        char * wm_name;
+        if (XFetchName(display, child, &wm_name))
         {
-            // FIXME: some windows (like urxvt) sends it bad
-            // may be just LC_CTYPE... but not work..
-            header.set_title(window_name);
-            free(window_name);
+            header.set_title(wm_name);
+            free(wm_name);
         }
         return;
     }
-    char *atom_name = XGetAtomName(display, e.xproperty.atom);
-    XFree(atom_name);
+
+    if (e.xproperty.atom == display._NET_WM_NAME)
+    {
+        char * wm_name = get_net_wm_name();
+        if (wm_name)
+        {
+           header.set_title(wm_name);
+           XFree(wm_name);
+        }
+        return;
+    }
 }
 
 } // namespace wm

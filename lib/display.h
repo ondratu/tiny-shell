@@ -23,6 +23,17 @@ class Display {
     const Atom WM_NAME;
     const Atom WM_PROTOCOLS;
 
+    // EWMH
+    const Atom UTF8_STRING;
+    const Atom _NET_SUPPORTED;
+    const Atom _NET_WM_NAME;
+
+    const char *EWMH[3] = {
+        "UTF8_STRING",
+        "_NET_SUPPORTED",
+        "_NET_WM_NAME",
+    };
+
   private:
     ::Display * display;
 };

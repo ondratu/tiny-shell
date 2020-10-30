@@ -1,4 +1,5 @@
 #include <memory>
+#include <stdexcept>
 
 #include "display.h"
 #include "object.h"
@@ -12,7 +13,10 @@ Display::Display(::Display *display):
     WM_TAKE_FOCUS(XInternAtom(display, "WM_TAKE_FOCUS", 0)),
     WM_DELETE_WINDOW(XInternAtom(display, "WM_DELETE_WINDOW", 0)),
     WM_NAME(XInternAtom(display, "WM_NAME", 0)),
-    WM_PROTOCOLS(XInternAtom(display, "WM_PROTOCOLS", 0))
+    WM_PROTOCOLS(XInternAtom(display, "WM_PROTOCOLS", 0)),
+    UTF8_STRING(XInternAtom(display, "UTF8_STRING", 0)),
+    _NET_SUPPORTED(XInternAtom(display, "_NET_SUPPORTED", 0)),
+    _NET_WM_NAME(XInternAtom(display, "_NET_WM_NAME", 0))
 {}
 
 Display::~Display(){

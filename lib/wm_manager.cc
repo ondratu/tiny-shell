@@ -1,4 +1,5 @@
 #include <X11/cursorfont.h>
+#include <X11/Xatom.h>
 
 #include "wm_manager.h"
 #include "x_util.h"
@@ -22,6 +23,11 @@ Manager::Manager():
     ::Window *rv_child;
     uint32_t rv_ccount;
 
+    /*
+    XChangeProperty(display, root, display._NET_SUPPORTED, XA_ATOM,
+                    32, PropModeReplace,
+                    reinterpret_cast<unsigned char*>(display.EWMH), 1);
+    */
     XGrabServer(display);       // lock the X server for new events
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
     if (rv_ccount){
@@ -228,7 +234,7 @@ void Manager::on_map_request(const XMapRequestEvent &e)
     XWindowAttributes attrs;
     XGetWindowAttributes(display, e.window, &attrs);
     if (attrs.override_redirect){
-        TINY_LOG("window %lx hase override_redirect", e.window);
+        TINY_LOG("window %lx has override_redirect", e.window);
         return;     // do not manage this window
     }
 

@@ -44,6 +44,8 @@ class Window: public tiny::Container {
 
     void update_properties();
 
+    char * get_net_wm_name();
+
     /* signal handlers */
     void on_close_click(tiny::Object *o, const XEvent &e, void * data);
 
@@ -81,6 +83,7 @@ class Window: public tiny::Container {
     bool is_minimized = false;
     bool is_maximize = false;
     bool is_resizable = true;
+    bool _net_wm_name = false;
 
     uint32_t state_width;
     uint32_t state_height;
