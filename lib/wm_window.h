@@ -15,7 +15,8 @@ class Window: public tiny::Container {
 
     ~Window();
 
-    static Window * create(::Window parent, ::Window child);
+    static Window * create(::Window parent, ::Window child,
+            const XWindowAttributes& attrs);
 
     virtual void realize(::Window parent, int x, int y);
 

@@ -15,6 +15,8 @@ Manager::Manager():
     display(tiny::get_display())
 {
     root = XDefaultRootWindow(display);
+    XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
+    XSync(display, True);
 
     XDefineCursor(display, root, XCreateFontCursor(display, XC_arrow));
 
@@ -28,12 +30,25 @@ Manager::Manager():
                     32, PropModeReplace,
                     reinterpret_cast<unsigned char*>(display.EWMH), 1);
     */
+
     XGrabServer(display);       // lock the X server for new events
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
     if (rv_ccount){
         rv_ccount -= 1;
+        XWindowAttributes attrs;
+
         for (uint32_t i = 0; i <= rv_ccount; ++i){
-            Window * window = Window::create(root, rv_child[i]);
+            XGetWindowAttributes(display, rv_child[i], &attrs);
+            if (attrs.map_state == IsUnmapped){
+                continue;
+            }
+            if (attrs.override_redirect){
+                TINY_LOG("override_redirect");
+                XRaiseWindow(display, rv_child[i]);
+                continue;
+            }
+
+            Window * window = Window::create(root, rv_child[i], attrs);
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
             window->on_focus.connect(this,
@@ -44,7 +59,7 @@ Manager::Manager():
         }
         XFree(rv_child);
     }
-    XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
+
     XClearWindow(display, root);
     set_events();
     XUngrabServer(display);     // unlock the X server
@@ -238,7 +253,7 @@ void Manager::on_map_request(const XMapRequestEvent &e)
         return;     // do not manage this window
     }
 
-    Window * window = Window::create(root, e.window);
+    Window * window = Window::create(root, e.window, attrs);
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
     XMapWindow(display, e.window);

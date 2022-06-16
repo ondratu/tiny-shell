@@ -37,9 +37,9 @@ Window::~Window(){
     disconnect(FocusOut);
 }
 
-Window* Window::create(::Window parent, ::Window child){
-    XWindowAttributes attrs;
-    XGetWindowAttributes(*tiny::display.get(), child, &attrs);
+Window* Window::create(::Window parent, ::Window child,
+                       const XWindowAttributes& attrs)
+{
     auto win = new Window(child, attrs.width, attrs.height);
     // TODO: move down under panel
     win->realize(parent, attrs.x, attrs.y);
@@ -167,7 +167,6 @@ void Window::map_all(){
     }
     tiny::Container::map_all();
 
-    // set_focus();
     if (is_resizable){
         XRaiseWindow(display, shadow.get_window());     // shadow is lower
     }
@@ -279,7 +278,9 @@ void Window::update_protocols()
 
     Atom* supported;
     int count;
-    Status status = XGetWMProtocols(display, child, &supported, &count);
+    if (XGetWMProtocols(display, child, &supported, &count) == 0) {
+        return;
+    }
     for (size_t i =0; i < count; ++i){
         protocols.insert(supported[i]);
     }
@@ -328,7 +329,6 @@ char * Window::get_net_wm_name(){
             _net_wm_name = false;
             XFree(data);
         }
-
     }
     return nullptr;
 }
