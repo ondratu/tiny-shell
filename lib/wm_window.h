@@ -11,6 +11,18 @@ namespace wm {
 
 class Window: public tiny::Container {
   public:
+    enum class WMType {
+        DESKTOP,
+        DOCK,
+        TOOLBAR,
+        MENU,
+        UTILITY,
+        SPLASH,
+        DIALOG,
+        NORMAL
+    };
+
+  public:
     Window(::Window child, uint32_t width, uint32_t height);
 
     ~Window();
@@ -46,6 +58,8 @@ class Window: public tiny::Container {
     void update_properties();
 
     char * get_net_wm_name();
+
+    static WMType get_net_wm_type(::Window window);
 
     /* signal handlers */
     void on_close_click(tiny::Object *o, const XEvent &e, void * data);

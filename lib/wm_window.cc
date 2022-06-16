@@ -1,4 +1,5 @@
 #include <X11/cursorfont.h>
+#include <X11/Xatom.h>
 
 #include <algorithm>
 #include <cstring>
@@ -333,6 +334,85 @@ char * Window::get_net_wm_name(){
     return nullptr;
 }
 
+Window::WMType Window::get_net_wm_type(::Window window){
+    WMType wm_type = WMType::NORMAL;  // Default value
+
+    int count;
+    Atom * props = XListProperties(*tiny::display, window, &count);
+    std::set<Atom> properties;
+
+    for (int i=0; i < count; ++i){
+        properties.insert(props[i]);
+    }
+    XFree(props);
+
+    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE))
+    {
+        Atom actual_type;
+        int size;
+        unsigned long nitems;
+        unsigned long bytes_left;
+        unsigned char *data = NULL;
+        if (XGetWindowProperty(*tiny::display, window,
+                               tiny::display->_NET_WM_WINDOW_TYPE, 0L, 1L,
+                               false, XA_ATOM,
+                               &actual_type, &size,
+                               &nitems, &bytes_left, &data) != Success)
+        {
+            // No _NET_WM_WINDOW_TYPE return
+            return wm_type;
+        }
+
+        if (bytes_left != 0) {
+            XFree(data);
+            unsigned long remain = ((size / 8) * nitems) + bytes_left;
+            if (XGetWindowProperty(*tiny::display, window,
+                                   tiny::display->_NET_WM_WINDOW_TYPE,
+                                   0L, remain, false, XA_ATOM,
+                                   &actual_type, &size,
+                                   &nitems, &bytes_left, &data) != Success)
+            {
+                // No _NET_WM_WINDOW_TYPE Atoms return
+                return wm_type;
+            }
+        }
+
+        Atom* window_types = reinterpret_cast<Atom*>(data);
+        for (unsigned long i = 0; i < nitems; i++){
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DESKTOP){
+                wm_type = WMType::DESKTOP;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DOCK){
+                wm_type = WMType::DOCK;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_TOOLBAR){
+                wm_type = WMType::TOOLBAR;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_MENU){
+                wm_type = WMType::MENU;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_UTILITY){
+                wm_type = WMType::UTILITY;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_SPLASH){
+                wm_type = WMType::SPLASH;
+                break;
+            }
+            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DIALOG){
+                wm_type = WMType::DIALOG;
+                break;
+            }
+            // NORMAL is default
+        }
+        XFree(data);
+    }
+    return wm_type;
+}
 
 void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
     close();

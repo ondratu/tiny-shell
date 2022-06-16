@@ -40,14 +40,21 @@ Manager::Manager():
         for (uint32_t i = 0; i <= rv_ccount; ++i){
             XGetWindowAttributes(display, rv_child[i], &attrs);
             if (attrs.map_state == IsUnmapped){
-                continue;
+                continue;   // will be mapped later
             }
             if (attrs.override_redirect){
-                TINY_LOG("override_redirect");
-                XRaiseWindow(display, rv_child[i]);
-                continue;
+                continue;   // menu, special tools (idesk) and so on
             }
 
+            Window::WMType wm_type = Window::get_net_wm_type(rv_child[i]);
+            switch (wm_type) {
+                case Window::WMType::DESKTOP:
+                case Window::WMType::DOCK:
+                case Window::WMType::SPLASH:
+                    continue; // do not manage this window type
+                default:
+                    break;
+            }
             Window * window = Window::create(root, rv_child[i], attrs);
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
@@ -249,8 +256,17 @@ void Manager::on_map_request(const XMapRequestEvent &e)
     XWindowAttributes attrs;
     XGetWindowAttributes(display, e.window, &attrs);
     if (attrs.override_redirect){
-        TINY_LOG("window %lx has override_redirect", e.window);
-        return;     // do not manage this window
+        return;     // menu, special tools (idesk) and so on
+    }
+    Window::WMType wm_type = Window::get_net_wm_type(e.window);
+    switch (wm_type) {
+        case Window::WMType::DESKTOP:
+        case Window::WMType::DOCK:
+        case Window::WMType::SPLASH:
+            XMapWindow(display, e.window);
+            return; // do not manage this window type
+        default:
+            break;
     }
 
     Window * window = Window::create(root, e.window, attrs);
