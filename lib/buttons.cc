@@ -9,7 +9,9 @@ Button::Button(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
     Widget(width, height, border, border_color, background),
     is_active(false)
-{}
+{
+    name = "button";
+}
 
 Button::~Button()
 {
@@ -61,10 +63,16 @@ LabelButton::LabelButton(uint32_t width, uint32_t height,
     Button(width, height, border, border_color, background),
     text(text), font_name(font_name), normal_color(WIDGET_XFT_COLOR_NORMAL),
     active_color(WIDGET_XFT_COLOR_ACTIVE), screen(0)
-{}
+{
+    name = "labelbutton";
+}
 
 LabelButton::~LabelButton()
-{}
+{
+    if (event_done) {
+        disconnect(Expose);
+    }
+}
 
 void LabelButton::set_events(long mask)
 {
@@ -135,12 +143,13 @@ void LabelButton::on_expose(const XEvent &e, void * data)
 }
 
 
-
 MenuButton::MenuButton(uint32_t width, uint32_t height, const std::string &text,
             const std::string &font, uint32_t border, uint32_t border_color,
             uint32_t background):
     LabelButton(width, height, text, font, border, border_color, background)
-{}
+{
+    name = "menubutton";
+}
 
 MenuButton::~MenuButton()
 {}

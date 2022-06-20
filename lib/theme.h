@@ -35,3 +35,7 @@
 #define WM_WIN_MIN_HEIGHT       10+WM_WIN_HEADER
 
 #define WM_ROOT_BACKGROUND      0x729FCF
+
+#define WM_PANEL                30
+#define WM_PANEL_BACKGROUND     0x0
+#define WM_PANEL_TEXT           "#F3F3F3"

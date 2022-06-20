@@ -39,7 +39,9 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
 Container::Container(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
     Widget(Widget::Type::Normal, width, height, border, border_color, background)
-{}
+{
+    name = "container";
+}
 
 Container::Container(Widget::Type type, uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
@@ -79,6 +81,7 @@ Box::Box(Type type, uint32_t width, uint32_t height,
     Container(width, height, border, border_color, background),
     type(type), start_offset(0)
 {
+    name = "box";
     if (type == Type::Horizontal) {
         end_offset = width-1;
     } else { // Type::Vertical
@@ -130,7 +133,9 @@ Popover::Popover(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
     Box(Box::Type::Vertical, width, height, border, border_color, background),
     time_from_unmap(0)
-{}
+{
+    name = "popover";
+}
 
 Popover::Popover(Box::Type type, uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):

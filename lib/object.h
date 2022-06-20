@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <map>
+#include <set>
 
 #define TINY_LOG(format...) \
     tiny::log((const char*) __FILE__, (const char*) __FUNCTION__, \
@@ -16,16 +17,16 @@ class Object;
 typedef void (Object::*event_signal_t)(const XEvent &e, void * data);
 
 class Handlers : public std::map<
-        std::pair<uint16_t, Window>,
+        std::pair<uint16_t, ::Window>,
         std::tuple<Object*, event_signal_t, void*>>
 {
   public:
-    void set_handler(uint16_t event_type, Window window,
+    void set_handler(uint16_t event_type, ::Window window,
             Object*o, event_signal_t signal, void * data);
 
-    void unset_handler(uint16_t event_type, Window window);
+    void unset_handler(uint16_t event_type, ::Window window);
 
-    void call_hanlder(std::pair<uint16_t, Window> key, const XEvent &e);
+    void call_hanlder(std::pair<uint16_t, ::Window> key, const XEvent &e);
 };
 
 typedef void (Object::*object_signal_t)(Object * o, const XEvent &e,
@@ -57,14 +58,15 @@ class Object {
     Object()
     {}
 
-    virtual ~Object()
-    {}
+    virtual ~Object();
 
   protected:
-    void connect_window (uint16_t event_type, Window window,
+    void connect_window (uint16_t event_type, ::Window window,
             event_signal_t signal, void * data=nullptr);
 
-    void disconnect_window (uint16_t event_type, Window window);
+    void disconnect_window (uint16_t event_type, ::Window window);
+  private:
+    std::set<std::pair<uint16_t, ::Window>> connected_events;
 };
 
 

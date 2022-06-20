@@ -18,6 +18,7 @@ Window::Window(::Window child, uint32_t width, uint32_t height):
     header(width, WM_WIN_HEADER),
     shadow(width, height+WM_WIN_HEADER)
 {
+    name = "wm_window";
     hints = XAllocSizeHints();
     update_protocols();
 }

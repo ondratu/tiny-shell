@@ -69,6 +69,7 @@ class Widget: public Object {
     Display &display;
     Window parent;
     Window window;
+    const char* name;
 
     long event_mask;
     bool event_done;

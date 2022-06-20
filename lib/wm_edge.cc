@@ -7,7 +7,9 @@ namespace wm {
 Edge::Edge(uint32_t width, uint32_t height, uint16_t mask):
     tiny::Widget(tiny::Widget::Type::Input, width, height),
     mask(mask)
-{}
+{
+    name = "wm_edge";
+}
 
 Edge::~Edge()
 {
@@ -91,7 +93,9 @@ BackWindow::BackWindow(uint32_t width, uint32_t height):
     edge_right(WM_WIN_BORDER, height-WM_WIN_CORNER, tiny::Position::Right),
     edge_bottom(width-WM_WIN_CORNER, WM_WIN_BORDER, tiny::Position::Bottom),
     edge_left(WM_WIN_BORDER, height-WM_WIN_CORNER, tiny::Position::Left)
-{}
+{
+    name = "wm_backwindow";
+}
 
 BackWindow::~BackWindow()
 {}
@@ -186,7 +190,6 @@ void BackWindow::on_edge_drag_begin(Object *o, const XEvent &e, void *data)
 
 void BackWindow::on_edge_drag_motion(Object *o, const XEvent &e, void *data)
 {
-    uint16_t mask = 0;
     on_move_resize_motion(this, e,
             reinterpret_cast<void*>(static_cast<Edge*>(o)->get_mask()));
 }

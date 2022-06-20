@@ -11,7 +11,9 @@ Widget::Widget(Type type, uint32_t width, uint32_t height,
     event_mask(0), width(width), height(height), border(border),
     border_color(border_color), background(background),
     is_maped(false), is_realized(false)
-{}
+{
+    name = "widget";
+}
 
 Widget::Widget(uint32_t width, uint32_t height,
         uint32_t border, uint32_t border_color, uint32_t background):
@@ -19,13 +21,15 @@ Widget::Widget(uint32_t width, uint32_t height,
     event_mask(0), width(width), height(height), border(border),
     border_color(border_color), background(background),
     is_maped(false), is_realized(false)
-{}
+{
+    name = "widget";
+}
 
 Widget::~Widget(){
     unmap();
 
     if (event_done){
-        disconnect(ResizeRequest);
+        disconnect(ConfigureNotify);
     }
     if (window) {
         XSync(display, false);      // Wait for all Ungrab call

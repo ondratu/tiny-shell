@@ -12,7 +12,8 @@ namespace wm {
 
 Manager::Manager():
     tiny::Object(),
-    display(tiny::get_display())
+    display(tiny::get_display()),
+    wm_panel(), running(true)
 {
     root = XDefaultRootWindow(display);
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
@@ -67,6 +68,14 @@ Manager::Manager():
         XFree(rv_child);
     }
 
+    wm_panel.realize(root, 0, 0);
+    wm_panel.set_events();
+    wm_panel.map_all();
+
+    wm_panel.menu_user.logout.on_click.connect(
+            this,
+            static_cast<tiny::object_signal_t>(&Manager::on_logout));
+
     XClearWindow(display, root);
     set_events();
     XUngrabServer(display);     // unlock the X server
@@ -96,12 +105,12 @@ void Manager::set_events()
             Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
 }
 
+
 void Manager::main_loop()
 {
-    XWindowAttributes attr;
     XEvent event;
 
-    while (true){
+    while (running){
         XNextEvent(display, &event);
 
         auto signal_id = std::make_pair(event.type, event.xany.window);
@@ -187,6 +196,10 @@ void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
     active = static_cast<Window*>(o);
 }
 
+void Manager::on_logout(tiny::Object *o, const XEvent &e, void *data){
+    running = false;
+}
+
 void Manager::on_key_press(const XKeyEvent &e)
 {
     /* Alt F4 */
@@ -266,6 +279,7 @@ void Manager::on_map_request(const XMapRequestEvent &e)
             XMapWindow(display, e.window);
             return; // do not manage this window type
         default:
+            TINY_LOG("WM_TYPE is %d", wm_type);
             break;
     }
 
