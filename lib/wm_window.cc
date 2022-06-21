@@ -62,7 +62,7 @@ void Window::realize(::Window parent, int x, int y)
         if ((((size_retun & PMinSize) != PMinSize) &&
                     ((size_retun & PMaxSize) != PMaxSize)) ||
                 ((hints->min_width == hints->max_width) &&
-                 (hints->min_height == hints->min_height) &&
+                 (hints->min_height == hints->max_height) &&
                  (hints->min_width > 0 && hints->min_height > 0)))
         {
             is_resizable = false;
@@ -84,7 +84,6 @@ void Window::realize(::Window parent, int x, int y)
             WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
 
     XSetWindowBorderWidth(display, child, 0);
-    XAddToSaveSet(display, child);
     XReparentWindow(display, child, window, 0, WM_WIN_HEADER);
     char * wm_name = get_net_wm_name();
     if (!wm_name){

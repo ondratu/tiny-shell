@@ -32,7 +32,7 @@ Widget::~Widget(){
         disconnect(ConfigureNotify);
     }
     if (window) {
-        XSync(display, false);      // Wait for all Ungrab call
+        XSync(display, False);      // Wait for all Ungrab call
         XDestroyWindow(display, window);
     }
 }

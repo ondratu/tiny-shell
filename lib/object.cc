@@ -52,9 +52,10 @@ void Signal::connect(Object *object, object_signal_t method, void *data)
 
 Object::~Object()
 {
-    for(const auto &key :connected_events) {
-        TINY_LOG("missing %d for %x", key.first, key.second);
-        disconnect_window(key.first, key.second);
+    while (!connected_events.empty()){
+        const auto key = connected_events.crbegin();
+        TINY_LOG("missing %d for %x", key->first, key->second);
+        disconnect_window(key->first, key->second);
     }
     connected_events.clear();
 }
