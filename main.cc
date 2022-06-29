@@ -33,7 +33,7 @@ int main(int argc, char** argv)
             throw std::runtime_error("Detected another window manager.");
         }
 
-        wm::Manager manager;
+        wm::Manager manager(display, root);
         manager.main_loop();
     } catch (const std::exception &e) {
         fprintf(stderr, "Failed to initialize window manager.");

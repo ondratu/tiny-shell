@@ -87,4 +87,10 @@ inline XPoint x_point(short x, short y){
     return rv;
 }
 
-}
+void x_grab_key(::Display* display, int keycode, unsigned int modifiers,
+        ::Window window);
+
+void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
+        ::Window window);
+
+} // namespace tiny

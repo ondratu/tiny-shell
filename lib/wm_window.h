@@ -95,6 +95,8 @@ class Window: public tiny::Container {
 
     void on_property_notify(const XEvent &e, void *data);
 
+    void on_key_release(const XEvent &e, void *data);
+
     bool is_minimized = false;
     bool is_maximize = false;
     bool is_resizable = true;

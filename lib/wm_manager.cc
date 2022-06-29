@@ -10,12 +10,11 @@ namespace tiny {
 
 namespace wm {
 
-Manager::Manager():
+Manager::Manager(::Display* display, ::Window root):
     tiny::Object(),
-    display(tiny::get_display()),
+    display(display), root(root),
     wm_panel(), running(true)
 {
-    root = XDefaultRootWindow(display);
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
     XSync(display, True);
 
@@ -82,6 +81,16 @@ Manager::Manager():
 }
 
 Manager::~Manager(){
+    // Alt + Tab
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
+              Mod1Mask, root);
+    // Shift + Alt + Tab
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
+              ShiftMask|Mod1Mask, root);
+    // Alt + F2
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2),
+              Mod1Mask, root);
+
     XCloseDisplay(display);
 }
 
@@ -90,21 +99,16 @@ void Manager::set_events()
     XSelectInput(display, root,
             SubstructureNotifyMask|SubstructureRedirectMask);
 
-    XGrabKey(           // Alt + Tab
-            display, XKeysymToKeycode(display, XK_Tab),
-            Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
-    XGrabKey(           // Shift + Alt + Tab
-            display, XKeysymToKeycode(display, XK_Tab),
-            Mod1Mask|ShiftMask, root, true, GrabModeAsync, GrabModeAsync);
-
-    XGrabKey(           // Alt + F4
-            display, XKeysymToKeycode(display, XK_F4),
-            Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
-    XGrabKey(           // Alt + F2
-            display, XKeysymToKeycode(display, XK_F2),
-            Mod1Mask, root, true, GrabModeAsync, GrabModeAsync);
+    // Alt + Tab
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
+              Mod1Mask, root);
+    // Shift + Alt + Tab
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
+              ShiftMask|Mod1Mask, root);
+    // Alt + F2
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2),
+              Mod1Mask, root);
 }
-
 
 void Manager::main_loop()
 {
@@ -200,56 +204,39 @@ void Manager::on_logout(tiny::Object *o, const XEvent &e, void *data){
     running = false;
 }
 
-void Manager::on_key_press(const XKeyEvent &e)
-{
-    /* Alt F4 */
-    if (e.keycode == XKeysymToKeycode(display, XK_F4))
-    {
-        ::Window active;
-        int revert;
-        XGetInputFocus(display, &active, &revert);
-        if (active > 1){    // not to close root window
-            // TODO: do_close_window(active);
-            printf("close the window...\n");
-        }
-        key_done = true;
-        return;
-    }
 
+void Manager::on_key_press(const XKeyEvent &xkey)
+{
     /* Alt F2 */
-    if (e.keycode == XKeysymToKeycode(display, XK_F2))
+    if (xkey.keycode == XKeysymToKeycode(display, XK_F2))
     {
         printf("TODO: run dialog\n");
         key_done = true;
         return;
     }
-    fprintf(stderr, "%lu Manager::on_key_press Unhalded key event: %x\n",
-            e.time, e.keycode);
     key_done = false;
 }
 
-void Manager::on_key_release(const XKeyEvent &e)
+void Manager::on_key_release(const XKeyEvent &xkey)
 {
-    printf("%lu Manager::on_key_release %x\n", e.time, e.keycode);
     if (key_done){
-        return;         // key is handled in on_key_press
+        return; // key is handled in on_key_press
     }
 
     /* Alt + Tab or Alt + Shift + Tab */
-    if (e.keycode == XKeysymToKeycode(display, XK_Tab))
+    if (xkey.keycode == XKeysymToKeycode(display, XK_Tab)
+            && xkey.state & Mod1Mask)
     {
-        if (e.state & ShiftMask){
-            printf("call activate_prev_window\n");
+        if (xkey.state & ShiftMask){
             activate_prev_window();
         } else {
-            printf("call activate_next_window\n");
             activate_next_window();
         }
         return;
     }
 
     fprintf(stderr, "%lu Manager::on_key_release Unhalded key event: %x\n",
-            e.time, e.keycode);
+            xkey.time, xkey.keycode);
 }
 
 void Manager::on_unmap_notify(const XUnmapEvent &e)

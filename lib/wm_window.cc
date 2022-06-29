@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "wm_window.h"
+#include "x_util.h"
 
 namespace tiny {
     extern std::shared_ptr<Display> display;
@@ -31,6 +32,8 @@ Window::~Window(){
     }
 
     XUngrabButton(display, Button1, AnyModifier, window);
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F4),
+            Mod1Mask, window);
 
     disconnect(ButtonPress);
     disconnect(ButtonRelease);
@@ -99,7 +102,9 @@ void Window::realize(::Window parent, int x, int y)
 void Window::set_events(long mask)
 {
     // SubstructureNotifyMask so, wm::Manager can catch UnmapNotify
-    tiny::Container::set_events(mask|SubstructureNotifyMask|FocusChangeMask);
+    tiny::Container::set_events(
+            mask
+            |SubstructureNotifyMask|FocusChangeMask);
 
     XSelectInput(display, child, PropertyChangeMask);
 
@@ -107,6 +112,8 @@ void Window::set_events(long mask)
             ButtonPressMask|ButtonReleaseMask,
             GrabModeSync, GrabModeSync,
             None, None);
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F4),
+            Mod1Mask, window);
 
 /*
     XSelectInput(display, window,
@@ -130,6 +137,8 @@ void Window::set_events(long mask)
             static_cast<tiny::event_signal_t>(&Window::on_focus_out));
     connect_window(PropertyNotify, child,
             static_cast<tiny::event_signal_t>(&Window::on_property_notify));
+    connect(KeyRelease,
+            static_cast<tiny::event_signal_t>(&Window::on_key_release));
 
     header.get_title_box()->on_drag_begin.connect(
             this,
@@ -617,6 +626,15 @@ void Window::on_property_notify(const XEvent &e, void *data)
            XFree(wm_name);
         }
         return;
+    }
+}
+
+void Window::on_key_release(const XEvent &e, void* data)
+{
+    if (e.xkey.state & Mod1Mask
+        && e.xkey.keycode == XKeysymToKeycode(display, XK_F4))
+    {
+        close();
     }
 }
 

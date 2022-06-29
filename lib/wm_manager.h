@@ -11,7 +11,7 @@ namespace wm {
 
 class Manager: public tiny::Object {
   public:
-    Manager();
+    Manager(Display* display, ::Window root);
 
     ~Manager();
 
@@ -29,9 +29,9 @@ class Manager: public tiny::Object {
     void on_logout(tiny::Object *o, const XEvent &e, void *data);
 
     /* direct event handlers */
-    void on_key_press(const XKeyEvent &e);
+    void on_key_press(const XKeyEvent &xkey);
 
-    void on_key_release(const XKeyEvent &e);
+    void on_key_release(const XKeyEvent &xkey);
 
     void on_unmap_notify(const XUnmapEvent &e);
 
@@ -39,7 +39,7 @@ class Manager: public tiny::Object {
 
     void on_configure_request(const XConfigureRequestEvent &e);
 
-    tiny::Display &display;
+    ::Display* display;
     ::Window root;
 
     Panel wm_panel;
