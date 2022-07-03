@@ -6,6 +6,7 @@
 #include "object.h"
 #include "wm_window.h"
 #include "wm_panel.h"
+#include "wm_run.h"
 
 namespace wm {
 
@@ -43,6 +44,7 @@ class Manager: public tiny::Object {
     ::Window root;
 
     Panel wm_panel;
+    RunDialog wm_run;
 
     Window *active;
 

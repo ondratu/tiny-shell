@@ -60,11 +60,10 @@ void TitleBox::on_motion_notify(const XEvent &e, void * data)
 }
 
 
-
 Header::Header(uint32_t width, uint32_t height):
     Box(Box::Type::Horizontal, width, height,
         0, 0x0, WM_WIN_BACKGROUND),
-    title_box(width, height),
+    font(nullptr),title_box(width, height),
     is_disable(false), screen(0)
 {}
 
@@ -72,6 +71,10 @@ Header::~Header()
 {
     XUngrabButton(display, Button1, AnyModifier, window);
     disconnect(Expose);
+    if (font) {
+        XftFontClose(display, font);
+        font = nullptr;
+    }
 }
 
 void Header::set_events(long mask){

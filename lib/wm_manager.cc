@@ -13,7 +13,7 @@ namespace wm {
 Manager::Manager(::Display* display, ::Window root):
     tiny::Object(),
     display(display), root(root),
-    wm_panel(), running(true)
+    wm_panel(), wm_run(), running(true)
 {
     XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
     XSync(display, True);
@@ -70,6 +70,9 @@ Manager::Manager(::Display* display, ::Window root):
     wm_panel.realize(root, 0, 0);
     wm_panel.set_events();
     wm_panel.map_all();
+
+    wm_run.realize(root, 0, 0);
+    wm_run.set_events();
 
     wm_panel.menu_user.logout.on_click.connect(
             this,
@@ -210,7 +213,7 @@ void Manager::on_key_press(const XKeyEvent &xkey)
     /* Alt F2 */
     if (xkey.keycode == XKeysymToKeycode(display, XK_F2))
     {
-        printf("TODO: run dialog\n");
+        wm_run.popup();
         key_done = true;
         return;
     }

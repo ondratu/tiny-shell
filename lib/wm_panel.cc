@@ -57,7 +57,7 @@ void Panel::realize(::Window root, int x, int y)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, root, &attrs);
-   
+
     resize(attrs.width ,height);
 
     tiny::Box::realize(root, x, y);

@@ -1,4 +1,11 @@
 // default tiny-shel widgets are dark
+
+#define WHITE_COLOR             0xFFFFFF
+#define GRAY_COLOR              0x888888
+#define BLACK_COLOR             0x000000
+
+#define XFT_WHITE_COLOR         "#FFFFFF"
+
 #define WIDGET_BORDER           1
 #define WIDGET_BORDER_COLOR     0x2e3436
 #define WIDGET_BACKGROUND       0x0
