@@ -108,11 +108,11 @@ void Entry::on_key_release(const XEvent& e, void* data)
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Return)) {
         TINY_LOG("run %s", text.c_str());
         if (!fork()){
-            int ret = putenv(XDisplayString(display));
-            assert(ret != -1);
+            //int ret = putenv(XDisplayString(display));
+            //assert(ret != -1);
             std::string cmd = "exec ";
             cmd += text;
-            ret = execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
+            int ret = execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
             exit(ret);
         } else {
             on_exit(this, e);
