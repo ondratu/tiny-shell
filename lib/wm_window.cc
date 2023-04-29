@@ -14,10 +14,10 @@ namespace tiny {
 namespace wm {
 
 Window::Window(::Window child, uint32_t width, uint32_t height):
-    tiny::Container(width, height+WM_WIN_HEADER),
+    tiny::Container(width, height+tiny::theme.wm_win_header),
     child(child),
-    header(width, WM_WIN_HEADER),
-    shadow(width, height+WM_WIN_HEADER)
+    header(width, tiny::theme.wm_win_header),
+    shadow(width, height+tiny::theme.wm_win_header)
 {
     name = "wm_window";
     hints = XAllocSizeHints();
@@ -78,16 +78,16 @@ void Window::realize(::Window parent, int x, int y)
 
     add(&header, 0, 0);
     header.push_back(&cls_btn,
-            WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
+            tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
     if (is_resizable){
         header.push_back(&max_btn,
-                WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
+                tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
     }
     header.push_back(&min_btn,
-            WM_WIN_HEADER_PADDING, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
+            tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
 
     XSetWindowBorderWidth(display, child, 0);
-    XReparentWindow(display, child, window, 0, WM_WIN_HEADER);
+    XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
     char * wm_name = get_net_wm_name();
     if (!wm_name){
         XFetchName(display, child, &wm_name);
@@ -248,11 +248,11 @@ void Window::maximize()
     XMoveResizeWindow(display, window, 0, 0,
             root_attrs.width, root_attrs.height);
     XResizeWindow(display, child,
-            root_attrs.width, root_attrs.height-WM_WIN_HEADER);
+            root_attrs.width, root_attrs.height-tiny::theme.wm_win_header);
     if (is_resizable){
         shadow.move_resize(0, 0, root_attrs.width, root_attrs.height);
     }
-    header.resize(root_attrs.width, WM_WIN_HEADER);
+    header.resize(root_attrs.width, tiny::theme.wm_win_header);
 
     max_btn.set_restore(true);
     is_maximize = true;
@@ -267,9 +267,9 @@ void Window::restore(int x, int y)
         if (is_resizable) {
             shadow.move_resize(0, 0, state_width, state_height);
         }
-        header.resize(state_width, WM_WIN_HEADER);
+        header.resize(state_width, tiny::theme.wm_win_header);
         XResizeWindow(display, child,
-                state_width, state_height-WM_WIN_HEADER);
+                state_width, state_height-tiny::theme.wm_win_header);
         XMoveResizeWindow(display, window,
                 state_x, (y ? y : state_y), state_width, state_height);
         XSetWindowBorderWidth(display, window, 1);
@@ -495,8 +495,11 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
     }
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
-        if (std::max(hints->min_width+WM_WIN_CORNER, WM_WIN_MIN_WIDTH) > width) {
-            width = std::max(hints->min_width+WM_WIN_CORNER, WM_WIN_MIN_WIDTH);
+        if (std::max(hints->min_width+tiny::theme.wm_win_corner,
+                     tiny::theme.wm_win_min_width) > width)
+        {
+            width = std::max(hints->min_width+tiny::theme.wm_win_corner,
+                             tiny::theme.wm_win_min_width);
         }
         if ((0 < hints->max_width) && (hints->max_width < width)) {
             width = hints->max_width;
@@ -505,8 +508,11 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
 
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         // TODO: it exist steps
-        if (std::max(hints->min_height+WM_WIN_CORNER+WM_WIN_HEADER, WM_WIN_MIN_HEIGHT) > height) {
-            height = std::max(hints->min_height+WM_WIN_CORNER+WM_WIN_HEADER, WM_WIN_MIN_HEIGHT);
+        if (std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
+                     tiny::theme.wm_win_min_height) > height)
+        {
+            height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
+                              tiny::theme.wm_win_min_height);
         }
         if ((0 < hints->max_height) && (hints->max_height < height)) {
             height = hints->max_height;
@@ -530,8 +536,8 @@ void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
         shadow.resize(width, height);
     }
 
-    XResizeWindow(display, child, width, height-WM_WIN_HEADER);
-    header.resize(width, WM_WIN_HEADER);
+    XResizeWindow(display, child, width, height-tiny::theme.wm_win_header);
+    header.resize(width, tiny::theme.wm_win_header);
 }
 
 void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)

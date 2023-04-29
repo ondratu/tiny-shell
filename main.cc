@@ -19,6 +19,12 @@ int main(int argc, char** argv)
         tiny::Display::init();
 
         ::Display* display = tiny::get_display();
+
+        tiny::theme.init();
+
+        // TODO: tema musi byt až tady, musím mít display - resp. je potřeba
+        // pro inicializaci stylu -> fontu
+
         ::Window root = XDefaultRootWindow(display);
         XErrorHandler old = XSetErrorHandler(&on_wm_detected);
         XSelectInput(display, root,

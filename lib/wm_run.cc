@@ -7,7 +7,7 @@ namespace wm {
 
 Entry::Entry(uint32_t width, uint32_t height):
     tiny::Widget(Widget::Type::Normal, width, height),
-    font(nullptr), screen(0), xim(0), xic(0)
+    xim(0), xic(0)
 {
     name = "entry";
 }
@@ -15,10 +15,6 @@ Entry::Entry(uint32_t width, uint32_t height):
 Entry::~Entry()
 {
     disconnect(KeyPress);
-    if (font) {
-        XftFontClose(display, font);
-        font = nullptr;
-    }
     if (xic) {
         XDestroyIC(xic);
         xic = 0;
@@ -32,8 +28,6 @@ Entry::~Entry()
 void Entry::realize(Window parent, int x, int y)
 {
     tiny::Widget::realize(parent, x, y);
-    font = XftFontOpenName(display, screen, WM_WIN_HEADER_XFT_FONT);
-    TINY_LOG("font %s is %x", WM_WIN_HEADER_XFT_FONT, font);
 
     xim = XOpenIM(display, NULL, NULL, NULL);
     TINY_LOG("xim: %d", xim);
@@ -135,15 +129,16 @@ void Entry::on_expose(const XEvent& e, void* data)
     XftColor color;
     XftDraw *draw;
     XGlyphInfo extents;
+    const int screen = 0; // XXX
     Visual *visual = XDefaultVisual(display, screen);
     Colormap colormap = XDefaultColormap(display, screen);
 
     XftColorAllocName(display, visual, colormap,
-                XFT_WHITE_COLOR, &color);
+                tiny::theme.widget.get_xft_fg(get_theme_state()).data(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
-    XftTextExtentsUtf8(display, font,
+    XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
             reinterpret_cast<const FcChar8*>(text.c_str()), text.size(),
             &extents);
 
@@ -152,7 +147,7 @@ void Entry::on_expose(const XEvent& e, void* data)
     int y = (height+extents.height)/2;
 
     XClearWindow(display, window);
-    XftDrawStringUtf8(draw, &color, font, x, y,
+    XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
             reinterpret_cast<const FcChar8*>(text.c_str()), text.size());
 
     XftDrawDestroy(draw);
@@ -183,8 +178,8 @@ void Entry::clear()
 
 
 RunDialog::RunDialog():
-    tiny::Popover(320, WM_PANEL*1.5, 2, GRAY_COLOR, BLACK_COLOR),
-    entry(310)
+    tiny::Popover(320, tiny::theme.wm_panel*1.5),
+    entry(310, tiny::theme.wm_win_header)
 {
     name = "run-dialog";
     entry.on_exit.connect(this,

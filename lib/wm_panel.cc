@@ -39,9 +39,9 @@ void UserMenu::realize(::Window parent, int x, int y)
 
 
 Panel::Panel():
-    tiny::Box(tiny::Box::Type::Horizontal, 0, WM_PANEL,
-              0, 0, WM_PANEL_BACKGROUND),
-    btn_app(200, WM_PANEL, "Application"), btn_login(120, WM_PANEL, "Login"),
+    tiny::Box(tiny::Box::Type::Horizontal, 0, tiny::theme.wm_panel),
+    btn_app(200, tiny::theme.wm_panel, "Application"),
+    btn_login(120, tiny::theme.wm_panel, "Login"),
     menu_app(), menu_user()
 {
     name = "wm_panel";

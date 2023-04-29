@@ -6,7 +6,9 @@ namespace wm {
 
 TitleBox::TitleBox(uint32_t width, uint32_t height):
     tiny::Widget(Widget::Type::Input, width, height)
-{}
+{
+    name = "wm_titlebox";
+}
 
 TitleBox::~TitleBox()
 {
@@ -61,20 +63,17 @@ void TitleBox::on_motion_notify(const XEvent &e, void * data)
 
 
 Header::Header(uint32_t width, uint32_t height):
-    Box(Box::Type::Horizontal, width, height,
-        0, 0x0, WM_WIN_BACKGROUND),
-    font(nullptr),title_box(width, height),
+    Box(Box::Type::Horizontal, width, height),
+    title_box(width, height),
     is_disable(false), screen(0)
-{}
+{
+    name = "wm_header";
+}
 
 Header::~Header()
 {
     XUngrabButton(display, Button1, AnyModifier, window);
     disconnect(Expose);
-    if (font) {
-        XftFontClose(display, font);
-        font = nullptr;
-    }
 }
 
 void Header::set_events(long mask){
@@ -87,7 +86,6 @@ void Header::set_events(long mask){
 void Header::realize(Window parent, int x, int y)
 {
     Box::realize(parent, x, y);
-    font = XftFontOpenName(display, screen, WM_WIN_HEADER_XFT_FONT);
 
     add(&title_box, 0, 0);
 }
@@ -125,17 +123,14 @@ void Header::on_expose(const XEvent &e, void * data)
     Visual *visual = XDefaultVisual(display, screen);
     Colormap colormap = XDefaultColormap(display, screen);
 
-    if (is_disable){
-        XftColorAllocName(display, visual, colormap,
-                WM_WIN_HEADER_XFT_COLOR_DISABLE, &color);
-    } else {
-        XftColorAllocName(display, visual, colormap,
-                WM_WIN_HEADER_XFT_COLOR_NORMAL, &color);
-    }
+    uint8_t state = get_theme_state();
+
+    XftColorAllocName(display, visual, colormap,
+                tiny::theme.wm_header.get_xft_fg(state).data(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
-    XftTextExtentsUtf8(display, font,
+    XftTextExtentsUtf8(display, tiny::theme.wm_header.get_font(),
             reinterpret_cast<const FcChar8*>(title.c_str()), title.size(),
             &extents);
 
@@ -146,12 +141,12 @@ void Header::on_expose(const XEvent &e, void * data)
     if ((x + extents.width) > get_end_offset()){
         x = get_end_offset() - extents.width;
     }
-    if (x < WM_WIN_HEADER_PADDING) {
-        x = WM_WIN_HEADER_PADDING;
+    if (x < get_padding()) {
+        x = get_padding();
     }
 
     XClearWindow(display, window);
-    XftDrawStringUtf8(draw, &color, font, x, y,
+    XftDrawStringUtf8(draw, &color, tiny::theme.wm_header.get_font(), x, y,
             reinterpret_cast<const FcChar8*>(title.c_str()), title.size());
 
     XftDrawDestroy(draw);
@@ -159,7 +154,7 @@ void Header::on_expose(const XEvent &e, void * data)
 
     // bottom line
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, WM_WIN_BORDER_COLOR);
+    XSetForeground(display, gc, get_border());
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
     XDrawLine(display, window, gc, 0, height-1, width, height-1);
     XFreeGC(display, gc);

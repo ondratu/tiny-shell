@@ -1,48 +1,149 @@
+#pragma once
+
+#include <stdint.h>
+#include <string_view>
+
+#include <X11/Xft/Xft.h>
+
+namespace tiny {
+
+class Style {
+    /* State heredity
+     * Invisible - widget is not visible (out of allowed drawing area)
+     * Normal - base state
+     * Selected -> overwrite Normal
+     * Hover -> overwrite only Normal, Selected
+     * Focus -> overwrite Normal, Selected, Hover
+     * Pressed -> overwrite Normal, Selected, Hover, Focus, Pressed
+     * Disabled -> can't be overwritten
+     * */
+
+  public:
+    enum class State : uint8_t {
+        Invisible = 0,
+        Normal = 1,
+        Selected = 2,
+        Hover = 4,
+        Focus = 8,
+        Pressed = 16,
+        Disabled = 32
+    };
+
+    // last byte is 0x01
+    static constexpr uint32_t INHERITED = 0x01FFFFFF;
+
+    // last byte is 0x00
+    static constexpr uint32_t BLACK = 0x000000;
+    static constexpr uint32_t WHITE = 0xFFFFFF;
+    static constexpr uint32_t GRAY25 = 0x404040;
+    static constexpr uint32_t GRAY50 = 0x808080;
+    static constexpr uint32_t GRAY75 = 0xc0c0c0;
+
+  public:
+    Style(){};
+    virtual ~Style();
+
+    void init();
+
+    const uint32_t get_bg(uint8_t state) const;
+    const uint32_t get_fg(uint8_t state) const;
+    const uint32_t get_br(uint8_t state) const;
+    XftFont* get_font() const
+    { return font; }
+
+    const std::string_view get_xft_fg(uint8_t state) const;
+
+    // Normal state
+    uint32_t normal_bg = BLACK;
+    uint32_t normal_fg = 0xA8A8A8;
+    uint32_t normal_br = 0x2E3436;
+
+    // Disable
+    uint32_t disable_bg = INHERITED;
+    uint32_t disable_fg = 0x555753;
+    uint32_t disable_br = INHERITED;
+
+    // Active (on mouse hover)
+    uint32_t hover_bg = INHERITED;
+    uint32_t hover_fg = 0xF3F3F3;
+    uint32_t hover_br = INHERITED;
+
+    // Focus (on keyboard cursor)
+    uint32_t focus_bg = INHERITED;
+    uint32_t focus_fg = INHERITED;
+    uint32_t focus_br = INHERITED;
+
+    // Pressed or clicked
+    uint32_t pressed_bg = INHERITED;
+    uint32_t pressed_fg = INHERITED;
+    uint32_t pressed_br = INHERITED;
+
+    // Selected
+    uint32_t selected_bg = INHERITED;
+    uint32_t selected_fg = INHERITED;
+    uint32_t selected_br = INHERITED;
+
+    uint32_t border_width = 1;
+    uint32_t padding_width = 1;
+
+  private:
+    std::string_view font_name = "Cantarell-12";
+    XftFont* font;
+
+}; // Style
+
+
+class WMButtonStyle: public Style {
+  public:
+    // Normal state
+    uint32_t normal_bg = 0xF8F8F8;
+    uint32_t normal_fg = 0x2E3436;
+    uint32_t normal_br = 0xB6B6B3;
+
+    uint32_t disable_fg = 0x8B8E8F;
+
+    uint32_t hover_fg = 0xF7F7F7;
+    uint32_t hover_br = 0xF8F8F7;
+}; // WMButtonStyle
+
+
+class WMHeaderStyle: public Style {
+  public:
+    uint32_t normal_bg = 0xF8F8F8;
+    uint32_t normal_fg = 0x0E1416;
+    uint32_t normal_br = 0x888A85;
+
+    uint32_t disable_fg = 0x6E7476;
+
+    uint32_t padding = 2;
+  private:
+    std::string_view font_name = "Cantarell-12:bold";
+
+}; // WMHeaderStyle
+
+class Theme {
+  public:
+    Theme(){}
+    ~Theme(){}
+
+    void init();
+
+    uint32_t root_background = 0x729FCF;
+    uint32_t wm_win_header = 25;
+    uint32_t wm_win_border = 10;
+    uint32_t wm_win_corner = wm_win_border*2;
+    uint32_t wm_win_min_width = 10;
+    uint32_t wm_win_min_height = 10+wm_win_header;
+
+    uint32_t wm_panel = 30;
+
+  Style widget;
+  WMButtonStyle wm_button;
+  WMHeaderStyle wm_header;
+}; // Theme
+
+extern Theme theme;
+
+} // namespace
+
 // default tiny-shel widgets are dark
-
-#define WHITE_COLOR             0xFFFFFF
-#define GRAY_COLOR              0x888888
-#define BLACK_COLOR             0x000000
-
-#define XFT_WHITE_COLOR         "#FFFFFF"
-
-#define WIDGET_BORDER           1
-#define WIDGET_BORDER_COLOR     0x2e3436
-#define WIDGET_BACKGROUND       0x0
-#define WIDGET_COLOR_NORMAL     0xF3F3F3
-#define WIDGET_COLOR_DISABLE    0x555753
-#define WIDGET_XFT_COLOR_NORMAL     "#a8a8a8"
-#define WIDGET_XFT_COLOR_ACTIVE     "#F3F3F3"
-#define WIDGET_XFT_COLOR_DISABLE    "#F3F3F3"
-#define WIDGET_XFT_FONT         "Cantarell-12:bold"
-
-#define WM_BTN_BACKGROUND       0xf8f8f7
-#define WM_BTN_BG_MO            0xF7F7F7        // mouse over
-#define WM_BTN_BORDER           1               // border
-#define WM_BTN_BORDER_COLOR     0xb6b6b3        // border color
-#define WM_BTN_COLOR_NORMAL     0x2E3436        // color enable
-#define WM_BNT_COLOR_DISABLE    0x8b8e8f        // color disable
-
-#define WM_TITLE_FG_ENE         "#2E3436"
-#define WM_TITLE_FG_DIS         "#4E5456"
-
-#define WM_WIN_BACKGROUND       0xf8f8f8
-#define WM_WIN_BORDER_COLOR     0x888A85
-
-#define WM_WIN_HEADER           25
-#define WM_WIN_HEADER_PADDING   2
-#define WM_WIN_HEADER_XFT_FONT  "Cantarell-12:bold"
-#define WM_WIN_HEADER_XFT_COLOR_NORMAL     "#0E1416"
-#define WM_WIN_HEADER_XFT_COLOR_DISABLE    "#6E7476"
-
-#define WM_WIN_BORDER           10
-#define WM_WIN_CORNER           WM_WIN_BORDER*2
-
-#define WM_WIN_MIN_WIDTH        10
-#define WM_WIN_MIN_HEIGHT       10+WM_WIN_HEADER
-
-#define WM_ROOT_BACKGROUND      0x729FCF
-
-#define WM_PANEL                30
-#define WM_PANEL_BACKGROUND     0x0
-#define WM_PANEL_TEXT           "#F3F3F3"

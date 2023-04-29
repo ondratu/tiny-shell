@@ -20,15 +20,8 @@ class Position {
 
 class Container: public Widget {
   public:
-    Container(uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
-    Container(Widget::Type type, uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
-
+    Container(Widget::Type type, uint32_t width, uint32_t height);
+    Container(uint32_t width, uint32_t height);
 
     virtual ~Container();
 
@@ -46,10 +39,7 @@ class Box: public Container {
   public:
     enum class Type {Horizontal, Vertical};
 
-    Box(Type type, uint32_t width, uint32_t height,
-        uint32_t border=WIDGET_BORDER,
-        uint32_t border_color=WIDGET_BORDER_COLOR,
-        uint32_t background=WIDGET_BACKGROUND);
+    Box(Type type, uint32_t width, uint32_t height);
 
     virtual ~Box();
 
@@ -81,14 +71,8 @@ class Box: public Container {
 
 class Popover: public Box {
   public:
-    Popover(uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
-    Popover(Box::Type type, uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
+    Popover(Box::Type type, uint32_t width, uint32_t height);
+    Popover(uint32_t width, uint32_t height);
 
     virtual ~Popover();
 

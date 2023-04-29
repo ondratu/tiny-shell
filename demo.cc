@@ -40,9 +40,9 @@ class Demo: public tiny::Container {
 
         add(&vbox);
         vbox.push_start(&header);
-        header.push_back(&x_btn, 6, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
-        header.push_back(&o_btn, 12, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
-        header.push_back(&__btn, 12, WM_WIN_HEADER_PADDING-WM_BTN_BORDER);
+        header.push_back(&x_btn, 6, 1);
+        header.push_back(&o_btn, 12, 1);
+        header.push_back(&__btn, 12, 1);
 
         vbox.push_back(&buttons);
 

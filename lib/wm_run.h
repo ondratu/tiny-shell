@@ -7,7 +7,7 @@ namespace wm {
 
 class Entry: public tiny::Widget {
   public:
-    Entry(uint32_t width, uint32_t height=WM_WIN_HEADER);
+    Entry(uint32_t width, uint32_t height);
 
     virtual ~Entry();
 
@@ -26,8 +26,6 @@ class Entry: public tiny::Widget {
 
   private:
     std::string text;
-    XftFont *font;
-    const int screen;       // XXX: this is zero for now
 
     XIM xim;
     XIC xic;

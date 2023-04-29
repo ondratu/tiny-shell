@@ -5,25 +5,17 @@
 
 namespace tiny {
 
-Widget::Widget(Type type, uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Object(), type(type), display(get_display()), parent(0), window(0),
-    event_mask(0), width(width), height(height), border(border),
-    border_color(border_color), background(background),
+Widget::Widget(Type type, uint32_t width, uint32_t height):
+    Object(), type(type), display(get_display()),
+    parent(0), window(0), event_mask(0), width(width), height(height),
     is_maped(false), is_realized(false)
 {
     name = "widget";
 }
 
-Widget::Widget(uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Object(), type(Type::Normal), display(get_display()), parent(0), window(0),
-    event_mask(0), width(width), height(height), border(border),
-    border_color(border_color), background(background),
-    is_maped(false), is_realized(false)
-{
-    name = "widget";
-}
+Widget::Widget(uint32_t width, uint32_t height):
+    Widget(Type::Normal, width, height)
+{}
 
 Widget::~Widget(){
     unmap();
@@ -35,6 +27,27 @@ Widget::~Widget(){
         XSync(display, False);      // Wait for all Ungrab call
         XDestroyWindow(display, window);
     }
+}
+
+uint8_t Widget::get_theme_state() const
+{
+    uint8_t state = (uint8_t) Style::State::Normal;
+    if (is_selected){
+        state |= (uint8_t) Style::State::Selected;
+    }
+    if (is_hover){
+        state |= (uint8_t) Style::State::Hover;
+    }
+    if (is_focus){
+        state |= (uint8_t) Style::State::Focus;
+    }
+    if (is_pressed){
+        state |= (uint8_t) Style::State::Pressed;
+    }
+    if (is_disabled){
+        state |= (uint8_t) Style::State::Disabled;
+    }
+    return state;
 }
 
 void Widget::set_events(long mask){
@@ -53,12 +66,16 @@ void Widget::realize(Window parent, int x, int y)
     }
     this->parent = parent;
 
+    uint8_t state = get_theme_state();
+    TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
+
     switch(type) {
         case (Type::Normal):
             window = XCreateSimpleWindow(
                     display, parent,
                     x, y, width, height,
-                    border, border_color, background);
+                    get_border(), tiny::theme.widget.get_br(state),
+                    tiny::theme.widget.get_bg(state));
             break;
         case (Type::Input):
             // TODO: parent must bew root or InputOnly
@@ -75,12 +92,12 @@ void Widget::realize(Window parent, int x, int y)
 
             XSetWindowAttributes attr;
             attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
-            attr.border_pixel = border_color;
-            attr.background_pixel = background;
+            attr.border_pixel = tiny::theme.widget.get_br(state);
+            attr.background_pixel = tiny::theme.widget.get_bg(state);
 
             window = XCreateWindow(
                     display, parent,
-                    x, y, width, height, border,
+                    x, y, width, height, get_border(),
                     vinfo.depth, InputOutput, vinfo.visual,
                     CWColormap | CWBorderPixel | CWBackPixel, &attr);
             break;

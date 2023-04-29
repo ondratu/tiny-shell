@@ -15,7 +15,7 @@ Manager::Manager(::Display* display, ::Window root):
     display(display), root(root),
     wm_panel(), wm_run(), running(true)
 {
-    XSetWindowBackground(display, root, WM_ROOT_BACKGROUND);
+    XSetWindowBackground(display, root, tiny::theme.root_background);
     XSync(display, True);
 
     XDefineCursor(display, root, XCreateFontCursor(display, XC_arrow));

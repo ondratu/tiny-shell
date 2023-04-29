@@ -7,10 +7,10 @@ namespace wm {
 
 Button::Button():
     tiny::Button(
-        WM_WIN_HEADER-2*WM_WIN_HEADER_PADDING,
-        WM_WIN_HEADER-2*WM_WIN_HEADER_PADDING,
-        WM_BTN_BORDER, WM_BTN_BACKGROUND, WM_BTN_BACKGROUND)
-{}
+        tiny::theme.wm_win_header-2*get_padding(),      // TODO: WM_WIN_HEADER_PADDING
+        tiny::theme.wm_win_header-2*get_padding())
+{
+}
 
 Button::~Button(){
     disconnect(ExposureMask);
@@ -26,12 +26,12 @@ void Button::set_events(long mask)
 
 void Button::on_enter_notify(const XEvent &e, void * data){
     tiny::Button::on_enter_notify(e, data);
-    XSetWindowBorder(display, window, WM_BTN_BORDER_COLOR);
+    XSetWindowBorder(display, window, tiny::theme.wm_button.get_br(get_theme_state()));
 }
 
 void Button::on_leave_notify(const XEvent &e, void * data){
     tiny::Button::on_leave_notify(e, data);
-    XSetWindowBorder(display, window, WM_BTN_BACKGROUND);
+    XSetWindowBorder(display, window, tiny::theme.wm_button.get_br(get_theme_state()));
 }
 
 
@@ -48,7 +48,7 @@ void CloseButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, WM_BTN_COLOR_NORMAL);
+    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
@@ -75,7 +75,7 @@ void MaximizeButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, WM_BTN_COLOR_NORMAL);
+    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinMiter);
 
     int mid_x = attrs.width/2;
@@ -123,7 +123,7 @@ void MinimizeButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, WM_BTN_COLOR_NORMAL);
+    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;

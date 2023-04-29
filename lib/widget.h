@@ -14,15 +14,9 @@ class Widget: public Object {
   public:
     enum class Type {Normal, Transparent, Input};
 
-    Widget(Type type, uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
+    Widget(Type type, uint32_t width, uint32_t height);
 
-    Widget(uint32_t width, uint32_t height,
-            uint32_t border=WIDGET_BORDER,
-            uint32_t border_color=WIDGET_BORDER_COLOR,
-            uint32_t background=WIDGET_BACKGROUND);
+    Widget(uint32_t width, uint32_t height);
 
     virtual ~Widget();
 
@@ -33,6 +27,12 @@ class Widget: public Object {
 
     inline const Window get_parent_window() const
     { return parent; }
+
+    inline virtual uint32_t get_border() const
+    { return tiny::theme.widget.border_width; }
+
+    inline virtual uint32_t get_padding() const
+    { return tiny::theme.widget.padding_width; }
 
     inline uint32_t get_width() const
     { return width; }
@@ -65,6 +65,8 @@ class Widget: public Object {
 
     virtual void on_configure_notify(const XEvent &e, void *);
 
+    uint8_t get_theme_state() const;
+
     Type type;
     Display &display;
     Window parent;
@@ -76,12 +78,15 @@ class Widget: public Object {
     uint32_t width;
     uint32_t height;
 
-    uint32_t border;
-    uint32_t border_color;
-    uint32_t background;
-
     bool is_maped;
     bool is_realized;
+
+    bool is_disabled = false;
+    bool is_selected = false;   //!< is selected
+    bool is_hover = false;      //!< is mouse over
+    bool is_focus = false;      //!< is keyboard cursor in / on
+    bool is_pressed = false;    //!< is pressed (buttons)
+    bool is_dragged = false;    //!< is dragged
 };
 
 } // namespace tiny

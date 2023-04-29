@@ -5,10 +5,8 @@
 
 namespace tiny {
 
-Button::Button(uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Widget(width, height, border, border_color, background),
-    is_active(false)
+Button::Button(uint32_t width, uint32_t height):
+    Widget(width, height)
 {
     name = "button";
 }
@@ -41,11 +39,11 @@ void Button::set_events(long mask)
 }
 
 void Button::on_enter_notify(const XEvent &e, void *){
-    is_active = true;
+    is_hover = true;
 }
 
 void Button::on_leave_notify(const XEvent &e, void *){
-    is_active = false;
+    is_hover = false;
 }
 
 void Button::on_button_release(const XEvent &e, void * data){
@@ -58,11 +56,9 @@ void Button::on_button_release(const XEvent &e, void * data){
 
 
 LabelButton::LabelButton(uint32_t width, uint32_t height,
-        const std::string &text, const std::string &font_name,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Button(width, height, border, border_color, background),
-    text(text), font_name(font_name), normal_color(WIDGET_XFT_COLOR_NORMAL),
-    active_color(WIDGET_XFT_COLOR_ACTIVE), screen(0)
+        const std::string &text):
+    Button(width, height),
+    text(text)
 {
     name = "labelbutton";
 }
@@ -85,7 +81,6 @@ void LabelButton::set_events(long mask)
 void LabelButton::realize(Window parent, int x, int y)
 {
     Button::realize(parent, x, y);
-    font = XftFontOpenName(display, screen, font_name.c_str());
 }
 
 void LabelButton::set_text(const std::string &text)
@@ -113,20 +108,17 @@ void LabelButton::on_expose(const XEvent &e, void * data)
     XftColor color;
     XftDraw *draw;
     XGlyphInfo extents;
+    const int screen = 0; // XXX
     Visual *visual = XDefaultVisual(display, screen);
     Colormap colormap = XDefaultColormap(display, screen);
 
-    if (is_active){
-        XftColorAllocName(display, visual, colormap, active_color.c_str(),
-                &color);
-    } else {
-        XftColorAllocName(display, visual, colormap, normal_color.c_str(),
-                &color);
-    }
+    uint8_t state = get_theme_state();
+    XftColorAllocName(display, visual, colormap,
+                      tiny::theme.widget.get_xft_fg(state).data(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
-    XftTextExtentsUtf8(display, font,
+    XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
             reinterpret_cast<const FcChar8*>(text.c_str()), text.size(),
             &extents);
 
@@ -135,7 +127,7 @@ void LabelButton::on_expose(const XEvent &e, void * data)
     int y = (height+extents.height)/2;
 
     XClearWindow(display, window);
-    XftDrawStringUtf8(draw, &color, font, x, y,
+    XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
             reinterpret_cast<const FcChar8*>(text.c_str()), text.size());
 
     XftDrawDestroy(draw);
@@ -143,10 +135,8 @@ void LabelButton::on_expose(const XEvent &e, void * data)
 }
 
 
-MenuButton::MenuButton(uint32_t width, uint32_t height, const std::string &text,
-            const std::string &font, uint32_t border, uint32_t border_color,
-            uint32_t background):
-    LabelButton(width, height, text, font, border, border_color, background)
+MenuButton::MenuButton(uint32_t width, uint32_t height, const std::string &text):
+    LabelButton(width, height, text)
 {
     name = "menubutton";
 }

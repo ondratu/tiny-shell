@@ -35,18 +35,18 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
     }
 }
 
-
-Container::Container(uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Widget(Widget::Type::Normal, width, height, border, border_color, background)
+Container::Container(Widget::Type type, uint32_t width, uint32_t height):
+    Widget(type, width, height)
 {
     name = "container";
 }
 
-Container::Container(Widget::Type type, uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Widget(type, width, height, border, border_color, background)
-{}
+
+Container::Container(uint32_t width, uint32_t height):
+    Container(Widget::Type::Normal, width, height)
+{
+}
+
 
 Container::~Container()
 {}
@@ -76,9 +76,8 @@ void Container::add(Widget * widget, int x, int y, int gravity)
 
 
 
-Box::Box(Type type, uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Container(width, height, border, border_color, background),
+Box::Box(Type type, uint32_t width, uint32_t height):
+    Container(width, height),
     type(type), start_offset(0)
 {
     name = "box";
@@ -128,20 +127,18 @@ void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
 }
 
 
-
-Popover::Popover(uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Box(Box::Type::Vertical, width, height, border, border_color, background),
+Popover::Popover(Box::Type type, uint32_t width, uint32_t height):
+    Box(type, width, height),
     time_from_unmap(0)
 {
     name = "popover";
 }
 
-Popover::Popover(Box::Type type, uint32_t width, uint32_t height,
-        uint32_t border, uint32_t border_color, uint32_t background):
-    Box(type, width, height, border, border_color, background),
-    time_from_unmap(0)
+
+Popover::Popover(uint32_t width, uint32_t height):
+    Popover(Box::Type::Vertical, width, height)
 {}
+
 
 Popover::~Popover()
 {

@@ -2,12 +2,13 @@
 #include <string>
 
 #include "containers.h"
+#include "theme.h"
 
 namespace wm {
 
 class TitleBox: public tiny::Widget {
   public:
-    TitleBox(uint32_t width, uint32_t height=WM_WIN_HEADER);
+    TitleBox(uint32_t width, uint32_t height);
 
     virtual ~TitleBox();
 
@@ -26,7 +27,7 @@ class TitleBox: public tiny::Widget {
 
 class Header: public tiny::Box {
   public:
-    Header(uint32_t width, uint32_t height=WM_WIN_HEADER);
+    Header(uint32_t width, uint32_t height);
 
     virtual ~Header();
 
@@ -51,7 +52,6 @@ class Header: public tiny::Box {
 
   private:
     std::string title;
-    XftFont *font;
 
     TitleBox title_box;
     bool is_disable;
