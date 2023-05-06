@@ -35,17 +35,17 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
     }
 }
 
-Container::Container(Widget::Type type, uint32_t width, uint32_t height):
+Container::Container(Widget::Type type, uint32_t width, uint32_t height,
+        const char* name):
     Widget(type, width, height)
 {
-    name = "container";
+    this->name = name;
 }
 
 
-Container::Container(uint32_t width, uint32_t height):
-    Container(Widget::Type::Normal, width, height)
-{
-}
+Container::Container(uint32_t width, uint32_t height, const char* name):
+    Container(Widget::Type::Normal, width, height, name)
+{}
 
 
 Container::~Container()

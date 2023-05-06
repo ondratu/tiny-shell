@@ -10,6 +10,13 @@
 
 namespace tiny {
 
+struct Rect {
+    int x;
+    int y;
+    uint32_t width;
+    uint32_t height;
+};
+
 class Widget: public Object {
   public:
     enum class Type {Normal, Transparent, Input};

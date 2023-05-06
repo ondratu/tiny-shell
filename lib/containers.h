@@ -20,8 +20,9 @@ class Position {
 
 class Container: public Widget {
   public:
-    Container(Widget::Type type, uint32_t width, uint32_t height);
-    Container(uint32_t width, uint32_t height);
+    Container(Widget::Type type, uint32_t width, uint32_t height,
+            const char* name = "container");
+    Container(uint32_t width, uint32_t height, const char* name = "container");
 
     virtual ~Container();
 

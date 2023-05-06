@@ -1,6 +1,7 @@
 #include <X11/cursorfont.h>
 
 #include "wm_header.h"
+#include "x_util.h"
 
 namespace wm {
 

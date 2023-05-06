@@ -54,7 +54,7 @@ Object::~Object()
 {
     while (!connected_events.empty()){
         const auto key = connected_events.crbegin();
-        TINY_LOG("missing %d for %x", key->first, key->second);
+        // TINY_LOG("missing %d for %x", key->first, key->second);
         disconnect_window(key->first, key->second);
     }
     connected_events.clear();

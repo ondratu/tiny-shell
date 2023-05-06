@@ -67,7 +67,7 @@ void Widget::realize(Window parent, int x, int y)
     this->parent = parent;
 
     uint8_t state = get_theme_state();
-    TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
+    // TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
 
     switch(type) {
         case (Type::Normal):

@@ -1,20 +1,26 @@
+#include <vector>
+
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 
 #include "wm_manager.h"
+#include "wm_wrapped.h"
 #include "x_util.h"
 
 namespace tiny {
     extern Handlers handlers;
+    extern std::shared_ptr<Display> display;
 }
 
 namespace wm {
 
 Manager::Manager(::Display* display, ::Window root):
     tiny::Object(),
-    display(display), root(root),
+    display(display),
+    root(root),
     wm_panel(), wm_run(), running(true)
 {
+    //set_supported();
     XSetWindowBackground(display, root, tiny::theme.root_background);
     XSync(display, True);
 
@@ -46,16 +52,34 @@ Manager::Manager(::Display* display, ::Window root):
                 continue;   // menu, special tools (idesk) and so on
             }
 
-            Window::WMType wm_type = Window::get_net_wm_type(rv_child[i]);
-            switch (wm_type) {
-                case Window::WMType::DESKTOP:
-                case Window::WMType::DOCK:
-                case Window::WMType::SPLASH:
-                    continue; // do not manage this window type
-                default:
-                    break;
+            std::set<Atom> properties;
+            Window::get_properties(rv_child[i], properties);
+
+            if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE))
+            {
+                Window::WMType wm_type = Window::get_net_wm_type(rv_child[i]);
+                switch (wm_type) {
+                    case Window::WMType::DESKTOP:
+                    case Window::WMType::DOCK:
+                    case Window::WMType::SPLASH:
+                        continue; // do not manage this window type
+                    default:
+                        break;
+                }
             }
-            Window * window = Window::create(root, rv_child[i], attrs);
+
+            Window* window = nullptr;
+            unsigned long functions;
+            unsigned long decorations;
+            if (Window::get_motif_hints(rv_child[i], functions, decorations)
+                    && !decorations)
+            {
+                window = Window::create(root, rv_child[i], attrs, functions);
+            } else {
+                window = Wrapped::create(root, rv_child[i], attrs,
+                                         functions, decorations);
+            }
+
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
             window->on_focus.connect(this,
@@ -113,12 +137,29 @@ void Manager::set_events()
               Mod1Mask, root);
 }
 
+void Manager::set_supported()
+{
+    Atom supported[] = {
+        tiny::display->_NET_SUPPORTED,
+        tiny::display->_NET_WM_NAME,
+        tiny::display->_NET_WM_VISIBLE_NAME,
+        tiny::display->_NET_WM_WINDOW_TYPE
+    };
+
+    XChangeProperty(display, root, tiny::display->_NET_SUPPORTED, XA_ATOM,
+            32, PropModeReplace,
+            reinterpret_cast<unsigned char *>(supported),
+            sizeof(supported)/sizeof(Atom));
+}
+
 void Manager::main_loop()
 {
     XEvent event;
 
     while (running){
         XNextEvent(display, &event);
+        /*TINY_LOG("Event: %s (%lx)\n",
+                 event_to_string(event), event.xany.window);*/
 
         auto signal_id = std::make_pair(event.type, event.xany.window);
 
@@ -144,9 +185,23 @@ void Manager::main_loop()
             case ConfigureRequest:  // need for resize requests from app windows
                 on_configure_request(event.xconfigurerequest);
                 break;
+            case ClientMessage:
+                on_client_message(event.xclient);
+                print_wm_state(event.xclient.window);
+                break;
+            case CreateNotify:
+                TINY_LOG("CreateNotify for %lx -> %d;%d [%dx%d]",
+                        event.xany.window,
+                        event.xcreatewindow.x,
+                        event.xcreatewindow.y,
+                        event.xcreatewindow.width,
+                        event.xcreatewindow.height);
+                break;
             default:
+                // TODO: co dělají ConfigureNotify? Chodí před _NET_WM_USER_TIME
+                // Na Gedit chodí ještě další další notifikace... proč?
 #ifdef DEBUG
-                fprintf(stderr, "Unhandled event: %s (%x)\n",
+                fprintf(stderr, "Unhandled event: %s (%lx)\n",
                         event_to_string(event), event.xany.window);
 #endif
                 break;
@@ -200,7 +255,7 @@ void Manager::activate_prev_window()
 }
 
 void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
-    active = static_cast<Window*>(o);
+    active = reinterpret_cast<Window*>(o);
 }
 
 void Manager::on_logout(tiny::Object *o, const XEvent &e, void *data){
@@ -258,22 +313,44 @@ void Manager::on_map_request(const XMapRequestEvent &e)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, e.window, &attrs);
+    if (attrs.map_state == IsViewable){
+        return;
+    }
     if (attrs.override_redirect){
         return;     // menu, special tools (idesk) and so on
     }
-    Window::WMType wm_type = Window::get_net_wm_type(e.window);
-    switch (wm_type) {
-        case Window::WMType::DESKTOP:
-        case Window::WMType::DOCK:
-        case Window::WMType::SPLASH:
-            XMapWindow(display, e.window);
-            return; // do not manage this window type
-        default:
-            TINY_LOG("WM_TYPE is %d", wm_type);
-            break;
+
+    print_wm_state(e.window);
+
+    std::set<Atom> properties;
+    Window::get_properties(e.window, properties);
+
+    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE))
+    {
+        Window::WMType wm_type = Window::get_net_wm_type(e.window);
+        switch (wm_type) {
+            case Window::WMType::DESKTOP:
+            case Window::WMType::DOCK:
+            case Window::WMType::SPLASH:
+                XMapWindow(display, e.window);
+                return; // do not manage this window type
+            default:
+                break;
+        }
     }
 
-    Window * window = Window::create(root, e.window, attrs);
+    Window* window = nullptr;
+    unsigned long functions;
+    unsigned long decorations;
+
+    if (Window::get_motif_hints(e.window, functions, decorations)
+            && !decorations)
+    {
+        window = Window::create(root, e.window, attrs, functions);
+    } else {
+        window = Wrapped::create(root, e.window, attrs, functions, decorations);
+    }
+
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
     XMapWindow(display, e.window);
@@ -294,17 +371,105 @@ void Manager::on_configure_request(const XConfigureRequestEvent &e)
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
 
+    TINY_LOG("win size: %d x %d -> [%d x %d]", e.x, e.y, e.width, e.height);
     XConfigureWindow(display, e.window, e.value_mask, &ch);
-    printf(" > Resize to %dx%d\n", e.width, e.height);
+    // printf(" > Resize to %dx%d\n", e.width, e.height);
 
     // XXX: Why this ?
-    if (wm_windows.count(e.window)){
-        const ::Window frame = wm_windows[e.window]->get_window();
+    if (false && wm_windows.count(e.window)){
+        const ::Window frame = wm_windows[e.window]->get_child();
         ch.width -= 2;
         ch.height -= 22;
         XConfigureWindow(display, frame, e.value_mask, &ch);
         printf(" > Resize frame to %dx%d\n", e.width, e.height);
     }
+}
+
+void Manager::on_client_message(const XClientMessageEvent& xclient)
+{
+    char * prop_name = nullptr;
+    prop_name = XGetAtomName(display, xclient.message_type);
+    TINY_LOG("Recieve ClientMessage %s (%ld, %ld, %ld, %ld)",
+            prop_name,
+            xclient.data.l[0],  // action
+            xclient.data.l[1],  // first property
+            xclient.data.l[2],  // second property
+            xclient.data.l[3]); // source indication
+    XFree(prop_name);
+
+    if (xclient.message_type == tiny::display->_NET_WM_STATE){
+        for (uint8_t i = 1; i <= 2; i++){
+            prop_name = XGetAtomName(display,
+                    (Atom)xclient.data.l[1]);
+            TINY_LOG("\t _NET_WM_STATE: %s", prop_name);
+            XFree(prop_name);
+        }
+    }
+
+    if (xclient.data.l[0] == tiny::Display::_NET_WM_STATE_ADD){
+        if ((Atom)xclient.data.l[1] == tiny::display->_NET_WM_STATE_MAXIMIZED_VERT &&
+                (Atom)xclient.data.l[2] == tiny::display->_NET_WM_STATE_MAXIMIZED_HORZ)
+        {
+            XWindowAttributes root_attrs;   //TODO: get_screen size
+            XGetWindowAttributes(display, root, &root_attrs);
+            XMoveResizeWindow(display, xclient.window, 0, 0,
+                    root_attrs.width, root_attrs.height);
+
+            std::vector<Atom> atoms;
+            atoms.push_back(tiny::display->_NET_WM_STATE_MAXIMIZED_VERT);
+            atoms.push_back(tiny::display->_NET_WM_STATE_MAXIMIZED_HORZ);
+
+            XChangeProperty(display, xclient.window,
+                    tiny::display->_NET_WM_STATE, XA_ATOM,
+                    32, PropModeReplace,
+                    reinterpret_cast<unsigned char *>(&(atoms[0])),
+                    atoms.size());
+        }
+    }
+}
+
+void Manager::print_wm_state(::Window window)
+{
+    Atom returned_type;
+    int size;
+    unsigned long nitems;
+    unsigned long bytes_left;
+    unsigned char *data = NULL;
+    TINY_LOG("Try to get _NET_WM_STATE...");
+
+    if (XGetWindowProperty(*tiny::display, window,
+                tiny::display->_NET_WM_STATE, 0L, 1L,
+                false, XA_ATOM,
+                &returned_type, &size,
+                &nitems, &bytes_left, &data) != Success || !nitems)
+    {
+        TINY_LOG("No _NET_WM_STATE...");
+        return;
+    }
+    TINY_LOG("\tbytes left: %ld nitems: %ld", bytes_left, nitems);
+
+    if (bytes_left != 0) {  // Fetch all states...
+        XFree(data);
+        unsigned long remain = ((size / 8) * nitems) + bytes_left;
+        if (XGetWindowProperty(*tiny::display, window,
+                    tiny::display->_NET_WM_STATE,  0L, remain,
+                    false, XA_ATOM,
+                    &returned_type, &size,
+                    &nitems, &bytes_left, &data) != Success)
+        {
+            TINY_LOG("No other _NET_WM_STATE...");
+            return;
+        }
+    }
+
+    char* atom_name;
+    Atom* atoms = reinterpret_cast<Atom*>(data);
+    for (unsigned long i = 0; i < nitems; i++){
+        atom_name = XGetAtomName(display, atoms[i]);
+        TINY_LOG("\t _NET_WM_STATE: %s", atom_name);
+        XFree(atom_name);
+    }
+    XFree(data);
 }
 
 } // namespace wm

@@ -1,126 +1,181 @@
 #pragma once
 
+#include <vector>
 #include <set>
 
-#include "containers.h"
-#include "wm_header.h"
-#include "wm_buttons.h"
-#include "wm_edge.h"
+#include "object.h"
+#include "widget.h"
+#include "display.h"
 
 namespace wm {
 
-class Window: public tiny::Container {
-  public:
-    enum class WMType {
-        DESKTOP,
-        DOCK,
-        TOOLBAR,
-        MENU,
-        UTILITY,
-        SPLASH,
-        DIALOG,
-        NORMAL
+struct MotifWMHints {
+    unsigned long flags;
+    unsigned long functions;
+    unsigned long decorations;
+    long input_mode;
+    unsigned long status;
+
+    static constexpr long property_length = 5L;
+
+    enum { // MWM flags
+        FLAG_FUNCTIONS     = 1L<<0,
+        FLAG_DECORATIONS   = 1L<<1,
+        FLAG_INPUT_MODE    = 1L<<2,
+        FLAG_STATUS        = 1L<<3
     };
 
-  public:
-    Window(::Window child, uint32_t width, uint32_t height);
+    enum { // MWM functions
+        FUNC_ALL        = 1L<<0,
+        FUNC_RESIZE     = 1L<<1,
+        FUNC_MOVE       = 1L<<2,
+        FUNC_MINIMIZE   = 1L<<3,
+        FUNC_MAXIMIZE   = 1L<<4,
+        FUNC_CLOSE      = 1L<<5
+    };
 
-    ~Window();
+    enum { // MWM decorations
+        DECOR_ALL       = 1L<<0,
+        DECOR_BORDER    = 1L<<1,
+        DECOR_RESIZE    = 1L<<2,
+        DECOR_TITLE     = 1L<<3,
+        DECOR_MENU      = 1L<<4,
+        DECOR_MINIMIZE  = 1L<<5,
+        DECOR_MAXIMIZE  = 1L<<6
+    };
 
-    static Window * create(::Window parent, ::Window child,
-            const XWindowAttributes& attrs);
-
-    virtual void realize(::Window parent, int x, int y);
-
-    virtual void set_events(long mask=0);
-
-    virtual void map_all();
-
-    inline bool get_minimized() const
-    { return is_minimized; }
-
-    inline ::Window get_child() const
-    { return child; }
-
-    void set_focus();
-
-    void close();
-
-    // XXX: could be named iconify....
-    void minimize();
-
-    void restore(int x=0, int y=0);
-
-    void maximize();
-
-    void update_protocols();
-
-    void update_properties();
-
-    char * get_net_wm_name();
-
-    static WMType get_net_wm_type(::Window window);
-
-    /* signal handlers */
-    void on_close_click(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_minimize_click(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_maximize_click(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_resize(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_move_resize_begin(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_move_resize_motion(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_window_drag_begin(tiny::Object *o, const XEvent &e, void * data);
-
-    void on_window_drag_motion(tiny::Object *o, const XEvent &e, void * data);
-
-    tiny::Signal on_focus;
-    tiny::Signal on_drag_begin;
-    tiny::Signal on_drag_motion;
-  protected:
-    /* event handlers */
-    void on_button_press(const XEvent &e, void *data);
-
-    void on_button_release(const XEvent &e, void *data);
-
-    void on_motion_notify(const XEvent &e, void *data);
-
-    void on_focus_in(const XEvent &e, void *data);
-
-    void on_focus_out(const XEvent &e, void *data);
-
-    void on_property_notify(const XEvent &e, void *data);
-
-    void on_key_release(const XEvent &e, void *data);
-
-    bool is_minimized = false;
-    bool is_maximize = false;
-    bool is_resizable = true;
-    bool _net_wm_name = false;
-
-    uint32_t state_width;
-    uint32_t state_height;
-    int state_x;
-    int state_y;
-
-    ::Window child;
-    XSizeHints * hints;
-    std::set<Atom> protocols;
-    std::set<Atom> properties;
-
-    XEvent start_event;                 // state before moving/resizing
-    XWindowAttributes start_attrs;
-
-    Header header;
-    CloseButton cls_btn;
-    MinimizeButton min_btn;
-    MaximizeButton max_btn;
-    BackWindow shadow;
+    enum { // MWM input
+        INPUT_MODELESS                  = 0,
+        INPUT_APPLICATION_MODAL         = 1,
+        INPUT_SYSTEM_MODAL              = 2,
+        INPUT_FULL_APPLICATION_MODAL    = 3
+    };
 };
 
+
+class Window: public tiny::Object {
+    public:
+        enum class WMType {
+            DESKTOP,
+            DOCK,
+            TOOLBAR,
+            MENU,
+            UTILITY,
+            SPLASH,
+            DIALOG,
+            NORMAL
+        };
+
+        enum WMState {
+            MODAL               = 1L<<0,
+            STICKY              = 1L<<1,
+            MAXIMIZED_VERT      = 1L<<2,
+            MAXIMIZED_HORZ      = 1L<<3,
+            SHADED              = 1L<<4,
+            SKIP_TASKBAR        = 1L<<5,
+            SKIP_PAGER          = 1L<<6,
+            HIDDEN              = 1L<<7,
+            FULLSCREEN          = 1L<<8,
+            ABOVE               = 1L<<9,
+            BELOW               = 1L<<10,
+            DEMANDS_ATTENTION   = 1L<<11,
+            FOCUSED             = 1L<<12
+        };
+
+    public:
+        Window(::Window child, ::Window root, unsigned long functions);
+        virtual ~Window();
+
+        static Window* create(::Window root, ::Window child,
+                const XWindowAttributes& attrs, unsigned long functions);
+
+        inline ::Window get_child() const
+        { return child; }
+
+        virtual inline bool is_resizable() const
+        { return functions & MotifWMHints::FUNC_RESIZE; }
+
+        virtual inline bool is_maximizable() const
+        { return functions & MotifWMHints::FUNC_MAXIMIZE; }
+
+        virtual inline bool get_minimized() const
+        { return wm_states & WMState::HIDDEN; }
+        void set_minimized(bool minimized);
+
+        virtual inline bool get_maximized() const
+        { return (wm_states & WMState::MAXIMIZED_VERT &&
+                  wm_states & WMState::MAXIMIZED_HORZ); }
+        void set_maximized(bool maximized);
+
+        virtual inline bool is_fullscreen() const
+        { return wm_states & WMState::FULLSCREEN; }
+
+        void get_wm_states(std::vector<Atom>& atoms);
+
+        virtual void set_focus();
+
+        //! Send WM_DELETE_WINDOW to window or xkill that
+        virtual void close();
+
+        virtual void maximize();
+
+        virtual void restore(int x=0, int y=0);
+
+        void update_protocols();        //!< Update WMProtocols
+        void update_properties();       //!< Update WMProperties
+        void update_normal_hints();     //!< Update XSizeHints;
+        void update_wm_states();        //!< Update WMStates
+        void set_events();
+
+        //! Get and fill window properties
+        static int get_properties(::Window window,
+                std::set<Atom>& properties);
+
+        //! Return _NET_WM_TYPE or WMType::NORMAL when property can't be read
+        static WMType get_net_wm_type(::Window window);
+
+        //! Return _MOTIF_WM_HINTS od return ALL flags set
+        static bool get_motif_hints(::Window window,
+                unsigned long& functions, unsigned long& decorations);
+
+        virtual void on_window_drag_begin(tiny::Object *o, const XEvent &e,
+                void * data);
+
+        virtual void on_window_drag_motion(tiny::Object *o, const XEvent &e,
+                void * data);
+
+        tiny::Signal on_focus;
+        tiny::Signal on_drag_begin;
+        tiny::Signal on_drag_motion;
+    protected:
+        /* event handlers */
+        virtual void on_client_message(const XEvent &e, void *data);
+
+        virtual void on_property_notify(const XEvent &e, void *data);
+
+        virtual void on_button_press(const XEvent &e, void *data);
+
+        virtual void on_button_release(const XEvent &e, void *data);
+
+        virtual void on_key_release(const XEvent &e, void* data);
+
+        void on_motion_notify(const XEvent &e, void *data);
+
+        ::Window child;
+        ::Window root;
+        tiny::Display& dsp;
+
+        XSizeHints* hints;
+        tiny::Rect state = {0, 0, 1, 1};
+
+        unsigned long functions = 0;
+        unsigned long wm_states = 0;
+
+        XEvent start_event;                 // state before moving/resizing
+        XWindowAttributes start_attrs;
+
+        std::set<Atom> protocols;
+        std::set<Atom> properties;
+    };
 
 } // namespace wm

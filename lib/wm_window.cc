@@ -1,284 +1,220 @@
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
+#include <X11/Xutil.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <memory>
+#include <new>
 
 #include "wm_window.h"
 #include "x_util.h"
 
-namespace tiny {
-    extern std::shared_ptr<Display> display;
-}
-
 namespace wm {
 
-Window::Window(::Window child, uint32_t width, uint32_t height):
-    tiny::Container(width, height+tiny::theme.wm_win_header),
+Window::Window(::Window child, ::Window root, unsigned long functions):
     child(child),
-    header(width, tiny::theme.wm_win_header),
-    shadow(width, height+tiny::theme.wm_win_header)
+    root(root),
+    dsp(tiny::get_display()),
+    functions(functions)
 {
-    name = "wm_window";
     hints = XAllocSizeHints();
+    if (hints == nullptr) {
+        throw std::bad_alloc();
+    }
+
     update_protocols();
+    update_properties();
+
+    if (properties.count(dsp._NET_WM_STATE)){
+        update_wm_states();
+    }
+    if (properties.count(dsp.WM_NORMAL_HINTS)){
+        update_normal_hints();
+    }
+
+    if (get_maximized() && (state.width == 0 || state.height == 0)){
+        if (hints->flags & PMinSize) {
+            state.width = hints->min_width;
+            state.height = hints->min_height;
+        }
+
+        XWindowAttributes attrs;
+        XGetWindowAttributes(dsp, root, &attrs);  //!< TODO: get screen size instead
+        state.width = std::max(state.width, (uint32_t)attrs.width/3*2);
+        state.height = std::max(state.height, (uint32_t)attrs.height/3*2);
+
+        if (hints->flags & PMaxSize) {
+            state.width = std::min(state.width, (uint32_t)hints->max_width);
+            state.height = std::min(state.height, (uint32_t)hints->max_height);
+        }
+        if (hints->flags & PAspect){
+            // TODO: fix ratio if is set
+            TINY_LOG("Aspect ratio problem...");
+        }
+    }
 }
 
-Window::~Window(){
-    disconnect_window(PropertyNotify, child);
-
+Window::~Window()
+{
     if (hints){
         XFree(hints);
     }
-
-    XUngrabButton(display, Button1, AnyModifier, window);
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F4),
-            Mod1Mask, window);
-
-    disconnect(ButtonPress);
-    disconnect(ButtonRelease);
-    disconnect(MotionNotify);
-    disconnect(FocusIn);
-    disconnect(FocusOut);
 }
 
-Window* Window::create(::Window parent, ::Window child,
-                       const XWindowAttributes& attrs)
+Window* Window::create(::Window root, ::Window child,
+                       const XWindowAttributes& attrs,
+                       unsigned long functions)
 {
-    auto win = new Window(child, attrs.width, attrs.height);
-    // TODO: move down under panel
-    win->realize(parent, attrs.x, attrs.y);
-    win->on_focus_out(XEvent(), nullptr);   // disable and GrabButton
-    win->map_all();
+    tiny::Display& display = tiny::get_display();
+    auto win = new Window(child, root, functions);
 
+    XMapWindow(display, child);
+    XSetWindowBorderWidth(display, child, 1);
+    XRaiseWindow(display, child);
+
+    win->set_events();
+    // TODO: move down under panel
     return win;
 }
 
-void Window::realize(::Window parent, int x, int y)
+void Window::set_minimized(bool minimized)
 {
-    update_properties();
-    tiny::Container::realize(parent, x, y);
-
-    {   // Detect window, if is resizable
-        long int size_retun;
-        XGetWMNormalHints(display, child, hints, &size_retun);
-        if ((((size_retun & PMinSize) != PMinSize) &&
-                    ((size_retun & PMaxSize) != PMaxSize)) ||
-                ((hints->min_width == hints->max_width) &&
-                 (hints->min_height == hints->max_height) &&
-                 (hints->min_width > 0 && hints->min_height > 0)))
-        {
-            is_resizable = false;
-        }
+    if (minimized){
+        wm_states |= WMState::HIDDEN;
+    } else {
+        wm_states &= ~(WMState::HIDDEN);
     }
 
-    if (is_resizable){
-        shadow.realize(parent, x, y);
-    }
+    std::vector<Atom> atoms;
+    get_wm_states(atoms);
 
-    add(&header, 0, 0);
-    header.push_back(&cls_btn,
-            tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
-    if (is_resizable){
-        header.push_back(&max_btn,
-                tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
-    }
-    header.push_back(&min_btn,
-            tiny::theme.wm_header.padding_width, tiny::theme.wm_header.padding_width-get_border());
-
-    XSetWindowBorderWidth(display, child, 0);
-    XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
-    char * wm_name = get_net_wm_name();
-    if (!wm_name){
-        XFetchName(display, child, &wm_name);
-    }
-    if (wm_name)
-    {
-        header.set_title(wm_name);
-        XFree(wm_name);
-    }
+    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
+            32, PropModeReplace,
+            reinterpret_cast<unsigned char *>(&(*atoms.begin())),
+            atoms.size());
 }
 
-void Window::set_events(long mask)
+void Window::set_maximized(bool maximized)
 {
-    // SubstructureNotifyMask so, wm::Manager can catch UnmapNotify
-    tiny::Container::set_events(
-            mask
-            |SubstructureNotifyMask|FocusChangeMask);
-
-    XSelectInput(display, child, PropertyChangeMask);
-
-    XGrabButton(display, Button1, AnyModifier, window, true,
-            ButtonPressMask|ButtonReleaseMask,
-            GrabModeSync, GrabModeSync,
-            None, None);
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F4),
-            Mod1Mask, window);
-
-/*
-    XSelectInput(display, window,
-        SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
-
-    minim_btn->on_click.connect(
-        this,
-        static_cast<object_signal_t>(&WMWindow::on_minimize_click));
+    if (maximized){
+        wm_states |= WMState::MAXIMIZED_VERT;
+        wm_states |= WMState::MAXIMIZED_HORZ;
+    } else {
+        wm_states &= ~(WMState::MAXIMIZED_VERT);
+        wm_states &= ~(WMState::MAXIMIZED_HORZ);
     }
-*/
 
-    connect(ButtonPress,
-            static_cast<tiny::event_signal_t>(&Window::on_button_press));
-    connect(ButtonRelease,
-            static_cast<tiny::event_signal_t>(&Window::on_button_release));
-    connect(MotionNotify,
-            static_cast<tiny::event_signal_t>(&Window::on_motion_notify));
-    connect(FocusIn,
-            static_cast<tiny::event_signal_t>(&Window::on_focus_in));
-    connect(FocusOut,
-            static_cast<tiny::event_signal_t>(&Window::on_focus_out));
-    connect_window(PropertyNotify, child,
-            static_cast<tiny::event_signal_t>(&Window::on_property_notify));
-    connect(KeyRelease,
-            static_cast<tiny::event_signal_t>(&Window::on_key_release));
+    std::vector<Atom> atoms;
+    get_wm_states(atoms);
 
-    header.get_title_box()->on_drag_begin.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
-    header.get_title_box()->on_drag_motion.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
-
-    on_drag_begin.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
-    on_drag_motion.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
-
-
-    cls_btn.on_click.connect(this,
-            static_cast<tiny::object_signal_t>(&Window::on_close_click));
-
-    if (is_resizable)
-    {
-        shadow.on_move_resize_begin.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_move_resize_begin));
-        shadow.on_move_resize_motion.connect(
-            this,
-            static_cast<tiny::object_signal_t>(&Window::on_move_resize_motion));
-        max_btn.on_click.connect(this,
-                static_cast<tiny::object_signal_t>(&Window::on_maximize_click));
-    }
+    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
+            32, PropModeReplace,
+            reinterpret_cast<unsigned char *>(&(*atoms.begin())),
+            atoms.size());
 }
 
-void Window::map_all(){
-    if (is_resizable){
-        shadow.map_all();
-    }
-    tiny::Container::map_all();
+void Window::get_wm_states(std::vector<Atom>& atoms)
+{
+    atoms.clear();
 
-    if (is_resizable){
-        XRaiseWindow(display, shadow.get_window());     // shadow is lower
-    }
-    XRaiseWindow(display, window);
+    if (wm_states & WMState::MODAL){
+        atoms.push_back(dsp._NET_WM_STATE_MODAL); }
+    if (wm_states & WMState::STICKY){
+        atoms.push_back(dsp._NET_WM_STATE_STICKY); }
+    if (wm_states & WMState::MAXIMIZED_VERT){
+        atoms.push_back(dsp._NET_WM_STATE_MAXIMIZED_VERT); }
+    if (wm_states & WMState::MAXIMIZED_HORZ){
+        atoms.push_back(dsp._NET_WM_STATE_MAXIMIZED_HORZ); }
+    if (wm_states & WMState::SHADED){
+        atoms.push_back(dsp._NET_WM_STATE_SHADED); }
+    if (wm_states & WMState::SKIP_TASKBAR){
+        atoms.push_back(dsp._NET_WM_STATE_SKIP_TASKBAR); }
+    if (wm_states & WMState::SKIP_PAGER){
+        atoms.push_back(dsp._NET_WM_STATE_SKIP_PAGER); }
+    if (wm_states & WMState::HIDDEN){
+        atoms.push_back(dsp._NET_WM_STATE_HIDDEN); }
+    if (wm_states & WMState::FULLSCREEN){
+        atoms.push_back(dsp._NET_WM_STATE_FULLSCREEN); }
+    if (wm_states & WMState::ABOVE){
+        atoms.push_back(dsp._NET_WM_STATE_ABOVE); }
+    if (wm_states & WMState::BELOW){
+        atoms.push_back(dsp._NET_WM_STATE_BELOW); }
+    if (wm_states & WMState::DEMANDS_ATTENTION){
+        atoms.push_back(dsp._NET_WM_STATE_DEMANDS_ATTENTION); }
+    if (wm_states & WMState::FOCUSED){
+        atoms.push_back(dsp._NET_WM_STATE_FOCUSED); }
 }
 
 void Window::set_focus()
 {
-    if (is_resizable){
-        XRaiseWindow(display, shadow.get_window());
-    }
-    XRaiseWindow(display, window);
-    XSetInputFocus(display, child, RevertToPointerRoot, CurrentTime);
+    XSetInputFocus(dsp, child, RevertToPointerRoot, CurrentTime);
 
-    if (protocols.count(display.WM_TAKE_FOCUS))
+    if (protocols.count(dsp.WM_TAKE_FOCUS))
     {
         XClientMessageEvent msg;
-        msg.message_type = display.WM_PROTOCOLS;
-        msg.display = display;
+        msg.message_type = dsp.WM_PROTOCOLS;
+        msg.display = dsp;
         msg.window = child;
         msg.format = 32;
-        msg.data.l[0] = display.WM_TAKE_FOCUS;
+        msg.data.l[0] = dsp.WM_TAKE_FOCUS;
         msg.data.l[1] = CurrentTime;
 
-        XSendEvent(display, child, false, NoEventMask, (XEvent*) &msg);
+        XSendEvent(dsp, child, false, NoEventMask, (XEvent*) &msg);
     }
+    XRaiseWindow(dsp, child);
 }
 
 void Window::close()
 {
-    if (protocols.count(display.WM_DELETE_WINDOW))
+    if (protocols.count(dsp.WM_DELETE_WINDOW))
     {
         XClientMessageEvent msg;
         msg.window = child;
         msg.type = ClientMessage;
         msg.format = 32;
-        msg.message_type = display.WM_PROTOCOLS;
-        msg.data.l[0] = display.WM_DELETE_WINDOW;
-        XSendEvent(display, child, false, NoEventMask, (XEvent*) &msg);
+        msg.message_type = dsp.WM_PROTOCOLS;
+        msg.data.l[0] = dsp.WM_DELETE_WINDOW;
+        XSendEvent(dsp, child, false, NoEventMask, (XEvent*) &msg);
     } else {
-        XKillClient(display, child);
+        XKillClient(dsp, child);
     }
-}
-
-void Window::minimize()
-{
-    // TODO: set state
-    is_minimized = true;
-    unmap();
-    XSetInputFocus(display, parent, RevertToPointerRoot, CurrentTime);
 }
 
 void Window::maximize()
 {
-    if (is_maximize){
+    if (get_maximized()){
         return;
     }
-    XWindowAttributes win_attrs;
-    XGetWindowAttributes(display, window, &win_attrs);
-    state_width = width;
-    state_height = height;
-    state_x = win_attrs.x;
-    state_y = win_attrs.y;
 
-    XWindowAttributes root_attrs;   //TODO: get_screen size
-    XGetWindowAttributes(display, parent, &root_attrs);
+    XWindowAttributes attrs;
+    XGetWindowAttributes(dsp, child, &attrs);
+    state.x = attrs.x;
+    state.y = attrs.y;
+    state.width = attrs.width;
+    state.height = attrs.height;
 
-    XSetWindowBorderWidth(display, window, 0);
-    XMoveResizeWindow(display, window, 0, 0,
-            root_attrs.width, root_attrs.height);
-    XResizeWindow(display, child,
-            root_attrs.width, root_attrs.height-tiny::theme.wm_win_header);
-    if (is_resizable){
-        shadow.move_resize(0, 0, root_attrs.width, root_attrs.height);
-    }
-    header.resize(root_attrs.width, tiny::theme.wm_win_header);
-
-    max_btn.set_restore(true);
-    is_maximize = true;
+    XGetWindowAttributes(dsp, root, &attrs);  //!< TODO: get screen size instead
+                                              // TODO: move under the panel
+    XMoveResizeWindow(dsp, child, 0, 0, attrs.width, attrs.height);
+    set_maximized(true);
 }
 
 void Window::restore(int x, int y)
 {
-    if (is_maximize){
-        // TODO: move state_x near to pointer (x), which is on wm_window
-        // TODO: move statr_y near to pointer (y), which is on wm_window
+    if (get_maximized()) {
+        // TODO: stay in desktop
+        x = x ? (x - state.width/2): state.x;
+        y = y ? (y - state.height/2) : state.y;
 
-        if (is_resizable) {
-            shadow.move_resize(0, 0, state_width, state_height);
-        }
-        header.resize(state_width, tiny::theme.wm_win_header);
-        XResizeWindow(display, child,
-                state_width, state_height-tiny::theme.wm_win_header);
-        XMoveResizeWindow(display, window,
-                state_x, (y ? y : state_y), state_width, state_height);
-        XSetWindowBorderWidth(display, window, 1);
-
-        max_btn.set_restore(false);
-        is_maximize = false;
+        XMoveResizeWindow(dsp, child,
+                x, y, state.width, state.height);
+        XSetWindowBorderWidth(dsp, child, 1);
+        set_maximized(false);
     } else {
-        map();
-        is_minimized = false;
+        XMapWindow(dsp, child);
+        set_minimized(false);
     }
 }
 
@@ -288,10 +224,10 @@ void Window::update_protocols()
 
     Atom* supported;
     int count;
-    if (XGetWMProtocols(display, child, &supported, &count) == 0) {
+    if (XGetWMProtocols(dsp, child, &supported, &count) == 0) {
         return;
     }
-    for (size_t i =0; i < count; ++i){
+    for (size_t i =0; i < size_t(count); ++i){
         protocols.insert(supported[i]);
     }
     XFree(supported);
@@ -302,266 +238,165 @@ void Window::update_properties()
     properties.clear();
 
     int count;
-    Atom * props = XListProperties(display, child, &count);
-
-    for (int i=0; i < count; ++i){
-        properties.insert(props[i]);
-        char * prop_name = XGetAtomName(display, props[i]);
-        printf(" { Atom } %s\n", prop_name);
-        XFree(prop_name);
-    }
-    XFree(props);
-}
-
-char * Window::get_net_wm_name(){
-    if (properties.count(display._NET_WM_NAME))
-    {
-        Atom actual_type;
-        int actual_format;
-        unsigned long nitems;
-        unsigned long leftover;
-        unsigned char *data = NULL;
-        if (XGetWindowProperty(display, child,
-                               display._NET_WM_NAME, 0L, BUFSIZ,
-                               false, display.UTF8_STRING,
-                               &actual_type, &actual_format,
-                               &nitems, &leftover, &data) != Success)
-        {
-            _net_wm_name = false;
-            return nullptr;
-        }
-
-        if ((actual_type == display.UTF8_STRING) && (actual_format == 8))
-        {
-            _net_wm_name = true;
-            return reinterpret_cast<char*>(data);
-        } else {
-            _net_wm_name = false;
-            XFree(data);
-        }
-    }
-    return nullptr;
-}
-
-Window::WMType Window::get_net_wm_type(::Window window){
-    WMType wm_type = WMType::NORMAL;  // Default value
-
-    int count;
-    Atom * props = XListProperties(*tiny::display, window, &count);
-    std::set<Atom> properties;
+    Atom * props = XListProperties(dsp, child, &count);
 
     for (int i=0; i < count; ++i){
         properties.insert(props[i]);
     }
     XFree(props);
+}
 
-    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE))
+void Window::update_normal_hints()
+{
+    /*
+     * USPosition|USSize|PPosition|PSize|PMinSize|PMaxSize|PResizeInc|PAspect
+     * PBaseSize|PWinGravity
+     */
+    long supplied;
+    XGetWMNormalHints(dsp, child, hints, &supplied);
+    // Min and Max size are not set
+    if (!(supplied & PMinSize) && !(supplied & PMaxSize))
     {
-        Atom actual_type;
-        int size;
-        unsigned long nitems;
-        unsigned long bytes_left;
-        unsigned char *data = NULL;
-        if (XGetWindowProperty(*tiny::display, window,
-                               tiny::display->_NET_WM_WINDOW_TYPE, 0L, 1L,
-                               false, XA_ATOM,
-                               &actual_type, &size,
-                               &nitems, &bytes_left, &data) != Success)
-        {
-            // No _NET_WM_WINDOW_TYPE return
-            return wm_type;
-        }
+        //? Really
+        functions &= ~(MotifWMHints::FUNC_ALL);
+        functions &= ~(MotifWMHints::FUNC_RESIZE);
+        functions &= ~(MotifWMHints::FUNC_MAXIMIZE);
+    }
+    // Min and Max are set but are same
+    if (supplied & PMinSize && supplied &PMaxSize &&
+            (hints->min_width == hints->max_width) &&
+            (hints->min_height == hints->max_height))
+    {
+        functions &= ~(MotifWMHints::FUNC_ALL);
+        functions &= ~(MotifWMHints::FUNC_RESIZE);
+        functions &= ~(MotifWMHints::FUNC_MAXIMIZE);
+    }
 
-        if (bytes_left != 0) {
-            XFree(data);
-            unsigned long remain = ((size / 8) * nitems) + bytes_left;
-            if (XGetWindowProperty(*tiny::display, window,
-                                   tiny::display->_NET_WM_WINDOW_TYPE,
-                                   0L, remain, false, XA_ATOM,
-                                   &actual_type, &size,
-                                   &nitems, &bytes_left, &data) != Success)
-            {
-                // No _NET_WM_WINDOW_TYPE Atoms return
-                return wm_type;
-            }
-        }
+    if (supplied & PBaseSize) {
+        state.width = hints->base_width;
+        state.height = hints->base_height;
+    }
+}
 
-        Atom* window_types = reinterpret_cast<Atom*>(data);
-        for (unsigned long i = 0; i < nitems; i++){
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DESKTOP){
-                wm_type = WMType::DESKTOP;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DOCK){
-                wm_type = WMType::DOCK;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_TOOLBAR){
-                wm_type = WMType::TOOLBAR;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_MENU){
-                wm_type = WMType::MENU;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_UTILITY){
-                wm_type = WMType::UTILITY;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_SPLASH){
-                wm_type = WMType::SPLASH;
-                break;
-            }
-            if (window_types[i] == tiny::display->_NET_WM_WINDOW_TYPE_DIALOG){
-                wm_type = WMType::DIALOG;
-                break;
-            }
-            // NORMAL is default
-        }
+void Window::update_wm_states()
+{
+    wm_states = 0L;
+
+    Atom returned_type;
+    int size;
+    unsigned long nitems;
+    unsigned long bytes_left;
+    unsigned char *data = NULL;
+
+    if (XGetWindowProperty(dsp, child,
+                dsp._NET_WM_STATE, 0L, 1L,
+                false, XA_ATOM,
+                &returned_type, &size,
+                &nitems, &bytes_left, &data) != Success || !nitems)
+    {
+        // No _NET_WM_STATE
+        return;
+    }
+
+    if (bytes_left != 0) {  // Fetch all states...
         XFree(data);
-    }
-    return wm_type;
-}
-
-void Window::on_close_click(tiny::Object *o, const XEvent &e, void *data){
-    close();
-}
-
-void Window::on_maximize_click(tiny::Object *o, const XEvent &e, void *data){
-    if (is_maximize){
-        restore();
-    } else {
-        maximize();
-    }
-}
-
-void Window::on_move_resize_begin(tiny::Object *o, const XEvent &e, void *data)
-{
-    is_maximize = false;
-    start_event = e;
-    XGetWindowAttributes(display, window, &start_attrs);
-    long int size_retun;
-    XGetWMNormalHints(display, child, hints, &size_retun);
-
-    // theoretical, that not change from first check, but...
-    if ((size_retun & PMinSize) != PMinSize){
-        hints->min_width = start_attrs.width;
-        hints->min_height = start_attrs.height;
-    }
-
-    if ((size_retun & PMaxSize) != PMaxSize){
-        hints->max_width = start_attrs.width;
-        hints->max_height = start_attrs.height;
-    }
-}
-
-void Window::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
-{
-    uint16_t mask = reinterpret_cast<size_t>(data);
-    int xdiff = 0;
-    int ydiff = 0;
-    int mod;
-
-    if (mask & (tiny::Position::Left|tiny::Position::Right)){
-        xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-        mod = (hints->width_inc ? xdiff % hints->width_inc : 0);
-        if (mod) {
-            xdiff -= (hints->width_inc - std::abs(mod));
-        }
-    }
-    if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
-        ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-        mod = (hints->height_inc ? ydiff % hints->height_inc : 0);
-        if (mod) {
-            printf("mod: %d, ydiff: %d, height_inc: %d start: %d\n",
-                    mod, ydiff, hints->height_inc, start_attrs.height);
-            ydiff -= (hints->height_inc - std::abs(mod));
-        }
-    }
-
-    int width = start_attrs.width;
-    int height = start_attrs.height;
-
-    if (mask & tiny::Position::Right){
-        width += xdiff;
-    } else {    // ::Position::Left
-        width -= xdiff;
-    }
-
-    if (mask &tiny::Position::Bottom){
-        height += ydiff;
-    } else {    // ::Position::Top
-        height -= ydiff;
-    }
-
-    if (mask & (tiny::Position::Left|tiny::Position::Right)){
-        if (std::max(hints->min_width+tiny::theme.wm_win_corner,
-                     tiny::theme.wm_win_min_width) > width)
+        unsigned long remain = ((size / 8) * nitems) + bytes_left;
+        if (XGetWindowProperty(dsp, child, dsp._NET_WM_STATE,
+                    0L, remain, false, XA_ATOM,
+                    &returned_type, &size,
+                    &nitems, &bytes_left, &data) != Success)
         {
-            width = std::max(hints->min_width+tiny::theme.wm_win_corner,
-                             tiny::theme.wm_win_min_width);
-        }
-        if ((0 < hints->max_width) && (hints->max_width < width)) {
-            width = hints->max_width;
+            // No _NET_WM_STATE
+            return;
         }
     }
 
-    if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
-        // TODO: it exist steps
-        if (std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
-                     tiny::theme.wm_win_min_height) > height)
-        {
-            height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
-                              tiny::theme.wm_win_min_height);
+    char* atom_name;
+    Atom* atoms = reinterpret_cast<Atom*>(data);
+    for (unsigned long i = 0; i < nitems; i++){
+        if (atoms[i] == dsp._NET_WM_STATE_MODAL){
+            wm_states |= WMState::MODAL;
+            continue;
         }
-        if ((0 < hints->max_height) && (hints->max_height < height)) {
-            height = hints->max_height;
+        if (atoms[i] == dsp._NET_WM_STATE_STICKY){
+            wm_states |= WMState::STICKY;
+            continue;
         }
+        if (atoms[i] == dsp._NET_WM_STATE_MAXIMIZED_VERT){
+            wm_states |= WMState::MAXIMIZED_VERT;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_MAXIMIZED_HORZ){
+            wm_states |= WMState::MAXIMIZED_HORZ;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_SHADED){
+            wm_states |= WMState::SHADED;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_SKIP_TASKBAR){
+            wm_states |= WMState::SKIP_TASKBAR;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_SKIP_PAGER){
+            wm_states |= WMState::SKIP_PAGER;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_HIDDEN){
+            wm_states |= WMState::HIDDEN;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_FULLSCREEN){
+            wm_states |= WMState::FULLSCREEN;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_ABOVE){
+            wm_states |= WMState::ABOVE;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_BELOW){
+            wm_states |= WMState::BELOW;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_DEMANDS_ATTENTION){
+            wm_states |= WMState::DEMANDS_ATTENTION;
+            continue;
+        }
+        if (atoms[i] == dsp._NET_WM_STATE_FOCUSED){
+            wm_states |= WMState::FOCUSED;
+            continue;
+        }
+
+        atom_name = XGetAtomName(dsp, atoms[i]);
+        TINY_LOG("Unsupported _NET_WM_STATE: %s", atom_name);
+        XFree(atom_name);
     }
-
-    if (mask & tiny::Position::Top || mask & tiny::Position::Left) {
-        int x = start_attrs.x;
-        int y = start_attrs.y;
-        if (mask & tiny::Position::Left){
-            x += xdiff;
-        }
-        if (mask & tiny::Position::Top){
-            y += ydiff;
-        }
-
-        XMoveResizeWindow(display, window, x, y, width, height);
-        shadow.move_resize(x, y, width, height);
-    } else {
-        XResizeWindow(display, window, width, height);
-        shadow.resize(width, height);
-    }
-
-    XResizeWindow(display, child, width, height-tiny::theme.wm_win_header);
-    header.resize(width, tiny::theme.wm_win_header);
+    XFree(data);
+    TINY_LOG("wm_states = %d", wm_states);
 }
 
 void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
 {
     set_focus();     // check if is not have focus yet
-    if (is_maximize){
+    if (get_maximized()){
         restore(e.xmotion.x, e.xmotion.y);
     }
 
     start_event = e;
-    XGetWindowAttributes(display, window, &start_attrs);
+    XGetWindowAttributes(dsp, child, &start_attrs);
+    TINY_LOG("start moved");
 }
+
 
 void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
 {
     int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
     int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
 
-    if (is_resizable){
-        shadow.move(start_attrs.x + xdiff, start_attrs.y + ydiff);
-    }
-    XMoveWindow(display, window,
-        start_attrs.x + xdiff, start_attrs.y + ydiff);
+    XMoveWindow(dsp, child, start_attrs.x + xdiff, start_attrs.y + ydiff);
+    TINY_LOG("motion");
 }
+
 
 void Window::on_button_press(const XEvent &e, void* data)
 {
@@ -569,79 +404,283 @@ void Window::on_button_press(const XEvent &e, void* data)
 
     if (e.xbutton.state & Mod1Mask){
         // unblock the pointer, but not send to child
-        XAllowEvents(display, AsyncPointer, e.xbutton.time);
+        XAllowEvents(dsp, AsyncPointer, e.xbutton.time);
         XGrabPointer(
-                display, window, false,
+                dsp, child, false,
                 ButtonPressMask|ButtonReleaseMask|Button1MotionMask,
                 GrabModeAsync, GrabModeAsync,
-                None, XCreateFontCursor(display, XC_hand1), CurrentTime);
-        on_drag_begin(this, e);
+                None, XCreateFontCursor(dsp, XC_hand1), CurrentTime);
+        on_drag_begin((Window*)this, e);
         return;
     }
 
     // resend event to child
-    XAllowEvents(display, ReplayPointer, e.xbutton.time);
+    XAllowEvents(dsp, ReplayPointer, e.xbutton.time);
 }
 
 void Window::on_button_release(const XEvent &e, void * data){
     // Stop motion
-    XUngrabPointer(display, CurrentTime);
+    XUngrabPointer(dsp, CurrentTime);
+}
+
+void Window::on_client_message(const XEvent& e, void* data)
+{
+    if (e.xclient.message_type == dsp._NET_WM_STATE){
+        // client want be maximized
+        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_ADD)
+        {
+            if ((Atom)e.xclient.data.l[1] == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
+                (Atom)e.xclient.data.l[2] == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
+            {
+                maximize();
+                return;
+            }
+
+            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            TINY_LOG("Unhandled WM_STATE_ADD request %s", atom_name);
+            XFree(atom_name);
+        }
+
+        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_REMOVE)
+        {
+            if ((Atom)e.xclient.data.l[1] == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
+                (Atom)e.xclient.data.l[2] == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
+            {
+                restore();
+                return;
+            }
+
+            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            TINY_LOG("Unhandled WM_STATE_REMOVE request %s", atom_name);
+            XFree(atom_name);
+        }
+
+        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_TOGGLE)
+        {
+            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            TINY_LOG("Unhandled WM_STATE_TOGLE request %s", atom_name);
+            XFree(atom_name);
+        }
+        return;
+    }
+
+    // if (e.xclient.message_type == dsp.WM_CHANGE_STATE){}
+
+    TINY_LOG("try get message_type");
+    char* atom_name = XGetAtomName(dsp, e.xclient.message_type);
+    TINY_LOG("Unhandled client message type %s", atom_name);
+    XFree(atom_name);
 }
 
 void Window::on_motion_notify(const XEvent &e, void * data){
-    on_drag_motion(this, e);
-}
-
-void Window::on_focus_in(const XEvent &e, void* data){
-    header.set_disable(false);
-    on_focus(this, e, nullptr);
-}
-
-void Window::on_focus_out(const XEvent &e, void* data){
-    header.set_disable(true);
+    TINY_LOG("MotionNotify...");
+    on_drag_motion((Window*)this, e);
 }
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
-    char *atom_name = XGetAtomName(display, e.xproperty.atom);
+
+    char *atom_name = XGetAtomName(dsp, e.xproperty.atom);
     TINY_LOG("on_property_notify %s", atom_name);
     XFree(atom_name);
 
-    if (e.xproperty.atom == display.WM_PROTOCOLS){
+    if (e.xproperty.atom == dsp.WM_PROTOCOLS){
         update_protocols();
         return;
     }
-
-    if (e.xproperty.atom == display.WM_NAME && ! _net_wm_name)
-    {
-        char * wm_name;
-        if (XFetchName(display, child, &wm_name))
-        {
-            header.set_title(wm_name);
-            free(wm_name);
-        }
+    if (e.xproperty.atom == dsp._NET_WM_STATE){
+        update_wm_states();
         return;
     }
 
-    if (e.xproperty.atom == display._NET_WM_NAME)
-    {
-        char * wm_name = get_net_wm_name();
-        if (wm_name)
-        {
-           header.set_title(wm_name);
-           XFree(wm_name);
-        }
-        return;
-    }
 }
 
 void Window::on_key_release(const XEvent &e, void* data)
 {
     if (e.xkey.state & Mod1Mask
-        && e.xkey.keycode == XKeysymToKeycode(display, XK_F4))
+        && e.xkey.keycode == XKeysymToKeycode(dsp, XK_F4))
     {
         close();
     }
+}
+
+
+void Window::set_events()
+{
+    XSelectInput(dsp, child, PropertyChangeMask);
+
+    XGrabButton(dsp, Button1, AnyModifier, child, true,
+            ButtonPressMask|ButtonReleaseMask,
+            GrabModeSync, GrabModeSync,
+            None, None);
+    tiny::x_grab_key(dsp, XKeysymToKeycode(dsp, XK_F4),
+            Mod1Mask, child);
+
+    connect_window(ClientMessage, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_client_message));
+    connect_window(PropertyNotify, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_property_notify));
+    connect_window(KeyRelease,child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_key_release));
+    connect_window(ButtonPress, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_button_press));
+    connect_window(ButtonRelease, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_button_release));
+    connect_window(MotionNotify, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_motion_notify));
+
+    on_drag_begin.connect(
+            reinterpret_cast<tiny::Object*>(this),
+            reinterpret_cast<tiny::object_signal_t>(&Window::on_window_drag_begin));
+    on_drag_motion.connect(
+            reinterpret_cast<tiny::Object*>(this),
+            reinterpret_cast<tiny::object_signal_t>(&Window::on_window_drag_motion));
+}
+
+int Window::get_properties(::Window window, std::set<Atom>& properties)
+{
+    int count;
+    properties.clear();
+
+    tiny::Display& display = tiny::get_display();
+    Atom * props = XListProperties(display, window, &count);
+
+    TINY_LOG("Window %lx properties:", window);
+    char* atom_name;
+    for (int i=0; i < count; ++i){
+        properties.insert(props[i]);
+        atom_name = XGetAtomName(display, props[i]);
+        printf("\t%s\n", atom_name);
+        XFree(atom_name);
+    }
+    XFree(props);
+    return count;
+}
+
+Window::WMType Window::get_net_wm_type(::Window window)
+{
+    WMType wm_type = WMType::NORMAL;  // Default value
+    tiny::Display& display = tiny::get_display();
+
+    Atom return_type;
+    int size;
+    unsigned long nitems;
+    unsigned long bytes_left;
+    unsigned char *data = NULL;
+    if (XGetWindowProperty(display, window,
+                display._NET_WM_WINDOW_TYPE, 0L, 1L,
+                false, XA_ATOM,
+                &return_type, &size,
+                &nitems, &bytes_left, &data) != Success)
+    {
+        // No _NET_WM_WINDOW_TYPE return
+        return wm_type;
+    }
+
+    if (bytes_left != 0) {
+        XFree(data);
+        unsigned long remain = ((size / 8) * nitems) + bytes_left;
+        if (XGetWindowProperty(display, window,
+                    display._NET_WM_WINDOW_TYPE,
+                    0L, remain, false, XA_ATOM,
+                    &return_type, &size,
+                    &nitems, &bytes_left, &data) != Success)
+        {
+            // No _NET_WM_WINDOW_TYPE Atoms return
+            return wm_type;
+        }
+    }
+
+    Atom* window_types = reinterpret_cast<Atom*>(data);
+    for (unsigned long i = 0; i < nitems; i++){
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_DESKTOP){
+            wm_type = WMType::DESKTOP;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_DOCK){
+            wm_type = WMType::DOCK;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_TOOLBAR){
+            wm_type = WMType::TOOLBAR;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_MENU){
+            wm_type = WMType::MENU;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_UTILITY){
+            wm_type = WMType::UTILITY;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_SPLASH){
+            wm_type = WMType::SPLASH;
+            break;
+        }
+        if (window_types[i] == display._NET_WM_WINDOW_TYPE_DIALOG){
+            wm_type = WMType::DIALOG;
+            break;
+        }
+        // NORMAL is default
+    }
+    XFree(data);
+    return wm_type;
+}
+
+bool Window::get_motif_hints(::Window window,
+        unsigned long& functions, unsigned long& decorations)
+{
+    functions =
+        MotifWMHints::FUNC_ALL |
+        MotifWMHints::FUNC_RESIZE |
+        MotifWMHints::FUNC_MOVE |
+        MotifWMHints::FUNC_MINIMIZE |
+        MotifWMHints::FUNC_MAXIMIZE |
+        MotifWMHints::FUNC_CLOSE;
+
+    decorations =
+        MotifWMHints::DECOR_ALL |
+        MotifWMHints::DECOR_BORDER |
+        MotifWMHints::DECOR_RESIZE |
+        MotifWMHints::DECOR_TITLE |
+        MotifWMHints::DECOR_MENU |
+        MotifWMHints::DECOR_MINIMIZE |
+        MotifWMHints::DECOR_MAXIMIZE;
+
+    tiny::Display& display = tiny::get_display();
+    Atom returned_type;
+    int size;
+    unsigned long nitems;
+    unsigned long bytes_left;
+    MotifWMHints *hints = nullptr;
+
+    if (XGetWindowProperty(display, window,
+                display._MOTIF_WM_HINTS,
+                0L, MotifWMHints::property_length,
+                false, display._MOTIF_WM_HINTS,
+                &returned_type, &size,
+                &nitems, &bytes_left,
+                reinterpret_cast<uint8_t**>(&hints)) != Success || !nitems)
+    {
+        return false;
+    }
+    if (hints->flags & MotifWMHints::FLAG_FUNCTIONS){
+        functions = hints->functions;
+    }
+    if (hints->flags & MotifWMHints::FLAG_DECORATIONS){
+        decorations = hints->decorations;
+    }
+
+    TINY_LOG("_MOTIF: flags: %lu func: %lu dec: %lu in:%ld status:%lu",
+            hints->flags,
+            hints->functions,
+            hints->decorations,
+            hints->input_mode,
+            hints->status);
+
+    XFree(hints);
+
+    return true;
 }
 
 } // namespace wm

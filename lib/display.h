@@ -15,16 +15,22 @@ class Display {
     inline operator ::Display* () const
     { return display; }
 
+    static const constexpr long _NET_WM_STATE_REMOVE = 0;
+    static const constexpr long _NET_WM_STATE_ADD = 1;
+    static const constexpr long _NET_WM_STATE_TOGGLE = 2;
+
     // Protocols
     const Atom WM_TAKE_FOCUS;
     const Atom WM_DELETE_WINDOW;
 
     // Properties
     const Atom WM_NAME;
+    const Atom WM_NORMAL_HINTS;
     const Atom WM_PROTOCOLS;
 
     // EWMH
     const Atom UTF8_STRING;
+    const Atom _MOTIF_WM_HINTS;
     const Atom _NET_SUPPORTED;
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_VISIBLE_NAME;
@@ -53,38 +59,7 @@ class Display {
     const Atom _NET_WM_STATE_ABOVE;
     const Atom _NET_WM_STATE_BELOW;
     const Atom _NET_WM_STATE_DEMANDS_ATTENTION;
-
-    const char *EWMH[29] = {
-        "UTF8_STRING",
-        "_NET_SUPPORTED",
-        "_NET_WM_NAME",
-        "_NET_WM_VISIBLE_NAME",
-        "_NET_WM_ICON_NAME",
-        "_NET_WM_VISIBLE_ICON_NAME",
-        "_NET_WM_DESKTOP",
-        "_NET_WM_WINDOW_TYPE",
-        "_NET_WM_WINDOW_TYPE_DESKTOP",
-        "_NET_WM_WINDOW_TYPE_DOCK",
-        "_NET_WM_WINDOW_TYPE_TOOLBAR",
-        "_NET_WM_WINDOW_TYPE_MENU",
-        "_NET_WM_WINDOW_TYPE_UTILITY",
-        "_NET_WM_WINDOW_TYPE_SPLASH",
-        "_NET_WM_WINDOW_TYPE_DIALOG",
-        "_NET_WM_WINDOW_TYPE_NORMAL",
-        "_NET_WM_STATE",
-        "_NET_WM_STATE_MODAL",
-        "_NET_WM_STATE_STICKY",
-        "_NET_WM_STATE_MAXIMIZED_VERT",
-        "_NET_WM_STATE_MAXIMIZED_HORZ",
-        "_NET_WM_STATE_SHADED",
-        "_NET_WM_STATE_SKIP_TASKBAR",
-        "_NET_WM_STATE_SKIP_PAGER",
-        "_NET_WM_STATE_HIDDEN",
-        "_NET_WM_STATE_FULLSCREEN",
-        "_NET_WM_STATE_ABOVE",
-        "_NET_WM_STATE_BELOW",
-        "_NET_WM_STATE_DEMANDS_ATTENTION"
-    };
+    const Atom _NET_WM_STATE_FOCUSED;
 
   private:
     ::Display * display;

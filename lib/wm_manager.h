@@ -21,6 +21,8 @@ class Manager: public tiny::Object {
   private:
     void set_events();
 
+    void set_supported();
+
     void activate_next_window();
 
     void activate_prev_window();
@@ -39,6 +41,10 @@ class Manager: public tiny::Object {
     void on_map_request(const XMapRequestEvent &e);
 
     void on_configure_request(const XConfigureRequestEvent &e);
+
+    void on_client_message(const XClientMessageEvent &e);
+
+    void print_wm_state(::Window window);
 
     ::Display* display;
     ::Window root;

@@ -9,12 +9,13 @@ namespace tiny {
 std::shared_ptr<Display> display(nullptr);
 
 Display::Display(::Display *display):
-    display(display),
     WM_TAKE_FOCUS(XInternAtom(display, "WM_TAKE_FOCUS", 0)),
     WM_DELETE_WINDOW(XInternAtom(display, "WM_DELETE_WINDOW", 0)),
     WM_NAME(XInternAtom(display, "WM_NAME", 0)),
+    WM_NORMAL_HINTS(XInternAtom(display, "WM_NORMAL_HINTS", 0)),
     WM_PROTOCOLS(XInternAtom(display, "WM_PROTOCOLS", 0)),
     UTF8_STRING(XInternAtom(display, "UTF8_STRING", 0)),
+    _MOTIF_WM_HINTS(XInternAtom(display, "_MOTIF_WM_HINTS", 0)),
     _NET_SUPPORTED(XInternAtom(display, "_NET_SUPPORTED", 0)),
     _NET_WM_NAME(XInternAtom(display, "_NET_WM_NAME", 0)),
     _NET_WM_VISIBLE_NAME(XInternAtom(display, "_NET_WM_VISIBLE_NAME", 0)),
@@ -42,7 +43,9 @@ Display::Display(::Display *display):
     _NET_WM_STATE_FULLSCREEN(XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0)),
     _NET_WM_STATE_ABOVE(XInternAtom(display, "_NET_WM_STATE_ABOVE", 0)),
     _NET_WM_STATE_BELOW(XInternAtom(display, "_NET_WM_STATE_BELOW", 0)),
-    _NET_WM_STATE_DEMANDS_ATTENTION(XInternAtom(display, "_NET_WM_STATE_DEMANDS_ATTENTION", 0))
+    _NET_WM_STATE_DEMANDS_ATTENTION(XInternAtom(display, "_NET_WM_STATE_DEMANDS_ATTENTION", 0)),
+    _NET_WM_STATE_FOCUSED(XInternAtom(display, "_NET_WM_STATE_FOCUSED", 0)),
+    display(display)
 {}
 
 Display::~Display(){
@@ -51,7 +54,7 @@ Display::~Display(){
 
 void Display::init(const char *display_name)
 {
-    ::Display * display = XOpenDisplay(display_name);
+    ::Display* display = XOpenDisplay(display_name);
     if (display == nullptr) {
         throw std::runtime_error("Failed to open X display");
     }

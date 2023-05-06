@@ -178,7 +178,8 @@ void BackWindow::move(int x, int y){
 void BackWindow::move_resize(int x, int y, uint32_t width, uint32_t height)
 {
     if (is_realized){
-        XMoveResizeWindow(display, window, x-tiny::theme.wm_win_border, y-tiny::theme.wm_win_border,
+        XMoveResizeWindow(display, window,
+                x-tiny::theme.wm_win_border, y-tiny::theme.wm_win_border,
                 width+2*tiny::theme.wm_win_border, height+2*tiny::theme.wm_win_border);
     }
 }
