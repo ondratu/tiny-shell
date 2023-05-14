@@ -93,4 +93,9 @@ void x_grab_key(::Display* display, int keycode, unsigned int modifiers,
 void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
         ::Window window);
 
+Pixmap resize_pixmap(::Display* display, ::Window root, Pixmap origin,
+        unsigned int o_width, unsigned int o_height,
+        unsigned int t_width, unsigned int t_height,
+        unsigned int depth);
+
 } // namespace tiny

@@ -18,7 +18,7 @@ Manager::Manager(::Display* display, ::Window root):
     tiny::Object(),
     display(display),
     root(root),
-    wm_panel(), wm_run(), running(true)
+    wm_panel(), wm_run(), wm_dock(), running(true)
 {
     //set_supported();
     XSetWindowBackground(display, root, tiny::theme.root_background);
@@ -82,6 +82,9 @@ Manager::Manager(::Display* display, ::Window root):
 
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
+            if (!window->skip_taskbar()){
+                wm_dock.add(window);
+            }
             window->on_focus.connect(this,
                     static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
             if (i == rv_ccount){
@@ -91,9 +94,18 @@ Manager::Manager(::Display* display, ::Window root):
         XFree(rv_child);
     }
 
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, root, &attrs);
+
     wm_panel.realize(root, 0, 0);
     wm_panel.set_events();
     wm_panel.map_all();
+
+    wm_dock.realize(root,
+            attrs.width/2,
+            attrs.height - wm_dock.get_height()-tiny::theme.wm_dock_border);
+    wm_dock.set_events();
+    wm_dock.map_all();
 
     wm_run.realize(root, 0, 0);
     wm_run.set_events();
@@ -104,6 +116,7 @@ Manager::Manager(::Display* display, ::Window root):
 
     XClearWindow(display, root);
     set_events();
+    XSetErrorHandler(&Manager::on_error);
     XUngrabServer(display);     // unlock the X server
 }
 
@@ -118,6 +131,9 @@ Manager::~Manager(){
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2),
               Mod1Mask, root);
 
+    if (old_error_handler){
+        XSetErrorHandler(old_error_handler);
+    }
     XCloseDisplay(display);
 }
 
@@ -303,6 +319,7 @@ void Manager::on_unmap_notify(const XUnmapEvent &e)
     if (wm_windows.count(e.window)){
         Window * window = wm_windows[e.window];
         wm_tops.remove(window);
+        wm_dock.remove(window);
         delete (window);
         wm_windows.erase(e.window);
         activate_prev_window();
@@ -353,6 +370,9 @@ void Manager::on_map_request(const XMapRequestEvent &e)
 
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
+    if (!window->skip_taskbar()){
+        wm_dock.add(window);
+    }
     XMapWindow(display, e.window);
     window->on_focus.connect(this,
             static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
@@ -371,9 +391,8 @@ void Manager::on_configure_request(const XConfigureRequestEvent &e)
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
 
-    TINY_LOG("win size: %d x %d -> [%d x %d]", e.x, e.y, e.width, e.height);
+    // TINY_LOG("win size: %d x %d -> [%d x %d]", e.x, e.y, e.width, e.height);
     XConfigureWindow(display, e.window, e.value_mask, &ch);
-    // printf(" > Resize to %dx%d\n", e.width, e.height);
 
     // XXX: Why this ?
     if (false && wm_windows.count(e.window)){
@@ -471,5 +490,16 @@ void Manager::print_wm_state(::Window window)
     }
     XFree(data);
 }
+
+int Manager::on_error(::Display* display, XErrorEvent* error)
+{
+    char buffer[255];
+    XGetErrorText(display, error->error_code, buffer, 255);
+    tiny::error("XError %s (%d) opcode %d/%d on res %lx", buffer,
+            error->error_code, error->request_code, error->minor_code,
+            error->resourceid);
+    return 0;
+}
+
 
 } // namespace wm

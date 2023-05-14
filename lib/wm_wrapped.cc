@@ -70,15 +70,7 @@ void Wrapped::realize(::Window parent, int x, int y)
 
     XSetWindowBorderWidth(display, child, 0);
     XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
-    char * wm_name = get_net_wm_name();
-    if (!wm_name){
-        XFetchName(display, child, &wm_name);
-    }
-    if (wm_name)
-    {
-        header.set_title(wm_name);
-        XFree(wm_name);
-    }
+    header.set_title(wm_name);
 }
 
 void Wrapped::set_events(long mask)
@@ -213,39 +205,6 @@ void Wrapped::restore(int x, int y)
         set_minimized(false);
     }
 }
-
-
-char * Wrapped::get_net_wm_name(){
-    if (properties.count(display._NET_WM_NAME))
-    {
-        Atom actual_type;
-        int actual_format;
-        unsigned long nitems;
-        unsigned long leftover;
-        unsigned char *data = NULL;
-        //TINY_LOG("XGetWindowProperty... on %lx", child);
-        if (XGetWindowProperty(display, child,
-                               display._NET_WM_NAME, 0L, BUFSIZ,
-                               false, display.UTF8_STRING,
-                               &actual_type, &actual_format,
-                               &nitems, &leftover, &data) != Success)
-        {
-            _net_wm_name = false;
-            return nullptr;
-        }
-
-        if ((actual_type == display.UTF8_STRING) && (actual_format == 8))
-        {
-            _net_wm_name = true;
-            return reinterpret_cast<char*>(data);
-        } else {
-            _net_wm_name = false;
-            XFree(data);
-        }
-    }
-    return nullptr;
-}
-
 
 void Wrapped::on_close_click(tiny::Object *o, const XEvent &e, void *data){
     close();
@@ -395,26 +354,10 @@ void Wrapped::on_property_notify(const XEvent &e, void *data)
 {
     Window::on_property_notify(e, data);
 
-    if (e.xproperty.atom == display.WM_NAME && ! _net_wm_name)
+    if (e.xproperty.atom == display.WM_NAME ||
+            e.xproperty.atom == display._NET_WM_NAME)
     {
-        char * wm_name;
-        if (XFetchName(display, child, &wm_name))
-        {
-            header.set_title(wm_name);
-            free(wm_name);
-        }
-        return;
-    }
-
-    if (e.xproperty.atom == display._NET_WM_NAME)
-    {
-        char * wm_name = get_net_wm_name();
-        if (wm_name)
-        {
-           header.set_title(wm_name);
-           XFree(wm_name);
-        }
-        return;
+        header.set_title(wm_name);
     }
 }
 

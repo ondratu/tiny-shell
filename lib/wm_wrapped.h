@@ -28,14 +28,12 @@ class Wrapped: public tiny::Container, public Window {
 
     virtual void set_focus() override;
 
-    // XXX: could be named iconify....
+    //! Minimize (Iconify) window
     void minimize();
 
     virtual void restore(int x=0, int y=0) override;
 
     virtual void maximize() override;
-
-    char * get_net_wm_name();
 
     /* signal handlers */
     void on_close_click(tiny::Object *o, const XEvent &e, void * data);
@@ -64,8 +62,6 @@ class Wrapped: public tiny::Container, public Window {
     void on_focus_out(const XEvent &e, void *data);
 
     virtual void on_property_notify(const XEvent &e, void *data) override;
-
-    bool _net_wm_name = false;
 
     unsigned long decorations = 0;
 

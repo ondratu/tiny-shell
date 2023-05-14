@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <set>
+#include <string>
 
 #include "object.h"
 #include "widget.h"
@@ -98,6 +99,12 @@ class Window: public tiny::Object {
         virtual inline bool is_maximizable() const
         { return functions & MotifWMHints::FUNC_MAXIMIZE; }
 
+        virtual inline bool skip_taskbar() const
+        { return wm_states & WMState::SKIP_TASKBAR; }
+
+        virtual inline bool skip_pager() const
+        { return wm_states & WMState::SKIP_PAGER; }
+
         virtual inline bool get_minimized() const
         { return wm_states & WMState::HIDDEN; }
         void set_minimized(bool minimized);
@@ -112,6 +119,22 @@ class Window: public tiny::Object {
 
         void get_wm_states(std::vector<Atom>& atoms);
 
+        inline std::string get_wm_name() const
+        { return wm_name; }
+
+        std::string get_wm_icon_name() const
+        { return wm_icon_name; }
+
+        /* @short Return icon scaled to tiny::theme.wm_icon size.
+         *
+         * Pixmap will be destroyed in Window destructor if it set, otherwise
+         * zero is returned.
+         * */
+        inline Pixmap get_icon() const
+        { return icon; }
+        inline Pixmap get_icon_mask() const
+        { return icon_mask; }
+
         virtual void set_focus();
 
         //! Send WM_DELETE_WINDOW to window or xkill that
@@ -124,7 +147,11 @@ class Window: public tiny::Object {
         void update_protocols();        //!< Update WMProtocols
         void update_properties();       //!< Update WMProperties
         void update_normal_hints();     //!< Update XSizeHints;
+        void update_wm_hints();         //!< Update XWMHints;
         void update_wm_states();        //!< Update WMStates
+        void update_wm_name();          //!< Update wm_name
+        void update_wm_icon_name();     //!< Update wm_icon_name
+        void update_wm_icon();
         void set_events();
 
         //! Get and fill window properties
@@ -170,6 +197,12 @@ class Window: public tiny::Object {
 
         unsigned long functions = 0;
         unsigned long wm_states = 0;
+        std::string wm_name;
+        bool is_net_wm_name = true;
+        std::string wm_icon_name;
+
+        Pixmap icon = 0;
+        Pixmap icon_mask = 0;
 
         XEvent start_event;                 // state before moving/resizing
         XWindowAttributes start_attrs;

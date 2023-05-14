@@ -81,6 +81,7 @@ class Demo: public tiny::Box {
 int main (int argc, char * argv[])
 {
     tiny::Display::init();
+    tiny::theme.init();
     Demo demo;
     demo.main_loop();
     return 0;

@@ -74,6 +74,10 @@ void Container::add(Widget * widget, int x, int y, int gravity)
     children.push_back(widget);
 }
 
+void Container::remove(Widget* widget)
+{
+    children.remove(widget);
+}
 
 
 Box::Box(Type type, uint32_t width, uint32_t height):
@@ -102,6 +106,7 @@ void Box::resize(uint32_t width, uint32_t height){
 
 void Box::push_start(Widget * widget, int x_spacing, int y_spacing, int gravity)
 {
+    offsets[widget] = {true, x_spacing, y_spacing};
     if (type == Type::Horizontal){
         add(widget, start_offset+x_spacing, y_spacing,
                 (gravity == AutoGravity ? NorthWestGravity : gravity));
@@ -115,6 +120,7 @@ void Box::push_start(Widget * widget, int x_spacing, int y_spacing, int gravity)
 
 void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
 {
+    offsets[widget] = {false, x_spacing, y_spacing};
     if (type == Type::Horizontal){
         end_offset -= x_spacing + widget->get_width();
         add(widget, end_offset, y_spacing,
@@ -123,6 +129,40 @@ void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
         end_offset -= y_spacing + widget->get_height();
         add(widget, x_spacing, end_offset,
                 (gravity == AutoGravity ? SouthEastGravity : gravity));
+    }
+}
+
+void Box::remove(Widget* widget)
+{
+    uint32_t offset = 0;
+    auto it = offsets.find(widget);
+
+    Container::remove(widget);
+
+    if (type == Type::Horizontal){
+        if (it->second.start){
+            start_offset -= (it->second.x + widget->get_width());
+            offset = 0;
+            for (auto ch: offsets){
+                if (ch.second.start){
+                    XMoveWindow(display, ch.first->get_window(),
+                            offset+ch.second.x, ch.second.y);
+                    offset += ch.second.x + ch.first->get_width();
+                }
+            }
+        } else {    // end_offset
+            end_offset += (it->second.x + widget->get_width());
+            offset = width -1;
+            for (auto ch: offsets){
+                if (!ch.second.start){
+                    offset -= ch.second.x + ch.first->get_width();
+                    XMoveWindow(display, ch.first->get_window(),
+                            offset, ch.second.y);
+                }
+            }
+        }
+    } else {
+        TINY_LOG("Not implemented yet");
     }
 }
 

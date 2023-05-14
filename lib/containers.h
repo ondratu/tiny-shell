@@ -31,6 +31,8 @@ class Container: public Widget {
     virtual void add(Widget * widget, int x=0, int y=0,
             int gravity=NorthWestGravity);
 
+    virtual void remove(Widget* widget);
+
   protected:
     std::list<Widget*> children;
 };
@@ -44,7 +46,7 @@ class Box: public Container {
 
     virtual ~Box();
 
-    virtual void resize(uint32_t widget, uint32_t height);
+    virtual void resize(uint32_t widget, uint32_t height) override;
 
     inline Type get_type() const
     { return type; }
@@ -61,12 +63,20 @@ class Box: public Container {
     virtual void push_back(Widget * widget, int x_spacing=0, int y_spacing=0,
             int gravity=AutoGravity);
 
+    virtual void remove(Widget* widget) override;
+
   protected:
+    struct Offset {
+        bool start;
+        int x;
+        int y;
+    };
+
     Type type;
 
-  private:
     uint32_t start_offset;
     uint32_t end_offset;
+    std::map<Widget*, Offset> offsets;
 };
 
 

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <climits>
 #include <memory>
 #include <new>
 
@@ -54,12 +55,32 @@ Window::Window(::Window child, ::Window root, unsigned long functions):
             TINY_LOG("Aspect ratio problem...");
         }
     }
+
+    update_wm_name();
+
+
+    if (properties.count(dsp._NET_WM_ICON)){
+        update_wm_icon();
+    }
+    if (not icon && properties.count(dsp.WM_HINTS)){
+        XIconSize* icon_size = XAllocIconSize();
+        icon_size->min_width = tiny::theme.wm_icon;
+        icon_size->min_height = tiny::theme.wm_icon;
+        icon_size->max_width = tiny::theme.wm_icon;
+        icon_size->max_height = tiny::theme.wm_icon;
+        // Request the best icon
+        XSetIconSizes(dsp, child, icon_size, 1);
+        update_wm_hints();
+    }
 }
 
 Window::~Window()
 {
     if (hints){
         XFree(hints);
+    }
+    if (icon){
+        XFreePixmap(dsp, icon);
     }
 }
 
@@ -145,6 +166,11 @@ void Window::get_wm_states(std::vector<Atom>& atoms)
         atoms.push_back(dsp._NET_WM_STATE_DEMANDS_ATTENTION); }
     if (wm_states & WMState::FOCUSED){
         atoms.push_back(dsp._NET_WM_STATE_FOCUSED); }
+}
+
+std::string_view get_wm_icon()
+{
+    return "";
 }
 
 void Window::set_focus()
@@ -278,6 +304,78 @@ void Window::update_normal_hints()
     }
 }
 
+void Window::update_wm_hints()
+{
+    XWMHints* wm_hints = XGetWMHints(dsp, child);
+    if (wm_hints == nullptr){
+        return;
+    }
+    if (!(wm_hints->flags & IconPixmapHint)){
+        XFree(wm_hints);
+        return;     // No Icon in WMHints
+    }
+
+    ::Window root;
+    int x, y;           //!< unused for pixmap
+    unsigned int icon_width, icon_height, icon_border;
+    unsigned int depth; //!< unused dor pixmap
+    if (!XGetGeometry(dsp, wm_hints->icon_pixmap, &root, &x, &y,
+                    &icon_width, &icon_height, &icon_border, &depth))
+    {
+        TINY_LOG("Can't read geometry from icon!");
+        XFree(wm_hints);
+        return;
+    }
+
+    if (icon){  // On update
+        XFreePixmap(dsp, icon);
+    }
+    if (icon_mask){  // On update
+        XFreePixmap(dsp, icon_mask);
+    }
+
+    if (icon_width == tiny::theme.wm_icon || icon_height == tiny::theme.wm_icon)
+    {
+        icon = XCreatePixmap(dsp, root,
+            tiny::theme.wm_icon, tiny::theme.wm_icon,
+            XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
+
+        GC gc = XCreateGC(dsp, icon, 0, nullptr);
+        XCopyArea(dsp, wm_hints->icon_pixmap, icon, gc,
+                icon_border+wm_hints->icon_x, icon_border+wm_hints->icon_y,
+                tiny::theme.wm_icon, tiny::theme.wm_icon,
+                tiny::theme.wm_icon/2 - icon_width/2,
+                tiny::theme.wm_icon/2 - icon_height/2);
+        XFreeGC(dsp, gc);
+
+        if (wm_hints->flags & IconMaskHint){
+            icon_mask = XCreatePixmap(dsp, root,
+                    tiny::theme.wm_icon, tiny::theme.wm_icon,
+                    1);
+
+            GC gc = XCreateGC(dsp, icon_mask, 0, nullptr);
+            XCopyArea(dsp, wm_hints->icon_mask, icon_mask, gc,
+                    icon_border+wm_hints->icon_x, icon_border+wm_hints->icon_y,
+                    tiny::theme.wm_icon, tiny::theme.wm_icon,
+                    tiny::theme.wm_icon/2 - icon_width/2,
+                    tiny::theme.wm_icon/2 - icon_height/2);
+            XFreeGC(dsp, gc);
+        }
+
+    } else {
+        icon = resize_pixmap(dsp, root, wm_hints->icon_pixmap,
+                icon_width, icon_height,
+                tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
+        if (wm_hints->flags & IconMaskHint){
+            icon_mask = resize_pixmap(dsp, root, wm_hints->icon_mask,
+                icon_width, icon_height,
+                tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
+        }
+    }
+
+    XFree(wm_hints);
+}
+
 void Window::update_wm_states()
 {
     wm_states = 0L;
@@ -372,7 +470,167 @@ void Window::update_wm_states()
         XFree(atom_name);
     }
     XFree(data);
-    TINY_LOG("wm_states = %d", wm_states);
+}
+
+void Window::update_wm_name()
+{
+    is_net_wm_name = false;
+
+    if (properties.count(dsp._NET_WM_NAME))
+    {
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems;
+        unsigned long leftover;
+        unsigned char *data = NULL;
+        if (XGetWindowProperty(dsp, child,
+                    dsp._NET_WM_NAME, 0L, BUFSIZ,
+                    false, dsp.UTF8_STRING,
+                    &actual_type, &actual_format,
+                    &nitems, &leftover, &data) == Success)
+        {
+            if ((actual_type == dsp.UTF8_STRING) && (actual_format == 8)) {
+                wm_name = reinterpret_cast<char*>(data);
+            }
+            is_net_wm_name = true;
+            XFree(data);
+        }
+    }
+    if (wm_name.size() == 0){
+        char* data;
+        if (XFetchName(dsp, child, &data)){
+            wm_name = data;
+            XFree(data);
+        }
+    }
+}
+
+void Window::update_wm_icon_name()
+{
+    if (properties.count(dsp._NET_WM_ICON_NAME))
+    {
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems;
+        unsigned long leftover;
+        unsigned char *data = NULL;
+        if (XGetWindowProperty(dsp, child,
+                    dsp._NET_WM_ICON_NAME, 0L, BUFSIZ,
+                    false, dsp.UTF8_STRING,
+                    &actual_type, &actual_format,
+                    &nitems, &leftover, &data) == Success)
+        {
+            if ((actual_type == dsp.UTF8_STRING) && (actual_format == 8)) {
+                wm_icon_name = reinterpret_cast<char*>(data);
+            }
+            XFree(data);
+        }
+
+    }
+    if (wm_icon_name.size() == 0){
+        char* data;
+        if (XGetIconName(dsp, child, &data)){
+            wm_icon_name = data;
+            XFree(data);
+        }
+    }
+}
+
+void Window::update_wm_icon()
+{
+    if (properties.count(dsp._NET_WM_ICON))
+    {
+        Atom returned_type;
+        int size;
+        unsigned long nitems;
+        unsigned long bytes_left;
+        uint8_t *data = nullptr;
+        if (XGetWindowProperty(dsp, child,
+                    dsp._NET_WM_ICON, 0L, ULONG_MAX,
+                    false, XA_CARDINAL,
+                    &returned_type, &size,
+                    &nitems, &bytes_left, &data) != Success)
+        {
+            return;
+        }
+
+        // Find best size
+        std::map<unsigned long, size_t> icons;
+        size_t pos = 0;
+        size_t icon_size = 0;
+        unsigned long width = 0;
+        unsigned long height = 0;
+        // Yes, it can really be 64bit (unsigned long) not 32bit!
+        unsigned long* words = reinterpret_cast<unsigned long*>(data);
+        while (pos < nitems){
+            width = words[pos];
+            height = words[pos+1];
+            icon_size = width*height;
+            icons[width] = pos;
+            pos += 2 + icon_size;   // width+height+icon_size
+        }
+
+        for (auto it: icons){   // Find the best icon size
+            pos = it.second;
+            if (it.first >= tiny::theme.wm_icon){
+                break;
+            }
+        }
+
+        width = words[pos];
+        height = words[pos+1];
+        icon_size = width*height;
+
+        if (icon){  // On update
+            XFreePixmap(dsp, icon);
+        }
+        if (icon_mask){  // On update
+            XFreePixmap(dsp, icon_mask);
+        }
+
+        icon = XCreatePixmap(dsp, root, width, height,
+                XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
+        GC gc = XCreateGC(dsp, icon, 0, nullptr);
+
+        icon_mask = XCreatePixmap(dsp, root, width, height, 1);
+        GC gc_mask = XCreateGC(dsp, icon_mask, 0, nullptr);
+        XSetForeground(dsp, gc_mask, 1);
+
+        pos += 2;   //!< shift pos to starting data
+        uint32_t color;
+        uint8_t* pixel;
+        // format is RGBA + 4 zeors on 64bit
+        for (size_t y = 0; y < height; y++)
+            for (size_t x = 0; x < width; x++)
+            {
+                pixel = reinterpret_cast<uint8_t*>(&words[pos+y*width+x]);
+                color = (pixel[0] * pixel[3]/255) << 0;
+                color |= (pixel[1] * pixel[3]/255) << 8;
+                color |= (pixel[2] * pixel[3]/255) << 16;
+
+                XSetForeground(dsp, gc, color);
+                XDrawPoint(dsp, icon, gc, x, y);
+                if (color) { XDrawPoint(dsp, icon_mask, gc_mask, x, y); }
+            }
+
+        if ((width != tiny::theme.wm_icon) && (height != tiny::theme.wm_icon))
+        {
+            Pixmap orig = icon;
+            icon = resize_pixmap(dsp, root, orig, width, height,
+                tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
+            XFreePixmap(dsp, orig);
+
+            orig = icon_mask;
+            icon_mask = resize_pixmap(dsp, root, orig, width, height,
+                tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
+            XFreePixmap(dsp, orig);
+
+        }
+
+        XFreeGC(dsp, gc);
+        XFreeGC(dsp, gc_mask);
+        XFree(data);
+    }
 }
 
 void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
@@ -384,7 +642,6 @@ void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
 
     start_event = e;
     XGetWindowAttributes(dsp, child, &start_attrs);
-    TINY_LOG("start moved");
 }
 
 
@@ -394,7 +651,6 @@ void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
     int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
 
     XMoveWindow(dsp, child, start_attrs.x + xdiff, start_attrs.y + ydiff);
-    TINY_LOG("motion");
 }
 
 
@@ -466,22 +722,18 @@ void Window::on_client_message(const XEvent& e, void* data)
 
     // if (e.xclient.message_type == dsp.WM_CHANGE_STATE){}
 
-    TINY_LOG("try get message_type");
     char* atom_name = XGetAtomName(dsp, e.xclient.message_type);
     TINY_LOG("Unhandled client message type %s", atom_name);
     XFree(atom_name);
 }
 
 void Window::on_motion_notify(const XEvent &e, void * data){
-    TINY_LOG("MotionNotify...");
     on_drag_motion((Window*)this, e);
 }
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
-
     char *atom_name = XGetAtomName(dsp, e.xproperty.atom);
-    TINY_LOG("on_property_notify %s", atom_name);
     XFree(atom_name);
 
     if (e.xproperty.atom == dsp.WM_PROTOCOLS){
@@ -492,7 +744,34 @@ void Window::on_property_notify(const XEvent &e, void *data)
         update_wm_states();
         return;
     }
-
+    if (e.xproperty.atom == dsp.WM_NAME && ! is_net_wm_name){
+        char* data;
+        if (XFetchName(dsp, child, &data))
+        {
+            wm_name = data;
+            free(data);
+        }
+        return;
+    }
+    if (e.xproperty.atom == dsp._NET_WM_NAME){
+        update_wm_name();
+        return;
+    }
+    if (e.xproperty.atom == dsp.WM_ICON_NAME){
+        char* data;
+        if (XGetIconName(dsp, child, &data)){
+            wm_icon_name = data;
+            XFree(data);
+        }
+    }
+    if (e.xproperty.atom == dsp._NET_WM_ICON_NAME){
+        update_wm_icon_name();
+        return;
+    }
+    if (e.xproperty.atom == dsp._NET_WM_ICON){
+        update_wm_icon();
+        return;
+    }
 }
 
 void Window::on_key_release(const XEvent &e, void* data)
@@ -545,7 +824,6 @@ int Window::get_properties(::Window window, std::set<Atom>& properties)
     tiny::Display& display = tiny::get_display();
     Atom * props = XListProperties(display, window, &count);
 
-    TINY_LOG("Window %lx properties:", window);
     char* atom_name;
     for (int i=0; i < count; ++i){
         properties.insert(props[i]);
@@ -670,13 +948,6 @@ bool Window::get_motif_hints(::Window window,
     if (hints->flags & MotifWMHints::FLAG_DECORATIONS){
         decorations = hints->decorations;
     }
-
-    TINY_LOG("_MOTIF: flags: %lu func: %lu dec: %lu in:%ld status:%lu",
-            hints->flags,
-            hints->functions,
-            hints->decorations,
-            hints->input_mode,
-            hints->status);
 
     XFree(hints);
 

@@ -4,10 +4,13 @@ X11_LIBS = $(shell pkg-config --libs x11)
 XFT_CFLAGS = $(shell pkg-config --cflags xft)
 XFT_LIBS = $(shell pkg-config --libs xft)
 
-CXXFLAGS = -MMD -g -std=c++17 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS)
-LDFLAGS = -O2 $(X11_LIBS) $(XFT_LIBS)
+XRENDER_CFLAGS = $(shell pkg-config --cflags xrender)
+XRENDER_LIBS = $(shell pkg-config --libs xrender)
 
-PKGS = x11 xft
+CXXFLAGS = -MMD -g -std=c++17 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS) $(XRENDER_CFLAGS)
+LDFLAGS = -O2 $(X11_LIBS) $(XFT_LIBS) $(XRENDER_LIBS)
+
+PKGS = x11 xft xrender
 # TODO: create _CFLAGS and _LIBS from PKGS
 
 LIB_SRC = $(wildcard lib/*.cc)

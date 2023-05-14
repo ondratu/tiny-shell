@@ -95,25 +95,31 @@ class Style {
 
 class WMButtonStyle: public Style {
   public:
-    // Normal state
-    uint32_t normal_bg = 0xF8F8F8;
-    uint32_t normal_fg = 0x2E3436;
-    uint32_t normal_br = 0xB6B6B3;
+      WMButtonStyle(){
+        // Normal state
+        //normal_bg = 0x2E3436;
+        normal_bg = BLACK;
+        normal_fg = 0xF8F8F8;
+        normal_br = 0xB6B6B3;
 
-    uint32_t disable_fg = 0x8B8E8F;
+        disable_fg = 0x8B8E8F;
 
-    uint32_t hover_fg = 0xF7F7F7;
-    uint32_t hover_br = 0xF8F8F7;
+        hover_bg = GRAY25;
+        hover_fg = 0xF7F7F7;
+        hover_br = 0xF8F8F7;
+      }
 }; // WMButtonStyle
 
 
 class WMHeaderStyle: public Style {
   public:
-    uint32_t normal_bg = 0xF8F8F8;
-    uint32_t normal_fg = 0x0E1416;
-    uint32_t normal_br = 0x888A85;
+      WMHeaderStyle(){
+        normal_bg = 0xF8F8F8;
+        normal_fg = 0x0E1416;
+        normal_br = 0x888A85;
 
-    uint32_t disable_fg = 0x6E7476;
+        disable_fg = 0x6E7476;
+      }
 
     uint32_t padding = 2;
   private:
@@ -122,24 +128,26 @@ class WMHeaderStyle: public Style {
 }; // WMHeaderStyle
 
 class Theme {
-  public:
-    Theme(){}
-    ~Theme(){}
+    public:
+        Theme(){}
+        ~Theme(){}
 
-    void init();
+        void init();
 
-    uint32_t root_background = 0x729FCF;
-    uint32_t wm_win_header = 25;
-    uint32_t wm_win_border = 10;
-    uint32_t wm_win_corner = wm_win_border*2;
-    uint32_t wm_win_min_width = 10;
-    uint32_t wm_win_min_height = 10+wm_win_header;
+        uint32_t root_background = 0x729FCF;
+        uint32_t wm_win_header = 25;
+        uint32_t wm_win_border = 10;
+        uint32_t wm_win_corner = wm_win_border*2;
+        uint32_t wm_win_min_width = 10;
+        uint32_t wm_win_min_height = 10+wm_win_header;
 
-    uint32_t wm_panel = 30;
+        uint32_t wm_panel = 30;
+        uint32_t wm_icon = 48;
+        uint32_t wm_dock_border = 5;
 
-  Style widget;
-  WMButtonStyle wm_button;
-  WMHeaderStyle wm_header;
+        Style widget;
+        WMButtonStyle wm_button;
+        WMHeaderStyle wm_header;
 }; // Theme
 
 extern Theme theme;

@@ -24,16 +24,21 @@ class Display {
     const Atom WM_DELETE_WINDOW;
 
     // Properties
+    const Atom WM_HINTS;
+    const Atom WM_ICON_NAME;
     const Atom WM_NAME;
     const Atom WM_NORMAL_HINTS;
     const Atom WM_PROTOCOLS;
 
-    // EWMH
+    // Types
     const Atom UTF8_STRING;
+
+    // EWMH
     const Atom _MOTIF_WM_HINTS;
     const Atom _NET_SUPPORTED;
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_VISIBLE_NAME;
+    const Atom _NET_WM_ICON;
     const Atom _NET_WM_ICON_NAME;
     const Atom _NET_WM_VISIBLE_ICON_NAME;
     const Atom _NET_WM_DESKTOP;
