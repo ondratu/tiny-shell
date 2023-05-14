@@ -65,7 +65,6 @@ void Widget::realize(Window parent, int x, int y)
         return error("tiny::Widget is realized yet!");
     }
     this->parent = parent;
-
     uint8_t state = get_theme_state();
     // TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
 
@@ -74,8 +73,8 @@ void Widget::realize(Window parent, int x, int y)
             window = XCreateSimpleWindow(
                     display, parent,
                     x, y, width, height,
-                    get_border(), tiny::theme.widget.get_br(state),
-                    tiny::theme.widget.get_bg(state));
+                    get_border(), get_style().get_br(state),
+                    get_style().get_bg(state));
             break;
         case (Type::Input):
             // TODO: parent must bew root or InputOnly
@@ -92,8 +91,8 @@ void Widget::realize(Window parent, int x, int y)
 
             XSetWindowAttributes attr;
             attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
-            attr.border_pixel = tiny::theme.widget.get_br(state);
-            attr.background_pixel = tiny::theme.widget.get_bg(state);
+            attr.border_pixel = get_style().get_br(state);
+            attr.background_pixel = get_style().get_bg(state);
 
             window = XCreateWindow(
                     display, parent,
@@ -154,6 +153,5 @@ void Widget::on_configure_notify(const XEvent &e, void *){
     width = e.xconfigure.width;
     height = e.xconfigure.height;
 }
-
 
 } // namespace tiny

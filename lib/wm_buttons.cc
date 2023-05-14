@@ -7,8 +7,8 @@ namespace wm {
 
 Button::Button():
     tiny::Button(
-        tiny::theme.wm_win_header-2*get_padding(),      // TODO: WM_WIN_HEADER_PADDING
-        tiny::theme.wm_win_header-2*get_padding())
+        tiny::theme.wm_win_icon,      // TODO: WM_WIN_HEADER_PADDING
+        tiny::theme.wm_win_icon)
 {
 }
 
@@ -22,18 +22,11 @@ void Button::set_events(long mask)
 
     connect(Expose,
             static_cast<tiny::event_signal_t>(&Button::on_expose));
+    on_enter.connect(this,
+            reinterpret_cast<tiny::object_signal_t>(&Button::on_expose));
+    on_leave.connect(this,
+            reinterpret_cast<tiny::object_signal_t>(&Button::on_expose));
 }
-
-void Button::on_enter_notify(const XEvent &e, void * data){
-    tiny::Button::on_enter_notify(e, data);
-    XSetWindowBorder(display, window, tiny::theme.wm_button.get_br(get_theme_state()));
-}
-
-void Button::on_leave_notify(const XEvent &e, void * data){
-    tiny::Button::on_leave_notify(e, data);
-    XSetWindowBorder(display, window, tiny::theme.wm_button.get_br(get_theme_state()));
-}
-
 
 
 CloseButton::CloseButton():Button()
@@ -48,7 +41,12 @@ void CloseButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
+    uint8_t state = get_theme_state();
+
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XClearWindow(display, window);
+
+    XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
@@ -75,7 +73,12 @@ void MaximizeButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
+    uint8_t state = get_theme_state();
+
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XClearWindow(display, window);
+
+    XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinMiter);
 
     int mid_x = attrs.width/2;
@@ -123,7 +126,13 @@ void MinimizeButton::on_expose(const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, tiny::theme.wm_button.get_fg(get_theme_state()));
+
+    uint8_t state = get_theme_state();
+
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XClearWindow(display, window);
+
+    XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;

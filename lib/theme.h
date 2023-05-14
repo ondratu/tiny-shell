@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <string_view>
+#include <string>
 
 #include <X11/Xft/Xft.h>
 
@@ -51,7 +51,7 @@ class Style {
     XftFont* get_font() const
     { return font; }
 
-    const std::string_view get_xft_fg(uint8_t state) const;
+    const std::string get_xft_fg(uint8_t state) const;
 
     // Normal state
     uint32_t normal_bg = BLACK;
@@ -64,7 +64,7 @@ class Style {
     uint32_t disable_br = INHERITED;
 
     // Active (on mouse hover)
-    uint32_t hover_bg = INHERITED;
+    uint32_t hover_bg = 0x2E3436;
     uint32_t hover_fg = 0xF3F3F3;
     uint32_t hover_br = INHERITED;
 
@@ -86,7 +86,7 @@ class Style {
     uint32_t border_width = 1;
     uint32_t padding_width = 1;
 
-  private:
+  protected:
     std::string_view font_name = "Cantarell-12";
     XftFont* font;
 
@@ -97,16 +97,15 @@ class WMButtonStyle: public Style {
   public:
       WMButtonStyle(){
         // Normal state
-        //normal_bg = 0x2E3436;
-        normal_bg = BLACK;
-        normal_fg = 0xF8F8F8;
-        normal_br = 0xB6B6B3;
+        normal_bg = 0xF8F8F8;
+        normal_fg = 0x2E3436;
 
         disable_fg = 0x8B8E8F;
 
-        hover_bg = GRAY25;
-        hover_fg = 0xF7F7F7;
-        hover_br = 0xF8F8F7;
+        hover_bg = 0x2E3436;
+        hover_fg = 0xF8F8F8;
+
+        border_width = 0;
       }
 }; // WMButtonStyle
 
@@ -116,16 +115,27 @@ class WMHeaderStyle: public Style {
       WMHeaderStyle(){
         normal_bg = 0xF8F8F8;
         normal_fg = 0x0E1416;
-        normal_br = 0x888A85;
 
         disable_fg = 0x6E7476;
+
+        border_width = 0;
+        padding_width = 2;
+
+        font_name = "Cantarell-12:bold";
       }
 
-    uint32_t padding = 2;
-  private:
-    std::string_view font_name = "Cantarell-12:bold";
-
 }; // WMHeaderStyle
+
+
+class WMDockStyle: public Style {
+    public:
+        WMDockStyle()
+        {
+            border_width = 0;
+            padding_width = 5;
+        }
+
+}; // WMDockStyle
 
 class Theme {
     public:
@@ -136,6 +146,7 @@ class Theme {
 
         uint32_t root_background = 0x729FCF;
         uint32_t wm_win_header = 25;
+        uint32_t wm_win_icon = 21;  // wm_win_header - 2*header.padding
         uint32_t wm_win_border = 10;
         uint32_t wm_win_corner = wm_win_border*2;
         uint32_t wm_win_min_width = 10;
@@ -148,6 +159,7 @@ class Theme {
         Style widget;
         WMButtonStyle wm_button;
         WMHeaderStyle wm_header;
+        WMDockStyle wm_dock;
 }; // Theme
 
 extern Theme theme;

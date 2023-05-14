@@ -142,6 +142,7 @@ void Box::remove(Widget* widget)
     if (type == Type::Horizontal){
         if (it->second.start){
             start_offset -= (it->second.x + widget->get_width());
+            offsets.erase(it);
             offset = 0;
             for (auto ch: offsets){
                 if (ch.second.start){
@@ -152,6 +153,7 @@ void Box::remove(Widget* widget)
             }
         } else {    // end_offset
             end_offset += (it->second.x + widget->get_width());
+            offsets.erase(it);
             offset = width -1;
             for (auto ch: offsets){
                 if (!ch.second.start){
@@ -163,6 +165,7 @@ void Box::remove(Widget* widget)
         }
     } else {
         TINY_LOG("Not implemented yet");
+        offsets.erase(it);
     }
 }
 

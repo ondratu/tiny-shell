@@ -57,16 +57,16 @@ void Wrapped::realize(::Window parent, int x, int y)
 
     add(&header, 0, 0);
     header.push_back(&cls_btn,
-            tiny::theme.wm_header.padding_width,
-            tiny::theme.wm_header.padding_width-get_border());
+            header.get_padding(),
+            header.get_padding()-cls_btn.get_border());
     if (is_maximizable()){
         header.push_back(&max_btn,
-                tiny::theme.wm_header.padding_width,
-                tiny::theme.wm_header.padding_width-get_border());
+                header.get_padding(),
+                header.get_padding()-max_btn.get_border());
     }
     header.push_back(&min_btn,
-            tiny::theme.wm_header.padding_width,
-            tiny::theme.wm_header.padding_width-get_border());
+            header.get_padding(),
+            header.get_padding()-min_btn.get_border());
 
     XSetWindowBorderWidth(display, child, 0);
     XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);

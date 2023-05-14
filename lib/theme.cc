@@ -24,8 +24,8 @@
     uint32_t retval = normal_##P; \
     GET_STATE_COLOR(state, P); \
     char hex[10] = {'\0'}; \
-    snprintf(hex, 10, "#%X", retval); \
-    return std::string_view(hex);
+    snprintf(hex, 10, "#%06X", retval); \
+    return std::string(hex);
 
 namespace tiny {
 
@@ -69,7 +69,7 @@ const uint32_t Style::get_br(uint8_t state) const
     GET_STATE_UINT32_COLOR(state, br)
 }
 
-const std::string_view Style::get_xft_fg(uint8_t state) const
+const std::string Style::get_xft_fg(uint8_t state) const
 {
     GET_STATE_XFT_COLOR(state, fg);
 }

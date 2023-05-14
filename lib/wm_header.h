@@ -47,6 +47,9 @@ class Header: public tiny::Box {
 
     void set_disable(bool disable);
 
+    inline virtual const tiny::Style& get_style() const
+    { return tiny::theme.wm_header; }
+
   protected:
         void on_expose(const XEvent &e, void *data);
 

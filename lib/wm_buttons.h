@@ -12,9 +12,10 @@ class Button: public tiny::Button {
 
     virtual void set_events(long mask=0);
 
+    inline virtual const tiny::Style& get_style() const
+    { return tiny::theme.wm_button; }
+
   protected:
-    virtual void on_enter_notify(const XEvent &e, void *data);
-    virtual void on_leave_notify(const XEvent &e, void *data);
     virtual void on_expose(const XEvent &e, void *data) = 0;
 };
 

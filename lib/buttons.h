@@ -16,6 +16,8 @@ class Button: public Widget {
     virtual void set_events(long mask=0);
 
     Signal on_click;
+    Signal on_enter;
+    Signal on_leave;
 
   protected:
     virtual void on_enter_notify(const XEvent &e, void *data);

@@ -35,11 +35,14 @@ class Widget: public Object {
     inline const Window get_parent_window() const
     { return parent; }
 
+    inline virtual const Style& get_style() const
+    { return theme.widget; }
+
     inline virtual uint32_t get_border() const
-    { return tiny::theme.widget.border_width; }
+    { return get_style().border_width; }
 
     inline virtual uint32_t get_padding() const
-    { return tiny::theme.widget.padding_width; }
+    { return get_style().padding_width; }
 
     inline uint32_t get_width() const
     { return width; }

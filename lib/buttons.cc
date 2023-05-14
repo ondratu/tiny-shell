@@ -38,17 +38,18 @@ void Button::set_events(long mask)
             static_cast<event_signal_t>(&Button::on_button_release));
 }
 
-void Button::on_enter_notify(const XEvent &e, void *){
+void Button::on_enter_notify(const XEvent &e, void* data){
     is_hover = true;
+    on_enter(this, e, data);
 }
 
-void Button::on_leave_notify(const XEvent &e, void *){
+void Button::on_leave_notify(const XEvent &e, void* data){
     is_hover = false;
+    on_leave(this, e, data);
 }
 
 void Button::on_button_release(const XEvent &e, void * data){
-    // TODO: check if release is on window, if not do not call the handler
-    if (on_click){
+    if (on_click && is_hover){
         on_click(this, e);
     }
 }
@@ -126,6 +127,7 @@ void LabelButton::on_expose(const XEvent &e, void * data)
     int x = (width-extents.width)/2;
     int y = (height+extents.height)/2;
 
+    XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
             reinterpret_cast<const FcChar8*>(text.c_str()), text.size());

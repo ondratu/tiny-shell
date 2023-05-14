@@ -127,7 +127,7 @@ void Header::on_expose(const XEvent &e, void * data)
     uint8_t state = get_theme_state();
 
     XftColorAllocName(display, visual, colormap,
-                tiny::theme.wm_header.get_xft_fg(state).data(), &color);
+                tiny::theme.wm_header.get_xft_fg(state).c_str(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
@@ -146,6 +146,8 @@ void Header::on_expose(const XEvent &e, void * data)
         x = get_padding();
     }
 
+    XSetWindowBackground(display, window,
+            tiny::theme.wm_header.get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.wm_header.get_font(), x, y,
             reinterpret_cast<const FcChar8*>(title.c_str()), title.size());
@@ -155,8 +157,8 @@ void Header::on_expose(const XEvent &e, void * data)
 
     // bottom line
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, get_border());
-    XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
+    XSetForeground(display, gc, tiny::theme.wm_header.get_br(state));
+    XSetLineAttributes(display, gc, get_border(), LineSolid, CapButt, JoinBevel);
     XDrawLine(display, window, gc, 0, height-1, width, height-1);
     XFreeGC(display, gc);
 }
