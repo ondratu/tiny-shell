@@ -57,7 +57,6 @@ class Header: public tiny::Box {
     std::string title;
 
     TitleBox title_box;
-    bool is_disable;
     const int screen;       // XXX: this is zero for now
 };
 

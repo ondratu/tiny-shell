@@ -66,7 +66,7 @@ void TitleBox::on_motion_notify(const XEvent &e, void * data)
 Header::Header(uint32_t width, uint32_t height):
     Box(Box::Type::Horizontal, width, height),
     title_box(width, height),
-    is_disable(false), screen(0)
+    screen(0)
 {
     name = "wm_header";
 }
@@ -110,7 +110,7 @@ void Header::set_title(const std::string &title)
 
 void Header::set_disable(bool disable)
 {
-    is_disable = disable;
+    is_disabled = disable;
     if (is_maped) {
         on_expose(XEvent(), nullptr);
     }
@@ -127,7 +127,7 @@ void Header::on_expose(const XEvent &e, void * data)
     uint8_t state = get_theme_state();
 
     XftColorAllocName(display, visual, colormap,
-                tiny::theme.wm_header.get_xft_fg(state).c_str(), &color);
+                get_style().get_xft_fg(state).c_str(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
