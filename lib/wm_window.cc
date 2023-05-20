@@ -390,26 +390,13 @@ void Window::update_wm_states()
     unsigned char *data = NULL;
 
     if (XGetWindowProperty(dsp, child,
-                dsp._NET_WM_STATE, 0L, 1L,
+                dsp._NET_WM_STATE, 0L, ULONG_MAX,
                 false, XA_ATOM,
                 &returned_type, &size,
                 &nitems, &bytes_left, &data) != Success || !nitems)
     {
         // No _NET_WM_STATE
         return;
-    }
-
-    if (bytes_left != 0) {  // Fetch all states...
-        XFree(data);
-        unsigned long remain = ((size / 8) * nitems) + bytes_left;
-        if (XGetWindowProperty(dsp, child, dsp._NET_WM_STATE,
-                    0L, remain, false, XA_ATOM,
-                    &returned_type, &size,
-                    &nitems, &bytes_left, &data) != Success)
-        {
-            // No _NET_WM_STATE
-            return;
-        }
     }
 
     char* atom_name;
@@ -854,27 +841,13 @@ Window::WMType Window::get_net_wm_type(::Window window)
     unsigned long bytes_left;
     unsigned char *data = NULL;
     if (XGetWindowProperty(display, window,
-                display._NET_WM_WINDOW_TYPE, 0L, 1L,
+                display._NET_WM_WINDOW_TYPE, 0L, ULONG_MAX,
                 false, XA_ATOM,
                 &return_type, &size,
                 &nitems, &bytes_left, &data) != Success)
     {
         // No _NET_WM_WINDOW_TYPE return
         return wm_type;
-    }
-
-    if (bytes_left != 0) {
-        XFree(data);
-        unsigned long remain = ((size / 8) * nitems) + bytes_left;
-        if (XGetWindowProperty(display, window,
-                    display._NET_WM_WINDOW_TYPE,
-                    0L, remain, false, XA_ATOM,
-                    &return_type, &size,
-                    &nitems, &bytes_left, &data) != Success)
-        {
-            // No _NET_WM_WINDOW_TYPE Atoms return
-            return wm_type;
-        }
     }
 
     Atom* window_types = reinterpret_cast<Atom*>(data);
