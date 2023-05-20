@@ -319,6 +319,9 @@ void Manager::on_unmap_notify(const XUnmapEvent &e)
     // TODO: could be append to signal handlers on wm_window.window
     if (wm_windows.count(e.window)){
         Window * window = wm_windows[e.window];
+        if (window->get_minimized()){
+            return;
+        }
         wm_tops.remove(window);
         wm_dock.remove(window);
         delete (window);

@@ -16,6 +16,7 @@ Display::Display(::Display *display):
     WM_NAME(XInternAtom(display, "WM_NAME", 0)),
     WM_NORMAL_HINTS(XInternAtom(display, "WM_NORMAL_HINTS", 0)),
     WM_PROTOCOLS(XInternAtom(display, "WM_PROTOCOLS", 0)),
+    WM_CHANGE_STATE(XInternAtom(display, "WM_CHANGE_STATE", 0)),
     WM_STATE(XInternAtom(display, "WM_STATE", 0)),
     UTF8_STRING(XInternAtom(display, "UTF8_STRING", 0)),
     _MOTIF_WM_HINTS(XInternAtom(display, "_MOTIF_WM_HINTS", 0)),

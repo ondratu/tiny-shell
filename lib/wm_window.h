@@ -140,6 +140,7 @@ class Window: public tiny::Object {
         //! Send WM_DELETE_WINDOW to window or xkill that
         virtual void close();
 
+        virtual void minimize();
         virtual void maximize();
 
         virtual void restore(int x=0, int y=0);

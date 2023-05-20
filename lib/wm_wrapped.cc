@@ -1,5 +1,6 @@
 #include <X11/cursorfont.h>
 
+#include "object.h"
 #include "theme.h"
 #include "wm_wrapped.h"
 #include "x_util.h"
@@ -91,15 +92,9 @@ void Wrapped::set_events(long mask)
             |SubstructureNotifyMask|FocusChangeMask);
     Window::set_events();
 
-
 /*
     XSelectInput(display, window,
         SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
-
-    minim_btn->on_click.connect(
-        this,
-        static_cast<object_signal_t>(&WMWindow::on_minimize_click));
-    }
 */
 
     connect(FocusIn,
@@ -114,6 +109,9 @@ void Wrapped::set_events(long mask)
             reinterpret_cast<tiny::Object*>(this),
             reinterpret_cast<tiny::object_signal_t>(&Wrapped::on_window_drag_motion));
 
+    min_btn.on_click.connect(
+        reinterpret_cast<tiny::Object*>(this),
+        reinterpret_cast<tiny::object_signal_t>(&Wrapped::on_minimize_click));
 
     cls_btn.on_click.connect(
             reinterpret_cast<tiny::Object*>(this),
@@ -215,6 +213,10 @@ void Wrapped::restore(int x, int y)
         map();
         set_minimized(false);
     }
+}
+
+void Wrapped::on_minimize_click(tiny::Object *o, const XEvent &e, void *data){
+    minimize();
 }
 
 void Wrapped::on_close_click(tiny::Object *o, const XEvent &e, void *data){

@@ -178,6 +178,9 @@ std::string_view get_wm_icon()
 
 void Window::set_focus()
 {
+    if (get_minimized()){
+        restore();
+    }
     XSetInputFocus(dsp, child, RevertToPointerRoot, CurrentTime);
 
     if (protocols.count(dsp.WM_TAKE_FOCUS))
@@ -209,6 +212,16 @@ void Window::close()
     } else {
         XKillClient(dsp, child);
     }
+}
+
+void Window::minimize()
+{
+    if (get_minimized()){
+        return;
+    }
+
+    XIconifyWindow(dsp, child, 0);
+    set_minimized(true);
 }
 
 void Window::maximize()
@@ -299,11 +312,6 @@ void Window::update_normal_hints()
         functions &= ~(MotifWMHints::FUNC_ALL);
         functions &= ~(MotifWMHints::FUNC_RESIZE);
         functions &= ~(MotifWMHints::FUNC_MAXIMIZE);
-    }
-
-    if (supplied & PBaseSize) {
-        state.width = hints->base_width;
-        state.height = hints->base_height;
     }
 }
 
@@ -710,7 +718,13 @@ void Window::on_client_message(const XEvent& e, void* data)
         return;
     }
 
-    // if (e.xclient.message_type == dsp.WM_CHANGE_STATE){}
+    if (e.xclient.message_type == dsp.WM_CHANGE_STATE){
+        if (e.xclient.data.l[0] == IconicState){
+            set_minimized(true);
+            XUnmapWindow(dsp, child);
+            return;
+        }
+    }
 
     char* atom_name = XGetAtomName(dsp, e.xclient.message_type);
     TINY_LOG("Unhandled client message type %s", atom_name);

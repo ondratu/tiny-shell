@@ -29,6 +29,7 @@ class Display {
     const Atom WM_NAME;
     const Atom WM_NORMAL_HINTS;
     const Atom WM_PROTOCOLS;
+    const Atom WM_CHANGE_STATE;
     const Atom WM_STATE;
 
     // Types

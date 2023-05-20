@@ -29,7 +29,7 @@ class Wrapped: public tiny::Container, public Window {
     virtual void set_focus() override;
 
     //! Minimize (Iconify) window
-    void minimize();
+    virtual void minimize() override;
 
     virtual void restore(int x=0, int y=0) override;
 
