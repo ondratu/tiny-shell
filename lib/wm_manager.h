@@ -45,8 +45,6 @@ class Manager: public tiny::Object {
 
     void on_client_message(const XClientMessageEvent &e);
 
-    void print_wm_state(::Window window);
-
     static int on_error(::Display* display, XErrorEvent* error);
 
     ::Display* display;

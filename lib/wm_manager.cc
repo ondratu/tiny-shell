@@ -205,7 +205,6 @@ void Manager::main_loop()
                 break;
             case ClientMessage:
                 on_client_message(event.xclient);
-                print_wm_state(event.xclient.window);
                 break;
             case CreateNotify:
                 if (!event.xcreatewindow.override_redirect){
@@ -339,8 +338,6 @@ void Manager::on_map_request(const XMapRequestEvent &e)
         return;     // menu, special tools (idesk) and so on
     }
 
-    print_wm_state(e.window);
-
     std::set<Atom> properties;
     Window::get_properties(e.window, properties);
 
@@ -446,50 +443,6 @@ void Manager::on_client_message(const XClientMessageEvent& xclient)
                     atoms.size());
         }
     }
-}
-
-void Manager::print_wm_state(::Window window)
-{
-    Atom returned_type;
-    int size;
-    unsigned long nitems;
-    unsigned long bytes_left;
-    unsigned char *data = NULL;
-    TINY_LOG("Try to get _NET_WM_STATE... for application %x", window);
-
-    if (XGetWindowProperty(*tiny::display, window,
-                tiny::display->_NET_WM_STATE, 0L, 1L,
-                false, XA_ATOM,
-                &returned_type, &size,
-                &nitems, &bytes_left, &data) != Success || !nitems)
-    {
-        TINY_LOG("No _NET_WM_STATE...");
-        return;
-    }
-    TINY_LOG("\tbytes left: %ld nitems: %ld", bytes_left, nitems);
-
-    if (bytes_left != 0) {  // Fetch all states...
-        XFree(data);
-        unsigned long remain = ((size / 8) * nitems) + bytes_left;
-        if (XGetWindowProperty(*tiny::display, window,
-                    tiny::display->_NET_WM_STATE,  0L, remain,
-                    false, XA_ATOM,
-                    &returned_type, &size,
-                    &nitems, &bytes_left, &data) != Success)
-        {
-            TINY_LOG("No other _NET_WM_STATE...");
-            return;
-        }
-    }
-
-    char* atom_name;
-    Atom* atoms = reinterpret_cast<Atom*>(data);
-    for (unsigned long i = 0; i < nitems; i++){
-        atom_name = XGetAtomName(display, atoms[i]);
-        TINY_LOG("\t _NET_WM_STATE: %s", atom_name);
-        XFree(atom_name);
-    }
-    XFree(data);
 }
 
 int Manager::on_error(::Display* display, XErrorEvent* error)
