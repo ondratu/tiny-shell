@@ -174,10 +174,12 @@ void Manager::main_loop()
 
     while (running){
         XNextEvent(display, &event);
-        /*TINY_LOG("Event: %s (%lx)\n",
-                 event_to_string(event), event.xany.window);*/
+        ::Window window = tiny::window_of_event(event);
 
-        auto signal_id = std::make_pair(event.type, event.xany.window);
+        /*TINY_LOG("Event: %s (%lx)\n\t",
+                 event_to_string(event), window);*/
+
+        auto signal_id = std::make_pair(event.type, window);
 
         // call manager handlers first
         if (tiny::handlers.count(signal_id)){
@@ -206,19 +208,19 @@ void Manager::main_loop()
                 print_wm_state(event.xclient.window);
                 break;
             case CreateNotify:
-                TINY_LOG("CreateNotify for %lx -> %d;%d [%dx%d]",
-                        event.xany.window,
-                        event.xcreatewindow.x,
-                        event.xcreatewindow.y,
-                        event.xcreatewindow.width,
-                        event.xcreatewindow.height);
+                if (!event.xcreatewindow.override_redirect){
+                    TINY_LOG("CreateNotify for %lx -> %d;%d [%dx%d] !!",
+                            event.xcreatewindow.window,
+                            event.xcreatewindow.x,
+                            event.xcreatewindow.y,
+                            event.xcreatewindow.width,
+                            event.xcreatewindow.height);
+                }
                 break;
             default:
-                // TODO: co dělají ConfigureNotify? Chodí před _NET_WM_USER_TIME
-                // Na Gedit chodí ještě další další notifikace... proč?
 #ifdef DEBUG
                 fprintf(stderr, "Unhandled event: %s (%lx)\n",
-                        event_to_string(event), event.xany.window);
+                        event_to_string(event), window);
 #endif
                 break;
         }
@@ -391,7 +393,6 @@ void Manager::on_configure_request(const XConfigureRequestEvent &e)
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
 
-    // TINY_LOG("win size: %d x %d -> [%d x %d]", e.x, e.y, e.width, e.height);
     XConfigureWindow(display, e.window, e.value_mask, &ch);
 
     // XXX: Why this ?
@@ -454,7 +455,7 @@ void Manager::print_wm_state(::Window window)
     unsigned long nitems;
     unsigned long bytes_left;
     unsigned char *data = NULL;
-    TINY_LOG("Try to get _NET_WM_STATE...");
+    TINY_LOG("Try to get _NET_WM_STATE... for application %x", window);
 
     if (XGetWindowProperty(*tiny::display, window,
                 tiny::display->_NET_WM_STATE, 0L, 1L,

@@ -1,3 +1,5 @@
+#include <X11/X.h>
+#include <X11/Xlib.h>
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -9,6 +11,7 @@
 #include <memory>
 #include <new>
 
+#include "object.h"
 #include "wm_window.h"
 #include "x_util.h"
 
@@ -733,15 +736,16 @@ void Window::on_motion_notify(const XEvent &e, void * data){
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
-    char *atom_name = XGetAtomName(dsp, e.xproperty.atom);
-    XFree(atom_name);
-
     if (e.xproperty.atom == dsp.WM_PROTOCOLS){
         update_protocols();
         return;
     }
     if (e.xproperty.atom == dsp._NET_WM_STATE){
         update_wm_states();
+        return;
+    }
+    if (e.xproperty.atom == dsp.WM_NORMAL_HINTS){
+        update_normal_hints();
         return;
     }
     if (e.xproperty.atom == dsp.WM_NAME && ! is_net_wm_name){
@@ -772,6 +776,10 @@ void Window::on_property_notify(const XEvent &e, void *data)
         update_wm_icon();
         return;
     }
+
+    char *atom_name = XGetAtomName(dsp, e.xproperty.atom);
+    TINY_LOG("Unhandled propetry update: %s", atom_name);
+    XFree(atom_name);
 }
 
 void Window::on_key_release(const XEvent &e, void* data)
@@ -930,7 +938,7 @@ bool Window::get_motif_hints(::Window window,
     int size;
     unsigned long nitems;
     unsigned long bytes_left;
-    MotifWMHints *hints = nullptr;
+    MotifWMHints *mhints = nullptr;
 
     if (XGetWindowProperty(display, window,
                 display._MOTIF_WM_HINTS,
@@ -938,18 +946,18 @@ bool Window::get_motif_hints(::Window window,
                 false, display._MOTIF_WM_HINTS,
                 &returned_type, &size,
                 &nitems, &bytes_left,
-                reinterpret_cast<uint8_t**>(&hints)) != Success || !nitems)
+                reinterpret_cast<uint8_t**>(&mhints)) != Success || !nitems)
     {
         return false;
     }
-    if (hints->flags & MotifWMHints::FLAG_FUNCTIONS){
-        functions = hints->functions;
+    if (mhints->flags & MotifWMHints::FLAG_FUNCTIONS){
+        functions = mhints->functions;
     }
-    if (hints->flags & MotifWMHints::FLAG_DECORATIONS){
-        decorations = hints->decorations;
+    if (mhints->flags & MotifWMHints::FLAG_DECORATIONS){
+        decorations = mhints->decorations;
     }
 
-    XFree(hints);
+    XFree(mhints);
 
     return true;
 }

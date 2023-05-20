@@ -6,7 +6,7 @@ export GDK_BACKEND=x11
 #xeyes &
 #urxvt
 xterm &
-gedit &
+#gedit &
 
 #ulimit -c unlimited
 #exec valgrind ./tiny-shell

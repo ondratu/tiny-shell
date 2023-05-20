@@ -1,5 +1,6 @@
 #include <X11/cursorfont.h>
 
+#include "theme.h"
 #include "wm_wrapped.h"
 #include "x_util.h"
 
@@ -42,6 +43,15 @@ Window* Wrapped::create(::Window root, ::Window child,
     win->realize(root, attrs.x, attrs.y);
     win->on_focus_out(XEvent(), nullptr);   // disable and GrabButton
     win->map_all();
+
+    unsigned long data[2];      /* "suggested" by ICCCM version 1 */
+
+    data[0] = (unsigned long) NormalState;
+    data[1] = (unsigned long) None;
+
+    XChangeProperty(tiny::get_display(), win->get_window(),
+            tiny::get_display().WM_STATE, tiny::get_display().WM_STATE, 32,
+            PropModeReplace, (unsigned char *) data, 2);
 
     return win;
 }
@@ -180,6 +190,7 @@ void Wrapped::maximize()
     max_btn.set_restore(true);
     set_maximized(true);
 }
+
 
 void Wrapped::restore(int x, int y)
 {
@@ -358,6 +369,28 @@ void Wrapped::on_property_notify(const XEvent &e, void *data)
             e.xproperty.atom == display._NET_WM_NAME)
     {
         header.set_title(wm_name);
+    }
+    if (e.xproperty.atom == display.WM_NORMAL_HINTS)
+    {
+        // SDL on resize moved window relative to root
+        ::Window root;
+        int x, y;
+        unsigned int width, height;
+        unsigned int border, depth;
+        if (!XGetGeometry(dsp, child, &root,
+                &x, &y, &width, &height, &border, &depth))
+        {
+            TINY_LOG("Can't get window geometry");
+            return;
+        }
+
+        // when window is moved
+        if (x != 0 || y != tiny::theme.wm_win_header){
+            XWindowChanges ch;
+            ch.x = 0;
+            ch.y = tiny::theme.wm_win_header;
+            XConfigureWindow(dsp, child, CWX | CWY, &ch);
+        }
     }
 }
 

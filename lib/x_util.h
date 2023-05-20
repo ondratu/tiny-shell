@@ -1,4 +1,5 @@
 #pragma once
+#include <X11/X.h>
 #include <X11/Xlib.h>
 
 inline const char * event_to_string(const XEvent e){
@@ -78,7 +79,13 @@ inline const char * event_to_string(const XEvent e){
     }
 }
 
+
 namespace tiny {
+
+/**
+ * @short Return right event window, instead of XEvent.any.window.
+ */
+::Window window_of_event(const XEvent& e);
 
 inline XPoint x_point(short x, short y){
     XPoint rv;
