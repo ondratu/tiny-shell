@@ -79,7 +79,7 @@ class Style {
     uint32_t pressed_br = INHERITED;
 
     // Selected
-    uint32_t selected_bg = INHERITED;
+    uint32_t selected_bg = 0x3E4446;
     uint32_t selected_fg = INHERITED;
     uint32_t selected_br = INHERITED;
 

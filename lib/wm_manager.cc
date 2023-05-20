@@ -3,6 +3,7 @@
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 
+#include "object.h"
 #include "wm_manager.h"
 #include "wm_wrapped.h"
 #include "x_util.h"
@@ -242,6 +243,7 @@ void Manager::activate_next_window()
         }
     }
 
+    active = nullptr;
     if (next->get_minimized()){
         next->restore();
     }
@@ -264,14 +266,21 @@ void Manager::activate_prev_window()
             break;
         }
     }
+    active = nullptr;
     if (prev->get_minimized()){
         prev->restore();
     }
     prev->set_focus();
 }
 
-void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data){
+void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data)
+{
+    if (active){
+        active->return_focus();
+        wm_dock.redraw(active, e);
+    }
     active = reinterpret_cast<Window*>(o);
+    wm_dock.redraw(active, e);
 }
 
 void Manager::on_logout(tiny::Object *o, const XEvent &e, void *data){
@@ -321,11 +330,13 @@ void Manager::on_unmap_notify(const XUnmapEvent &e)
         if (window->get_minimized()){
             return;
         }
+        if (active == window){
+            activate_prev_window();
+        }
         wm_tops.remove(window);
         wm_dock.remove(window);
         delete (window);
         wm_windows.erase(e.window);
-        activate_prev_window();
     }
 }
 

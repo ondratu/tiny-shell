@@ -9,7 +9,7 @@ class Edge: public tiny::Widget {
 
     virtual ~Edge();
 
-    virtual void realize(Window parent, int x, int y);
+    virtual void realize(::Window parent, int x, int y);
 
     virtual void set_events(long mask=0);
 
@@ -37,7 +37,7 @@ class BackWindow: public tiny::Container {
 
     virtual ~BackWindow();
 
-    virtual void realize(Window parent, int x, int y);
+    virtual void realize(::Window parent, int x, int y);
 
     virtual void set_events(long mask=0);
 

@@ -16,6 +16,9 @@ class DockButton: public tiny::Widget {
 
         virtual void set_events(long mask=0) override;
 
+        inline void redraw(const XEvent& e)
+        { on_expose(e, nullptr); }
+
         tiny::Signal on_click;
 
     protected:
@@ -44,6 +47,7 @@ class Dock: public tiny::Box {
 
         void add(Window* window);
         void remove(Window* window);
+        void redraw(Window* window, const XEvent& e);
 
         virtual void realize(::Window parent, int x, int y) override;
         virtual void resize(uint32_t width, uint32_t height) override;

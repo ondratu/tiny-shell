@@ -1,4 +1,7 @@
 #include "wm_dock.h"
+#include "object.h"
+#include "wm_window.h"
+#include <X11/Xlib.h>
 
 namespace wm {
 
@@ -94,6 +97,8 @@ void Icon::on_button_release(const XEvent& e, void* data){
 
 void Icon::on_expose(const XEvent& e, void* data)
 {
+    is_selected = task->is_focused();
+
     GC gc = XCreateGC(display, window, 0, nullptr);
     XSetWindowBackground(display, window,
             get_style().get_bg(get_theme_state()));
@@ -157,6 +162,15 @@ void Dock::remove(Window* window)
     wm_task_icons.erase(window);
     delete(icon);
     resize(children.size()*height, height);
+}
+
+void Dock::redraw(Window* window, const XEvent& e)
+{
+    auto wm_task = wm_task_icons.find(window);
+    if (wm_task != wm_task_icons.end()){
+        Icon* icon = wm_task_icons[window];
+        icon->redraw(e);
+    }
 }
 
 void Dock::realize(::Window parent, int x, int y)

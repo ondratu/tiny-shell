@@ -57,9 +57,9 @@ class Wrapped: public tiny::Container, public Window {
   protected:
     /* event handlers */
 
-    void on_focus_in(const XEvent &e, void *data);
+    virtual void on_focus_in(const XEvent &e, void *data) override;
 
-    void on_focus_out(const XEvent &e, void *data);
+    virtual void on_focus_out(const XEvent &e, void *data) override;
 
     virtual void on_property_notify(const XEvent &e, void *data) override;
 

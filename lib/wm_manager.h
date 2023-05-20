@@ -53,7 +53,7 @@ class Manager: public tiny::Object {
     RunDialog wm_run;
     Dock wm_dock;
 
-    Window *active;
+    Window *active=nullptr;
 
     std::map<::Window, Window*> wm_windows;
     std::list<Window*> wm_tops;

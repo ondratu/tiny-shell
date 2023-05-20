@@ -196,6 +196,29 @@ void Window::set_focus()
         XSendEvent(dsp, child, false, NoEventMask, (XEvent*) &msg);
     }
     XRaiseWindow(dsp, child);
+
+    wm_states |= WMState::FOCUSED;
+
+    std::vector<Atom> atoms;
+    get_wm_states(atoms);
+
+    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
+            32, PropModeReplace,
+            reinterpret_cast<unsigned char *>(&(*atoms.begin())),
+            atoms.size());
+}
+
+void Window::return_focus()
+{
+    wm_states &= ~(WMState::FOCUSED);
+
+    std::vector<Atom> atoms;
+    get_wm_states(atoms);
+
+    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
+            32, PropModeReplace,
+            reinterpret_cast<unsigned char *>(&(*atoms.begin())),
+            atoms.size());
 }
 
 void Window::close()
@@ -735,6 +758,13 @@ void Window::on_motion_notify(const XEvent &e, void * data){
     on_drag_motion((Window*)this, e);
 }
 
+void Window::on_focus_in(const XEvent &e, void* data){
+    on_focus(this, e, nullptr);
+}
+
+void Window::on_focus_out(const XEvent &e, void* data){
+}
+
 void Window::on_property_notify(const XEvent &e, void *data)
 {
     if (e.xproperty.atom == dsp.WM_PROTOCOLS){
@@ -795,7 +825,7 @@ void Window::on_key_release(const XEvent &e, void* data)
 
 void Window::set_events()
 {
-    XSelectInput(dsp, child, PropertyChangeMask);
+    XSelectInput(dsp, child, PropertyChangeMask|FocusChangeMask);
 
     XGrabButton(dsp, Button1, AnyModifier, child, true,
             ButtonPressMask|ButtonReleaseMask,
@@ -803,6 +833,11 @@ void Window::set_events()
             None, None);
     tiny::x_grab_key(dsp, XKeysymToKeycode(dsp, XK_F4),
             Mod1Mask, child);
+
+    connect_window(FocusIn, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_focus_in));
+    connect_window(FocusOut, child,
+            reinterpret_cast<tiny::event_signal_t>(&Window::on_focus_out));
 
     connect_window(ClientMessage, child,
             reinterpret_cast<tiny::event_signal_t>(&Window::on_client_message));

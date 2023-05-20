@@ -2,6 +2,7 @@
 
 #include "object.h"
 #include "theme.h"
+#include "wm_window.h"
 #include "wm_wrapped.h"
 #include "x_util.h"
 
@@ -96,11 +97,6 @@ void Wrapped::set_events(long mask)
     XSelectInput(display, window,
         SubstructureRedirectMask | SubstructureNotifyMask | FocusChangeMask);
 */
-
-    connect(FocusIn,
-            reinterpret_cast<tiny::event_signal_t>(&Wrapped::on_focus_in));
-    connect(FocusOut,
-            reinterpret_cast<tiny::event_signal_t>(&Wrapped::on_focus_out));
 
     header.get_title_box()->on_drag_begin.connect(
             reinterpret_cast<tiny::Object*>(this),
@@ -356,11 +352,12 @@ void Wrapped::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data
 
 void Wrapped::on_focus_in(const XEvent &e, void* data){
     header.set_disable(false);
-    on_focus((Window*)this, e, nullptr);
+    Window::on_focus_in(e, data);
 }
 
 void Wrapped::on_focus_out(const XEvent &e, void* data){
     header.set_disable(true);
+    Window::on_focus_out(e, data);
 }
 
 void Wrapped::on_property_notify(const XEvent &e, void *data)

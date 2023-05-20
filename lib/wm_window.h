@@ -117,6 +117,9 @@ class Window: public tiny::Object {
         virtual inline bool is_fullscreen() const
         { return wm_states & WMState::FULLSCREEN; }
 
+        virtual inline bool is_focused() const
+        { return wm_states & WMState::FOCUSED; }
+
         void get_wm_states(std::vector<Atom>& atoms);
 
         inline std::string get_wm_name() const
@@ -136,6 +139,7 @@ class Window: public tiny::Object {
         { return icon_mask; }
 
         virtual void set_focus();
+        virtual void return_focus();
 
         //! Send WM_DELETE_WINDOW to window or xkill that
         virtual void close();
@@ -188,6 +192,10 @@ class Window: public tiny::Object {
         virtual void on_key_release(const XEvent &e, void* data);
 
         void on_motion_notify(const XEvent &e, void *data);
+
+        virtual void on_focus_in(const XEvent &e, void *data);
+
+        virtual void on_focus_out(const XEvent &e, void *data);
 
         ::Window child;
         ::Window root;
