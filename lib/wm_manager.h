@@ -43,8 +43,6 @@ class Manager: public tiny::Object {
 
     void on_configure_request(const XConfigureRequestEvent &e);
 
-    void on_client_message(const XClientMessageEvent &e);
-
     static int on_error(::Display* display, XErrorEvent* error);
 
     ::Display* display;

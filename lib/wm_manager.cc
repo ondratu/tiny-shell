@@ -203,9 +203,7 @@ void Manager::main_loop()
             case ConfigureRequest:  // need for resize requests from app windows
                 on_configure_request(event.xconfigurerequest);
                 break;
-            case ClientMessage:
-                on_client_message(event.xclient);
-                break;
+            /*
             case CreateNotify:
                 if (!event.xcreatewindow.override_redirect){
                     TINY_LOG("CreateNotify for %lx -> %d;%d [%dx%d] !!",
@@ -216,6 +214,7 @@ void Manager::main_loop()
                             event.xcreatewindow.height);
                 }
                 break;
+            */
             default:
 #ifdef DEBUG
                 fprintf(stderr, "Unhandled event: %s (%lx)\n",
@@ -383,7 +382,6 @@ void Manager::on_map_request(const XMapRequestEvent &e)
 
 void Manager::on_configure_request(const XConfigureRequestEvent &e)
 {
-    // could be connect as signal for wm_window.chilid
     XWindowChanges ch;
     ch.x = e.x;
     ch.y = e.y;
@@ -394,58 +392,6 @@ void Manager::on_configure_request(const XConfigureRequestEvent &e)
     ch.stack_mode = e.detail;
 
     XConfigureWindow(display, e.window, e.value_mask, &ch);
-
-    // XXX: Why this ?
-    if (false && wm_windows.count(e.window)){
-        const ::Window frame = wm_windows[e.window]->get_child();
-        ch.width -= 2;
-        ch.height -= 22;
-        XConfigureWindow(display, frame, e.value_mask, &ch);
-        printf(" > Resize frame to %dx%d\n", e.width, e.height);
-    }
-}
-
-void Manager::on_client_message(const XClientMessageEvent& xclient)
-{
-    char * prop_name = nullptr;
-    prop_name = XGetAtomName(display, xclient.message_type);
-    TINY_LOG("Recieve ClientMessage %s (%ld, %ld, %ld, %ld)",
-            prop_name,
-            xclient.data.l[0],  // action
-            xclient.data.l[1],  // first property
-            xclient.data.l[2],  // second property
-            xclient.data.l[3]); // source indication
-    XFree(prop_name);
-
-    if (xclient.message_type == tiny::display->_NET_WM_STATE){
-        for (uint8_t i = 1; i <= 2; i++){
-            prop_name = XGetAtomName(display,
-                    (Atom)xclient.data.l[1]);
-            TINY_LOG("\t _NET_WM_STATE: %s", prop_name);
-            XFree(prop_name);
-        }
-    }
-
-    if (xclient.data.l[0] == tiny::Display::_NET_WM_STATE_ADD){
-        if ((Atom)xclient.data.l[1] == tiny::display->_NET_WM_STATE_MAXIMIZED_VERT &&
-                (Atom)xclient.data.l[2] == tiny::display->_NET_WM_STATE_MAXIMIZED_HORZ)
-        {
-            XWindowAttributes root_attrs;   //TODO: get_screen size
-            XGetWindowAttributes(display, root, &root_attrs);
-            XMoveResizeWindow(display, xclient.window, 0, 0,
-                    root_attrs.width, root_attrs.height);
-
-            std::vector<Atom> atoms;
-            atoms.push_back(tiny::display->_NET_WM_STATE_MAXIMIZED_VERT);
-            atoms.push_back(tiny::display->_NET_WM_STATE_MAXIMIZED_HORZ);
-
-            XChangeProperty(display, xclient.window,
-                    tiny::display->_NET_WM_STATE, XA_ATOM,
-                    32, PropModeReplace,
-                    reinterpret_cast<unsigned char *>(&(atoms[0])),
-                    atoms.size());
-        }
-    }
 }
 
 int Manager::on_error(::Display* display, XErrorEvent* error)
