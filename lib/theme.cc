@@ -49,7 +49,7 @@ Style::~Style()
 void Style::init()
 {
     const int screen = 0;   // XXX: this is zero for now
-    font = XftFontOpenName(get_display(), screen, font_name.data());
+    font = XftFontOpenName(get_display(), screen, font_name);
 
     // TODO: check success
 }

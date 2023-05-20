@@ -25,7 +25,7 @@ DEP = $(OBJ:%.o=%.d)
 
 TARGET = tiny-shell
 
-all: $(TARGET)
+all: $(TARGET) demo input_only wm_test menu test_memory
 
 -include $(LIB_OBJ:.o=.d)
 
@@ -62,6 +62,13 @@ $(LIB_OBJ): .pkg_check
 
 .syntastic_cpp_config: .pkg_check
 	@echo "-I./lib" > $@
+	@$(foreach pkg, $(PKGS), for i in $$(pkg-config --cflags $(pkg)); do echo $$i >> $@; done;)
+
+compile_flags.txt: .pkg_check
+	@echo "-xc++" > $@
+	@echo "-Wall" >> $@
+	@echo "-std=c++17" >> $@
+	@echo "-I./lib" >> $@
 	@$(foreach pkg, $(PKGS), for i in $$(pkg-config --cflags $(pkg)); do echo $$i >> $@; done;)
 
 clean:

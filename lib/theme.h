@@ -87,7 +87,7 @@ class Style {
     uint32_t padding_width = 1;
 
   protected:
-    std::string_view font_name = "Cantarell-12";
+    const char* font_name = "Cantarell-12";
     XftFont* font;
 
 }; // Style
