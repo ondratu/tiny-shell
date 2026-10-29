@@ -13,8 +13,7 @@ much as it can give.
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock and a run
 > dialog. Large parts of EWMH, the task bar with a clock, `.desktop` files
-> and the launcher are still missing, see below. The detailed work list is in
-> [TODO](TODO).
+> and the launcher are still missing, see below.
 
 ## What it is
 

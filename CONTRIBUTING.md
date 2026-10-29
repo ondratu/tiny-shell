@@ -52,7 +52,7 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   `tiny::x_dim()` (a window size, limited to 1..65535) or `tiny::x_uint()`
   (other values, never negative).
 - **Strictness:** the code compiles without warnings with GCC and Clang, with
-  a long list of warnings on (see the TODO for the list), is formatted by
+  a long list of warnings on (see `WARNINGS` in the Makefile), is formatted by
   `clang-format` (`make format`) and checked by `clang-tidy` (`make lint`). Fix the cause of a warning; if
   it really cannot be fixed (a macro or a header of Xlib), isolate it in one
   small place with a comment. Test coverage stays as high as is sensible and
@@ -136,6 +136,11 @@ you work on memory handling, also build with the sanitizers:
 ```sh
 make asan        # all the tests with AddressSanitizer and UBSan
 ```
+
+The same checks run in GitHub Actions (`.github/workflows/ci.yml`) with GCC,
+Clang (also with libc++), on Alpine (musl) and FreeBSD, plus pre-commit,
+clang-tidy, the sanitizers, a coverage minimum and a binary size limit. A
+change should pass all of them; the FreeBSD job is best effort.
 
 ## Tests
 
