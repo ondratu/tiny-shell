@@ -6,10 +6,10 @@ class WmButtonTest: public ::testing::Test {
   protected:
     uint32_t bg() const { return tiny::theme.wm_button.normal_bg; }
     uint32_t fg() const { return tiny::theme.wm_button.normal_fg; }
-    uint32_t icon() const { return tiny::theme.wm_win_icon; }
+    int icon()  const { return tiny::theme.wm_win_icon; }
 
     Image image_of(const tiny::Widget &w)
-    { return Image(w.get_window(), tiny::x_uint(w.get_width()), tiny::x_uint(w.get_height())); }
+    { return Image(w.get_window(), w.get_width(), w.get_height()); }
 };
 
 TEST_F(WmButtonTest, buttons_are_square_icons)
@@ -51,13 +51,13 @@ TEST_F(WmButtonTest, expose_draws_line_on_minimize_button)
 
     Image img = image_of(b);
     unsigned int drawn = 0;
-    for (unsigned int y = 0; y < icon(); ++y) {
-        for (unsigned int x = 0; x < icon(); ++x) {
+    for (int y = 0; y < icon(); ++y) {
+        for (int x = 0; x < icon(); ++x) {
             if (img.at(x, y) != bg()) {
                 ++drawn;
                 // a short horizontal line below the middle
-                EXPECT_GE(y, icon() / 2u + 1) << x << "," << y;
-                EXPECT_LE(y, icon() / 2u + 5) << x << "," << y;
+                EXPECT_GE(y, icon() / 2 + 1) << x << "," << y;
+                EXPECT_LE(y, icon() / 2 + 5) << x << "," << y;
             }
         }
     }
@@ -194,7 +194,7 @@ class ScaledWmButtonTest: public WmButtonTest {
     void TearDown() override
     { tiny::theme.scale(1); }
 
-    unsigned int mid() const { return icon() / 2; }
+    int mid() const { return icon() / 2; }
 };
 
 TEST_F(ScaledWmButtonTest, close_cross_is_scaled)

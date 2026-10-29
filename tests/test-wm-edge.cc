@@ -112,8 +112,8 @@ TEST(EdgeTest, delete_through_base_pointer)
 
 class BackWindowTest: public ::testing::Test {
   protected:
-    uint32_t border() const { return tiny::theme.wm_win_border; }
-    uint32_t corner() const { return tiny::theme.wm_win_corner; }
+    int border()  const { return tiny::theme.wm_win_border; }
+    int corner()  const { return tiny::theme.wm_win_corner; }
 
     // client area 200x100 at 50, 60 -> 220x120 window at 40, 50
     void SetUp() override

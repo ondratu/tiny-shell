@@ -105,15 +105,15 @@ class HeaderTest: public ::testing::Test {
     { tiny::theme.wm_header = original; }
 
     Image image_of(const wm::Header &h)
-    { return Image(h.get_window(), tiny::x_uint(h.get_width()), tiny::x_uint(h.get_height())); }
+    { return Image(h.get_window(), h.get_width(), h.get_height()); }
 
     // Darkest red channel of the text area (without the bottom line).
     unsigned int darkest_text(const Image &img)
     {
         unsigned int darkest = 255;
-        for (unsigned int y = 0; y < img.height - 1; ++y) {
-            for (unsigned int x = 0; x < img.width; ++x) {
-                darkest = std::min(darkest, (img.at(x, y) >> 16) & 0xFF);
+        for (int y = 0; y < img.height - 1; ++y) {
+            for (int x = 0; x < img.width; ++x) {
+                darkest = std::min(darkest, (img.at(x, y) >> 16) & 0xFFu);
             }
         }
         return darkest;
@@ -216,7 +216,7 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
 
     Image img = image_of(h);
     EXPECT_GT(img.count_not(bg(), 24), 0u);
-    for (unsigned int y = 0; y < 24; ++y) {
+    for (int y = 0; y < 24; ++y) {
         EXPECT_EQ(img.at(0, y), bg()) << "row " << y;   // not cut on the left
     }
 }

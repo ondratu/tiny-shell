@@ -293,7 +293,7 @@ TEST_F(WmWindowTest, window_manager_protocols_are_read)
 
 TEST_F(WmWindowTest, wm_hints_icon_of_the_theme_size_is_copied)
 {
-    client.set_icon_pixmap(tiny::x_uint(tiny::theme.wm_icon), false);
+    client.set_icon_pixmap(tiny::theme.wm_icon, false);
 
     auto window = manage();
 
@@ -303,7 +303,7 @@ TEST_F(WmWindowTest, wm_hints_icon_of_the_theme_size_is_copied)
 
 TEST_F(WmWindowTest, wm_hints_icon_of_the_theme_size_with_mask)
 {
-    client.set_icon_pixmap(tiny::x_uint(tiny::theme.wm_icon), true);
+    client.set_icon_pixmap(tiny::theme.wm_icon, true);
 
     auto window = manage();
 
@@ -354,7 +354,7 @@ TEST_F(WmWindowTest, wm_hints_with_a_broken_icon_pixmap_leave_no_icon)
 
 TEST_F(WmWindowTest, net_wm_icon_is_converted_to_a_pixmap)
 {
-    client.set_net_icon(tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon));
+    client.set_net_icon(tiny::theme.wm_icon, tiny::theme.wm_icon);
 
     auto window = manage();
 
@@ -394,7 +394,7 @@ TEST_F(WmWindowTest, the_best_net_wm_icon_is_chosen_from_several)
 
 TEST_F(WmWindowTest, icon_update_replaces_the_icon)
 {
-    client.set_net_icon(tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon));
+    client.set_net_icon(tiny::theme.wm_icon, tiny::theme.wm_icon);
     auto window = manage();
     window->set_events();
     ASSERT_NE(window->get_icon(), 0u);
@@ -718,13 +718,13 @@ TEST_F(WmWindowTest, client_message_maximizes_and_restores)
     window->set_events();
 
     send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                dsp()._NET_WM_STATE_ADD, dsp()._NET_WM_STATE_MAXIMIZED_VERT,
-                dsp()._NET_WM_STATE_MAXIMIZED_HORZ));
+                static_cast<long>(dsp()._NET_WM_STATE_ADD), static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
+                static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_TRUE(window->get_maximized());
 
     send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                dsp()._NET_WM_STATE_REMOVE, dsp()._NET_WM_STATE_MAXIMIZED_VERT,
-                dsp()._NET_WM_STATE_MAXIMIZED_HORZ));
+                static_cast<long>(dsp()._NET_WM_STATE_REMOVE), static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
+                static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_FALSE(window->get_maximized());
 }
 
@@ -735,11 +735,11 @@ TEST_F(WmWindowTest, client_message_with_other_state_changes_is_ignored)
     window->set_events();
 
     send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                dsp()._NET_WM_STATE_ADD, dsp()._NET_WM_STATE_STICKY));
+                static_cast<long>(dsp()._NET_WM_STATE_ADD), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
     send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                dsp()._NET_WM_STATE_REMOVE, dsp()._NET_WM_STATE_STICKY));
+                static_cast<long>(dsp()._NET_WM_STATE_REMOVE), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
     send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                dsp()._NET_WM_STATE_TOGGLE, dsp()._NET_WM_STATE_STICKY));
+                static_cast<long>(dsp()._NET_WM_STATE_TOGGLE), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
 
     EXPECT_FALSE(window->get_maximized());
 }
@@ -951,11 +951,11 @@ TEST_F(WmWindowTest, dragging_a_maximized_window_restores_it_first)
 
 TEST_F(WmWindowTest, icon_update_without_mask_causes_no_x_error)
 {
-    client.set_icon_pixmap(tiny::x_uint(tiny::theme.wm_icon), true);
+    client.set_icon_pixmap(tiny::theme.wm_icon, true);
     XErrors errors;
     {
         auto window = manage();
-        client.set_icon_pixmap(tiny::x_uint(tiny::theme.wm_icon), false);
+        client.set_icon_pixmap(tiny::theme.wm_icon, false);
         window->update_wm_hints();
     }
     EXPECT_EQ(errors.errors(), 0);
