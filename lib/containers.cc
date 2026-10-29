@@ -139,6 +139,10 @@ void Box::remove(Widget* widget)
 
     Container::remove(widget);
 
+    if (it == offsets.end()){
+        return;     // not pushed by push_start / push_back
+    }
+
     if (type == Type::Horizontal){
         if (it->second.start){
             start_offset -= (it->second.x + widget->get_width());
