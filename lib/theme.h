@@ -45,6 +45,9 @@ class Style {
 
     void init();
 
+    // Multiply border, padding and font size of the base values by factor
+    void scale(double factor);
+
     const uint32_t get_bg(uint8_t state) const;
     const uint32_t get_fg(uint8_t state) const;
     const uint32_t get_br(uint8_t state) const;
@@ -87,8 +90,16 @@ class Style {
     uint32_t padding_width = 1;
 
   protected:
-    const char* font_name = "Cantarell-12";
+    const char* font_family = "Cantarell";
+    const char* font_style = "";            // e.g. ":bold"
+    double font_size = 12;
     XftFont* font = nullptr;
+
+  private:
+    bool base_set = false;
+    uint32_t base_border_width = 0;
+    uint32_t base_padding_width = 0;
+    double base_font_size = 0;
 
 }; // Style
 
@@ -121,7 +132,7 @@ class WMHeaderStyle: public Style {
         border_width = 0;
         padding_width = 2;
 
-        font_name = "Cantarell-12:bold";
+        font_style = ":bold";
       }
 
 }; // WMHeaderStyle
@@ -139,10 +150,17 @@ class WMDockStyle: public Style {
 
 class Theme {
     public:
-        Theme(){}
+        // Scale factor is read from TINY_SCALE_FACTOR (default 1)
+        Theme();
         ~Theme(){}
 
         void init();
+
+        // Scale all metrics and fonts (relative to the default theme)
+        void scale(double factor);
+
+        // Parse TINY_SCALE_FACTOR; invalid or non-positive value gives 1
+        static double env_scale_factor();
 
         uint32_t root_background = 0x729FCF;
         uint32_t wm_win_header = 25;
@@ -155,6 +173,8 @@ class Theme {
         uint32_t wm_panel = 30;
         uint32_t wm_icon = 48;
         uint32_t wm_dock_border = 5;
+
+        double scale_factor = 1;
 
         Style widget;
         WMButtonStyle wm_button;
