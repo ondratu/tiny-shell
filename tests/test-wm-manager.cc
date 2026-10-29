@@ -30,7 +30,7 @@ using WmWindow = wm::Window;
 
 namespace {
 
-uint32_t border()
+int border()
 { return tiny::theme.wm_dock_border; }
 
 // Stops the main loop: the loop reaches it after all earlier events.
@@ -117,7 +117,7 @@ class ManagerTest: public ::testing::Test {
     void set_window_type(Client &c, Atom type)
     { c.set_atoms(dsp()._NET_WM_WINDOW_TYPE, {type}); }
 
-    XKeyEvent key(int keysym, unsigned int state = Mod1Mask)
+    XKeyEvent key(KeySym keysym, unsigned int state = Mod1Mask)
     {
         XKeyEvent e = {};
         e.type = KeyPress;
@@ -304,7 +304,7 @@ TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
     XErrors errors;
     Client other;
     for (int sym: {XK_Tab, XK_F2}) {
-        XGrabKey(other.display, XKeysymToKeycode(other.display, sym),
+        XGrabKey(other.display, XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
                 Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
     }
     other.sync();

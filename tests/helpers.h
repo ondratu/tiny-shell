@@ -95,30 +95,31 @@ inline ::Window child_at(::Window parent, int x, int y)
 // Contents of an InputOutput window or pixmap.
 class Image {
   public:
-    Image(::Drawable d, unsigned int w, unsigned int h):
+    Image(::Drawable d, int w, int h):
         width(w), height(h)
     {
         XSync(tiny::get_display(), False);
-        XImage *img = XGetImage(tiny::get_display(), d, 0, 0, w, h,
-                AllPlanes, ZPixmap);
-        pixels.resize(w * h);
-        for (unsigned int y = 0; y < h; ++y) {
-            for (unsigned int x = 0; x < w; ++x) {
-                pixels[y * w + x] = XGetPixel(img, x, y) & 0xFFFFFF;
+        XImage *img = XGetImage(tiny::get_display(), d, 0, 0,
+                tiny::x_uint(w), tiny::x_uint(h), AllPlanes, ZPixmap);
+        pixels.resize(static_cast<size_t>(w) * static_cast<size_t>(h));
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                pixels[index(x, y)] =
+                    static_cast<uint32_t>(XGetPixel(img, x, y)) & 0xFFFFFF;
             }
         }
         XDestroyImage(img);
     }
 
-    uint32_t at(unsigned int x, unsigned int y) const
-    { return pixels[y * width + x]; }
+    uint32_t at(int x, int y) const
+    { return pixels[index(x, y)]; }
 
     // Number of pixels different from `bg` in the rows [0, rows).
-    unsigned int count_not(uint32_t bg, unsigned int rows) const
+    unsigned int count_not(uint32_t bg, int rows) const
     {
         unsigned int n = 0;
-        for (unsigned int y = 0; y < rows && y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
+        for (int y = 0; y < rows && y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 n += at(x, y) != bg;
             }
         }
@@ -128,9 +129,14 @@ class Image {
     bool operator ==(const Image &o) const
     { return width == o.width && height == o.height && pixels == o.pixels; }
 
-    unsigned int width;
-    unsigned int height;
+    int width;
+    int height;
     std::vector<uint32_t> pixels;
+
+  private:
+    size_t index(int x, int y) const
+    { return static_cast<size_t>(y) * static_cast<size_t>(width)
+        + static_cast<size_t>(x); }
 };
 
 // Counts X protocol errors while it lives (an unhandled one kills the

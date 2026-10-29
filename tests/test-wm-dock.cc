@@ -9,10 +9,10 @@ using WmWindow = wm::Window;
 
 namespace {
 
-uint32_t icon_size()
+int icon_size()
 { return tiny::theme.wm_icon; }
 
-uint32_t border()
+int border()
 { return tiny::theme.wm_dock_border; }
 
 uint32_t widget_bg(tiny::Style::State state)
@@ -80,8 +80,8 @@ TEST(DockButtonScaleTest, dots_are_scaled)
 
         uint32_t fg = tiny::theme.widget.get_fg(
                 static_cast<uint8_t>(tiny::Style::State::Normal));
-        Image img(button.get_window(), tiny::x_uint(button.get_width()), tiny::x_uint(button.get_height()));
-        unsigned int origin = tiny::x_uint(3 * (button.get_width() / 14));
+        Image img(button.get_window(), button.get_width(), button.get_height());
+        int origin = 3 * (button.get_width() / 14);
 
         ASSERT_EQ(button.get_width(), 96u);
         // 10 px dot (5 px at scale 1): its far edge is still filled
@@ -228,7 +228,7 @@ class DockTest: public ::testing::Test {
         return windows.back().get();
     }
 
-    uint32_t task_width(unsigned tasks) const
+    int task_width(int tasks) const
     { return (tasks + 1) * (icon_size() + border()) + border(); }
 
     wm::Dock dock;

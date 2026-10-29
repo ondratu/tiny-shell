@@ -112,18 +112,19 @@ class Client {
     }
 
     // Pixmap filled with a color, in the depth of the default screen.
-    Pixmap pixmap(unsigned size, unsigned long color)
+    Pixmap pixmap(int size, unsigned long color)
     {
-        Pixmap p = XCreatePixmap(display, DefaultRootWindow(display), size,
-                size, tiny::x_uint(DefaultDepth(display, 0)));
+        Pixmap p = XCreatePixmap(display, DefaultRootWindow(display),
+                tiny::x_uint(size), tiny::x_uint(size),
+                tiny::x_uint(DefaultDepth(display, 0)));
         GC gc = XCreateGC(display, p, 0, nullptr);
         XSetForeground(display, gc, color);
-        XFillRectangle(display, p, gc, 0, 0, size, size);
+        XFillRectangle(display, p, gc, 0, 0, tiny::x_uint(size), tiny::x_uint(size));
         XFreeGC(display, gc);
         return p;
     }
 
-    void set_icon_pixmap(unsigned size, bool with_mask)
+    void set_icon_pixmap(int size, bool with_mask)
     {
         XWMHints hints = {};
         hints.flags = IconPixmapHint;
@@ -131,17 +132,18 @@ class Client {
         if (with_mask) {
             hints.flags |= IconMaskHint;
             hints.icon_mask = XCreatePixmap(display, DefaultRootWindow(display),
-                    size, size, 1);
+                    tiny::x_uint(size), tiny::x_uint(size), 1);
         }
         XSetWMHints(display, window, &hints);
         sync();
     }
 
     // _NET_WM_ICON: width, height and ARGB pixels in 64 bit words
-    void set_net_icon(unsigned width, unsigned height)
+    void set_net_icon(int width, int height)
     {
         std::vector<long> data = {static_cast<long>(width), static_cast<long>(height)};
-        data.insert(data.end(), width * height, 0xFFFF0000L);
+        data.insert(data.end(), static_cast<size_t>(width) * static_cast<size_t>(height),
+                0xFFFF0000L);
         set_cardinals(dsp()._NET_WM_ICON, data);
     }
 
