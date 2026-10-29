@@ -70,7 +70,7 @@ class Demo: public tiny::Container {
     void on_client_message(const XEvent &e, void *)
     {
         if (e.xclient.message_type == display.WM_PROTOCOLS &&
-            (Atom)e.xclient.data.l[0] == display.WM_DELETE_WINDOW)
+            static_cast<Atom>(e.xclient.data.l[0]) == display.WM_DELETE_WINDOW)
         {
             printf("This is it!\n");
             keep_running = false;

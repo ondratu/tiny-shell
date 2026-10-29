@@ -70,7 +70,7 @@ TEST(PanelTest, realize_stretches_panel_over_the_root_window)
     XWindowAttributes root = attributes_of(root_window());
     XWindowAttributes attrs = attributes_of(panel);
     EXPECT_EQ(attrs.width, root.width);
-    EXPECT_EQ(attrs.height, (int) tiny::theme.wm_panel);
+    EXPECT_EQ(attrs.height, static_cast<int>(tiny::theme.wm_panel));
 }
 
 TEST(PanelTest, realize_puts_menu_buttons_to_both_ends)

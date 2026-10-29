@@ -52,14 +52,14 @@ class Client {
     void set_atoms(Atom property, const std::vector<Atom> &atoms)
     {
         XChangeProperty(display, window, property, XA_ATOM, 32, PropModeReplace,
-                (const unsigned char *) atoms.data(), atoms.size());
+                reinterpret_cast<const unsigned char*>(atoms.data()), atoms.size());
         sync();
     }
 
     void set_cardinals(Atom property, const std::vector<long> &values)
     {
         XChangeProperty(display, window, property, XA_CARDINAL, 32,
-                PropModeReplace, (const unsigned char *) values.data(),
+                PropModeReplace, reinterpret_cast<const unsigned char*>(values.data()),
                 values.size());
         sync();
     }
@@ -67,7 +67,7 @@ class Client {
     void set_utf8(Atom property, const std::string &text)
     {
         XChangeProperty(display, window, property, dsp().UTF8_STRING, 8,
-                PropModeReplace, (const unsigned char *) text.c_str(),
+                PropModeReplace, reinterpret_cast<const unsigned char*>(text.c_str()),
                 text.size());
         sync();
     }
@@ -91,11 +91,11 @@ class Client {
     void set_motif(unsigned long flags, unsigned long functions,
             unsigned long decorations)
     {
-        long hints[5] = {(long) flags, (long) functions, (long) decorations,
+        long hints[5] = {static_cast<long>(flags), static_cast<long>(functions), static_cast<long>(decorations),
             0, 0};
         XChangeProperty(display, window, dsp()._MOTIF_WM_HINTS,
                 dsp()._MOTIF_WM_HINTS, 32, PropModeReplace,
-                (const unsigned char *) hints, 5);
+                reinterpret_cast<const unsigned char*>(hints), 5);
         sync();
     }
 
@@ -140,7 +140,7 @@ class Client {
     // _NET_WM_ICON: width, height and ARGB pixels in 64 bit words
     void set_net_icon(unsigned width, unsigned height)
     {
-        std::vector<long> data = {(long) width, (long) height};
+        std::vector<long> data = {static_cast<long>(width), static_cast<long>(height)};
         data.insert(data.end(), width * height, 0xFFFF0000L);
         set_cardinals(dsp()._NET_WM_ICON, data);
     }
@@ -164,7 +164,7 @@ class Client {
         XGetWindowProperty(display, window, dsp()._NET_WM_STATE, 0, 64, False,
                 XA_ATOM, &type, &format, &count, &left, &data);
         if (data) {
-            Atom *atoms = (Atom *) data;
+            Atom *atoms = reinterpret_cast<Atom*>(data);
             rv.assign(atoms, atoms + count);
             XFree(data);
         }

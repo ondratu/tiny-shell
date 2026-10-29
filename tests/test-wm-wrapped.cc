@@ -86,7 +86,7 @@ TEST_F(WrappedTest, frame_wraps_the_client)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 200);
-    EXPECT_EQ(f.height, (int) (100 + header_height()));
+    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()));
     EXPECT_EQ(f.map_state, IsViewable);
 }
 
@@ -96,7 +96,7 @@ TEST_F(WrappedTest, client_is_reparented_under_the_header)
 
     auto c = child();
     EXPECT_EQ(c.x, 0);
-    EXPECT_EQ(c.y, (int) header_height());
+    EXPECT_EQ(c.y, static_cast<int>(header_height()));
     EXPECT_EQ(c.border_width, 0);
     EXPECT_EQ(c.width, 200);
     EXPECT_EQ(c.height, 100);
@@ -143,7 +143,7 @@ TEST_F(WrappedTest, create_sets_wm_state_to_normal)
                 dsp().WM_STATE, &type, &format, &count, &left, &data),
             Success);
     ASSERT_EQ(count, 2u);
-    EXPECT_EQ(((long *) data)[0], NormalState);
+    EXPECT_EQ((reinterpret_cast<long*>(data))[0], NormalState);
     XFree(data);
 }
 
@@ -205,7 +205,7 @@ TEST_F(WrappedTest, maximize_button_fills_the_screen)
     EXPECT_EQ(f.width, s.width);
     EXPECT_EQ(f.height, s.height);
     EXPECT_EQ(child().width, s.width);
-    EXPECT_EQ(child().height, s.height - (int) header_height());
+    EXPECT_EQ(child().height, s.height - static_cast<int>(header_height()));
 }
 
 TEST_F(WrappedTest, maximize_button_restores_a_maximized_window)
@@ -220,7 +220,7 @@ TEST_F(WrappedTest, maximize_button_restores_a_maximized_window)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 200);
-    EXPECT_EQ(f.height, (int) (100 + header_height()));
+    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()));
     EXPECT_EQ(child().width, 200);
     EXPECT_EQ(child().height, 100);
 }
@@ -246,7 +246,7 @@ TEST_F(WrappedTest, restore_can_center_the_window_on_the_pointer)
     win->restore(500, 400);
 
     EXPECT_EQ(frame().x, 500 - 100);
-    EXPECT_EQ(frame().y, 400 - (int) (100 + header_height()) / 2);
+    EXPECT_EQ(frame().y, 400 - static_cast<int>(100 + header_height()) / 2);
 }
 
 // ---- close ----
@@ -260,7 +260,7 @@ TEST_F(WrappedTest, close_button_asks_the_client_to_exit)
 
     XEvent e;
     ASSERT_TRUE(client.message(e));
-    EXPECT_EQ(e.xclient.data.l[0], (long) dsp().WM_DELETE_WINDOW);
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
 TEST_F(WrappedTest, close_button_kills_an_uncooperative_client)
@@ -303,9 +303,9 @@ TEST_F(WrappedTest, focus_events_enable_and_disable_the_header)
     client.set_title("title");
     build();
     // only the text color differs
-    ASSERT_NE(tiny::theme.wm_header.get_fg((uint8_t) tiny::Style::State::Normal),
+    ASSERT_NE(tiny::theme.wm_header.get_fg(static_cast<uint8_t>(tiny::Style::State::Normal)),
             tiny::theme.wm_header.get_fg(
-                (uint8_t) tiny::Style::State::Disabled));
+                static_cast<uint8_t>(tiny::Style::State::Disabled)));
     auto header_image = [this] {
         send(win->header, Expose);
         return Image(win->header.get_window(), win->header.get_width(),
@@ -370,7 +370,7 @@ TEST_F(WrappedTest, normal_hints_change_puts_a_moved_client_back)
     send(client.window, e);
 
     EXPECT_EQ(child().x, 0);
-    EXPECT_EQ(child().y, (int) header_height());
+    EXPECT_EQ(child().y, static_cast<int>(header_height()));
 }
 
 TEST_F(WrappedTest, normal_hints_change_of_a_gone_client_is_survived)
@@ -434,7 +434,7 @@ TEST_F(WrappedTest, resizing_the_right_bottom_corner_grows_the_window)
     resizable();
     build();
     using tiny::Position;
-    void *mask = (void *) (size_t) (Position::Right | Position::Bottom);
+    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right | Position::Bottom));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(350, 330, MotionNotify), mask);
@@ -444,7 +444,7 @@ TEST_F(WrappedTest, resizing_the_right_bottom_corner_grows_the_window)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 250);
-    EXPECT_EQ(f.height, (int) (100 + header_height()) + 30);
+    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()) + 30);
     EXPECT_EQ(child().width, 250);
     EXPECT_EQ(child().height, 130);
     EXPECT_EQ(win->header.get_width(), 250u);
@@ -455,7 +455,7 @@ TEST_F(WrappedTest, resizing_the_left_top_corner_moves_the_window)
     resizable();
     build();
     using tiny::Position;
-    void *mask = (void *) (size_t) (Position::Left | Position::Top);
+    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Left | Position::Top));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(280, 270, MotionNotify), mask);
@@ -464,7 +464,7 @@ TEST_F(WrappedTest, resizing_the_left_top_corner_moves_the_window)
     EXPECT_EQ(f.x, -10);
     EXPECT_EQ(f.y, -10);
     EXPECT_EQ(f.width, 220);
-    EXPECT_EQ(f.height, (int) (100 + header_height()) + 30);
+    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()) + 30);
 }
 
 TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
@@ -472,7 +472,7 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
     resizable();
     build();
     using tiny::Position;
-    void *mask = (void *) (size_t) (Position::Right | Position::Bottom);
+    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right | Position::Bottom));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(5000, 5000, MotionNotify),
@@ -482,8 +482,8 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
 
     win->on_move_resize_motion(nullptr, pointer(-5000, -5000, MotionNotify),
             mask);
-    EXPECT_GE(frame().width, (int) tiny::theme.wm_win_min_width);
-    EXPECT_GE(frame().height, (int) tiny::theme.wm_win_min_height);
+    EXPECT_GE(frame().width, static_cast<int>(tiny::theme.wm_win_min_width));
+    EXPECT_GE(frame().height, static_cast<int>(tiny::theme.wm_win_min_height));
 }
 
 TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
@@ -498,7 +498,7 @@ TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
     client.sync();
     build();
     using tiny::Position;
-    void *mask = (void *) (size_t) Position::Right;
+    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(391, 300, MotionNotify), mask);
@@ -553,7 +553,7 @@ TEST_F(WrappedTest, destructor_gives_the_client_back_to_the_root)
     EXPECT_EQ(parent, root_window());
     auto c = child();
     EXPECT_EQ(c.x, 10);
-    EXPECT_EQ(c.y, 20 + (int) header_height());
+    EXPECT_EQ(c.y, 20 + static_cast<int>(header_height()));
     EXPECT_EQ(c.width, 200);
 }
 

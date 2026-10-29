@@ -148,8 +148,8 @@ TEST_F(BackWindowTest, realize_places_window_around_client_area)
     bw->realize(root_window(), 50, 60);
 
     XWindowAttributes attrs = attributes_of(*bw);
-    EXPECT_EQ(attrs.x, 50 - (int)border());
-    EXPECT_EQ(attrs.y, 60 - (int)border());
+    EXPECT_EQ(attrs.x, 50 - static_cast<int>(border()));
+    EXPECT_EQ(attrs.y, 60 - static_cast<int>(border()));
     EXPECT_EQ(attrs.width, 220);
     EXPECT_EQ(attrs.height, 120);
     EXPECT_EQ(attrs.c_class, InputOnly);
@@ -180,8 +180,8 @@ TEST_F(BackWindowTest, move_moves_the_window_around_the_client_area)
     bw->move(100, 120);
 
     XWindowAttributes attrs = attributes_of(*bw);
-    EXPECT_EQ(attrs.x, 100 - (int)border());
-    EXPECT_EQ(attrs.y, 120 - (int)border());
+    EXPECT_EQ(attrs.x, 100 - static_cast<int>(border()));
+    EXPECT_EQ(attrs.y, 120 - static_cast<int>(border()));
     EXPECT_EQ(attrs.width, 220);
 }
 
@@ -192,10 +192,10 @@ TEST_F(BackWindowTest, move_resize_changes_position_and_size)
     bw->move_resize(100, 120, 300, 200);
 
     XWindowAttributes attrs = attributes_of(*bw);
-    EXPECT_EQ(attrs.x, 100 - (int)border());
-    EXPECT_EQ(attrs.y, 120 - (int)border());
-    EXPECT_EQ(attrs.width, 300 + 2 * (int)border());
-    EXPECT_EQ(attrs.height, 200 + 2 * (int)border());
+    EXPECT_EQ(attrs.x, 100 - static_cast<int>(border()));
+    EXPECT_EQ(attrs.y, 120 - static_cast<int>(border()));
+    EXPECT_EQ(attrs.width, 300 + 2 * static_cast<int>(border()));
+    EXPECT_EQ(attrs.height, 200 + 2 * static_cast<int>(border()));
 }
 
 TEST_F(BackWindowTest, move_and_move_resize_before_realize_do_nothing)
@@ -215,8 +215,8 @@ TEST_F(BackWindowTest, resize_adds_the_borders)
     bw->resize(300, 200);
 
     XWindowAttributes attrs = attributes_of(*bw);
-    EXPECT_EQ(attrs.width, 300 + 2 * (int)border());
-    EXPECT_EQ(attrs.height, 200 + 2 * (int)border());
+    EXPECT_EQ(attrs.width, 300 + 2 * static_cast<int>(border()));
+    EXPECT_EQ(attrs.height, 200 + 2 * static_cast<int>(border()));
 }
 
 TEST_F(BackWindowTest, configure_notify_keeps_edges_on_the_sides)

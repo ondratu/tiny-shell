@@ -154,7 +154,7 @@ TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
     auto root = attributes_of(root_window());
     auto dock = attributes_of(manager->wm_dock);
     EXPECT_EQ(dock.x, root.width / 2);
-    EXPECT_EQ(dock.y, (int) (root.height - manager->wm_dock.get_height()
+    EXPECT_EQ(dock.y, static_cast<int>(root.height - manager->wm_dock.get_height()
                 - border()));
 }
 
@@ -320,8 +320,8 @@ TEST_F(ManagerTest, set_supported_publishes_the_supported_properties)
                 64, False, XA_ATOM, &type, &format, &count, &left, &data),
             Success);
     ASSERT_EQ(count, 4u);
-    EXPECT_EQ(((Atom *) data)[0], dsp()._NET_SUPPORTED);
-    EXPECT_EQ(((Atom *) data)[3], dsp()._NET_WM_WINDOW_TYPE);
+    EXPECT_EQ((reinterpret_cast<Atom*>(data))[0], dsp()._NET_SUPPORTED);
+    EXPECT_EQ((reinterpret_cast<Atom*>(data))[3], dsp()._NET_WM_WINDOW_TYPE);
     XFree(data);
 }
 

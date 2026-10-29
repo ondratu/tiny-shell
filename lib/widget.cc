@@ -32,21 +32,21 @@ Widget::~Widget(){
 
 uint8_t Widget::get_theme_state() const
 {
-    uint8_t state = (uint8_t) Style::State::Normal;
+    uint8_t state = static_cast<uint8_t>(Style::State::Normal);
     if (is_selected){
-        state |= (uint8_t) Style::State::Selected;
+        state |= static_cast<uint8_t>(Style::State::Selected);
     }
     if (is_hover){
-        state |= (uint8_t) Style::State::Hover;
+        state |= static_cast<uint8_t>(Style::State::Hover);
     }
     if (is_focus){
-        state |= (uint8_t) Style::State::Focus;
+        state |= static_cast<uint8_t>(Style::State::Focus);
     }
     if (is_pressed){
-        state |= (uint8_t) Style::State::Pressed;
+        state |= static_cast<uint8_t>(Style::State::Pressed);
     }
     if (is_disabled){
-        state |= (uint8_t) Style::State::Disabled;
+        state |= static_cast<uint8_t>(Style::State::Disabled);
     }
     return state;
 }

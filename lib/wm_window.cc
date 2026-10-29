@@ -46,12 +46,12 @@ Window::Window(::Window child_arg, ::Window root_arg, unsigned long functions_ar
 
         XWindowAttributes attrs;
         XGetWindowAttributes(dsp, root_arg, &attrs);  //!< TODO: get screen size instead
-        state.width = std::max(state.width, (uint32_t)attrs.width/3*2);
-        state.height = std::max(state.height, (uint32_t)attrs.height/3*2);
+        state.width = std::max(state.width, static_cast<uint32_t>(attrs.width)/3*2);
+        state.height = std::max(state.height, static_cast<uint32_t>(attrs.height)/3*2);
 
         if (hints->flags & PMaxSize) {
-            state.width = std::min(state.width, (uint32_t)hints->max_width);
-            state.height = std::min(state.height, (uint32_t)hints->max_height);
+            state.width = std::min(state.width, static_cast<uint32_t>(hints->max_width));
+            state.height = std::min(state.height, static_cast<uint32_t>(hints->max_height));
         }
         if (hints->flags & PAspect){
             // TODO: fix ratio if is set
@@ -198,7 +198,7 @@ void Window::set_focus()
         msg.data.l[0] = dsp.WM_TAKE_FOCUS;
         msg.data.l[1] = CurrentTime;
 
-        XSendEvent(dsp, child, false, NoEventMask, (XEvent*) &msg);
+        XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
     }
     XRaiseWindow(dsp, child);
 
@@ -236,7 +236,7 @@ void Window::close()
         msg.format = 32;
         msg.message_type = dsp.WM_PROTOCOLS;
         msg.data.l[0] = dsp.WM_DELETE_WINDOW;
-        XSendEvent(dsp, child, false, NoEventMask, (XEvent*) &msg);
+        XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
     } else {
         XKillClient(dsp, child);
     }
@@ -713,8 +713,8 @@ void Window::on_client_message(const XEvent& e, void*)
         // client want be maximized
         if (e.xclient.data.l[0] == dsp._NET_WM_STATE_ADD)
         {
-            if ((Atom)e.xclient.data.l[1] == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
-                (Atom)e.xclient.data.l[2] == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
+            if (static_cast<Atom>(e.xclient.data.l[1]) == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
+                static_cast<Atom>(e.xclient.data.l[2]) == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
             {
                 maximize();
                 return;
@@ -727,8 +727,8 @@ void Window::on_client_message(const XEvent& e, void*)
 
         if (e.xclient.data.l[0] == dsp._NET_WM_STATE_REMOVE)
         {
-            if ((Atom)e.xclient.data.l[1] == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
-                (Atom)e.xclient.data.l[2] == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
+            if (static_cast<Atom>(e.xclient.data.l[1]) == dsp._NET_WM_STATE_MAXIMIZED_VERT &&
+                static_cast<Atom>(e.xclient.data.l[2]) == dsp._NET_WM_STATE_MAXIMIZED_HORZ)
             {
                 restore();
                 return;

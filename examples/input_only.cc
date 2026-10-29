@@ -31,7 +31,7 @@ class Demo: public wm::BackWindow {
     void on_client_message(const XEvent &e, void *)
     {
         if (e.xclient.message_type == XInternAtom(display, "WM_PROTOCOLS", 1) &&
-            (Atom)e.xclient.data.l[0] == XInternAtom(display, "WM_DELETE_WINDOW", 1))
+            static_cast<Atom>(e.xclient.data.l[0]) == XInternAtom(display, "WM_DELETE_WINDOW", 1))
         {
             printf("This is it!\n");
             keep_running = false;

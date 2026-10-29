@@ -87,7 +87,7 @@ TEST_F(WmWindowTest, motif_hints_override_functions)
 
     EXPECT_TRUE(WmWindow::get_motif_hints(client.window, functions, decorations));
 
-    EXPECT_EQ(functions, (unsigned long) MotifWMHints::FUNC_CLOSE);
+    EXPECT_EQ(functions, static_cast<unsigned long>(MotifWMHints::FUNC_CLOSE));
     EXPECT_TRUE(decorations & MotifWMHints::DECOR_TITLE);  // not overridden
 }
 
@@ -132,7 +132,7 @@ TEST_F(WmWindowTest, get_properties_lists_window_properties)
 
     int count = WmWindow::get_properties(client.window, properties);
 
-    EXPECT_EQ(count, (int) properties.size());
+    EXPECT_EQ(count, static_cast<int>(properties.size()));
     EXPECT_TRUE(properties.count(dsp().WM_NAME));
     EXPECT_TRUE(properties.count(dsp()._NET_WM_STATE));
 }
@@ -286,7 +286,7 @@ TEST_F(WmWindowTest, window_manager_protocols_are_read)
 
     XEvent e;
     ASSERT_TRUE(client.message(e));
-    EXPECT_EQ(e.xclient.data.l[0], (long) dsp().WM_DELETE_WINDOW);
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
 // ---- icons ----
@@ -643,7 +643,7 @@ TEST_F(WmWindowTest, set_focus_sends_wm_take_focus)
 
     XEvent e;
     ASSERT_TRUE(client.message(e));
-    EXPECT_EQ(e.xclient.data.l[0], (long) dsp().WM_TAKE_FOCUS);
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_TAKE_FOCUS));
 }
 
 TEST_F(WmWindowTest, set_focus_does_not_message_clients_without_take_focus)
@@ -669,7 +669,7 @@ TEST_F(WmWindowTest, close_asks_a_cooperating_client_to_exit)
     XEvent e;
     ASSERT_TRUE(client.message(e));
     EXPECT_EQ(e.xclient.message_type, dsp().WM_PROTOCOLS);
-    EXPECT_EQ(e.xclient.data.l[0], (long) dsp().WM_DELETE_WINDOW);
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
 TEST_F(WmWindowTest, close_kills_a_client_without_delete_protocol)
