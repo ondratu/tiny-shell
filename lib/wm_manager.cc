@@ -194,10 +194,10 @@ void Manager::main_loop()
         }
 
         switch (event.type) {
-            case KeyPress: // shortcats
+            case KeyPress: // shortcuts
                 on_key_press(event.xkey);
                 break;
-            case KeyRelease: // shortcats
+            case KeyRelease: // shortcuts
                 on_key_release(event.xkey);
                 break;
             case UnmapNotify: // need for delete windows frames (wm_windows)
