@@ -487,8 +487,8 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
 
     win->on_move_resize_motion(nullptr, pointer(-5000, -5000, MotionNotify),
                                mask);
-    EXPECT_GE(frame().width, static_cast<int>(tiny::theme.wm_win_min_width));
-    EXPECT_GE(frame().height, static_cast<int>(tiny::theme.wm_win_min_height));
+    EXPECT_GE(frame().width, tiny::theme.wm_win_min_width);
+    EXPECT_GE(frame().height, tiny::theme.wm_win_min_height);
 }
 
 TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
