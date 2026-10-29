@@ -5,7 +5,7 @@
 
 bool wm_detected = false;
 
-int on_wm_detected(::Display* display, XErrorEvent* error)
+int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
 {
     if (static_cast<int>(error->error_code) == BadAccess) {
         wm_detected = true;
@@ -13,7 +13,7 @@ int on_wm_detected(::Display* display, XErrorEvent* error)
     return 0;
 }
 
-int main(int argc, char** argv)
+int main(int /*argc*/, char** /*argv*/)
 {
     try {
         tiny::Display::init();

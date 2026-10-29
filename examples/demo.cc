@@ -51,6 +51,7 @@ class Demo : public tiny::Container {
         x_btn.on_click.connect(this, static_cast<tiny::object_signal_t>(
                                              &Demo::on_button_click));
 
+        // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall): final class
         set_events();
         map_all();
     }

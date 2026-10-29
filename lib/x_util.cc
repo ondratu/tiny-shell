@@ -71,9 +71,9 @@ namespace tiny {
         case ClientMessage:
             return e.xclient.window;
         case MappingNotify:
+        default: // GenericEvent and unknown (extension) events
             return None;
     }
-    return None;
 }
 
 void x_grab_key(::Display* display, int keycode, unsigned int modifiers,

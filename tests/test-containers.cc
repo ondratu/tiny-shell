@@ -132,7 +132,7 @@ TEST(PositionTest, cursor_shape_for_edges)
 TEST(PositionTest, cursor_shape_for_all_sides_and_corners)
 {
     using tiny::Position;
-    struct {
+    const struct {
         uint16_t mask;
         uint32_t shape;
     } cases[] = {

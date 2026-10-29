@@ -748,14 +748,14 @@ TEST_F(WmWindowTest, client_message_maximizes_and_restores)
 
     send(client.window,
          client_message(client.window, dsp()._NET_WM_STATE,
-                        static_cast<long>(dsp()._NET_WM_STATE_ADD),
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_ADD),
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_TRUE(window->get_maximized());
 
     send(client.window,
          client_message(client.window, dsp()._NET_WM_STATE,
-                        static_cast<long>(dsp()._NET_WM_STATE_REMOVE),
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_REMOVE),
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_FALSE(window->get_maximized());
@@ -769,15 +769,15 @@ TEST_F(WmWindowTest, client_message_with_other_state_changes_is_ignored)
 
     send(client.window,
          client_message(client.window, dsp()._NET_WM_STATE,
-                        static_cast<long>(dsp()._NET_WM_STATE_ADD),
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_ADD),
                         static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
     send(client.window,
          client_message(client.window, dsp()._NET_WM_STATE,
-                        static_cast<long>(dsp()._NET_WM_STATE_REMOVE),
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_REMOVE),
                         static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
     send(client.window,
          client_message(client.window, dsp()._NET_WM_STATE,
-                        static_cast<long>(dsp()._NET_WM_STATE_TOGGLE),
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_TOGGLE),
                         static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
 
     EXPECT_FALSE(window->get_maximized());

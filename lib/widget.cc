@@ -28,7 +28,7 @@ Widget::Widget(int w, int h): Widget(Type::Normal, w, h) {}
 
 Widget::~Widget()
 {
-    unmap();
+    Widget::unmap();
 
     if (event_done) {
         disconnect(ConfigureNotify);

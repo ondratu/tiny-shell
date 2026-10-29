@@ -282,7 +282,7 @@ TEST_F(BackWindowTest, every_edge_reports_its_own_mask)
     bw->realize(root_window(), 50, 60);
     const ::Window w = bw->get_window();
 
-    struct {
+    const struct {
         int x, y;
         uint16_t mask;
     } edges[] = {

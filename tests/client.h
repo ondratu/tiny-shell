@@ -38,7 +38,7 @@ class Client {
     void abandon() { display = nullptr; }
 
     // Both connections: the manager's requests are buffered too.
-    void sync()
+    void sync() const
     {
         XSync(dsp(), False);
         XSync(display, False);
@@ -118,7 +118,7 @@ class Client {
     }
 
     // Pixmap filled with a color, in the depth of the default screen.
-    Pixmap pixmap(int size, unsigned long color)
+    Pixmap pixmap(int size, unsigned long color) const
     {
         const Pixmap p = XCreatePixmap(display, DefaultRootWindow(display),
                                        tiny::x_uint(size), tiny::x_uint(size),

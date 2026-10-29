@@ -37,7 +37,7 @@ class LabelButton : public Button {
 
     void set_text(const std::string& text);
 
-    const std::string get_text() const { return text; }
+    std::string get_text() const { return text; }
 
   protected:
     void on_enter_notify(const XEvent& e, void* data) override;

@@ -80,6 +80,7 @@ void Display::init(const char* display_name)
         throw std::runtime_error("Failed to open X display");
     }
 
+    // NOLINTNEXTLINE(modernize-make-shared): the constructor is private
     tiny::display = std::shared_ptr<Display>(new Display(dsp));
 }
 
