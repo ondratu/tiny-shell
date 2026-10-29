@@ -337,10 +337,10 @@ class PixmapTest: public ::testing::Test {
 TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
 {
     int depth = DefaultDepth(display, 0);
-    Pixmap origin = filled(100, 100, depth, 0xFF0000);
+    Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
     Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50,
-            50, depth);
+            50, tiny::x_uint(depth));
 
     unsigned int w, h, d;
     geometry(target, w, h, d);
@@ -354,10 +354,10 @@ TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
 TEST_F(PixmapTest, resize_keeps_color)
 {
     int depth = DefaultDepth(display, 0);
-    Pixmap origin = filled(100, 100, depth, 0xFF0000);
+    Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
     Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50,
-            50, depth);
+            50, tiny::x_uint(depth));
 
     XSync(display, False);
     XImage *img = XGetImage(display, target, 10, 10, 1, 1, AllPlanes, ZPixmap);

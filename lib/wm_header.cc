@@ -140,13 +140,13 @@ void Header::on_expose(const XEvent &, void *)
             &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (static_cast<int>(width) - extents.width) / 2;
+    int x = (width - extents.width) / 2;
     int y = (height+extents.height)/2;
 
-    if ((x + extents.width) > static_cast<int>(get_end_offset())){
+    if ((x + extents.width) > get_end_offset()){
         x = get_end_offset() - extents.width;
     }
-    if (x < static_cast<int>(get_padding())) {
+    if (x < get_padding()) {
         x = get_padding();
     }
 

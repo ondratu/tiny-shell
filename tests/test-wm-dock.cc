@@ -80,8 +80,8 @@ TEST(DockButtonScaleTest, dots_are_scaled)
 
         uint32_t fg = tiny::theme.widget.get_fg(
                 static_cast<uint8_t>(tiny::Style::State::Normal));
-        Image img(button.get_window(), button.get_width(), button.get_height());
-        unsigned int origin = 3 * (button.get_width() / 14);
+        Image img(button.get_window(), tiny::x_uint(button.get_width()), tiny::x_uint(button.get_height()));
+        unsigned int origin = tiny::x_uint(3 * (button.get_width() / 14));
 
         ASSERT_EQ(button.get_width(), 96u);
         // 10 px dot (5 px at scale 1): its far edge is still filled

@@ -308,8 +308,8 @@ TEST_F(WrappedTest, focus_events_enable_and_disable_the_header)
                 static_cast<uint8_t>(tiny::Style::State::Disabled)));
     auto header_image = [this] {
         send(win->header, Expose);
-        return Image(win->header.get_window(), win->header.get_width(),
-                win->header.get_height());
+        return Image(win->header.get_window(), tiny::x_uint(win->header.get_width()),
+                tiny::x_uint(win->header.get_height()));
     };
     Image disabled = header_image();
 

@@ -9,7 +9,7 @@ class WmButtonTest: public ::testing::Test {
     uint32_t icon() const { return tiny::theme.wm_win_icon; }
 
     Image image_of(const tiny::Widget &w)
-    { return Image(w.get_window(), w.get_width(), w.get_height()); }
+    { return Image(w.get_window(), tiny::x_uint(w.get_width()), tiny::x_uint(w.get_height())); }
 };
 
 TEST_F(WmButtonTest, buttons_are_square_icons)
