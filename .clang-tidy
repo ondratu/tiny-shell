@@ -25,9 +25,44 @@ Checks: >
   -readability-magic-numbers,
   -readability-math-missing-parentheses,
   -readability-named-parameter,
+  -performance-enum-size,
+  -modernize-macro-to-enum,
+  -cert-dcl50-cpp,
+  -modernize-avoid-variadic-functions,
+  -misc-multiple-inheritance,
+  -bugprone-throwing-static-initialization,
+  -cert-err58-cpp,
+  -misc-use-internal-linkage,
+  -misc-use-anonymous-namespace,
+  -cert-err33-c,
+  -bugprone-macro-parentheses,
+  -readability-avoid-return-with-void-value,
+  -modernize-pass-by-value,
+  -modernize-use-default-member-init,
+  -modernize-min-max-use-initializer-list,
+  -readability-convert-member-functions-to-static,
   -readability-function-cognitive-complexity,
   -readability-uppercase-literal-suffix
 # Disabled because:
+#  performance-enum-size, modernize-macro-to-enum
+#                                         (enums are flag sets given to X)
+#  cert-dcl50-cpp, modernize-avoid-variadic-functions
+#                                         (printf-style log(); checked with the
+#                                          format attribute)
+#  misc-multiple-inheritance              (Wrapped, see the TODO)
+#  bugprone-throwing-static-initialization, cert-err58-cpp
+#                                         (the global theme, see the TODO)
+#  misc-use-internal-linkage, misc-use-anonymous-namespace
+#                                         (static is the convention here)
+#  cert-err33-c                           (the result of fprintf to stderr)
+#  bugprone-macro-parentheses             (macros of theme.cc take a name)
+#  readability-avoid-return-with-void-value
+#                                         (return error("...") in void functions)
+#  modernize-pass-by-value, modernize-use-default-member-init,
+#  modernize-min-max-use-initializer-list
+#                                         (style; constructors initialize)
+#  readability-convert-member-functions-to-static
+#                                         (event handlers are member pointers)
 #  bugprone-easily-swappable-parameters  (x, y, width, height are the X API)
 #  bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp
 #                                         (atoms are named _NET_WM_STATE ...)

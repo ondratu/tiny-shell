@@ -1,0 +1,13 @@
+# The tests inherit the checks of the project; these are fine in a test.
+InheritParentConfig: true
+Checks: >
+  -performance-no-int-to-ptr,
+  -readability-avoid-nested-conditional-operator,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -modernize-return-braced-init-list,
+  -readability-make-member-function-const
+# performance-no-int-to-ptr  (the resize mask is passed as the data pointer)
+# readability-avoid-nested-conditional-operator, modernize-return-braced-init-list
+#   (short helper code of the tests)
+# readability-make-member-function-const  (Client wraps calls to the X server)
+# bugprone-implicit-widening-of-multiplication-result  (small test images)

@@ -56,7 +56,7 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage format
+.PHONY: all examples clean check coverage format lint
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
@@ -154,3 +154,15 @@ FORMAT_FILES = $(wildcard lib/*.cc lib/*.h src/*.cc examples/*.cc tests/*.cc tes
 
 format:
 	$(CLANG_FORMAT) -i $(FORMAT_FILES)
+
+# Static analysis with clang-tidy (checks in .clang-tidy); runs in parallel.
+# CLANG_TIDY picks the tool, e.g. make lint CLANG_TIDY=clang-tidy-22.
+CLANG_TIDY ?= clang-tidy
+LINT_FLAGS = -std=c++17 -I./lib $(SYS_CFLAGS)
+LINT_SRC = $(LIB_SRC) $(wildcard src/*.cc examples/*.cc)
+
+lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
+	@printf '%s\n' $(LINT_SRC) | xargs -P $$(nproc) -I{} \
+	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
+	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
+	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(shell pkg-config --cflags gtest)
