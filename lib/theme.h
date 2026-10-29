@@ -40,7 +40,7 @@ class Style {
     static constexpr uint32_t GRAY75 = 0xc0c0c0;
 
   public:
-    Style() {}
+    Style() = default;
     virtual ~Style();
 
     void init();
@@ -150,7 +150,7 @@ class Theme {
   public:
     // Scale factor is read from TINY_SCALE_FACTOR (default 1)
     Theme();
-    ~Theme() {}
+    ~Theme() = default;
 
     void init();
 

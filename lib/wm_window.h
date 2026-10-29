@@ -84,60 +84,51 @@ class Window : public tiny::Object {
 
   public:
     Window(::Window child, ::Window root, unsigned long functions);
-    virtual ~Window();
+    ~Window() override;
 
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
                           unsigned long functions);
 
-    inline ::Window get_child() const { return child; }
+    ::Window get_child() const { return child; }
 
-    virtual inline bool is_resizable() const
+    virtual bool is_resizable() const
     {
         return functions & MotifWMHints::FUNC_RESIZE;
     }
 
-    virtual inline bool is_maximizable() const
+    virtual bool is_maximizable() const
     {
         return functions & MotifWMHints::FUNC_MAXIMIZE;
     }
 
-    virtual inline bool skip_taskbar() const
+    virtual bool skip_taskbar() const
     {
         return wm_states & WMState::SKIP_TASKBAR;
     }
 
-    virtual inline bool skip_pager() const
-    {
-        return wm_states & WMState::SKIP_PAGER;
-    }
+    virtual bool skip_pager() const { return wm_states & WMState::SKIP_PAGER; }
 
-    virtual inline bool get_minimized() const
-    {
-        return wm_states & WMState::HIDDEN;
-    }
+    virtual bool get_minimized() const { return wm_states & WMState::HIDDEN; }
     void set_minimized(bool minimized);
 
-    virtual inline bool get_maximized() const
+    virtual bool get_maximized() const
     {
         return (wm_states & WMState::MAXIMIZED_VERT &&
                 wm_states & WMState::MAXIMIZED_HORZ);
     }
     void set_maximized(bool maximized);
 
-    virtual inline bool is_fullscreen() const
+    virtual bool is_fullscreen() const
     {
         return wm_states & WMState::FULLSCREEN;
     }
 
-    virtual inline bool is_focused() const
-    {
-        return wm_states & WMState::FOCUSED;
-    }
+    virtual bool is_focused() const { return wm_states & WMState::FOCUSED; }
 
     void get_wm_states(std::vector<Atom>& atoms);
 
-    inline std::string get_wm_name() const { return wm_name; }
+    std::string get_wm_name() const { return wm_name; }
 
     std::string get_wm_icon_name() const { return wm_icon_name; }
 
@@ -146,8 +137,8 @@ class Window : public tiny::Object {
          * Pixmap will be destroyed in Window destructor if it set, otherwise
          * zero is returned.
          * */
-    inline Pixmap get_icon() const { return icon; }
-    inline Pixmap get_icon_mask() const { return icon_mask; }
+    Pixmap get_icon() const { return icon; }
+    Pixmap get_icon_mask() const { return icon_mask; }
 
     virtual void set_focus();
     virtual void return_focus();

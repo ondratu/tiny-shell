@@ -7,13 +7,13 @@ class Edge : public tiny::Widget {
   public:
     Edge(int width, int height, uint16_t mask);
 
-    virtual ~Edge();
+    ~Edge() override;
 
-    virtual void realize(::Window parent, int x, int y);
+    void realize(::Window parent, int x, int y) override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
-    inline uint16_t get_mask() const { return mask; }
+    uint16_t get_mask() const { return mask; }
 
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_end;
@@ -32,13 +32,13 @@ class BackWindow : public tiny::Container {
   public:
     BackWindow(int width, int height);
 
-    virtual ~BackWindow();
+    ~BackWindow() override;
 
-    virtual void realize(::Window parent, int x, int y);
+    void realize(::Window parent, int x, int y) override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
-    virtual void resize(int width, int height);
+    void resize(int width, int height) override;
 
     virtual void move(int x, int y);
 
@@ -51,7 +51,7 @@ class BackWindow : public tiny::Container {
     virtual void on_edge_drag_begin(Object* o, const XEvent& e, void* data);
     virtual void on_edge_drag_motion(Object* o, const XEvent& e, void* data);
 
-    virtual void on_configure_notify(const XEvent& e, void*);
+    void on_configure_notify(const XEvent& e, void*) override;
 
   private:
     Edge corner_right_top; /* corners */

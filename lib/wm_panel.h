@@ -9,9 +9,9 @@ class AppMenu : public tiny::Popover {
   public:
     AppMenu();
 
-    ~AppMenu();
+    ~AppMenu() override;
 
-    virtual void realize(::Window parent, int x = 0, int y = 0);
+    void realize(::Window parent, int x = 0, int y = 0) override;
 
   private:
     //tiny::LabelButton urxvt;
@@ -21,9 +21,9 @@ class UserMenu : public tiny::Popover {
   public:
     UserMenu();
 
-    ~UserMenu();
+    ~UserMenu() override;
 
-    virtual void realize(::Window parent, int x = 0, int y = 0);
+    void realize(::Window parent, int x = 0, int y = 0) override;
 
     //utiny::LabelButton sleep;
     tiny::LabelButton restart;
@@ -35,9 +35,9 @@ class Panel : public tiny::Box {
   public:
     Panel();
 
-    ~Panel();
+    ~Panel() override;
 
-    virtual void realize(::Window root, int x = 0, int y = 0);
+    void realize(::Window root, int x = 0, int y = 0) override;
 
   private:
     tiny::MenuButton btn_app;

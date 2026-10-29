@@ -1,6 +1,6 @@
 #include <sys/time.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 
 #include "object.h"
 
@@ -74,10 +74,10 @@ void log(const char* file, const char* function, uint32_t line,
          const char* format, ...)
 {
     struct timeval tp;
-    gettimeofday(&tp, NULL);
+    gettimeofday(&tp, nullptr);
     //int64_t time_stamp = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
-    char* buffer = NULL;
+    char* buffer = nullptr;
     va_list args;
     va_start(args, format);
     vasprintf(&buffer, format, args);
@@ -90,10 +90,10 @@ void log(const char* file, const char* function, uint32_t line,
 void error(const char* format, ...)
 {
     struct timeval tp;
-    gettimeofday(&tp, NULL);
+    gettimeofday(&tp, nullptr);
     //int64_t time_stamp = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
-    char* buffer = NULL;
+    char* buffer = nullptr;
     va_list args;
     va_start(args, format);
     vasprintf(&buffer, format, args);

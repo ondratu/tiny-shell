@@ -6,7 +6,7 @@
 namespace wm {
 
 Entry::Entry(int w, int h):
-    tiny::Widget(Widget::Type::Normal, w, h), xim(0), xic(0)
+    tiny::Widget(Widget::Type::Normal, w, h), xim(nullptr), xic(nullptr)
 {
     name = "entry";
 }
@@ -16,11 +16,11 @@ Entry::~Entry()
     disconnect(KeyPress);
     if (xic) {
         XDestroyIC(xic);
-        xic = 0;
+        xic = nullptr;
     }
     if (xim) {
         XCloseIM(xim);
-        xim = 0;
+        xim = nullptr;
     }
 }
 
@@ -28,7 +28,7 @@ void Entry::realize(::Window parent_arg, int x, int y)
 {
     tiny::Widget::realize(parent_arg, x, y);
 
-    xim = XOpenIM(display, NULL, NULL, NULL);
+    xim = XOpenIM(display, nullptr, nullptr, nullptr);
     TINY_LOG("xim: %p", static_cast<void*>(xim));
     xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
                     XNClientWindow, window, XNFocusWindow, window, NULL);
@@ -181,7 +181,7 @@ RunDialog::RunDialog():
             this, static_cast<tiny::object_signal_t>(&RunDialog::popover));
 }
 
-RunDialog::~RunDialog() {}
+RunDialog::~RunDialog() = default;
 
 void RunDialog::realize(::Window root, int, int)
 {

@@ -136,7 +136,7 @@ MenuButton::MenuButton(int w, int h, const std::string& text_arg):
     name = "menubutton";
 }
 
-MenuButton::~MenuButton() {}
+MenuButton::~MenuButton() = default;
 
 void MenuButton::set_events(long mask)
 {

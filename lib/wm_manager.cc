@@ -16,12 +16,10 @@ extern std::shared_ptr<Display> display;
 namespace wm {
 
 Manager::Manager(::Display* display_arg, ::Window root_arg):
-    tiny::Object(),
+
     display(display_arg),
     root(root_arg),
-    wm_panel(),
-    wm_run(),
-    wm_dock(),
+
     running(true)
 {
     //set_supported();
@@ -340,7 +338,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
         }
         wm_tops.remove(window);
         wm_dock.remove(window);
-        delete (window);
+        delete window;
         wm_windows.erase(e.window);
     }
 }

@@ -9,13 +9,13 @@ namespace wm {
 class DockButton : public tiny::Widget {
   public:
     DockButton();
-    virtual ~DockButton();
+    ~DockButton() override;
 
-    inline virtual int get_border() const override { return 0; }
+    int get_border() const override { return 0; }
 
-    virtual void set_events(long mask = 0) override;
+    void set_events(long mask = 0) override;
 
-    inline void redraw(const XEvent& e) { on_expose(e, nullptr); }
+    void redraw(const XEvent& e) { on_expose(e, nullptr); }
 
     tiny::Signal on_click;
 
@@ -29,11 +29,11 @@ class DockButton : public tiny::Widget {
 class Icon : public DockButton {
   public:
     Icon(Window* task);
-    virtual ~Icon();
+    ~Icon() override;
 
   protected:
-    virtual void on_button_release(const XEvent& e, void* data) override;
-    virtual void on_expose(const XEvent& e, void* data) override;
+    void on_button_release(const XEvent& e, void* data) override;
+    void on_expose(const XEvent& e, void* data) override;
 
     Window* task;
 };
@@ -41,7 +41,7 @@ class Icon : public DockButton {
 class Dock : public tiny::Box {
   public:
     Dock();
-    virtual ~Dock();
+    ~Dock() override;
 
     using tiny::Box::add;
     using tiny::Box::remove;
@@ -49,10 +49,10 @@ class Dock : public tiny::Box {
     void remove(Window* window);
     void redraw(Window* window, const XEvent& e);
 
-    virtual void realize(::Window parent, int x, int y) override;
-    virtual void resize(int width, int height) override;
+    void realize(::Window parent, int x, int y) override;
+    void resize(int width, int height) override;
 
-    inline virtual const tiny::Style& get_style() const override
+    const tiny::Style& get_style() const override
     {
         return tiny::theme.wm_dock;
     }
