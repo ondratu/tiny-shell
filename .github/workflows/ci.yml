@@ -25,16 +25,17 @@ jobs:
     name: pre-commit (format, spelling, shellcheck)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y clang-format
       - run: pipx install pre-commit
       - run: pre-commit run --all-files --show-diff-on-failure
 
   lint:
     name: clang-tidy 22
+    needs: pre-commit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install clang-tidy 22 and the dependencies
         run: |
           wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 22
@@ -43,6 +44,7 @@ jobs:
 
   build:
     name: ${{ matrix.name }}
+    needs: pre-commit
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -55,7 +57,7 @@ jobs:
             cxx: clang++-19
             packages: clang-19
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y $DEPS ${{ matrix.packages }}
       - name: Build and test
         run: |
@@ -63,13 +65,15 @@ jobs:
 
   asan:
     name: ASan + UBSan
+    needs: pre-commit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19 llvm-19
       - run: make CXX=clang++-19 asan
 
   alpine:
+    needs: pre-commit
     # musl instead of glibc, the libc of small embedded systems: finds code that
     # relies on GNU extensions.
     name: Alpine (musl), Clang
@@ -79,11 +83,12 @@ jobs:
       - run: >
           apk add --no-cache git make pkgconf clang g++ libx11-dev libxft-dev
           libxrender-dev gtest-dev xvfb xvfb-run xauth font-dejavu
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: make CXX=clang++ check examples
 
   netbsd:
     name: NetBSD
+    needs: pre-commit
     runs-on: ubuntu-24.04
     # Best effort: NetBSD is the BSD for small and old hardware, but the VM is
     # slow and the package set changes, so a failure here does not block a
@@ -91,7 +96,7 @@ jobs:
     continue-on-error: true
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cross-platform-actions/action@v1
         with:
           operating_system: netbsd
@@ -117,12 +122,39 @@ jobs:
             exit $rc
 
   coverage:
+    needs: pre-commit
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write # to comment the table on a pull request
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y $DEPS
       - name: Measure (gcov needs GCC)
         run: make CXX=g++ coverage | tee coverage.txt
+      - name: Make the table
+        run: |
+          {
+            echo "### Test coverage of lib/"
+            echo
+            echo "| File | Statements | Missed | Covered |"
+            echo "|---|--:|--:|--:|"
+            awk '/^Name /{t=1; next} /^-+$/{next}
+                 t && $1 == "TOTAL" {printf "| **%s** | **%s** | **%s** | **%s** |\n", $1, $2, $3, $4; next}
+                 t && NF == 4 {printf "| %s | %s | %s | %s |\n", $1, $2, $3, $4}' coverage.txt
+          } > coverage.md
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment the table on the pull request
+        # Not for pushes (there is no pull request) and not for forks (their
+        # token cannot write); the summary of the run has the table anyway.
+        if: >
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh pr comment ${{ github.event.pull_request.number }}
+          --edit-last --create-if-none --body-file coverage.md
       - name: The coverage must not go below the threshold
         # A ratchet: raise the number when the coverage grows, never lower it.
         run: |
@@ -130,16 +162,20 @@ jobs:
           total=$(awk '/^TOTAL/ {gsub("%", "", $4); print $4}' coverage.txt)
           echo "coverage ${total} % (minimum ${min} %)" | tee -a "$GITHUB_STEP_SUMMARY"
           [ "$total" -ge "$min" ]
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: coverage
-          path: coverage.txt
+          path: |
+            coverage.txt
+            coverage.md
 
   size:
     name: Binary size
+    needs: pre-commit
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
