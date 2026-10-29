@@ -1,0 +1,168 @@
+#pragma once
+
+// gtest must be included before Xlib: X.h defines the None macro
+#include <gtest/gtest.h>
+
+#include <vector>
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+
+#include "display.h"
+#include "object.h"
+#include "widget.h"
+
+namespace tiny {
+extern Handlers handlers;
+}
+
+inline XEvent make_event(int type)
+{
+    XEvent e = {};
+    e.type = type;
+    return e;
+}
+
+inline ::Window root_window()
+{ return XDefaultRootWindow(tiny::get_display()); }
+
+// Calls the handler registered for `type` on `window`, like the main loop.
+inline void send(::Window window, const XEvent &e)
+{ tiny::handlers.call_hanlder({e.type, window}, e); }
+
+inline void send(const tiny::Widget &w, int type)
+{ send(w.get_window(), make_event(type)); }
+
+// Remembers the last signal it received.
+class Recorder: public tiny::Object {
+  public:
+    void on_signal(tiny::Object *owner, const XEvent &e, void *data)
+    {
+        ++calls;
+        last_owner = owner;
+        last_event = e;
+        last_data = data;
+    }
+
+    tiny::object_signal_t slot()
+    { return static_cast<tiny::object_signal_t>(&Recorder::on_signal); }
+
+    int calls = 0;
+    tiny::Object *last_owner = nullptr;
+    XEvent last_event = {};
+    void *last_data = nullptr;
+};
+
+inline XWindowAttributes attributes_of(::Window w)
+{
+    XSync(tiny::get_display(), False);
+    XWindowAttributes attrs;
+    XGetWindowAttributes(tiny::get_display(), w, &attrs);
+    return attrs;
+}
+
+inline XWindowAttributes attributes_of(const tiny::Widget &w)
+{ return attributes_of(w.get_window()); }
+
+// Windows directly inside `parent`.
+inline std::vector<::Window> children_of(::Window parent)
+{
+    XSync(tiny::get_display(), False);
+    ::Window rv_root, rv_parent, *children = nullptr;
+    unsigned int count = 0;
+    XQueryTree(tiny::get_display(), parent, &rv_root, &rv_parent, &children,
+            &count);
+    std::vector<::Window> rv(children, children + count);
+    if (children) {
+        XFree(children);
+    }
+    return rv;
+}
+
+// Child of `parent` placed at x, y (0 when there is none).
+inline ::Window child_at(::Window parent, int x, int y)
+{
+    for (::Window w: children_of(parent)) {
+        XWindowAttributes attrs = attributes_of(w);
+        if (attrs.x == x && attrs.y == y) {
+            return w;
+        }
+    }
+    return 0;
+}
+
+// Contents of an InputOutput window or pixmap.
+class Image {
+  public:
+    Image(::Drawable d, unsigned int width, unsigned int height):
+        width(width), height(height)
+    {
+        XSync(tiny::get_display(), False);
+        XImage *img = XGetImage(tiny::get_display(), d, 0, 0, width, height,
+                AllPlanes, ZPixmap);
+        pixels.resize(width * height);
+        for (unsigned int y = 0; y < height; ++y) {
+            for (unsigned int x = 0; x < width; ++x) {
+                pixels[y * width + x] = XGetPixel(img, x, y) & 0xFFFFFF;
+            }
+        }
+        XDestroyImage(img);
+    }
+
+    uint32_t at(unsigned int x, unsigned int y) const
+    { return pixels[y * width + x]; }
+
+    // Number of pixels different from `bg` in the rows [0, rows).
+    unsigned int count_not(uint32_t bg, unsigned int rows) const
+    {
+        unsigned int n = 0;
+        for (unsigned int y = 0; y < rows && y < height; ++y) {
+            for (unsigned int x = 0; x < width; ++x) {
+                n += at(x, y) != bg;
+            }
+        }
+        return n;
+    }
+
+    bool operator ==(const Image &o) const
+    { return width == o.width && height == o.height && pixels == o.pixels; }
+
+    unsigned int width;
+    unsigned int height;
+    std::vector<uint32_t> pixels;
+};
+
+// Counts X protocol errors while it lives (an unhandled one kills the
+// process in Xlib's default handler).
+class XErrors {
+  public:
+    XErrors()
+    {
+        count = 0;
+        old = XSetErrorHandler(handler);
+    }
+
+    ~XErrors()
+    {
+        XSync(tiny::get_display(), False);
+        XSetErrorHandler(old);
+    }
+
+    int errors() const
+    {
+        XSync(tiny::get_display(), False);
+        return count;
+    }
+
+  private:
+    static int handler(::Display *, XErrorEvent *)
+    {
+        ++count;
+        return 0;
+    }
+
+    static int count;
+    XErrorHandler old;
+};
+
+inline int XErrors::count = 0;
