@@ -29,7 +29,7 @@ uint32_t border()
 // Stops the main loop: the loop reaches it after all earlier events.
 class Stopper: public tiny::Object {
   public:
-    Stopper(bool *running): running(running) {}
+    Stopper(bool *running_arg): running(running_arg) {}
 
     void on_event(const XEvent &, void *)
     { *running = false; }

@@ -35,16 +35,16 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
     }
 }
 
-Container::Container(Widget::Type type, uint32_t width, uint32_t height,
-        const char* name):
-    Widget(type, width, height)
+Container::Container(Widget::Type type_arg, uint32_t w, uint32_t h,
+        const char* name_arg):
+    Widget(type_arg, w, h)
 {
-    this->name = name;
+    this->name = name_arg;
 }
 
 
-Container::Container(uint32_t width, uint32_t height, const char* name):
-    Container(Widget::Type::Normal, width, height, name)
+Container::Container(uint32_t w, uint32_t h, const char* name_arg):
+    Container(Widget::Type::Normal, w, h, name_arg)
 {}
 
 
@@ -80,28 +80,28 @@ void Container::remove(Widget* widget)
 }
 
 
-Box::Box(Type type, uint32_t width, uint32_t height):
-    Container(width, height),
-    type(type), start_offset(0)
+Box::Box(Type type_arg, uint32_t w, uint32_t h):
+    Container(w, h),
+    type(type_arg), start_offset(0)
 {
     name = "box";
-    if (type == Type::Horizontal) {
-        end_offset = width-1;
+    if (type_arg == Type::Horizontal) {
+        end_offset = w-1;
     } else { // Type::Vertical
-        end_offset = height-1;
+        end_offset = h-1;
     }
 }
 
 Box::~Box()
 {}
 
-void Box::resize(uint32_t width, uint32_t height){
+void Box::resize(uint32_t w, uint32_t h){
     if (type == Type::Horizontal){
-        end_offset += width - this->width;
+        end_offset += w - this->width;
     } else { // Type::Vertical
-        end_offset += height - this->height;
+        end_offset += h - this->height;
     }
-    Container::resize(width, height);
+    Container::resize(w, h);
 }
 
 void Box::push_start(Widget * widget, int x_spacing, int y_spacing, int gravity)
@@ -174,16 +174,16 @@ void Box::remove(Widget* widget)
 }
 
 
-Popover::Popover(Box::Type type, uint32_t width, uint32_t height):
-    Box(type, width, height),
+Popover::Popover(Box::Type type_arg, uint32_t w, uint32_t h):
+    Box(type_arg, w, h),
     time_from_unmap(0)
 {
     name = "popover";
 }
 
 
-Popover::Popover(uint32_t width, uint32_t height):
-    Popover(Box::Type::Vertical, width, height)
+Popover::Popover(uint32_t w, uint32_t h):
+    Popover(Box::Type::Vertical, w, h)
 {}
 
 

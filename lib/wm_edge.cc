@@ -4,9 +4,9 @@
 
 namespace wm {
 
-Edge::Edge(uint32_t width, uint32_t height, uint16_t mask):
-    tiny::Widget(tiny::Widget::Type::Input, width, height),
-    mask(mask)
+Edge::Edge(uint32_t w, uint32_t h, uint16_t mask_arg):
+    tiny::Widget(tiny::Widget::Type::Input, w, h),
+    mask(mask_arg)
 {
     name = "wm_edge";
 }
@@ -18,9 +18,9 @@ Edge::~Edge()
     }
 }
 
-void Edge::realize(Window parent, int x, int y)
+void Edge::realize(Window parent_arg, int x, int y)
 {
-    Widget::realize(parent, x, y);
+    Widget::realize(parent_arg, x, y);
     XDefineCursor(display, window,
             XCreateFontCursor(display, tiny::Position::get_cursor_shape(mask)));
 
@@ -29,9 +29,9 @@ void Edge::realize(Window parent, int x, int y)
     // XSetWindowBackground(display, window, background);
 }
 
-void Edge::set_events(long mask)
+void Edge::set_events(long mask_arg)
 {
-    Widget::set_events(mask);
+    Widget::set_events(mask_arg);
 
     XGrabButton(
         display, Button1, AnyModifier, window, true,
@@ -78,9 +78,9 @@ void Edge::on_motion_notify(const XEvent &e, void *)
 
 
 
-BackWindow::BackWindow(uint32_t width, uint32_t height):
+BackWindow::BackWindow(uint32_t w, uint32_t h):
     tiny::Container(tiny::Widget::Type::Input,
-            width+2*tiny::theme.wm_win_border, height+2*tiny::theme.wm_win_border),
+            w+2*tiny::theme.wm_win_border, h+2*tiny::theme.wm_win_border),
     corner_right_top(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
             tiny::Position::Right|tiny::Position::Top),
     corner_right_bottom(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
@@ -89,13 +89,13 @@ BackWindow::BackWindow(uint32_t width, uint32_t height):
             tiny::Position::Left|tiny::Position::Top),
     corner_left_bottom(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
             tiny::Position::Left|tiny::Position::Bottom),
-    edge_top(width-tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
+    edge_top(w-tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
             tiny::Position::Top),
-    edge_right(tiny::theme.wm_win_border, height-tiny::theme.wm_win_corner,
+    edge_right(tiny::theme.wm_win_border, h-tiny::theme.wm_win_corner,
             tiny::Position::Right),
-    edge_bottom(width-tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
+    edge_bottom(w-tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
             tiny::Position::Bottom),
-    edge_left(tiny::theme.wm_win_border, height-tiny::theme.wm_win_corner,
+    edge_left(tiny::theme.wm_win_border, h-tiny::theme.wm_win_corner,
             tiny::Position::Left)
 {
     name = "wm_backwindow";
@@ -149,9 +149,9 @@ void BackWindow::set_events(long mask)
         static_cast<tiny::object_signal_t>(&BackWindow::on_edge_drag_motion));
 }
 
-void BackWindow::realize(Window parent, int x, int y)
+void BackWindow::realize(Window parent_arg, int x, int y)
 {
-    Container::realize(parent,
+    Container::realize(parent_arg,
             x-tiny::theme.wm_win_border, y-tiny::theme.wm_win_border);
 
     add(&corner_right_top, width-tiny::theme.wm_win_corner, 0,
@@ -173,10 +173,10 @@ void BackWindow::realize(Window parent, int x, int y)
     add(&edge_left, 0, tiny::theme.wm_win_corner, WestGravity);
 }
 
-void BackWindow::resize(uint32_t width, uint32_t height)
+void BackWindow::resize(uint32_t w, uint32_t h)
 {
-    tiny::Container::resize(width+2*tiny::theme.wm_win_border,
-                            height+2*tiny::theme.wm_win_border);
+    tiny::Container::resize(w+2*tiny::theme.wm_win_border,
+                            h+2*tiny::theme.wm_win_border);
 }
 
 void BackWindow::move(int x, int y){
@@ -186,13 +186,13 @@ void BackWindow::move(int x, int y){
     }
 }
 
-void BackWindow::move_resize(int x, int y, uint32_t width, uint32_t height)
+void BackWindow::move_resize(int x, int y, uint32_t w, uint32_t h)
 {
     if (is_realized){
         XMoveResizeWindow(display, window,
                 x-tiny::theme.wm_win_border, y-tiny::theme.wm_win_border,
-                width+2*tiny::theme.wm_win_border,
-                height+2*tiny::theme.wm_win_border);
+                w+2*tiny::theme.wm_win_border,
+                h+2*tiny::theme.wm_win_border);
     }
 }
 

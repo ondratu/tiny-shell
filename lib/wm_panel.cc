@@ -11,9 +11,9 @@ AppMenu::AppMenu():
 AppMenu::~AppMenu()
 {}
 
-void AppMenu::realize(::Window parent, int x, int y)
+void AppMenu::realize(::Window parent_arg, int x, int y)
 {
-    tiny::Popover::realize(parent, x, y);
+    tiny::Popover::realize(parent_arg, x, y);
 }
 
 
@@ -29,9 +29,9 @@ UserMenu::UserMenu():
 UserMenu::~UserMenu()
 {}
 
-void UserMenu::realize(::Window parent, int x, int y)
+void UserMenu::realize(::Window parent_arg, int x, int y)
 {
-    tiny::Popover::realize(parent, x, y);
+    tiny::Popover::realize(parent_arg, x, y);
     push_start(&restart);
     push_start(&shutdown);
     push_start(&logout);

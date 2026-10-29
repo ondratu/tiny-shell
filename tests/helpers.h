@@ -95,16 +95,16 @@ inline ::Window child_at(::Window parent, int x, int y)
 // Contents of an InputOutput window or pixmap.
 class Image {
   public:
-    Image(::Drawable d, unsigned int width, unsigned int height):
-        width(width), height(height)
+    Image(::Drawable d, unsigned int w, unsigned int h):
+        width(w), height(h)
     {
         XSync(tiny::get_display(), False);
-        XImage *img = XGetImage(tiny::get_display(), d, 0, 0, width, height,
+        XImage *img = XGetImage(tiny::get_display(), d, 0, 0, w, h,
                 AllPlanes, ZPixmap);
-        pixels.resize(width * height);
-        for (unsigned int y = 0; y < height; ++y) {
-            for (unsigned int x = 0; x < width; ++x) {
-                pixels[y * width + x] = XGetPixel(img, x, y) & 0xFFFFFF;
+        pixels.resize(w * h);
+        for (unsigned int y = 0; y < h; ++y) {
+            for (unsigned int x = 0; x < w; ++x) {
+                pixels[y * w + x] = XGetPixel(img, x, y) & 0xFFFFFF;
             }
         }
         XDestroyImage(img);

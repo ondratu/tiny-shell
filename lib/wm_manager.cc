@@ -15,17 +15,17 @@ namespace tiny {
 
 namespace wm {
 
-Manager::Manager(::Display* display, ::Window root):
+Manager::Manager(::Display* display_arg, ::Window root_arg):
     tiny::Object(),
-    display(display),
-    root(root),
+    display(display_arg),
+    root(root_arg),
     wm_panel(), wm_run(), wm_dock(), running(true)
 {
     //set_supported();
-    XSetWindowBackground(display, root, tiny::theme.root_background);
-    XSync(display, True);
+    XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
+    XSync(display_arg, True);
 
-    XDefineCursor(display, root, XCreateFontCursor(display, XC_arrow));
+    XDefineCursor(display_arg, root_arg, XCreateFontCursor(display_arg, XC_arrow));
 
     ::Window rv_root;
     ::Window rv_parent;
@@ -33,39 +33,39 @@ Manager::Manager(::Display* display, ::Window root):
     uint32_t rv_ccount;
 
     /*
-    XChangeProperty(display, root, display._NET_SUPPORTED, XA_ATOM,
+    XChangeProperty(display_arg, root_arg, display_arg._NET_SUPPORTED, XA_ATOM,
                     32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(display.EWMH), 1);
+                    reinterpret_cast<unsigned char*>(display_arg.EWMH), 1);
     */
 
     // Realized (but not mapped, so they are not taken as client windows)
     // before the existing windows are added to the dock.
     XWindowAttributes attrs;
-    XGetWindowAttributes(display, root, &attrs);
+    XGetWindowAttributes(display_arg, root_arg, &attrs);
 
-    wm_panel.realize(root, 0, 0);
+    wm_panel.realize(root_arg, 0, 0);
     wm_panel.set_events();
 
-    wm_dock.realize(root,
+    wm_dock.realize(root_arg,
             attrs.width/2,
             attrs.height - wm_dock.get_height()-tiny::theme.wm_dock_border);
     wm_dock.set_events();
 
-    wm_run.realize(root, 0, 0);
+    wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
 
-    XGrabServer(display);       // lock the X server for new events
-    XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
+    XGrabServer(display_arg);       // lock the X server for new events
+    XQueryTree(display_arg, root_arg, &rv_root, &rv_parent, &rv_child, &rv_ccount);
     if (rv_ccount){
         rv_ccount -= 1;
-        XWindowAttributes attrs;
+        XWindowAttributes child_attrs;
 
         for (uint32_t i = 0; i <= rv_ccount; ++i){
-            XGetWindowAttributes(display, rv_child[i], &attrs);
-            if (attrs.map_state == IsUnmapped){
+            XGetWindowAttributes(display_arg, rv_child[i], &child_attrs);
+            if (child_attrs.map_state == IsUnmapped){
                 continue;   // will be mapped later
             }
-            if (attrs.override_redirect){
+            if (child_attrs.override_redirect){
                 continue;   // menu, special tools (idesk) and so on
             }
 
@@ -91,9 +91,9 @@ Manager::Manager(::Display* display, ::Window root):
             if (Window::get_motif_hints(rv_child[i], functions, decorations)
                     && !decorations)
             {
-                window = Window::create(root, rv_child[i], attrs, functions);
+                window = Window::create(root_arg, rv_child[i], child_attrs, functions);
             } else {
-                window = Wrapped::create(root, rv_child[i], attrs,
+                window = Wrapped::create(root_arg, rv_child[i], child_attrs,
                                          functions, decorations);
             }
 
@@ -119,10 +119,10 @@ Manager::Manager(::Display* display, ::Window root):
             this,
             static_cast<tiny::object_signal_t>(&Manager::on_logout));
 
-    XClearWindow(display, root);
+    XClearWindow(display_arg, root_arg);
     set_events();
     XSetErrorHandler(&Manager::on_error);
-    XUngrabServer(display);     // unlock the X server
+    XUngrabServer(display_arg);     // unlock the X server
 }
 
 Manager::~Manager(){

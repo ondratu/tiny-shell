@@ -5,8 +5,8 @@
 
 namespace tiny {
 
-Button::Button(uint32_t width, uint32_t height):
-    Widget(width, height)
+Button::Button(uint32_t w, uint32_t h):
+    Widget(w, h)
 {
     name = "button";
 }
@@ -56,10 +56,10 @@ void Button::on_button_release(const XEvent &e, void *){
 
 
 
-LabelButton::LabelButton(uint32_t width, uint32_t height,
-        const std::string &text):
-    Button(width, height),
-    text(text)
+LabelButton::LabelButton(uint32_t w, uint32_t h,
+        const std::string &text_arg):
+    Button(w, h),
+    text(text_arg)
 {
     name = "labelbutton";
 }
@@ -79,14 +79,14 @@ void LabelButton::set_events(long mask)
             static_cast<event_signal_t>(&LabelButton::on_expose));
 }
 
-void LabelButton::realize(Window parent, int x, int y)
+void LabelButton::realize(Window parent_arg, int x, int y)
 {
-    Button::realize(parent, x, y);
+    Button::realize(parent_arg, x, y);
 }
 
-void LabelButton::set_text(const std::string &text)
+void LabelButton::set_text(const std::string &text_arg)
 {
-    this->text = text;
+    this->text = text_arg;
     if (is_maped){
         on_expose(XEvent(), nullptr);
     }
@@ -137,8 +137,8 @@ void LabelButton::on_expose(const XEvent &, void *)
 }
 
 
-MenuButton::MenuButton(uint32_t width, uint32_t height, const std::string &text):
-    LabelButton(width, height, text)
+MenuButton::MenuButton(uint32_t w, uint32_t h, const std::string &text_arg):
+    LabelButton(w, h, text_arg)
 {
     name = "menubutton";
 }
@@ -153,9 +153,9 @@ void MenuButton::set_events(long mask)
     LabelButton::set_events(mask);
 }
 
-void MenuButton::set_popover(Popover *popover)
+void MenuButton::set_popover(Popover *popover_arg)
 {
-    this->popover = popover;
+    this->popover = popover_arg;
 }
 
 void MenuButton::do_popup(Object *, const XEvent &e, void *)

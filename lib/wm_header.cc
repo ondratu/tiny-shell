@@ -5,8 +5,8 @@
 
 namespace wm {
 
-TitleBox::TitleBox(uint32_t width, uint32_t height):
-    tiny::Widget(Widget::Type::Input, width, height)
+TitleBox::TitleBox(uint32_t w, uint32_t h):
+    tiny::Widget(Widget::Type::Input, w, h)
 {
     name = "wm_titlebox";
 }
@@ -65,9 +65,9 @@ void TitleBox::on_motion_notify(const XEvent &e, void *)
 }
 
 
-Header::Header(uint32_t width, uint32_t height):
-    Box(Box::Type::Horizontal, width, height),
-    title_box(width, height),
+Header::Header(uint32_t w, uint32_t h):
+    Box(Box::Type::Horizontal, w, h),
+    title_box(w, h),
     screen(0)
 {
     name = "wm_header";
@@ -88,25 +88,25 @@ void Header::set_events(long mask){
             static_cast<tiny::event_signal_t>(&Header::on_expose));
 }
 
-void Header::realize(Window parent, int x, int y)
+void Header::realize(Window parent_arg, int x, int y)
 {
-    Box::realize(parent, x, y);
+    Box::realize(parent_arg, x, y);
 
     add(&title_box, 0, 0);
 }
 
-void Header::resize(uint32_t width, uint32_t height)
+void Header::resize(uint32_t w, uint32_t h)
 {
-    Box::resize(width, height);
-    title_box.resize(width, height);
+    Box::resize(w, h);
+    title_box.resize(w, h);
     if (is_maped){
         on_expose(XEvent(), nullptr);
     }
 }
 
-void Header::set_title(const std::string &title)
+void Header::set_title(const std::string &title_arg)
 {
-    this->title = title;
+    this->title = title_arg;
     if (is_maped){
         on_expose(XEvent(), nullptr);
     }

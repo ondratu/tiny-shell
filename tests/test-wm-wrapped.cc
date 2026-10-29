@@ -18,9 +18,9 @@ class Probe: public wm::Wrapped {
     using wm::Wrapped::shadow;
 
     // What Wrapped::create does, without the WM_STATE property.
-    void setup(::Window root, int x, int y)
+    void setup(::Window root_arg, int x, int y)
     {
-        realize(root, x, y);
+        realize(root_arg, x, y);
         on_focus_out(XEvent(), nullptr);
         map_all();
     }
