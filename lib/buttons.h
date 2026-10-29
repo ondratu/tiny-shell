@@ -63,7 +63,7 @@ class MenuButton: public LabelButton {
   private:
     virtual void do_popup(Object *o, const XEvent &e, void *data);
 
-    Popover *popover;
+    Popover *popover = nullptr;
 };
 
 } // namespace
