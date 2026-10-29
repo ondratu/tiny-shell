@@ -57,8 +57,8 @@ class Demo: public tiny::Container {
         map_all();
     }
 
-    void set_events(){
-        Container::set_events();
+    void set_events(long mask = 0) override {
+        Container::set_events(mask);
 
         Atom wm_delete_window = display.WM_DELETE_WINDOW;
         XSetWMProtocols(display, window, &wm_delete_window, 1);

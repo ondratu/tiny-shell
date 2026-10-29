@@ -8,6 +8,17 @@
 
 BUILD ?= build
 
+# Clang is stricter, so it is the default compiler when it is installed (the
+# newest versioned one if there is no plain clang++); g++ otherwise.
+# Set CXX to choose another one.
+ifeq ($(origin CXX),default)
+CLANGXX := $(firstword $(shell command -v clang++ 2>/dev/null) \
+    $(shell ls /usr/bin/clang++-[0-9]* 2>/dev/null | sort -V | tail -n 1))
+ifneq (,$(CLANGXX))
+CXX := $(CLANGXX)
+endif
+endif
+
 # Strict warnings. STRICT=1 turns them into errors (used by CI); it is not the
 # default, so that a newer compiler does not break the build of a user.
 WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion \

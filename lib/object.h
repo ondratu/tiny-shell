@@ -70,7 +70,7 @@ class Object {
 
 
 void log(const char *file, const char* function, uint32_t line,
-        const char *format, ...);
+        const char *format, ...) __attribute__((format(printf, 4, 5)));
 
-void error(const char *format, ...);
+void error(const char *format, ...) __attribute__((format(printf, 1, 2)));
 } // namespace tiny

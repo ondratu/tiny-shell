@@ -35,8 +35,8 @@ class Demo: public tiny::Box {
         map_all();
     }
 
-    void set_events(){
-        tiny::Box::set_events();
+    void set_events(long mask = 0) override {
+        tiny::Box::set_events(mask);
 
         Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
         XSetWMProtocols(display, window, &wm_delete_window, 1);

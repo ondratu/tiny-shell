@@ -204,9 +204,9 @@ TEST(WindowOfEvent, structure_events_return_the_affected_window)
 
 TEST(WindowOfEvent, events_without_window)
 {
-    EXPECT_EQ(tiny::window_of_event(make_event(MappingNotify)), (::Window)None);
-    EXPECT_EQ(tiny::window_of_event(make_event(GenericEvent)), (::Window)None);
-    EXPECT_EQ(tiny::window_of_event(make_event(0)), (::Window)None);
+    EXPECT_EQ(tiny::window_of_event(make_event(MappingNotify)), static_cast<::Window>(None));
+    EXPECT_EQ(tiny::window_of_event(make_event(GenericEvent)), static_cast<::Window>(None));
+    EXPECT_EQ(tiny::window_of_event(make_event(0)), static_cast<::Window>(None));
 }
 
 TEST(XPoint, x_point_sets_coordinates)

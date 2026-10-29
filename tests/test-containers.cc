@@ -118,8 +118,8 @@ TEST_F(BoxTest, resize_horizontal_shifts_end_offset)
 
 TEST(PositionTest, cursor_shape_for_edges)
 {
-    EXPECT_EQ(tiny::Position::get_cursor_shape(tiny::Position::Top), (uint32_t)XC_top_side);
-    EXPECT_EQ(tiny::Position::get_cursor_shape(0), (uint32_t)XC_arrow);
+    EXPECT_EQ(tiny::Position::get_cursor_shape(tiny::Position::Top), static_cast<uint32_t>(XC_top_side));
+    EXPECT_EQ(tiny::Position::get_cursor_shape(0), static_cast<uint32_t>(XC_arrow));
 }
 
 TEST(PositionTest, cursor_shape_for_all_sides_and_corners)

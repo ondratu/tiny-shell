@@ -18,8 +18,8 @@ class Demo: public wm::BackWindow {
         map_all();
     }
 
-    void set_events(){
-        wm::BackWindow::set_events();
+    void set_events(long mask = 0) override {
+        wm::BackWindow::set_events(mask);
 
         Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
         XSetWMProtocols(display, window, &wm_delete_window, 1);
