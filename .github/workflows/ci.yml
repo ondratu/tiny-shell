@@ -99,6 +99,7 @@ jobs:
           # boots the kernel directly: about twice as fast as the default
           variant: microvm
           shell: sh
+          environment_variables: STRICT
           run: |
             # X11 (with Xft and Xvfb) is a part of the base system, the rest
             # comes from pkgsrc
@@ -108,10 +109,11 @@ jobs:
             # in the background with redirected output, otherwise the SSH
             # session of the VM never ends
             Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
+            xvfb=$!
             sleep 2
             rc=0
             DISPLAY=:99 gmake XVFB_RUN= check examples || rc=$?
-            kill %1
+            kill $xvfb
             exit $rc
 
   coverage:
