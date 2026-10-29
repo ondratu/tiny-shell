@@ -2,6 +2,11 @@
 #
 # Override from the command line or environment as usual, e.g.:
 #   make CXX=clang++ CXXFLAGS="-O2 -g"
+# Everything is built into $(BUILD) (build/ by default).
+
+-include local/config.mk
+
+BUILD ?= build
 
 PKGS = x11 xft xrender
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
@@ -12,45 +17,50 @@ override CXXFLAGS += -MMD -std=c++17 -I./lib $(PKG_CFLAGS)
 LDLIBS = $(PKG_LIBS)
 
 LIB_SRC = $(wildcard lib/*.cc)
-LIB_OBJ = $(LIB_SRC:.cc=.o)
-LIB_DEP = $(LIB_OBJ:.o=.d)
+LIB_OBJ = $(LIB_SRC:%.cc=$(BUILD)/%.o)
+LIB = $(BUILD)/lib/libtiny.a
 
-SRC = $(wildcard *.cc)
-OBJ = $(SRC:.cc=.o)
+EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc))
+TARGET = $(BUILD)/tiny-shell
+
+PROGS = $(TARGET) $(EXAMPLES)
+OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-TARGET = tiny-shell
-PROGS = $(TARGET) demo input_only menu
-
-.PHONY: all clean check coverage
+.PHONY: all examples clean check coverage
 .DELETE_ON_ERROR:
 
-all: $(PROGS)
+all: $(TARGET)
 
--include $(LIB_DEP) $(DEP)
+examples: $(EXAMPLES)
 
-lib/libtiny.a: $(LIB_OBJ)
+-include $(DEP)
+
+$(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(LIB): $(LIB_OBJ)
 	$(AR) rcs $@ $^
 
-# tiny-shell is built from main.cc, the other programs from <name>.cc
-$(TARGET): main.o lib/libtiny.a
+# tiny-shell is built from src/main.cc, the examples from examples/<name>.cc
+$(TARGET): $(BUILD)/src/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
-$(filter-out $(TARGET),$(PROGS)): %: %.o lib/libtiny.a
+$(EXAMPLES): %: %.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
-$(OBJ) $(LIB_OBJ): .pkg_check
-
-.pkg_check: Makefile
+$(BUILD)/.pkg_check: Makefile
+	@mkdir -p $(BUILD)
 	@printf "Checking packages $(PKGS)\t"
 	@pkg-config --print-errors --exists $(PKGS) && printf "Ok\n"
 	@touch $@
 
-# Editor / language server configuration
-.syntastic_cpp_config: .pkg_check
+# Editor / language server configuration (generated, not in git)
+.syntastic_cpp_config: $(BUILD)/.pkg_check
 	@printf '%s\n' -I./lib $(PKG_CFLAGS) > $@
 
-compile_flags.txt: .pkg_check
+compile_flags.txt: $(BUILD)/.pkg_check
 	@printf '%s\n' -xc++ -Wall -std=c++17 -I./lib $(PKG_CFLAGS) > $@
 
 # Tests (googletest), run with `make check`; they need an X server.
@@ -58,39 +68,38 @@ compile_flags.txt: .pkg_check
 XVFB_RUN ?= xvfb-run -a
 
 TEST_SRC = $(wildcard tests/test-*.cc)
-TESTS = $(TEST_SRC:.cc=)
-TEST_OBJ = $(TEST_SRC:.cc=.o) tests/main.o
-TEST_DEP = $(TEST_OBJ:.o=.d)
+TESTS = $(TEST_SRC:%.cc=$(BUILD)/%)
+TEST_OBJ = $(TEST_SRC:%.cc=$(BUILD)/%.o) $(BUILD)/tests/main.o
+DEP += $(TEST_OBJ:.o=.d)
 
--include $(TEST_DEP)
+-include $(TEST_OBJ:.o=.d)
 
-tests/%.o: override CXXFLAGS += $(shell pkg-config --cflags gtest)
+$(BUILD)/tests/%.o: override CXXFLAGS += $(shell pkg-config --cflags gtest)
 
-tests/test-%: tests/test-%.o tests/main.o lib/libtiny.a
+$(BUILD)/tests/test-%: $(BUILD)/tests/test-%.o $(BUILD)/tests/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
 
-check: .gtest_check $(TESTS)
+check: $(BUILD)/.gtest_check $(TESTS)
 	@rc=0; for t in $(TESTS); do \
-	    echo "running $$t"; $(XVFB_RUN) ./$$t || rc=1; done; exit $$rc
+	    echo "running $$t"; $(XVFB_RUN) $$t || rc=1; done; exit $$rc
 
-.gtest_check: Makefile
+$(BUILD)/.gtest_check: Makefile
+	@mkdir -p $(BUILD)
 	@printf "Checking packages gtest\t"
 	@pkg-config --print-errors --exists gtest && printf "Ok\n"
 	@touch $@
 
-$(TESTS) $(TEST_OBJ): | .gtest_check
+$(TESTS) $(TEST_OBJ): | $(BUILD)/.gtest_check
 
-# Coverage is built out of tree in COV_DIR so it does not mix with normal objects.
+# Coverage is built into COV_DIR so it does not mix with normal objects.
 # Needs gcc with gcov and xvfb-run.
 COV_DIR = build-cov
 
 coverage:
-	@rm -rf $(COV_DIR) && mkdir -p $(COV_DIR)/lib $(COV_DIR)/tests
-	@cp Makefile *.cc $(COV_DIR)/ && cp lib/*.cc lib/*.h $(COV_DIR)/lib/
-	@cp tests/*.cc tests/*.h $(COV_DIR)/tests/
-	@GTEST_BRIEF=1 $(MAKE) -C $(COV_DIR) check -s \
+	@rm -rf $(COV_DIR)
+	@GTEST_BRIEF=1 $(MAKE) BUILD=$(COV_DIR) check -s \
 	    CXXFLAGS="-g -O0 --coverage" LDFLAGS="--coverage"
-	@cd $(COV_DIR) && gcov -n -o lib $(notdir $(LIB_SRC)) 2>/dev/null | \
+	@gcov -n -o $(COV_DIR)/lib $(LIB_SRC) 2>/dev/null | \
 	    awk -F"'" '/^File/{f=$$2} /^Lines executed/{ \
 	        if (f ~ /^lib\/[^\/]*\.cc$$/ && !(f in seen)) { \
 	            seen[f]=1; split($$0, a, /[:% ]+/); \
@@ -106,6 +115,5 @@ coverage:
 	                ts ? 100*(ts-tm)/ts : 100}'
 
 clean:
-	@$(RM) .pkg_check $(OBJ) $(DEP) $(PROGS) lib/libtiny.a $(LIB_OBJ) $(LIB_DEP)
-	@$(RM) .gtest_check $(TESTS) $(TEST_OBJ) $(TEST_DEP)
-	@$(RM) -r $(COV_DIR)
+	@$(RM) -r $(BUILD) $(COV_DIR)
+	@$(RM) compile_flags.txt .syntastic_cpp_config
