@@ -633,7 +633,7 @@ void Window::update_wm_icon()
         pos += 2; //!< shift pos to starting data
         uint32_t color;
         uint8_t* pixel;
-        // format is RGBA + 4 zeors on 64bit
+        // format is RGBA + 4 zeros on 64bit
         for (size_t y = 0; y < height; y++) {
             for (size_t x = 0; x < width; x++) {
                 pixel = reinterpret_cast<uint8_t*>(&words[pos + y * width + x]);
@@ -834,7 +834,7 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
 
     char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
-    TINY_LOG("Unhandled propetry update: %s", atom_name);
+    TINY_LOG("Unhandled property update: %s", atom_name);
     XFree(atom_name);
 }
 

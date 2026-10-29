@@ -25,7 +25,7 @@ void Edge::realize(Window parent_arg, int x, int y)
             display, window,
             XCreateFontCursor(display, tiny::Position::get_cursor_shape(mask)));
 
-    // TODO: tiny::Widget::Type::Debug :-) will set background and check childs
+    // TODO: tiny::Widget::Type::Debug :-) will set background and check children
     // uint64_t background = std::rand();
     // XSetWindowBackground(display, window, background);
 }
