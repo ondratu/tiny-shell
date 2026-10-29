@@ -146,7 +146,7 @@ void Header::on_expose(const XEvent &e, void * data)
     if ((x + extents.width) > get_end_offset()){
         x = get_end_offset() - extents.width;
     }
-    if (x < get_padding()) {
+    if (x < (int) get_padding()) {
         x = get_padding();
     }
 
