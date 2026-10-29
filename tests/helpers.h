@@ -11,6 +11,7 @@
 #include "display.h"
 #include "object.h"
 #include "widget.h"
+#include "x_util.h"
 
 namespace tiny {
 extern Handlers handlers;
@@ -183,4 +184,36 @@ class WidgetFont {
   private:
     tiny::Style original;
     tiny::Style with_font;
+};
+
+// Delivers the pending events of the manager's connection to the registered
+// handlers (the main loop of the window manager does the same).
+inline void pump_events()
+{
+    XSync(tiny::get_display(), False);
+    XEvent e;
+    while (XPending(tiny::get_display())) {
+        XNextEvent(tiny::get_display(), &e);
+        std::pair<uint16_t, ::Window> key(e.type, tiny::window_of_event(e));
+        if (tiny::handlers.count(key)) {
+            tiny::handlers.call_hanlder(key, e);
+        }
+    }
+}
+
+// Same as WidgetFont for theme.wm_header.
+class HeaderFont {
+  public:
+    HeaderFont(): original(tiny::theme.wm_header), with_font(original)
+    {
+        with_font.init();
+        tiny::theme.wm_header = with_font;
+    }
+
+    ~HeaderFont()
+    { tiny::theme.wm_header = original; }
+
+  private:
+    tiny::WMHeaderStyle original;
+    tiny::WMHeaderStyle with_font;
 };
