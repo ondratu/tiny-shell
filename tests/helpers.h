@@ -166,3 +166,21 @@ class XErrors {
 };
 
 inline int XErrors::count = 0;
+
+// Gives theme.widget a font for the lifetime of the object (drawing text
+// crashes without one) and restores the original style afterwards.
+class WidgetFont {
+  public:
+    WidgetFont(): original(tiny::theme.widget), with_font(original)
+    {
+        with_font.init();
+        tiny::theme.widget = with_font;
+    }
+
+    ~WidgetFont()
+    { tiny::theme.widget = original; }
+
+  private:
+    tiny::Style original;
+    tiny::Style with_font;
+};
