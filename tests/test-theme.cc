@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <gtest/gtest.h>
 
 #include "theme.h"
@@ -152,4 +154,60 @@ TEST(ThemeTest, wm_styles_override_widget_defaults)
     EXPECT_EQ(tiny::theme.wm_button.normal_bg, 0xF8F8F8u);
     EXPECT_EQ(tiny::theme.wm_header.padding_width, 2u);
     EXPECT_EQ(tiny::theme.wm_dock.padding_width, 5u);
+}
+
+TEST(ThemeScale, scale_multiplies_metrics_and_styles)
+{
+    tiny::Theme t;
+
+    t.scale(2);
+
+    EXPECT_EQ(t.wm_win_header, 50u);
+    EXPECT_EQ(t.wm_icon, 96u);
+    EXPECT_EQ(t.wm_win_corner, 2 * t.wm_win_border);
+    EXPECT_EQ(t.wm_win_min_height, 20 + t.wm_win_header);
+    EXPECT_EQ(t.widget.border_width, 2u);
+    EXPECT_EQ(t.wm_header.padding_width, 4u);
+    EXPECT_EQ(t.wm_dock.padding_width, 10u);
+}
+
+TEST(ThemeScale, scale_is_relative_to_defaults_not_cumulative)
+{
+    tiny::Theme t;
+
+    t.scale(2);
+    t.scale(1);
+
+    EXPECT_EQ(t.wm_win_header, 25u);
+    EXPECT_EQ(t.widget.padding_width, 1u);
+    EXPECT_EQ(t.wm_header.padding_width, 2u);
+}
+
+TEST(ThemeScale, scaled_theme_opens_fonts)
+{
+    tiny::Theme t;
+
+    t.scale(1.5);
+    t.init();
+
+    EXPECT_NE(t.widget.get_font(), nullptr);
+    EXPECT_NE(t.wm_header.get_font(), nullptr);
+}
+
+TEST(ThemeScale, env_scale_factor_parsing)
+{
+    unsetenv("TINY_SCALE_FACTOR");
+    EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.0);
+
+    setenv("TINY_SCALE_FACTOR", "2", 1);
+    EXPECT_EQ(tiny::Theme::env_scale_factor(), 2.0);
+
+    setenv("TINY_SCALE_FACTOR", "1.5", 1);
+    EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.5);
+
+    for (const char *bad: {"", "abc", "0", "-2", "2x", "1000"}) {
+        setenv("TINY_SCALE_FACTOR", bad, 1);
+        EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.0) << bad;
+    }
+    unsetenv("TINY_SCALE_FACTOR");
 }

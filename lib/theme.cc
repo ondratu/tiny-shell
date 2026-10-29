@@ -1,4 +1,6 @@
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "display.h"
 #include "theme.h"
@@ -31,6 +33,50 @@ namespace tiny {
 
 Theme theme;  // default_theme
 
+static uint32_t scaled(uint32_t value, double factor)
+{
+    return uint32_t(lround(value * factor));
+}
+
+Theme::Theme()
+{
+    scale(env_scale_factor());
+}
+
+double Theme::env_scale_factor()
+{
+    const char *env = getenv("TINY_SCALE_FACTOR");
+    if (!env)
+        return 1;
+
+    char *end = nullptr;
+    double factor = strtod(env, &end);
+    if (end == env || *end != '\0' || !(factor > 0) || factor > 16)
+        return 1;
+    return factor;
+}
+
+void Theme::scale(double factor)
+{
+    scale_factor = factor;
+
+    wm_win_header = scaled(25, factor);
+    wm_win_icon = scaled(21, factor);
+    wm_win_border = scaled(10, factor);
+    wm_win_corner = wm_win_border*2;
+    wm_win_min_width = scaled(10, factor);
+    wm_win_min_height = scaled(10, factor) + wm_win_header;
+
+    wm_panel = scaled(30, factor);
+    wm_icon = scaled(48, factor);
+    wm_dock_border = scaled(5, factor);
+
+    widget.scale(factor);
+    wm_button.scale(factor);
+    wm_header.scale(factor);
+    wm_dock.scale(factor);
+}
+
 void Theme::init()  // TODO: screen, display, config...
 {
     widget.init();
@@ -46,10 +92,27 @@ Style::~Style()
     }
 }
 
+void Style::scale(double factor)
+{
+    // Remember the unscaled values on first use, so scaling is repeatable
+    if (!base_set) {
+        base_border_width = border_width;
+        base_padding_width = padding_width;
+        base_font_size = font_size;
+        base_set = true;
+    }
+
+    border_width = scaled(base_border_width, factor);
+    padding_width = scaled(base_padding_width, factor);
+    font_size = base_font_size * factor;
+}
+
 void Style::init()
 {
     const int screen = 0;   // XXX: this is zero for now
-    font = XftFontOpenName(get_display(), screen, font_name);
+    char name[128];
+    snprintf(name, sizeof(name), "%s-%g%s", font_family, font_size, font_style);
+    font = XftFontOpenName(get_display(), screen, name);
 
     // TODO: check success
 }
