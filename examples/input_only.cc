@@ -14,7 +14,7 @@ class Demo : public wm::BackWindow {
         realize(XDefaultRootWindow(display), 0, 0);
         // XSetWindowBackground(display, window, 0x000055);
 
-        // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall): final class
+        // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall): nothing derives from Demo
         set_events();
         map_all();
     }
