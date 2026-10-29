@@ -120,6 +120,16 @@ make check            # unit tests (run against Xvfb)
 tools/run-xephyr.sh   # run the window manager in a nested Xephyr
 ```
 
+Install the git hooks once, they check the formatting, spelling and shell
+scripts on every commit and run the static analysis and the tests before a
+push:
+
+```sh
+sudo apt install pre-commit clang-format clang-tidy
+pre-commit install --install-hooks
+pre-commit install --hook-type pre-push
+```
+
 Before sending a change, build without warnings and run `make check`. When
 you work on memory handling, also build with the sanitizers:
 

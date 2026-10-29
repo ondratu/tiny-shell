@@ -38,12 +38,11 @@ reviewer, keep it that way. Order of work:
    .git-blame-ignore-revs`). `make cppcheck` as a second opinion is still
    open. The disabled checks of `.clang-tidy` have a reason each; some
    disappear with the cleanup below (global state, `Wrapped` inheritance).
-7. **pre-commit.** `.pre-commit-config.yaml` with: `clang-format`,
-   whitespace and end-of-file fixers, merge-conflict and large-file checks,
-   `shellcheck` and `shfmt` for `tools/`, `codespell`, a check that the file
-   names stay lower case. Fast checks run on commit; `clang-tidy` and
-   `make check` run in the `pre-push` stage, since they take long. CI runs
-   `pre-commit run --all-files`, so the hooks and CI cannot disagree.
+7. ~~pre-commit~~ (done: `.pre-commit-config.yaml` with the generic hooks,
+   `codespell`, `shellcheck` and `clang-format` on commit, and `make lint`
+   and `make check` on push; install with `pre-commit install
+   --install-hooks && pre-commit install --hook-type pre-push`. CI will run
+   `pre-commit run --all-files`.)
 8. **Sanitizers.** `make asan` (`-fsanitize=address,undefined
    -fno-sanitize-recover=all`) runs the whole `make check`. The leaks of the
    toolkit that are accepted for now go to one suppression file with a
