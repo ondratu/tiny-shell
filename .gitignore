@@ -8,3 +8,6 @@ demo
 wm_test
 input_only
 build-cov
+tests/test-*
+!tests/test-*.cc
+.gtest_check
