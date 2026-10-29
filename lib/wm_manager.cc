@@ -38,6 +38,22 @@ Manager::Manager(::Display* display, ::Window root):
                     reinterpret_cast<unsigned char*>(display.EWMH), 1);
     */
 
+    // Realized (but not mapped, so they are not taken as client windows)
+    // before the existing windows are added to the dock.
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, root, &attrs);
+
+    wm_panel.realize(root, 0, 0);
+    wm_panel.set_events();
+
+    wm_dock.realize(root,
+            attrs.width/2,
+            attrs.height - wm_dock.get_height()-tiny::theme.wm_dock_border);
+    wm_dock.set_events();
+
+    wm_run.realize(root, 0, 0);
+    wm_run.set_events();
+
     XGrabServer(display);       // lock the X server for new events
     XQueryTree(display, root, &rv_root, &rv_parent, &rv_child, &rv_ccount);
     if (rv_ccount){
@@ -88,28 +104,16 @@ Manager::Manager(::Display* display, ::Window root):
             }
             window->on_focus.connect(this,
                     static_cast<tiny::object_signal_t>(&Manager::on_window_focus));
-            if (i == rv_ccount){
-                window->set_focus();
-            }
         }
         XFree(rv_child);
     }
 
-    XWindowAttributes attrs;
-    XGetWindowAttributes(display, root, &attrs);
+    if (!wm_tops.empty()){
+        wm_tops.back()->set_focus();    // the topmost one
+    }
 
-    wm_panel.realize(root, 0, 0);
-    wm_panel.set_events();
     wm_panel.map_all();
-
-    wm_dock.realize(root,
-            attrs.width/2,
-            attrs.height - wm_dock.get_height()-tiny::theme.wm_dock_border);
-    wm_dock.set_events();
     wm_dock.map_all();
-
-    wm_run.realize(root, 0, 0);
-    wm_run.set_events();
 
     wm_panel.menu_user.logout.on_click.connect(
             this,
