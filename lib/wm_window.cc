@@ -73,6 +73,7 @@ Window::Window(::Window child, ::Window root, unsigned long functions):
         icon_size->max_height = tiny::theme.wm_icon;
         // Request the best icon
         XSetIconSizes(dsp, child, icon_size, 1);
+        XFree(icon_size);
         update_wm_hints();
     }
 }
@@ -84,6 +85,9 @@ Window::~Window()
     }
     if (icon){
         XFreePixmap(dsp, icon);
+    }
+    if (icon_mask){
+        XFreePixmap(dsp, icon_mask);
     }
 }
 
@@ -364,9 +368,11 @@ void Window::update_wm_hints()
 
     if (icon){  // On update
         XFreePixmap(dsp, icon);
+        icon = 0;
     }
     if (icon_mask){  // On update
         XFreePixmap(dsp, icon_mask);
+        icon_mask = 0;
     }
 
     if (icon_width == tiny::theme.wm_icon || icon_height == tiny::theme.wm_icon)
