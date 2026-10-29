@@ -53,7 +53,7 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   (other values, never negative).
 - **Strictness:** the code compiles without warnings with GCC and Clang, with
   a long list of warnings on (see the TODO for the list), is formatted by
-  `clang-format` and checked by `clang-tidy`. Fix the cause of a warning; if
+  `clang-format` (`make format`) and checked by `clang-tidy` (`make lint`). Fix the cause of a warning; if
   it really cannot be fixed (a macro or a header of Xlib), isolate it in one
   small place with a comment. Test coverage stays as high as is sensible and
   never goes down.

@@ -32,17 +32,12 @@ reviewer, keep it that way. Order of work:
 5. ~~Clang by default~~ (done: `clang++`, else the newest `clang++-N`, else
    `g++`). Still open: `-D_FORTIFY_SOURCE=3`, `-D_GLIBCXX_ASSERTIONS` and
    `-fstack-protector-strong` for release builds.
-6. **Formatting and static analysis.** Done: `.clang-format` (the style of
-   the existing code), `make format`, one formatting-only commit listed in
-   `.git-blame-ignore-revs` (`git config blame.ignoreRevsFile
-   .git-blame-ignore-revs`). Still open: `.clang-tidy` and `make lint`
-   (clang-tidy is not installed on the development machine yet).
-   Plan for the rest: `.clang-tidy` (`bugprone-*`, `clang-analyzer-*`, `cert-*`,
-   `cppcoreguidelines-*` with the noisy checks listed and explained,
-   `misc-*`, `modernize-*`, `performance-*`, `readability-*`).
-   `WarningsAsErrors: '*'`. Targets `make format`, `make lint` (clang-tidy
-   with `compile_commands.json`, generated instead of `compile_flags.txt`)
-   and `make cppcheck` (optional, a second opinion).
+6. ~~Formatting and static analysis~~ (done: `.clang-format` with
+   `make format`, `.clang-tidy` with `make lint`, both clean; the formatting
+   commit is in `.git-blame-ignore-revs`, use `git config blame.ignoreRevsFile
+   .git-blame-ignore-revs`). `make cppcheck` as a second opinion is still
+   open. The disabled checks of `.clang-tidy` have a reason each; some
+   disappear with the cleanup below (global state, `Wrapped` inheritance).
 7. **pre-commit.** `.pre-commit-config.yaml` with: `clang-format`,
    whitespace and end-of-file fixers, merge-conflict and large-file checks,
    `shellcheck` and `shfmt` for `tools/`, `codespell`, a check that the file
