@@ -97,7 +97,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: cross-platform-actions/action@v1
+      - name: Start the VM
+        uses: cross-platform-actions/action@v1
         with:
           operating_system: netbsd
           version: "11.0"
@@ -105,21 +106,24 @@ jobs:
           variant: microvm
           shell: sh
           environment_variables: STRICT
-          run: |
-            # X11 (with Xft and Xvfb) is a part of the base system, the rest
-            # comes from pkgsrc
-            export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/X11R7/bin:$PATH
-            export PKG_CONFIG_PATH=/usr/X11R7/lib/pkgconfig:/usr/pkg/lib/pkgconfig
-            sudo pkgin -y install gmake pkgconf googletest
-            # in the background with redirected output, otherwise the SSH
-            # session of the VM never ends
-            Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
-            xvfb=$!
-            sleep 2
-            rc=0
-            DISPLAY=:99 gmake XVFB_RUN= check examples || rc=$?
-            kill $xvfb
-            exit $rc
+      - name: Build and test in the VM
+        # cpa.sh runs the commands inside the VM
+        shell: cpa.sh {0}
+        run: |
+          # X11 (with Xft and Xvfb) is a part of the base system, the rest
+          # comes from pkgsrc
+          export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/X11R7/bin:$PATH
+          export PKG_CONFIG_PATH=/usr/X11R7/lib/pkgconfig:/usr/pkg/lib/pkgconfig
+          sudo pkgin -y install gmake pkgconf googletest
+          # in the background with redirected output, otherwise the SSH
+          # session of the VM never ends
+          Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
+          xvfb=$!
+          sleep 2
+          rc=0
+          DISPLAY=:99 gmake XVFB_RUN= check examples || rc=$?
+          kill $xvfb
+          exit $rc
 
   coverage:
     needs: pre-commit
