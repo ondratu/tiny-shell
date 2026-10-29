@@ -115,12 +115,7 @@ void Window::set_minimized(bool minimized)
         wm_states &= static_cast<unsigned long>(~WMState::HIDDEN);
     }
 
-    std::vector<Atom> atoms;
-    get_wm_states(atoms);
-
-    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(atoms.data()),
-                    static_cast<int>(atoms.size()));
+    publish_wm_states();
 }
 
 void Window::set_maximized(bool maximized)
@@ -133,6 +128,11 @@ void Window::set_maximized(bool maximized)
         wm_states &= static_cast<unsigned long>(~WMState::MAXIMIZED_HORZ);
     }
 
+    publish_wm_states();
+}
+
+void Window::publish_wm_states()
+{
     std::vector<Atom> atoms;
     get_wm_states(atoms);
 
@@ -215,24 +215,14 @@ void Window::set_focus()
 
     wm_states |= WMState::FOCUSED;
 
-    std::vector<Atom> atoms;
-    get_wm_states(atoms);
-
-    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(atoms.data()),
-                    static_cast<int>(atoms.size()));
+    publish_wm_states();
 }
 
 void Window::return_focus()
 {
     wm_states &= static_cast<unsigned long>(~WMState::FOCUSED);
 
-    std::vector<Atom> atoms;
-    get_wm_states(atoms);
-
-    XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(atoms.data()),
-                    static_cast<int>(atoms.size()));
+    publish_wm_states();
 }
 
 void Window::close()
@@ -320,8 +310,12 @@ void Window::update_properties()
     int count;
     Atom* props = XListProperties(dsp, child, &count);
 
+    char* atom_name;
     for (int i = 0; i < count; ++i) {
         properties.insert(props[i]);
+        atom_name = XGetAtomName(display, props[i]);
+        printf("\t%s\n", atom_name);
+        XFree(atom_name);
     }
     XFree(props);
 }
