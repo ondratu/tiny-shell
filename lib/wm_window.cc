@@ -119,7 +119,7 @@ void Window::set_minimized(bool minimized)
     get_wm_states(atoms);
 
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(&(*atoms.begin())),
+                    reinterpret_cast<unsigned char*>(atoms.data()),
                     static_cast<int>(atoms.size()));
 }
 
@@ -137,7 +137,7 @@ void Window::set_maximized(bool maximized)
     get_wm_states(atoms);
 
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(&(*atoms.begin())),
+                    reinterpret_cast<unsigned char*>(atoms.data()),
                     static_cast<int>(atoms.size()));
 }
 
@@ -219,7 +219,7 @@ void Window::set_focus()
     get_wm_states(atoms);
 
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(&(*atoms.begin())),
+                    reinterpret_cast<unsigned char*>(atoms.data()),
                     static_cast<int>(atoms.size()));
 }
 
@@ -231,7 +231,7 @@ void Window::return_focus()
     get_wm_states(atoms);
 
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM, 32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(&(*atoms.begin())),
+                    reinterpret_cast<unsigned char*>(atoms.data()),
                     static_cast<int>(atoms.size()));
 }
 
@@ -414,7 +414,7 @@ void Window::update_wm_hints()
                       tiny::x_uint(tiny::theme.wm_icon),
                       tiny::theme.wm_icon / 2 - iw / 2,
                       tiny::theme.wm_icon / 2 - ih / 2);
-            XFreeGC(dsp, gc);
+            XFreeGC(dsp, mask_gc);
         }
 
     } else {
@@ -449,6 +449,9 @@ void Window::update_wm_states()
                            &data) != Success ||
         !nitems) {
         // No _NET_WM_STATE
+        if (data) {
+            XFree(data);
+        }
         return;
     }
 

@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <sys/time.h>
 #include <cstdarg>
 #include <cstdio>
@@ -80,11 +81,15 @@ void log(const char* file, const char* function, uint32_t line,
     char* buffer = nullptr;
     va_list args;
     va_start(args, format);
-    vasprintf(&buffer, format, args);
+    const int length = vasprintf(&buffer, format, args);
     va_end(args);
+    if (length < 0) {
+        return;
+    }
 
     fprintf(stderr, "%ld.%04ld in %s: %s (%s:%u)\n", tp.tv_sec, tp.tv_usec,
             function, buffer, file, line);
+    free(buffer);
 }
 
 void error(const char* format, ...)
@@ -96,10 +101,14 @@ void error(const char* format, ...)
     char* buffer = nullptr;
     va_list args;
     va_start(args, format);
-    vasprintf(&buffer, format, args);
+    const int length = vasprintf(&buffer, format, args);
     va_end(args);
+    if (length < 0) {
+        return;
+    }
 
     fprintf(stderr, "%ld.%04ld %s\n", tp.tv_sec, tp.tv_usec, buffer);
+    free(buffer);
 }
 
 } // namespace tiny
