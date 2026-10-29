@@ -135,7 +135,8 @@ Manager::~Manager(){
     if (old_error_handler){
         XSetErrorHandler(old_error_handler);
     }
-    XCloseDisplay(display);
+    // the display belongs to the caller, only stop managing the root window
+    XSelectInput(display, root, 0);
 }
 
 void Manager::set_events()
