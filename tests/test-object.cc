@@ -9,19 +9,19 @@ extern Handlers handlers;
 }
 
 // Records how it was called so tests can check the dispatching.
-class Receiver: public tiny::Object {
+class Receiver : public tiny::Object {
   public:
     using tiny::Object::connect_window;
     using tiny::Object::disconnect_window;
 
-    void on_event(const XEvent &e, void *data)
+    void on_event(const XEvent& e, void* data)
     {
         ++event_calls;
         last_event_type = e.type;
         last_data = data;
     }
 
-    void on_signal(tiny::Object *owner, const XEvent &e, void *data)
+    void on_signal(tiny::Object* owner, const XEvent& e, void* data)
     {
         ++signal_calls;
         last_owner = owner;
@@ -30,16 +30,20 @@ class Receiver: public tiny::Object {
     }
 
     tiny::event_signal_t event_slot()
-    { return static_cast<tiny::event_signal_t>(&Receiver::on_event); }
+    {
+        return static_cast<tiny::event_signal_t>(&Receiver::on_event);
+    }
 
     tiny::object_signal_t signal_slot()
-    { return static_cast<tiny::object_signal_t>(&Receiver::on_signal); }
+    {
+        return static_cast<tiny::object_signal_t>(&Receiver::on_signal);
+    }
 
     int event_calls = 0;
     int signal_calls = 0;
     int last_event_type = 0;
-    tiny::Object *last_owner = nullptr;
-    void *last_data = nullptr;
+    tiny::Object* last_owner = nullptr;
+    void* last_data = nullptr;
 };
 
 static XEvent make_event(int type)
@@ -55,7 +59,8 @@ TEST(Handlers, set_and_unset)
     Receiver r;
 
     handlers.set_handler(KeyPress, 42, &r, r.event_slot(), nullptr);
-    EXPECT_EQ(handlers.count(std::make_pair<uint16_t, ::Window>(KeyPress, 42)), 1u);
+    EXPECT_EQ(handlers.count(std::make_pair<uint16_t, ::Window>(KeyPress, 42)),
+              1u);
 
     handlers.unset_handler(KeyPress, 42);
     EXPECT_TRUE(handlers.empty());
@@ -116,7 +121,7 @@ TEST(SignalTest, unconnected_signal_is_false_and_noop)
     Receiver owner;
 
     EXPECT_FALSE(signal);
-    signal(&owner, make_event(ButtonPress));  // must not crash
+    signal(&owner, make_event(ButtonPress)); // must not crash
 }
 
 TEST(SignalTest, connected_signal_calls_method)
@@ -195,9 +200,9 @@ TEST(ObjectTest, destructor_disconnects_all_windows)
 
 TEST(ObjectTest, delete_through_base_pointer_disconnects_windows)
 {
-    Receiver *r = new Receiver;
+    Receiver* r = new Receiver;
     r->connect_window(KeyPress, 1004, r->event_slot());
-    tiny::Object *base = r;
+    tiny::Object* base = r;
 
     delete base;
 
@@ -206,7 +211,7 @@ TEST(ObjectTest, delete_through_base_pointer_disconnects_windows)
 
 TEST(ObjectTest, plain_object_can_be_deleted)
 {
-    tiny::Object *o = new tiny::Object;
+    tiny::Object* o = new tiny::Object;
 
     delete o;
 }

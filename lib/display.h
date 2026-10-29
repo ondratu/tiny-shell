@@ -6,14 +6,13 @@ namespace tiny {
 
 class Display {
   public:
-    Display(::Display *display);
+    Display(::Display* display);
 
     ~Display();
 
-    static void init(const char *display=nullptr);
+    static void init(const char* display = nullptr);
 
-    inline operator ::Display* () const
-    { return display; }
+    inline operator ::Display*() const { return display; }
 
     static const constexpr long _NET_WM_STATE_REMOVE = 0;
     static const constexpr long _NET_WM_STATE_ADD = 1;
@@ -69,10 +68,9 @@ class Display {
     const Atom _NET_WM_STATE_FOCUSED;
 
   private:
-    ::Display * display;
+    ::Display* display;
 };
-
 
 Display& get_display();
 
-}
+} // namespace tiny

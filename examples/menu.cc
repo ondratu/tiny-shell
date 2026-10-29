@@ -3,16 +3,17 @@
 #include "x_util.h"
 
 namespace tiny {
-    extern Handlers handlers;
+extern Handlers handlers;
 }
 
 bool keep_running;
 
-class Demo: public tiny::Box {
+class Demo : public tiny::Box {
   public:
-    Demo(): tiny::Box(tiny::Box::Type::Horizontal, 300, 30),
-            main_button(100, 28, "Menu"),
-            menu(150, 300)
+    Demo():
+        tiny::Box(tiny::Box::Type::Horizontal, 300, 30),
+        main_button(100, 28, "Menu"),
+        menu(150, 300)
     {
         realize(XDefaultRootWindow(display), 0, 0);
 
@@ -20,14 +21,13 @@ class Demo: public tiny::Box {
         push_start(&main_button);
         main_button.set_popover(&menu);
 
-
-        for (int i=0; i < 8; ++i) {
+        for (int i = 0; i < 8; ++i) {
             auto item = std::shared_ptr<tiny::LabelButton>(
                     new tiny::LabelButton(148, 28, "Menu Item"));
             btns.push_back(item);
         }
 
-        for (auto it: btns) {
+        for (auto it : btns) {
             menu.push_start(it.get());
         }
 
@@ -35,7 +35,8 @@ class Demo: public tiny::Box {
         map_all();
     }
 
-    void set_events(long mask = 0) override {
+    void set_events(long mask = 0) override
+    {
         tiny::Box::set_events(mask);
 
         Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
@@ -45,17 +46,18 @@ class Demo: public tiny::Box {
                 static_cast<tiny::event_signal_t>(&Demo::on_client_message));
     }
 
-    void on_client_message(const XEvent &e, void *)
+    void on_client_message(const XEvent& e, void*)
     {
         if (e.xclient.message_type == XInternAtom(display, "WM_PROTOCOLS", 1) &&
-            static_cast<Atom>(e.xclient.data.l[0]) == XInternAtom(display, "WM_DELETE_WINDOW", 1))
-        {
+            static_cast<Atom>(e.xclient.data.l[0]) ==
+                    XInternAtom(display, "WM_DELETE_WINDOW", 1)) {
             printf("This is it!\n");
             keep_running = false;
         }
     }
 
-    void main_loop(){
+    void main_loop()
+    {
         keep_running = true;
 
         XEvent event;
@@ -64,7 +66,7 @@ class Demo: public tiny::Box {
             auto signal_id = std::make_pair(event.type, event.xany.window);
 
             // call manager handlers first
-            if (tiny::handlers.count(signal_id)){
+            if (tiny::handlers.count(signal_id)) {
                 tiny::handlers.call_hanlder(signal_id, event);
                 continue;
             }
@@ -78,7 +80,7 @@ class Demo: public tiny::Box {
     std::list<std::shared_ptr<tiny::LabelButton>> btns;
 };
 
-int main (int, char *[])
+int main(int, char*[])
 {
     tiny::Display::init();
     tiny::theme.init();

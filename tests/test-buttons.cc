@@ -13,19 +13,21 @@ extern Handlers handlers;
 }
 
 // Counts the signals of a button.
-class Recorder: public tiny::Object {
+class Recorder : public tiny::Object {
   public:
-    void on_signal(tiny::Object *owner, const XEvent &, void *)
+    void on_signal(tiny::Object* owner, const XEvent&, void*)
     {
         ++calls;
         last_owner = owner;
     }
 
     tiny::object_signal_t slot()
-    { return static_cast<tiny::object_signal_t>(&Recorder::on_signal); }
+    {
+        return static_cast<tiny::object_signal_t>(&Recorder::on_signal);
+    }
 
     int calls = 0;
-    tiny::Object *last_owner = nullptr;
+    tiny::Object* last_owner = nullptr;
 };
 
 static XEvent make_event(int type)
@@ -35,12 +37,11 @@ static XEvent make_event(int type)
     return e;
 }
 
-class ButtonTest: public ::testing::Test {
+class ButtonTest : public ::testing::Test {
   protected:
-    ::Window root() const
-    { return XDefaultRootWindow(tiny::get_display()); }
+    ::Window root() const { return XDefaultRootWindow(tiny::get_display()); }
 
-    void send(const tiny::Widget &w, int type)
+    void send(const tiny::Widget& w, int type)
     {
         tiny::handlers.call_hanlder({type, w.get_window()}, make_event(type));
     }
@@ -55,25 +56,26 @@ class ButtonTest: public ::testing::Test {
         tiny::theme.widget = with_font;
     }
 
-    void TearDown() override
-    { tiny::theme.widget = original; }
+    void TearDown() override { tiny::theme.widget = original; }
 
-    uint32_t pixel(const tiny::Widget &w, int x, int y)
+    uint32_t pixel(const tiny::Widget& w, int x, int y)
     {
         XSync(tiny::get_display(), False);
-        XImage *img = XGetImage(tiny::get_display(), w.get_window(), x, y, 1,
-                1, AllPlanes, ZPixmap);
+        XImage* img = XGetImage(tiny::get_display(), w.get_window(), x, y, 1, 1,
+                                AllPlanes, ZPixmap);
         uint32_t px = static_cast<uint32_t>(XGetPixel(img, 0, 0));
         XDestroyImage(img);
         return px;
     }
 
     // true when anything but the background color is drawn
-    bool has_text(const tiny::Widget &w, uint32_t bg)
+    bool has_text(const tiny::Widget& w, uint32_t bg)
     {
         XSync(tiny::get_display(), False);
-        XImage *img = XGetImage(tiny::get_display(), w.get_window(), 0, 0,
-                tiny::x_uint(w.get_width()), tiny::x_uint(w.get_height()), AllPlanes, ZPixmap);
+        XImage* img =
+                XGetImage(tiny::get_display(), w.get_window(), 0, 0,
+                          tiny::x_uint(w.get_width()),
+                          tiny::x_uint(w.get_height()), AllPlanes, ZPixmap);
         bool found = false;
         for (int y = 0; y < w.get_height() && !found; ++y) {
             for (int x = 0; x < w.get_width() && !found; ++x) {
@@ -131,7 +133,7 @@ TEST_F(ButtonTest, click_without_connected_signal_is_ignored)
     b.realize(root(), 0, 0);
 
     send(b, EnterNotify);
-    send(b, ButtonRelease);   // must not crash
+    send(b, ButtonRelease); // must not crash
 }
 
 TEST_F(ButtonTest, destructor_disconnects_handlers)
@@ -153,7 +155,7 @@ TEST_F(ButtonTest, destructor_disconnects_handlers)
 
 TEST_F(ButtonTest, delete_unrealized_button_through_base_pointer)
 {
-    tiny::Widget *b = new tiny::Button(50, 20);
+    tiny::Widget* b = new tiny::Button(50, 20);
 
     delete b;
 }
@@ -233,19 +235,19 @@ TEST_F(ButtonTest, label_button_destructor_disconnects_expose)
 
 TEST_F(ButtonTest, delete_label_button_through_base_pointer)
 {
-    tiny::Widget *b = new tiny::LabelButton(100, 28, "x");
+    tiny::Widget* b = new tiny::LabelButton(100, 28, "x");
 
     delete b;
 }
 
 TEST_F(ButtonTest, delete_menu_button_through_base_pointer)
 {
-    tiny::Widget *b = new tiny::MenuButton(100, 28, "x");
+    tiny::Widget* b = new tiny::MenuButton(100, 28, "x");
 
     delete b;
 }
 
-class MenuButtonTest: public ButtonTest {
+class MenuButtonTest : public ButtonTest {
   protected:
     XEvent click_event(int x_root, int y_root, int x, int y)
     {
@@ -257,7 +259,7 @@ class MenuButtonTest: public ButtonTest {
         return e;
     }
 
-    void click(const tiny::Widget &w, const XEvent &e)
+    void click(const tiny::Widget& w, const XEvent& e)
     {
         send(w, EnterNotify);
         tiny::handlers.call_hanlder({ButtonRelease, w.get_window()}, e);
@@ -298,7 +300,7 @@ TEST_F(MenuButtonTest, click_does_not_popup_already_visible_popover)
     XSync(tiny::get_display(), False);
     XWindowAttributes attrs;
     XGetWindowAttributes(tiny::get_display(), popover.get_window(), &attrs);
-    EXPECT_EQ(attrs.x, 320);    // not moved
+    EXPECT_EQ(attrs.x, 320); // not moved
 }
 
 TEST_F(MenuButtonTest, click_without_popover_is_ignored)
@@ -306,5 +308,5 @@ TEST_F(MenuButtonTest, click_without_popover_is_ignored)
     tiny::MenuButton b(100, 28, "Menu");
     b.realize(root(), 0, 0);
 
-    click(b, click_event(310, 205, 10, 5));   // must not crash
+    click(b, click_event(310, 205, 10, 5)); // must not crash
 }

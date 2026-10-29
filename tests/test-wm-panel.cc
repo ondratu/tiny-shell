@@ -52,7 +52,7 @@ TEST(UserMenuTest, logout_click_is_signalled)
     menu.logout.on_click.connect(&recorder, recorder.slot());
     menu.realize(root_window());
 
-    send(menu.logout, EnterNotify);     // a click counts only on hover
+    send(menu.logout, EnterNotify); // a click counts only on hover
     send(menu.logout, ButtonRelease);
 
     EXPECT_EQ(recorder.calls, 1);
@@ -130,13 +130,11 @@ TEST(PanelTest, login_button_click_opens_the_user_menu)
 
 // ---- scaling (TINY_SCALE_FACTOR) ----
 
-class ScaledPanelTest: public ::testing::Test {
+class ScaledPanelTest : public ::testing::Test {
   protected:
-    void SetUp() override
-    { tiny::theme.scale(2); }
+    void SetUp() override { tiny::theme.scale(2); }
 
-    void TearDown() override
-    { tiny::theme.scale(1); }
+    void TearDown() override { tiny::theme.scale(1); }
 };
 
 TEST_F(ScaledPanelTest, user_menu_is_scaled)

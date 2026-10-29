@@ -8,14 +8,14 @@
 namespace {
 
 // Wrapped with the members the tests need to look at.
-class Probe: public wm::Wrapped {
+class Probe : public wm::Wrapped {
   public:
-    using wm::Wrapped::Wrapped;
-    using wm::Wrapped::header;
     using wm::Wrapped::cls_btn;
-    using wm::Wrapped::min_btn;
+    using wm::Wrapped::header;
     using wm::Wrapped::max_btn;
+    using wm::Wrapped::min_btn;
     using wm::Wrapped::shadow;
+    using wm::Wrapped::Wrapped;
 
     // What Wrapped::create does, without the WM_STATE property.
     void setup(::Window root_arg, int x, int y)
@@ -26,41 +26,40 @@ class Probe: public wm::Wrapped {
     }
 };
 
-class WrappedTest: public ::testing::Test {
+class WrappedTest : public ::testing::Test {
   protected:
-    void SetUp() override
-    { client.map(); }
+    void SetUp() override { client.map(); }
 
     // Properties of the client must be set before.
-    Probe *build(unsigned long functions = 0xFFFF)
+    Probe* build(unsigned long functions = 0xFFFF)
     {
         XWindowAttributes a = client.attrs();
-        win = std::make_unique<Probe>(client.window, root_window(),
-                a.width, a.height, functions, 0xFFFF);
+        win = std::make_unique<Probe>(client.window, root_window(), a.width,
+                                      a.height, functions, 0xFFFF);
         win->setup(root_window(), a.x, a.y);
         pump_events();
         return win.get();
     }
 
-    XWindowAttributes frame()
-    { return attributes_of(win->get_window()); }
+    XWindowAttributes frame() { return attributes_of(win->get_window()); }
 
-    XWindowAttributes child()
-    { return client.attrs(); }
+    XWindowAttributes child() { return client.attrs(); }
 
-    XWindowAttributes screen()
-    { return attributes_of(root_window()); }
+    XWindowAttributes screen() { return attributes_of(root_window()); }
 
-    int header_height()  const
-    { return tiny::theme.wm_win_header; }
+    int header_height() const { return tiny::theme.wm_win_header; }
 
     // Click on a button of the header.
-    void click(tiny::Button &button)
-    { button.on_click(&button, make_event(ButtonRelease)); }
+    void click(tiny::Button& button)
+    {
+        button.on_click(&button, make_event(ButtonRelease));
+    }
 
     // Limits resizing: 50x50 .. 800x600
     void resizable()
-    { client.set_size_hints(PMinSize|PMaxSize, 50, 50, 800, 600); }
+    {
+        client.set_size_hints(PMinSize | PMaxSize, 50, 50, 800, 600);
+    }
 
     XEvent pointer(int x_root, int y_root, int type = ButtonPress)
     {
@@ -72,7 +71,7 @@ class WrappedTest: public ::testing::Test {
 
     HeaderFont header_font;
     WidgetFont widget_font;
-    Client client;     // 10,20 200x100
+    Client client; // 10,20 200x100
     std::unique_ptr<Probe> win;
 };
 
@@ -117,7 +116,7 @@ TEST_F(WrappedTest, header_has_three_buttons)
 {
     build();
 
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 4u);   // + title
+    EXPECT_EQ(children_of(win->header.get_window()).size(), 4u); // + title
 }
 
 TEST_F(WrappedTest, window_without_maximize_function_has_no_maximize_button)
@@ -130,18 +129,19 @@ TEST_F(WrappedTest, window_without_maximize_function_has_no_maximize_button)
 TEST_F(WrappedTest, create_sets_wm_state_to_normal)
 {
     XWindowAttributes a = client.attrs();
-    std::unique_ptr<wm::Window> w(wm::Wrapped::create(root_window(),
-                client.window, a, 0xFFFF, 0xFFFF));
-    ::Window frame = static_cast<wm::Wrapped *>(w.get())->get_window();
+    std::unique_ptr<wm::Window> w(wm::Wrapped::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF));
+    ::Window frame = static_cast<wm::Wrapped*>(w.get())->get_window();
     XSync(dsp(), False);
 
     Atom type;
     int format;
     unsigned long count, left;
-    unsigned char *data = nullptr;
+    unsigned char* data = nullptr;
     ASSERT_EQ(XGetWindowProperty(dsp(), frame, dsp().WM_STATE, 0, 2, False,
-                dsp().WM_STATE, &type, &format, &count, &left, &data),
-            Success);
+                                 dsp().WM_STATE, &type, &format, &count, &left,
+                                 &data),
+              Success);
     ASSERT_EQ(count, 2u);
     EXPECT_EQ((reinterpret_cast<long*>(data))[0], NormalState);
     XFree(data);
@@ -164,8 +164,8 @@ TEST_F(WrappedTest, window_without_resize_function_has_no_shadow)
     EXPECT_FALSE(win->is_resizable());
     auto stack = children_of(root_window());
     EXPECT_EQ(stack.back(), win->get_window());
-    EXPECT_EQ(std::find(stack.begin(), stack.end(),
-                win->shadow.get_window()), stack.end());
+    EXPECT_EQ(std::find(stack.begin(), stack.end(), win->shadow.get_window()),
+              stack.end());
 }
 
 // ---- minimize, maximize ----
@@ -286,7 +286,7 @@ TEST_F(WrappedTest, set_focus_raises_the_window)
     other.map();
     XWindowAttributes a = other.attrs();
     Probe second(other.window, root_window(), a.width, a.height, 0xFFFF,
-            0xFFFF);
+                 0xFFFF);
     second.setup(root_window(), a.x, a.y);
     ASSERT_EQ(children_of(root_window()).back(), second.get_window());
 
@@ -303,13 +303,14 @@ TEST_F(WrappedTest, focus_events_enable_and_disable_the_header)
     client.set_title("title");
     build();
     // only the text color differs
-    ASSERT_NE(tiny::theme.wm_header.get_fg(static_cast<uint8_t>(tiny::Style::State::Normal)),
-            tiny::theme.wm_header.get_fg(
-                static_cast<uint8_t>(tiny::Style::State::Disabled)));
+    ASSERT_NE(tiny::theme.wm_header.get_fg(
+                      static_cast<uint8_t>(tiny::Style::State::Normal)),
+              tiny::theme.wm_header.get_fg(
+                      static_cast<uint8_t>(tiny::Style::State::Disabled)));
     auto header_image = [this] {
         send(win->header, Expose);
         return Image(win->header.get_window(), win->header.get_width(),
-                win->header.get_height());
+                     win->header.get_height());
     };
     Image disabled = header_image();
 
@@ -390,7 +391,7 @@ TEST_F(WrappedTest, normal_hints_change_of_a_gone_client_is_survived)
 TEST_F(WrappedTest, dragging_the_title_moves_the_window)
 {
     build();
-    auto *title = win->header.get_title_box();
+    auto* title = win->header.get_title_box();
 
     title->on_drag_begin(title, pointer(100, 100));
     title->on_drag_motion(title, pointer(130, 140, MotionNotify));
@@ -403,7 +404,7 @@ TEST_F(WrappedTest, dragging_the_title_moves_the_window)
 TEST_F(WrappedTest, dragging_the_title_moves_the_shadow_too)
 {
     build();
-    auto *title = win->header.get_title_box();
+    auto* title = win->header.get_title_box();
     int before = attributes_of(win->shadow).x;
 
     title->on_drag_begin(title, pointer(100, 100));
@@ -416,7 +417,7 @@ TEST_F(WrappedTest, dragging_a_maximized_window_restores_it)
 {
     build();
     win->maximize();
-    auto *title = win->header.get_title_box();
+    auto* title = win->header.get_title_box();
     XEvent e = pointer(500, 10);
     e.xmotion.x = 500;
     e.xmotion.y = 10;
@@ -434,12 +435,13 @@ TEST_F(WrappedTest, resizing_the_right_bottom_corner_grows_the_window)
     resizable();
     build();
     using tiny::Position;
-    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right | Position::Bottom));
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(350, 330, MotionNotify), mask);
 
-    pump_events();      // ConfigureNotify updates the widget sizes
+    pump_events(); // ConfigureNotify updates the widget sizes
     auto f = frame();
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
@@ -455,7 +457,8 @@ TEST_F(WrappedTest, resizing_the_left_top_corner_moves_the_window)
     resizable();
     build();
     using tiny::Position;
-    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Left | Position::Top));
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Left | Position::Top));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(280, 270, MotionNotify), mask);
@@ -472,16 +475,17 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
     resizable();
     build();
     using tiny::Position;
-    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right | Position::Bottom));
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(5000, 5000, MotionNotify),
-            mask);
+                               mask);
     EXPECT_EQ(frame().width, 800);
     EXPECT_EQ(frame().height, 600);
 
     win->on_move_resize_motion(nullptr, pointer(-5000, -5000, MotionNotify),
-            mask);
+                               mask);
     EXPECT_GE(frame().width, static_cast<int>(tiny::theme.wm_win_min_width));
     EXPECT_GE(frame().height, static_cast<int>(tiny::theme.wm_win_min_height));
 }
@@ -489,7 +493,7 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
 TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
 {
     XSizeHints hints = {};
-    hints.flags = PMinSize|PMaxSize|PResizeInc;
+    hints.flags = PMinSize | PMaxSize | PResizeInc;
     hints.min_width = hints.min_height = 50;
     hints.max_width = hints.max_height = 800;
     hints.width_inc = 10;
@@ -498,7 +502,7 @@ TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
     client.sync();
     build();
     using tiny::Position;
-    void *mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right));
+    void* mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right));
 
     win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
     win->on_move_resize_motion(nullptr, pointer(391, 300, MotionNotify), mask);
@@ -528,13 +532,13 @@ TEST_F(WrappedTest, destructor_disconnects_handlers_and_destroys_the_frame)
 
     win.reset();
 
-    for (int type: {FocusIn, FocusOut, PropertyNotify}) {
+    for (int type : {FocusIn, FocusOut, PropertyNotify}) {
         EXPECT_FALSE(tiny::handlers.count({type, kid})) << type;
     }
     XErrors errors;
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp(), f, &attrs);
-    EXPECT_EQ(errors.errors(), 1);     // BadWindow
+    EXPECT_EQ(errors.errors(), 1); // BadWindow
 }
 
 TEST_F(WrappedTest, destructor_gives_the_client_back_to_the_root)
@@ -545,8 +549,8 @@ TEST_F(WrappedTest, destructor_gives_the_client_back_to_the_root)
 
     ::Window root, parent, *kids = nullptr;
     unsigned int count;
-    ASSERT_TRUE(XQueryTree(dsp(), client.window, &root, &parent, &kids,
-                &count));
+    ASSERT_TRUE(
+            XQueryTree(dsp(), client.window, &root, &parent, &kids, &count));
     if (kids) {
         XFree(kids);
     }

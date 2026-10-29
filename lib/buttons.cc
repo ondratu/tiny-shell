@@ -5,8 +5,7 @@
 
 namespace tiny {
 
-Button::Button(int w, int h):
-    Widget(w, h)
+Button::Button(int w, int h): Widget(w, h)
 {
     name = "button";
 }
@@ -23,43 +22,38 @@ Button::~Button()
 
 void Button::set_events(long mask)
 {
-    Widget::set_events(EnterWindowMask|LeaveWindowMask|mask);
+    Widget::set_events(EnterWindowMask | LeaveWindowMask | mask);
 
-    XGrabButton(display, Button1, AnyModifier, window, false,
-            ButtonReleaseMask,
-            GrabModeAsync, GrabModeAsync,
-            None, None);
+    XGrabButton(display, Button1, AnyModifier, window, false, ButtonReleaseMask,
+                GrabModeAsync, GrabModeAsync, None, None);
 
-    connect(EnterNotify,
-            static_cast<event_signal_t>(&Button::on_enter_notify));
-    connect(LeaveNotify,
-            static_cast<event_signal_t>(&Button::on_leave_notify));
+    connect(EnterNotify, static_cast<event_signal_t>(&Button::on_enter_notify));
+    connect(LeaveNotify, static_cast<event_signal_t>(&Button::on_leave_notify));
     connect(ButtonRelease,
             static_cast<event_signal_t>(&Button::on_button_release));
 }
 
-void Button::on_enter_notify(const XEvent &e, void* data){
+void Button::on_enter_notify(const XEvent& e, void* data)
+{
     is_hover = true;
     on_enter(this, e, data);
 }
 
-void Button::on_leave_notify(const XEvent &e, void* data){
+void Button::on_leave_notify(const XEvent& e, void* data)
+{
     is_hover = false;
     on_leave(this, e, data);
 }
 
-void Button::on_button_release(const XEvent &e, void *){
-    if (on_click && is_hover){
+void Button::on_button_release(const XEvent& e, void*)
+{
+    if (on_click && is_hover) {
         on_click(this, e);
     }
 }
 
-
-
-LabelButton::LabelButton(int w, int h,
-        const std::string &text_arg):
-    Button(w, h),
-    text(text_arg)
+LabelButton::LabelButton(int w, int h, const std::string& text_arg):
+    Button(w, h), text(text_arg)
 {
     name = "labelbutton";
 }
@@ -73,10 +67,9 @@ LabelButton::~LabelButton()
 
 void LabelButton::set_events(long mask)
 {
-    Button::set_events(ExposureMask|mask);
+    Button::set_events(ExposureMask | mask);
 
-    connect(Expose,
-            static_cast<event_signal_t>(&LabelButton::on_expose));
+    connect(Expose, static_cast<event_signal_t>(&LabelButton::on_expose));
 }
 
 void LabelButton::realize(Window parent_arg, int x, int y)
@@ -84,33 +77,33 @@ void LabelButton::realize(Window parent_arg, int x, int y)
     Button::realize(parent_arg, x, y);
 }
 
-void LabelButton::set_text(const std::string &text_arg)
+void LabelButton::set_text(const std::string& text_arg)
 {
     this->text = text_arg;
-    if (is_maped){
+    if (is_maped) {
         on_expose(XEvent(), nullptr);
     }
 }
 
-void LabelButton::on_enter_notify(const XEvent &e, void * data)
+void LabelButton::on_enter_notify(const XEvent& e, void* data)
 {
     Button::on_enter_notify(e, data);
     on_expose(e, nullptr);
 }
 
-void LabelButton::on_leave_notify(const XEvent &e, void * data)
+void LabelButton::on_leave_notify(const XEvent& e, void* data)
 {
     Button::on_leave_notify(e, data);
     on_expose(e, nullptr);
 }
 
-void LabelButton::on_expose(const XEvent &, void *)
+void LabelButton::on_expose(const XEvent&, void*)
 {
     XftColor color;
-    XftDraw *draw;
+    XftDraw* draw;
     XGlyphInfo extents;
     const int screen = 0; // XXX
-    Visual *visual = XDefaultVisual(display, screen);
+    Visual* visual = XDefaultVisual(display, screen);
     Colormap colormap = XDefaultColormap(display, screen);
 
     uint8_t state = get_theme_state();
@@ -120,50 +113,48 @@ void LabelButton::on_expose(const XEvent &, void *)
     draw = XftDrawCreate(display, window, visual, colormap);
 
     XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
-            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()),
-            &extents);
+                       reinterpret_cast<const FcChar8*>(text.c_str()),
+                       static_cast<int>(text.size()), &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (width-extents.width)/2;
-    int y = (height+extents.height)/2;
+    int x = (width - extents.width) / 2;
+    int y = (height + extents.height) / 2;
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
-            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()));
+                      reinterpret_cast<const FcChar8*>(text.c_str()),
+                      static_cast<int>(text.size()));
 
     XftDrawDestroy(draw);
     XftColorFree(display, visual, colormap, &color);
 }
 
-
-MenuButton::MenuButton(int w, int h, const std::string &text_arg):
+MenuButton::MenuButton(int w, int h, const std::string& text_arg):
     LabelButton(w, h, text_arg)
 {
     name = "menubutton";
 }
 
-MenuButton::~MenuButton()
-{}
+MenuButton::~MenuButton() {}
 
 void MenuButton::set_events(long mask)
 {
-    on_click.connect(this,
-            static_cast<object_signal_t>(&MenuButton::do_popup));
+    on_click.connect(this, static_cast<object_signal_t>(&MenuButton::do_popup));
     LabelButton::set_events(mask);
 }
 
-void MenuButton::set_popover(Popover *popover_arg)
+void MenuButton::set_popover(Popover* popover_arg)
 {
     this->popover = popover_arg;
 }
 
-void MenuButton::do_popup(Object *, const XEvent &e, void *)
+void MenuButton::do_popup(Object*, const XEvent& e, void*)
 {
-    if (popover && !popover->get_maped()){
-        int x = e.xbutton.x_root - e.xbutton.x + width/2;
+    if (popover && !popover->get_maped()) {
+        int x = e.xbutton.x_root - e.xbutton.x + width / 2;
         int y = e.xbutton.y_root - e.xbutton.y + height;
-        popover->popup(x, y);       // center x, y under Button
+        popover->popup(x, y); // center x, y under Button
     }
 }
 

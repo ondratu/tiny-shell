@@ -8,7 +8,7 @@ namespace tiny {
 
 std::shared_ptr<Display> display(nullptr);
 
-Display::Display(::Display *display_arg):
+Display::Display(::Display* display_arg):
     WM_TAKE_FOCUS(XInternAtom(display_arg, "WM_TAKE_FOCUS", 0)),
     WM_DELETE_WINDOW(XInternAtom(display_arg, "WM_DELETE_WINDOW", 0)),
     WM_HINTS(XInternAtom(display_arg, "WM_HINTS", 0)),
@@ -25,39 +25,55 @@ Display::Display(::Display *display_arg):
     _NET_WM_VISIBLE_NAME(XInternAtom(display_arg, "_NET_WM_VISIBLE_NAME", 0)),
     _NET_WM_ICON(XInternAtom(display_arg, "_NET_WM_ICON", 0)),
     _NET_WM_ICON_NAME(XInternAtom(display_arg, "_NET_WM_ICON_NAME", 0)),
-    _NET_WM_VISIBLE_ICON_NAME(XInternAtom(display_arg, "_NET_WM_VISIBLE_ICON_NAME", 0)),
+    _NET_WM_VISIBLE_ICON_NAME(
+            XInternAtom(display_arg, "_NET_WM_VISIBLE_ICON_NAME", 0)),
     _NET_WM_DESKTOP(XInternAtom(display_arg, "_NET_WM_DESKTOP", 0)),
     _NET_WM_WINDOW_TYPE(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE", 0)),
-    _NET_WM_WINDOW_TYPE_DESKTOP(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DESKTOP", 0)),
-    _NET_WM_WINDOW_TYPE_DOCK(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DOCK", 0)),
-    _NET_WM_WINDOW_TYPE_TOOLBAR(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_TOOLBAR", 0)),
-    _NET_WM_WINDOW_TYPE_MENU(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_MENU", 0)),
-    _NET_WM_WINDOW_TYPE_UTILITY(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_UTILITY", 0)),
-    _NET_WM_WINDOW_TYPE_SPLASH(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_SPLASH", 0)),
-    _NET_WM_WINDOW_TYPE_DIALOG(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DIALOG", 0)),
-    _NET_WM_WINDOW_TYPE_NORMAL(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_NORMAL", 0)),
+    _NET_WM_WINDOW_TYPE_DESKTOP(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DESKTOP", 0)),
+    _NET_WM_WINDOW_TYPE_DOCK(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DOCK", 0)),
+    _NET_WM_WINDOW_TYPE_TOOLBAR(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_TOOLBAR", 0)),
+    _NET_WM_WINDOW_TYPE_MENU(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_MENU", 0)),
+    _NET_WM_WINDOW_TYPE_UTILITY(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_UTILITY", 0)),
+    _NET_WM_WINDOW_TYPE_SPLASH(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_SPLASH", 0)),
+    _NET_WM_WINDOW_TYPE_DIALOG(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DIALOG", 0)),
+    _NET_WM_WINDOW_TYPE_NORMAL(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_NORMAL", 0)),
     _NET_WM_STATE(XInternAtom(display_arg, "_NET_WM_STATE", 0)),
     _NET_WM_STATE_MODAL(XInternAtom(display_arg, "_NET_WM_STATE_MODAL", 0)),
     _NET_WM_STATE_STICKY(XInternAtom(display_arg, "_NET_WM_STATE_STICKY", 0)),
-    _NET_WM_STATE_MAXIMIZED_VERT(XInternAtom(display_arg, "_NET_WM_STATE_MAXIMIZED_VERT", 0)),
-    _NET_WM_STATE_MAXIMIZED_HORZ(XInternAtom(display_arg, "_NET_WM_STATE_MAXIMIZED_HORZ", 0)),
+    _NET_WM_STATE_MAXIMIZED_VERT(
+            XInternAtom(display_arg, "_NET_WM_STATE_MAXIMIZED_VERT", 0)),
+    _NET_WM_STATE_MAXIMIZED_HORZ(
+            XInternAtom(display_arg, "_NET_WM_STATE_MAXIMIZED_HORZ", 0)),
     _NET_WM_STATE_SHADED(XInternAtom(display_arg, "_NET_WM_STATE_SHADED", 0)),
-    _NET_WM_STATE_SKIP_TASKBAR(XInternAtom(display_arg, "_NET_WM_STATE_SKIP_TASKBAR", 0)),
-    _NET_WM_STATE_SKIP_PAGER(XInternAtom(display_arg, "_NET_WM_STATE_SKIP_PAGER", 0)),
+    _NET_WM_STATE_SKIP_TASKBAR(
+            XInternAtom(display_arg, "_NET_WM_STATE_SKIP_TASKBAR", 0)),
+    _NET_WM_STATE_SKIP_PAGER(
+            XInternAtom(display_arg, "_NET_WM_STATE_SKIP_PAGER", 0)),
     _NET_WM_STATE_HIDDEN(XInternAtom(display_arg, "_NET_WM_STATE_HIDDEN", 0)),
-    _NET_WM_STATE_FULLSCREEN(XInternAtom(display_arg, "_NET_WM_STATE_FULLSCREEN", 0)),
+    _NET_WM_STATE_FULLSCREEN(
+            XInternAtom(display_arg, "_NET_WM_STATE_FULLSCREEN", 0)),
     _NET_WM_STATE_ABOVE(XInternAtom(display_arg, "_NET_WM_STATE_ABOVE", 0)),
     _NET_WM_STATE_BELOW(XInternAtom(display_arg, "_NET_WM_STATE_BELOW", 0)),
-    _NET_WM_STATE_DEMANDS_ATTENTION(XInternAtom(display_arg, "_NET_WM_STATE_DEMANDS_ATTENTION", 0)),
+    _NET_WM_STATE_DEMANDS_ATTENTION(
+            XInternAtom(display_arg, "_NET_WM_STATE_DEMANDS_ATTENTION", 0)),
     _NET_WM_STATE_FOCUSED(XInternAtom(display_arg, "_NET_WM_STATE_FOCUSED", 0)),
     display(display_arg)
 {}
 
-Display::~Display(){
+Display::~Display()
+{
     XCloseDisplay(display);
 }
 
-void Display::init(const char *display_name)
+void Display::init(const char* display_name)
 {
     ::Display* dsp = XOpenDisplay(display_name);
     if (dsp == nullptr) {
@@ -67,10 +83,9 @@ void Display::init(const char *display_name)
     tiny::display = std::shared_ptr<Display>(new Display(dsp));
 }
 
-
-
-Display& get_display(){
-    if (display.get() == nullptr){
+Display& get_display()
+{
+    if (display.get() == nullptr) {
         error("Display is not initialized!");
         abort();
     }

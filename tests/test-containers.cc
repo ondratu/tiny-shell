@@ -14,10 +14,12 @@ namespace tiny {
 extern Handlers handlers;
 }
 
-class BoxTest: public ::testing::Test {
+class BoxTest : public ::testing::Test {
   protected:
-    void realize(tiny::Box &box)
-    { box.realize(XDefaultRootWindow(tiny::get_display()), 0, 0); }
+    void realize(tiny::Box& box)
+    {
+        box.realize(XDefaultRootWindow(tiny::get_display()), 0, 0);
+    }
 };
 
 TEST_F(BoxTest, initial_offsets_horizontal)
@@ -118,35 +120,40 @@ TEST_F(BoxTest, resize_horizontal_shifts_end_offset)
 
 TEST(PositionTest, cursor_shape_for_edges)
 {
-    EXPECT_EQ(tiny::Position::get_cursor_shape(tiny::Position::Top), static_cast<uint32_t>(XC_top_side));
-    EXPECT_EQ(tiny::Position::get_cursor_shape(0), static_cast<uint32_t>(XC_arrow));
+    EXPECT_EQ(tiny::Position::get_cursor_shape(tiny::Position::Top),
+              static_cast<uint32_t>(XC_top_side));
+    EXPECT_EQ(tiny::Position::get_cursor_shape(0),
+              static_cast<uint32_t>(XC_arrow));
 }
 
 TEST(PositionTest, cursor_shape_for_all_sides_and_corners)
 {
     using tiny::Position;
-    struct { uint16_t mask; uint32_t shape; } cases[] = {
-        {Position::Top, XC_top_side},
-        {Position::Right, XC_right_side},
-        {Position::Bottom, XC_bottom_side},
-        {Position::Left, XC_left_side},
-        {Position::Top|Position::Right, XC_top_right_corner},
-        {Position::Bottom|Position::Right, XC_bottom_right_corner},
-        {Position::Top|Position::Left, XC_top_left_corner},
-        {Position::Bottom|Position::Left, XC_bottom_left_corner},
-        {Position::Left|Position::Right, XC_arrow},     // not implemented yet
-        {Position::Top|Position::Bottom, XC_arrow},     // not implemented yet
+    struct {
+        uint16_t mask;
+        uint32_t shape;
+    } cases[] = {
+            {Position::Top, XC_top_side},
+            {Position::Right, XC_right_side},
+            {Position::Bottom, XC_bottom_side},
+            {Position::Left, XC_left_side},
+            {Position::Top | Position::Right, XC_top_right_corner},
+            {Position::Bottom | Position::Right, XC_bottom_right_corner},
+            {Position::Top | Position::Left, XC_top_left_corner},
+            {Position::Bottom | Position::Left, XC_bottom_left_corner},
+            {Position::Left | Position::Right, XC_arrow}, // not implemented yet
+            {Position::Top | Position::Bottom, XC_arrow}, // not implemented yet
     };
 
-    for (auto c: cases) {
+    for (auto c : cases) {
         EXPECT_EQ(Position::get_cursor_shape(c.mask), c.shape)
-            << "mask " << c.mask;
+                << "mask " << c.mask;
     }
 }
 
 // ---- Container ----
 
-static XWindowAttributes attributes_of(tiny::Widget &w)
+static XWindowAttributes attributes_of(tiny::Widget& w)
 {
     XSync(tiny::get_display(), False);
     XWindowAttributes attrs;
@@ -154,10 +161,9 @@ static XWindowAttributes attributes_of(tiny::Widget &w)
     return attrs;
 }
 
-class ContainerTest: public ::testing::Test {
+class ContainerTest : public ::testing::Test {
   protected:
-    ::Window root() const
-    { return XDefaultRootWindow(tiny::get_display()); }
+    ::Window root() const { return XDefaultRootWindow(tiny::get_display()); }
 };
 
 TEST_F(ContainerTest, add_realizes_child_inside_container)
@@ -231,7 +237,7 @@ TEST_F(ContainerTest, removed_child_is_not_mapped_by_map_all)
 
 TEST_F(ContainerTest, delete_through_base_pointer)
 {
-    tiny::Widget *c = new tiny::Container(200, 100);
+    tiny::Widget* c = new tiny::Container(200, 100);
     c->realize(root(), 0, 0);
 
     delete c;
@@ -346,19 +352,18 @@ TEST_F(BoxTest, remove_from_vertical_box_is_not_implemented)
 
 TEST_F(BoxTest, delete_through_base_pointer)
 {
-    tiny::Container *box = new tiny::Box(tiny::Box::Type::Vertical, 10, 10);
+    tiny::Container* box = new tiny::Box(tiny::Box::Type::Vertical, 10, 10);
 
     delete box;
 }
 
 // ---- Popover ----
 
-class PopoverTest: public ::testing::Test {
+class PopoverTest : public ::testing::Test {
   protected:
-    ::Window root() const
-    { return XDefaultRootWindow(tiny::get_display()); }
+    ::Window root() const { return XDefaultRootWindow(tiny::get_display()); }
 
-    void focus_out(tiny::Popover &p)
+    void focus_out(tiny::Popover& p)
     {
         XEvent e = {};
         e.type = FocusOut;
@@ -436,7 +441,7 @@ TEST_F(PopoverTest, popup_right_after_focus_out_is_ignored)
     p.popup(300, 50);
     focus_out(p);
 
-    p.popup(300, 50);   // click on the button that just closed the popover
+    p.popup(300, 50); // click on the button that just closed the popover
 
     EXPECT_FALSE(p.get_maped());
 }
@@ -469,7 +474,7 @@ TEST_F(PopoverTest, destructor_disconnects_focus_handler)
 
 TEST_F(PopoverTest, delete_through_base_pointer)
 {
-    tiny::Box *p = new tiny::Popover(200, 100);
+    tiny::Box* p = new tiny::Popover(200, 100);
     p->realize(root(), 0, 0);
 
     delete p;

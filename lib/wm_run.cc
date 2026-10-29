@@ -6,8 +6,7 @@
 namespace wm {
 
 Entry::Entry(int w, int h):
-    tiny::Widget(Widget::Type::Normal, w, h),
-    xim(0), xic(0)
+    tiny::Widget(Widget::Type::Normal, w, h), xim(0), xic(0)
 {
     name = "entry";
 }
@@ -31,20 +30,17 @@ void Entry::realize(::Window parent_arg, int x, int y)
 
     xim = XOpenIM(display, NULL, NULL, NULL);
     TINY_LOG("xim: %p", static_cast<void*>(xim));
-    xic = XCreateIC(xim,
-                    XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                    XNClientWindow, window,
-                    XNFocusWindow, window,
-                    NULL);
+    xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                    XNClientWindow, window, XNFocusWindow, window, NULL);
     TINY_LOG("xic: %p", static_cast<void*>(xic));
 }
 
 void Entry::set_events(long mask)
 {
-    tiny::Widget::set_events(mask|ExposureMask|KeyPressMask|KeyReleaseMask|FocusChangeMask);
+    tiny::Widget::set_events(mask | ExposureMask | KeyPressMask |
+                             KeyReleaseMask | FocusChangeMask);
 
-    connect(Expose,
-            static_cast<tiny::event_signal_t>(&Entry::on_expose));
+    connect(Expose, static_cast<tiny::event_signal_t>(&Entry::on_expose));
 
     connect(KeyPress,
             static_cast<tiny::event_signal_t>(&Entry::on_key_release));
@@ -52,10 +48,8 @@ void Entry::set_events(long mask)
     //connect(KeyRelease,
     //        static_cast<tiny::event_signal_t>(&Entry::on_key_release));
 
-    connect(FocusIn,
-            static_cast<tiny::event_signal_t>(&Entry::on_focus_in));
-    connect(FocusOut,
-            static_cast<tiny::event_signal_t>(&Entry::on_focus_out));
+    connect(FocusIn, static_cast<tiny::event_signal_t>(&Entry::on_focus_in));
+    connect(FocusOut, static_cast<tiny::event_signal_t>(&Entry::on_focus_out));
 }
 
 void Entry::on_key_release(const XEvent& e, void*)
@@ -69,8 +63,8 @@ void Entry::on_key_release(const XEvent& e, void*)
     //                        buf, 16, &keysym, &comp);
     //int len = XmbLookupString(xic¸, const_cast<XKeyEvent*>(&e.xkey),
     //                          buf, 16, &keysym, &state);
-    int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey),
-                                buf, sizeof(buf) - 1, &keysym, &state);
+    int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
+                                sizeof(buf) - 1, &keysym, &state);
     TINY_LOG("state: %d", state);
     if (state == XBufferOverflow) {
         TINY_LOG("\t XBufferOverflow");
@@ -90,8 +84,8 @@ void Entry::on_key_release(const XEvent& e, void*)
 
     TINY_LOG("read string len: %d: %s", len, buf);
     if (e.xkey.keycode == XKeysymToKeycode(display, XK_BackSpace)) {
-        if (text.size()){
-            text.erase(text.size()-1);
+        if (text.size()) {
+            text.erase(text.size() - 1);
         } else {
             return;
         }
@@ -101,7 +95,7 @@ void Entry::on_key_release(const XEvent& e, void*)
         // TODO: suggest like command line
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Return)) {
         TINY_LOG("run %s", text.c_str());
-        if (!fork()){
+        if (!fork()) {
             //int ret = putenv(XDisplayString(display));
             //assert(ret != -1);
             std::string cmd = "exec ";
@@ -117,7 +111,7 @@ void Entry::on_key_release(const XEvent& e, void*)
         on_exit(this, e);
         return;
     } else if (len > 0) {
-        buf[len]=0;
+        buf[len] = 0;
         text += buf;
     }
 
@@ -127,40 +121,42 @@ void Entry::on_key_release(const XEvent& e, void*)
 void Entry::on_expose(const XEvent&, void*)
 {
     XftColor color;
-    XftDraw *draw;
+    XftDraw* draw;
     XGlyphInfo extents;
     const int screen = 0; // XXX
-    Visual *visual = XDefaultVisual(display, screen);
+    Visual* visual = XDefaultVisual(display, screen);
     Colormap colormap = XDefaultColormap(display, screen);
 
     XftColorAllocName(display, visual, colormap,
-                tiny::theme.widget.get_xft_fg(get_theme_state()).data(), &color);
+                      tiny::theme.widget.get_xft_fg(get_theme_state()).data(),
+                      &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
     XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
-            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()),
-            &extents);
+                       reinterpret_cast<const FcChar8*>(text.c_str()),
+                       static_cast<int>(text.size()), &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (width-extents.width)/2;
-    int y = (height+extents.height)/2;
+    int x = (width - extents.width) / 2;
+    int y = (height + extents.height) / 2;
 
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
-            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()));
+                      reinterpret_cast<const FcChar8*>(text.c_str()),
+                      static_cast<int>(text.size()));
 
     XftDrawDestroy(draw);
     XftColorFree(display, visual, colormap, &color);
 }
 
-void Entry::on_focus_in(const XEvent &, void*)
+void Entry::on_focus_in(const XEvent&, void*)
 {
     TINY_LOG("XSetICFocus...");
     XSetICFocus(xic);
 }
 
-void Entry::on_focus_out(const XEvent &, void*)
+void Entry::on_focus_out(const XEvent&, void*)
 {
     TINY_LOG("XUnsetICFocus...");
     XUnsetICFocus(xic);
@@ -176,25 +172,24 @@ void Entry::clear()
     text.clear();
 }
 
-
 RunDialog::RunDialog():
-    tiny::Popover(320, static_cast<int>(tiny::theme.wm_panel*1.5)),
+    tiny::Popover(320, static_cast<int>(tiny::theme.wm_panel * 1.5)),
     entry(310, tiny::theme.wm_win_header)
 {
     name = "run-dialog";
-    entry.on_exit.connect(this,
-            static_cast<tiny::object_signal_t>(&RunDialog::popover));
+    entry.on_exit.connect(
+            this, static_cast<tiny::object_signal_t>(&RunDialog::popover));
 }
 
-RunDialog::~RunDialog()
-{}
+RunDialog::~RunDialog() {}
 
 void RunDialog::realize(::Window root, int, int)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, root, &attrs);
 
-    tiny::Popover::realize(root, attrs.width/2-width/2, attrs.height/2-height/2);
+    tiny::Popover::realize(root, attrs.width / 2 - width / 2,
+                           attrs.height / 2 - height / 2);
 
     push_start(&entry);
 }
@@ -206,7 +201,7 @@ void RunDialog::popup()
     entry.set_focus();
 }
 
-void RunDialog::popover(Object *, const XEvent &, void*)
+void RunDialog::popover(Object*, const XEvent&, void*)
 {
     entry.clear();
     unmap();

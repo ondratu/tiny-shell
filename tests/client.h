@@ -9,8 +9,10 @@
 #include <string>
 #include <vector>
 
-inline tiny::Display &dsp()
-{ return tiny::get_display(); }
+inline tiny::Display& dsp()
+{
+    return tiny::get_display();
+}
 
 // A client application: a window created over its own X connection, like a
 // real program managed by the window manager.
@@ -19,22 +21,21 @@ class Client {
     Client(int x = 10, int y = 20, unsigned width = 200, unsigned height = 100)
     {
         display = XOpenDisplay(nullptr);
-        window = XCreateSimpleWindow(display, DefaultRootWindow(display),
-                x, y, width, height, 0, 0, 0);
+        window = XCreateSimpleWindow(display, DefaultRootWindow(display), x, y,
+                                     width, height, 0, 0, 0);
         sync();
     }
 
     ~Client()
     {
-        XSync(dsp(), False);    // requests for resources about to disappear
+        XSync(dsp(), False); // requests for resources about to disappear
         if (display) {
             XCloseDisplay(display);
         }
     }
 
     // After the server killed the connection it must not be closed cleanly.
-    void abandon()
-    { display = nullptr; }
+    void abandon() { display = nullptr; }
 
     // Both connections: the manager's requests are buffered too.
     void sync()
@@ -49,53 +50,58 @@ class Client {
         sync();
     }
 
-    void set_atoms(Atom property, const std::vector<Atom> &atoms)
+    void set_atoms(Atom property, const std::vector<Atom>& atoms)
     {
         XChangeProperty(display, window, property, XA_ATOM, 32, PropModeReplace,
-                reinterpret_cast<const unsigned char*>(atoms.data()), static_cast<int>(atoms.size()));
+                        reinterpret_cast<const unsigned char*>(atoms.data()),
+                        static_cast<int>(atoms.size()));
         sync();
     }
 
-    void set_cardinals(Atom property, const std::vector<long> &values)
+    void set_cardinals(Atom property, const std::vector<long>& values)
     {
         XChangeProperty(display, window, property, XA_CARDINAL, 32,
-                PropModeReplace, reinterpret_cast<const unsigned char*>(values.data()),
-                static_cast<int>(values.size()));
+                        PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(values.data()),
+                        static_cast<int>(values.size()));
         sync();
     }
 
-    void set_utf8(Atom property, const std::string &text)
+    void set_utf8(Atom property, const std::string& text)
     {
         XChangeProperty(display, window, property, dsp().UTF8_STRING, 8,
-                PropModeReplace, reinterpret_cast<const unsigned char*>(text.c_str()),
-                static_cast<int>(text.size()));
+                        PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(text.c_str()),
+                        static_cast<int>(text.size()));
         sync();
     }
 
-    void set_title(const std::string &title)
+    void set_title(const std::string& title)
     {
         XStoreName(display, window, title.c_str());
         sync();
     }
 
-    void set_state(const std::vector<Atom> &atoms)
-    { set_atoms(dsp()._NET_WM_STATE, atoms); }
-
-    void set_protocols(const std::vector<Atom> &atoms)
+    void set_state(const std::vector<Atom>& atoms)
     {
-        XSetWMProtocols(display, window, const_cast<Atom *>(atoms.data()),
-                static_cast<int>(atoms.size()));
+        set_atoms(dsp()._NET_WM_STATE, atoms);
+    }
+
+    void set_protocols(const std::vector<Atom>& atoms)
+    {
+        XSetWMProtocols(display, window, const_cast<Atom*>(atoms.data()),
+                        static_cast<int>(atoms.size()));
         sync();
     }
 
     void set_motif(unsigned long flags, unsigned long functions,
-            unsigned long decorations)
+                   unsigned long decorations)
     {
-        long hints[5] = {static_cast<long>(flags), static_cast<long>(functions), static_cast<long>(decorations),
-            0, 0};
+        long hints[5] = {static_cast<long>(flags), static_cast<long>(functions),
+                         static_cast<long>(decorations), 0, 0};
         XChangeProperty(display, window, dsp()._MOTIF_WM_HINTS,
-                dsp()._MOTIF_WM_HINTS, 32, PropModeReplace,
-                reinterpret_cast<const unsigned char*>(hints), 5);
+                        dsp()._MOTIF_WM_HINTS, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(hints), 5);
         sync();
     }
 
@@ -115,11 +121,12 @@ class Client {
     Pixmap pixmap(int size, unsigned long color)
     {
         Pixmap p = XCreatePixmap(display, DefaultRootWindow(display),
-                tiny::x_uint(size), tiny::x_uint(size),
-                tiny::x_uint(DefaultDepth(display, 0)));
+                                 tiny::x_uint(size), tiny::x_uint(size),
+                                 tiny::x_uint(DefaultDepth(display, 0)));
         GC gc = XCreateGC(display, p, 0, nullptr);
         XSetForeground(display, gc, color);
-        XFillRectangle(display, p, gc, 0, 0, tiny::x_uint(size), tiny::x_uint(size));
+        XFillRectangle(display, p, gc, 0, 0, tiny::x_uint(size),
+                       tiny::x_uint(size));
         XFreeGC(display, gc);
         return p;
     }
@@ -131,8 +138,9 @@ class Client {
         hints.icon_pixmap = pixmap(size, 0xFF0000);
         if (with_mask) {
             hints.flags |= IconMaskHint;
-            hints.icon_mask = XCreatePixmap(display, DefaultRootWindow(display),
-                    tiny::x_uint(size), tiny::x_uint(size), 1);
+            hints.icon_mask =
+                    XCreatePixmap(display, DefaultRootWindow(display),
+                                  tiny::x_uint(size), tiny::x_uint(size), 1);
         }
         XSetWMHints(display, window, &hints);
         sync();
@@ -141,16 +149,18 @@ class Client {
     // _NET_WM_ICON: width, height and ARGB pixels in 64 bit words
     void set_net_icon(int width, int height)
     {
-        std::vector<long> data = {static_cast<long>(width), static_cast<long>(height)};
-        data.insert(data.end(), static_cast<size_t>(width) * static_cast<size_t>(height),
-                0xFFFF0000L);
+        std::vector<long> data = {static_cast<long>(width),
+                                  static_cast<long>(height)};
+        data.insert(data.end(),
+                    static_cast<size_t>(width) * static_cast<size_t>(height),
+                    0xFFFF0000L);
         set_cardinals(dsp()._NET_WM_ICON, data);
     }
 
     // Returns true and fills `out` when a ClientMessage is waiting.
-    bool message(XEvent &out)
+    bool message(XEvent& out)
     {
-        XSync(dsp(), False);        // flush what the manager has sent
+        XSync(dsp(), False); // flush what the manager has sent
         sync();
         return XCheckTypedWindowEvent(display, window, ClientMessage, &out);
     }
@@ -161,12 +171,12 @@ class Client {
         Atom type;
         int format;
         unsigned long count, left;
-        unsigned char *data = nullptr;
+        unsigned char* data = nullptr;
         std::vector<Atom> rv;
         XGetWindowProperty(display, window, dsp()._NET_WM_STATE, 0, 64, False,
-                XA_ATOM, &type, &format, &count, &left, &data);
+                           XA_ATOM, &type, &format, &count, &left, &data);
         if (data) {
-            Atom *atoms = reinterpret_cast<Atom*>(data);
+            Atom* atoms = reinterpret_cast<Atom*>(data);
             rv.assign(atoms, atoms + count);
             XFree(data);
         }
@@ -187,6 +197,6 @@ class Client {
         return a;
     }
 
-    ::Display *display;
+    ::Display* display;
     ::Window window;
 };

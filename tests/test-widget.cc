@@ -9,10 +9,10 @@ namespace tiny {
 extern Handlers handlers;
 }
 
-class TestWidget: public tiny::Widget {
+class TestWidget : public tiny::Widget {
   public:
-    using tiny::Widget::Widget;
     using tiny::Widget::get_theme_state;
+    using tiny::Widget::Widget;
 
     void set_selected(bool v) { is_selected = v; }
     void set_hover(bool v) { is_hover = v; }
@@ -21,23 +21,26 @@ class TestWidget: public tiny::Widget {
     void set_disabled(bool v) { is_disabled = v; }
 };
 
-class Receiver: public tiny::Object {
+class Receiver : public tiny::Object {
   public:
     using tiny::Object::connect_window;
 
-    void on_event(const XEvent &, void *) {}
+    void on_event(const XEvent&, void*) {}
 
     tiny::event_signal_t slot()
-    { return static_cast<tiny::event_signal_t>(&Receiver::on_event); }
+    {
+        return static_cast<tiny::event_signal_t>(&Receiver::on_event);
+    }
 };
 
-class WidgetTest: public ::testing::Test {
+class WidgetTest : public ::testing::Test {
   protected:
-    ::Window root() const
-    { return XDefaultRootWindow(tiny::get_display()); }
+    ::Window root() const { return XDefaultRootWindow(tiny::get_display()); }
 
     bool has_configure_handler(::Window w) const
-    { return tiny::handlers.count({ConfigureNotify, w}) == 1; }
+    {
+        return tiny::handlers.count({ConfigureNotify, w}) == 1;
+    }
 };
 
 TEST_F(WidgetTest, constructor_sets_size_and_state)
@@ -93,7 +96,8 @@ TEST_F(WidgetTest, realize_transparent_widget_uses_32_bit_visual)
 {
     XVisualInfo vinfo;
     if (!XMatchVisualInfo(tiny::get_display(),
-                XDefaultScreen(tiny::get_display()), 32, TrueColor, &vinfo)) {
+                          XDefaultScreen(tiny::get_display()), 32, TrueColor,
+                          &vinfo)) {
         GTEST_SKIP() << "X server has no 32 bit visual";
     }
     TestWidget w(tiny::Widget::Type::Transparent, 30, 20);
@@ -107,7 +111,7 @@ TEST_F(WidgetTest, realize_transparent_widget_uses_32_bit_visual)
 
 TEST_F(WidgetTest, delete_through_base_pointer_destroys_window)
 {
-    tiny::Widget *w = new tiny::Widget(30, 20);
+    tiny::Widget* w = new tiny::Widget(30, 20);
     w->realize(root(), 0, 0);
     ::Window window = w->get_window();
 
@@ -158,7 +162,7 @@ TEST_F(WidgetTest, destructor_destroys_window)
     ::Window rv_root, rv_parent, *children = nullptr;
     unsigned int count = 0;
     XQueryTree(tiny::get_display(), root(), &rv_root, &rv_parent, &children,
-            &count);
+               &count);
     bool found = false;
     for (unsigned int i = 0; i < count; ++i) {
         found = found || children[i] == window;
@@ -270,14 +274,16 @@ TEST_F(WidgetTest, theme_state_combines_flags)
 
     w.set_hover(true);
     EXPECT_EQ(w.get_theme_state(),
-            uint8_t(Style::State::Normal) | uint8_t(Style::State::Hover));
+              uint8_t(Style::State::Normal) | uint8_t(Style::State::Hover));
 
     w.set_selected(true);
     w.set_focus(true);
     w.set_pressed(true);
     w.set_disabled(true);
-    EXPECT_EQ(w.get_theme_state(),
-            uint8_t(Style::State::Normal) | uint8_t(Style::State::Selected)
-            | uint8_t(Style::State::Hover) | uint8_t(Style::State::Focus)
-            | uint8_t(Style::State::Pressed) | uint8_t(Style::State::Disabled));
+    EXPECT_EQ(w.get_theme_state(), uint8_t(Style::State::Normal) |
+                                           uint8_t(Style::State::Selected) |
+                                           uint8_t(Style::State::Hover) |
+                                           uint8_t(Style::State::Focus) |
+                                           uint8_t(Style::State::Pressed) |
+                                           uint8_t(Style::State::Disabled));
 }

@@ -25,19 +25,25 @@ inline XEvent make_event(int type)
 }
 
 inline ::Window root_window()
-{ return XDefaultRootWindow(tiny::get_display()); }
+{
+    return XDefaultRootWindow(tiny::get_display());
+}
 
 // Calls the handler registered for `type` on `window`, like the main loop.
-inline void send(::Window window, const XEvent &e)
-{ tiny::handlers.call_hanlder({e.type, window}, e); }
+inline void send(::Window window, const XEvent& e)
+{
+    tiny::handlers.call_hanlder({e.type, window}, e);
+}
 
-inline void send(const tiny::Widget &w, int type)
-{ send(w.get_window(), make_event(type)); }
+inline void send(const tiny::Widget& w, int type)
+{
+    send(w.get_window(), make_event(type));
+}
 
 // Remembers the last signal it received.
-class Recorder: public tiny::Object {
+class Recorder : public tiny::Object {
   public:
-    void on_signal(tiny::Object *owner, const XEvent &e, void *data)
+    void on_signal(tiny::Object* owner, const XEvent& e, void* data)
     {
         ++calls;
         last_owner = owner;
@@ -46,12 +52,14 @@ class Recorder: public tiny::Object {
     }
 
     tiny::object_signal_t slot()
-    { return static_cast<tiny::object_signal_t>(&Recorder::on_signal); }
+    {
+        return static_cast<tiny::object_signal_t>(&Recorder::on_signal);
+    }
 
     int calls = 0;
-    tiny::Object *last_owner = nullptr;
+    tiny::Object* last_owner = nullptr;
     XEvent last_event = {};
-    void *last_data = nullptr;
+    void* last_data = nullptr;
 };
 
 inline XWindowAttributes attributes_of(::Window w)
@@ -62,8 +70,10 @@ inline XWindowAttributes attributes_of(::Window w)
     return attrs;
 }
 
-inline XWindowAttributes attributes_of(const tiny::Widget &w)
-{ return attributes_of(w.get_window()); }
+inline XWindowAttributes attributes_of(const tiny::Widget& w)
+{
+    return attributes_of(w.get_window());
+}
 
 // Windows directly inside `parent`.
 inline std::vector<::Window> children_of(::Window parent)
@@ -72,7 +82,7 @@ inline std::vector<::Window> children_of(::Window parent)
     ::Window rv_root, rv_parent, *children = nullptr;
     unsigned int count = 0;
     XQueryTree(tiny::get_display(), parent, &rv_root, &rv_parent, &children,
-            &count);
+               &count);
     std::vector<::Window> rv(children, children + count);
     if (children) {
         XFree(children);
@@ -83,7 +93,7 @@ inline std::vector<::Window> children_of(::Window parent)
 // Child of `parent` placed at x, y (0 when there is none).
 inline ::Window child_at(::Window parent, int x, int y)
 {
-    for (::Window w: children_of(parent)) {
+    for (::Window w : children_of(parent)) {
         XWindowAttributes attrs = attributes_of(w);
         if (attrs.x == x && attrs.y == y) {
             return w;
@@ -95,24 +105,22 @@ inline ::Window child_at(::Window parent, int x, int y)
 // Contents of an InputOutput window or pixmap.
 class Image {
   public:
-    Image(::Drawable d, int w, int h):
-        width(w), height(h)
+    Image(::Drawable d, int w, int h): width(w), height(h)
     {
         XSync(tiny::get_display(), False);
-        XImage *img = XGetImage(tiny::get_display(), d, 0, 0,
-                tiny::x_uint(w), tiny::x_uint(h), AllPlanes, ZPixmap);
+        XImage* img = XGetImage(tiny::get_display(), d, 0, 0, tiny::x_uint(w),
+                                tiny::x_uint(h), AllPlanes, ZPixmap);
         pixels.resize(static_cast<size_t>(w) * static_cast<size_t>(h));
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
                 pixels[index(x, y)] =
-                    static_cast<uint32_t>(XGetPixel(img, x, y)) & 0xFFFFFF;
+                        static_cast<uint32_t>(XGetPixel(img, x, y)) & 0xFFFFFF;
             }
         }
         XDestroyImage(img);
     }
 
-    uint32_t at(int x, int y) const
-    { return pixels[index(x, y)]; }
+    uint32_t at(int x, int y) const { return pixels[index(x, y)]; }
 
     // Number of pixels different from `bg` in the rows [0, rows).
     unsigned int count_not(uint32_t bg, int rows) const
@@ -126,8 +134,10 @@ class Image {
         return n;
     }
 
-    bool operator ==(const Image &o) const
-    { return width == o.width && height == o.height && pixels == o.pixels; }
+    bool operator==(const Image& o) const
+    {
+        return width == o.width && height == o.height && pixels == o.pixels;
+    }
 
     int width;
     int height;
@@ -135,8 +145,10 @@ class Image {
 
   private:
     size_t index(int x, int y) const
-    { return static_cast<size_t>(y) * static_cast<size_t>(width)
-        + static_cast<size_t>(x); }
+    {
+        return static_cast<size_t>(y) * static_cast<size_t>(width) +
+               static_cast<size_t>(x);
+    }
 };
 
 // Counts X protocol errors while it lives (an unhandled one kills the
@@ -162,7 +174,7 @@ class XErrors {
     }
 
   private:
-    static int handler(::Display *, XErrorEvent *)
+    static int handler(::Display*, XErrorEvent*)
     {
         ++count;
         return 0;
@@ -184,8 +196,7 @@ class WidgetFont {
         tiny::theme.widget = with_font;
     }
 
-    ~WidgetFont()
-    { tiny::theme.widget = original; }
+    ~WidgetFont() { tiny::theme.widget = original; }
 
   private:
     tiny::Style original;
@@ -216,8 +227,7 @@ class HeaderFont {
         tiny::theme.wm_header = with_font;
     }
 
-    ~HeaderFont()
-    { tiny::theme.wm_header = original; }
+    ~HeaderFont() { tiny::theme.wm_header = original; }
 
   private:
     tiny::WMHeaderStyle original;

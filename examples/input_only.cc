@@ -2,14 +2,14 @@
 #include "x_util.h"
 
 namespace tiny {
-    extern Handlers handlers;
+extern Handlers handlers;
 }
 
 bool keep_running;
 
-class Demo: public wm::BackWindow {
+class Demo : public wm::BackWindow {
   public:
-    Demo():wm::BackWindow(300, 200)
+    Demo(): wm::BackWindow(300, 200)
     {
         realize(XDefaultRootWindow(display), 0, 0);
         // XSetWindowBackground(display, window, 0x000055);
@@ -18,7 +18,8 @@ class Demo: public wm::BackWindow {
         map_all();
     }
 
-    void set_events(long mask = 0) override {
+    void set_events(long mask = 0) override
+    {
         wm::BackWindow::set_events(mask);
 
         Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
@@ -26,19 +27,20 @@ class Demo: public wm::BackWindow {
 
         connect(ClientMessage,
                 static_cast<tiny::event_signal_t>(&Demo::on_client_message));
-}
+    }
 
-    void on_client_message(const XEvent &e, void *)
+    void on_client_message(const XEvent& e, void*)
     {
         if (e.xclient.message_type == XInternAtom(display, "WM_PROTOCOLS", 1) &&
-            static_cast<Atom>(e.xclient.data.l[0]) == XInternAtom(display, "WM_DELETE_WINDOW", 1))
-        {
+            static_cast<Atom>(e.xclient.data.l[0]) ==
+                    XInternAtom(display, "WM_DELETE_WINDOW", 1)) {
             printf("This is it!\n");
             keep_running = false;
         }
     }
 
-    void main_loop(){
+    void main_loop()
+    {
         keep_running = true;
 
         XEvent event;
@@ -47,7 +49,7 @@ class Demo: public wm::BackWindow {
             auto signal_id = std::make_pair(event.type, event.xany.window);
 
             // call manager handlers first
-            if (tiny::handlers.count(signal_id)){
+            if (tiny::handlers.count(signal_id)) {
                 tiny::handlers.call_hanlder(signal_id, event);
                 continue;
             }
@@ -57,7 +59,7 @@ class Demo: public wm::BackWindow {
     }
 };
 
-int main (int, char *[])
+int main(int, char*[])
 {
     tiny::Display::init();
     Demo demo;
