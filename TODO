@@ -26,22 +26,12 @@ reviewer, keep it that way. Order of work:
    and the applications without touching the repository. The Makefile
    includes `local/config.mk` when it exists (e.g. a different `CXX`).
    Done, except for a test of the script on another machine.
-4. **Strict warnings.** Default flags in the Makefile (the sources must
-   build clean with GCC and Clang; fix, do not silence):
-   `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
-   -Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-align
-   -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough`
-   plus `-Wuseless-cast -Wduplicated-cond -Wlogical-op` for GCC and
-   `-Wextra-semi -Wunreachable-code` for Clang. The X headers come through
-   `-isystem` (turn the `-I` of `pkg-config --cflags` into `-isystem`), so
-   their warnings do not hide ours; where Xlib forces a cast, wrap it in one
-   small helper in `x_util.h` with a comment. `-Werror` is switched on by CI
-   and by `make STRICT=1`, not by default: a new compiler version must not
-   break the build of a user.
-5. **Clang by default.** `CXX` is `clang++` when it is installed, `g++`
-   otherwise (`ifeq ($(origin CXX),default)`; a plain `CXX ?=` does not work
-   in make). Release builds also use `-D_FORTIFY_SOURCE=3`,
-   `-D_GLIBCXX_ASSERTIONS` and `-fstack-protector-strong`.
+4. ~~Strict warnings~~ (done: the long list of warnings is in the
+   Makefile, the sources are clean with GCC 16 and Clang 19, 21, 22;
+   `make STRICT=1` makes the warnings errors, CI will use it).
+5. ~~Clang by default~~ (done: `clang++`, else the newest `clang++-N`, else
+   `g++`). Still open: `-D_FORTIFY_SOURCE=3`, `-D_GLIBCXX_ASSERTIONS` and
+   `-fstack-protector-strong` for release builds.
 6. **Formatting and static analysis.** Commit `.clang-format` (the style of
    CONTRIBUTING.md, one reformatting commit with no other change) and
    `.clang-tidy` (`bugprone-*`, `clang-analyzer-*`, `cert-*`,

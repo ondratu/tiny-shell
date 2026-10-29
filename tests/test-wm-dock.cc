@@ -284,8 +284,8 @@ TEST_F(DockTest, dock_stays_centered_when_it_grows)
 
     auto root = attributes_of(root_window());
     auto attrs = attributes_of(dock);
-    EXPECT_EQ(attrs.x, static_cast<int>(root.width / 2 - dock.get_width() / 2));
-    EXPECT_EQ(attrs.y, static_cast<int>((root.height - dock.get_height() - border())));
+    EXPECT_EQ(attrs.x, (root.width / 2 - dock.get_width() / 2));
+    EXPECT_EQ(attrs.y, ((root.height - dock.get_height() - border())));
 }
 
 TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)

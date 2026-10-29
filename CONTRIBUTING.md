@@ -45,6 +45,12 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   `build/`. Files that belong to one machine (a session script, local
   settings) are not committed: they live in the ignored `local/`, created
   from `examples/` by the scripts.
+- **Geometry is `int`.** Sizes, offsets and coordinates are `int`, like in
+  Xlib structures, so that sums and differences do not wrap around. The
+  size of a widget cannot be negative: the constructor and `resize()` clamp
+  it to zero. Where an X request takes an unsigned value, convert with
+  `tiny::x_dim()` (a window size, limited to 1..65535) or `tiny::x_uint()`
+  (other values, never negative).
 - **Strictness:** the code compiles without warnings with GCC and Clang, with
   a long list of warnings on (see the TODO for the list), is formatted by
   `clang-format` and checked by `clang-tidy`. Fix the cause of a warning; if
