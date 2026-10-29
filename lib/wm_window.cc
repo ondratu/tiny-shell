@@ -310,12 +310,8 @@ void Window::update_properties()
     int count;
     Atom* props = XListProperties(dsp, child, &count);
 
-    char* atom_name;
     for (int i = 0; i < count; ++i) {
         properties.insert(props[i]);
-        atom_name = XGetAtomName(display, props[i]);
-        printf("\t%s\n", atom_name);
-        XFree(atom_name);
     }
     XFree(props);
 }
@@ -894,12 +890,8 @@ int Window::get_properties(::Window window, std::set<Atom>& properties)
     const tiny::Display& display = tiny::get_display();
     Atom* props = XListProperties(display, window, &count);
 
-    char* atom_name;
     for (int i = 0; i < count; ++i) {
         properties.insert(props[i]);
-        atom_name = XGetAtomName(display, props[i]);
-        printf("\t%s\n", atom_name);
-        XFree(atom_name);
     }
     XFree(props);
     return count;
