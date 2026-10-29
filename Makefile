@@ -25,7 +25,7 @@ DEP = $(OBJ:%.o=%.d)
 
 TARGET = tiny-shell
 
-all: $(TARGET) demo input_only wm_test menu test_memory
+all: $(TARGET) demo input_only menu test_memory
 
 -include $(LIB_OBJ:.o=.d)
 
@@ -41,9 +41,6 @@ demo: lib/libtiny.a demo.o
 
 input_only: lib/libtiny.a input_only.o
 	$(CXX) input_only.o -L./lib -ltiny -o input_only $(LDFLAGS)
-
-wm_test: lib/libtiny.a wm_test.o
-	$(CXX) wm_test.o -L./lib -ltiny -o wm_test $(LDFLAGS)
 
 menu: lib/libtiny.a menu.o
 	$(CXX) menu.o -L./lib -ltiny -o menu $(LDFLAGS)
