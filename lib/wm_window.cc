@@ -185,7 +185,8 @@ void Window::set_focus()
 
     if (protocols.count(dsp.WM_TAKE_FOCUS))
     {
-        XClientMessageEvent msg;
+        XClientMessageEvent msg = {};
+        msg.type = ClientMessage;
         msg.message_type = dsp.WM_PROTOCOLS;
         msg.display = dsp;
         msg.window = child;
@@ -225,7 +226,7 @@ void Window::close()
 {
     if (protocols.count(dsp.WM_DELETE_WINDOW))
     {
-        XClientMessageEvent msg;
+        XClientMessageEvent msg = {};
         msg.window = child;
         msg.type = ClientMessage;
         msg.format = 32;
