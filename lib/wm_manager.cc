@@ -182,9 +182,6 @@ void Manager::main_loop()
         XNextEvent(display, &event);
         const ::Window window = tiny::window_of_event(event);
 
-        /*TINY_LOG("Event: %s (%lx)\n\t",
-                 event_to_string(event), window);*/
-
         auto signal_id = std::make_pair(event.type, window);
 
         // call manager handlers first
@@ -209,18 +206,6 @@ void Manager::main_loop()
             case ConfigureRequest: // need for resize requests from app windows
                 on_configure_request(event.xconfigurerequest);
                 break;
-            /*
-            case CreateNotify:
-                if (!event.xcreatewindow.override_redirect){
-                    TINY_LOG("CreateNotify for %lx -> %d;%d [%dx%d] !!",
-                            event.xcreatewindow.window,
-                            event.xcreatewindow.x,
-                            event.xcreatewindow.y,
-                            event.xcreatewindow.width,
-                            event.xcreatewindow.height);
-                }
-                break;
-            */
             default:
 #ifdef DEBUG
                 fprintf(stderr, "Unhandled event: %s (%lx)\n",

@@ -29,10 +29,8 @@ void Entry::realize(::Window parent_arg, int x, int y)
     tiny::Widget::realize(parent_arg, x, y);
 
     xim = XOpenIM(display, nullptr, nullptr, nullptr);
-    TINY_LOG("xim: %p", static_cast<void*>(xim));
     xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
                     XNClientWindow, window, XNFocusWindow, window, NULL);
-    TINY_LOG("xic: %p", static_cast<void*>(xic));
 }
 
 void Entry::set_events(long mask)
@@ -56,33 +54,10 @@ void Entry::on_key_release(const XEvent& e, void*)
 {
     char buf[32] = "\0";
     KeySym keysym = NoSymbol;
-    //XComposeStatus comp;
     Status state;
 
-    //int len = XLookupString(const_cast<XKeyEvent*>(&e.xkey),
-    //                        buf, 16, &keysym, &comp);
-    //int len = XmbLookupString(xic¸, const_cast<XKeyEvent*>(&e.xkey),
-    //                          buf, 16, &keysym, &state);
     const int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
                                       sizeof(buf) - 1, &keysym, &state);
-    TINY_LOG("state: %d", state);
-    if (state == XBufferOverflow) {
-        TINY_LOG("\t XBufferOverflow");
-    }
-    if (state == XLookupChars) {
-        TINY_LOG("\t XLookupChars");
-    }
-    if (state == XLookupBoth) {
-        TINY_LOG("\t XLookupBoth");
-    }
-    if (state == XLookupKeySym) {
-        TINY_LOG("\t XLookupKeySym");
-    }
-    if (state == XLookupNone) {
-        TINY_LOG("\t XLookupNone");
-    }
-
-    TINY_LOG("read string len: %d: %s", len, buf);
     if (e.xkey.keycode == XKeysymToKeycode(display, XK_BackSpace)) {
         if (!text.empty()) {
             text.erase(text.size() - 1);
@@ -94,10 +69,7 @@ void Entry::on_key_release(const XEvent& e, void*)
         // TODO: working with position
         // TODO: suggest like command line
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Return)) {
-        TINY_LOG("run %s", text.c_str());
         if (!fork()) {
-            //int ret = putenv(XDisplayString(display));
-            //assert(ret != -1);
             std::string cmd = "exec ";
             cmd += text;
             const int ret =
@@ -106,7 +78,6 @@ void Entry::on_key_release(const XEvent& e, void*)
         } else {
             on_exit(this, e);
         }
-        TINY_LOG("done");
         return;
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Escape)) {
         on_exit(this, e);
@@ -153,13 +124,11 @@ void Entry::on_expose(const XEvent&, void*)
 
 void Entry::on_focus_in(const XEvent&, void*)
 {
-    TINY_LOG("XSetICFocus...");
     XSetICFocus(xic);
 }
 
 void Entry::on_focus_out(const XEvent&, void*)
 {
-    TINY_LOG("XUnsetICFocus...");
     XUnsetICFocus(xic);
 }
 
