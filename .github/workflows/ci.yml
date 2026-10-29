@@ -1,0 +1,151 @@
+# Every job builds with STRICT=1 (warnings are errors) and runs the tests
+# under Xvfb (make check). The same commands work locally, see CONTRIBUTING.md.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  STRICT: 1
+  DEBIAN_FRONTEND: noninteractive
+  DEPS: build-essential pkg-config libx11-dev libxft-dev libxrender-dev
+        xvfb xauth libgtest-dev
+
+jobs:
+  pre-commit:
+    name: pre-commit (format, spelling, shellcheck)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-format
+      - run: pipx install pre-commit
+      - run: pre-commit run --all-files --show-diff-on-failure
+
+  lint:
+    name: clang-tidy 22
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-tidy 22 and the dependencies
+        run: |
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 22
+          sudo apt-get install -y clang-tidy-22 $DEPS
+      - run: make lint CLANG_TIDY=clang-tidy-22
+
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC
+            cxx: g++
+            packages: ""
+          - name: Clang 19 (the oldest we support)
+            cxx: clang++-19
+            packages: clang-19
+          - name: Clang 19 with libc++
+            cxx: clang++-19
+            packages: clang-19 libc++-19-dev libc++abi-19-dev
+            flags: -stdlib=libc++
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS ${{ matrix.packages }}
+      - name: Build and test
+        run: |
+          make CXX=${{ matrix.cxx }} CXXFLAGS="-g ${{ matrix.flags }}" \
+              LDFLAGS="${{ matrix.flags }}" check examples
+
+  asan:
+    name: ASan + UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19 llvm-19
+      - run: make CXX=clang++-19 asan
+
+  alpine:
+    name: Alpine (musl), ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    container: alpine:3.22
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC
+            cxx: g++
+          - name: Clang
+            cxx: clang++
+    steps:
+      - run: >
+          apk add --no-cache git make pkgconf g++ clang libx11-dev libxft-dev
+          libxrender-dev gtest-dev xvfb xvfb-run xauth font-dejavu
+      - uses: actions/checkout@v4
+      - run: make CXX=${{ matrix.cxx }} check examples
+
+  freebsd:
+    name: FreeBSD
+    runs-on: ubuntu-24.04
+    # Best effort: the BSDs are claimed in the README, but the VM is slow
+    # and the port set changes, so a failure here does not block a merge.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cross-platform-actions/action@v0.27.0
+        with:
+          operating_system: freebsd
+          version: "14.2"
+          shell: sh
+          run: |
+            sudo pkg install -y gmake pkgconf libX11 libXft libXrender \
+                googletest xorg-vfbserver xauth dejavu
+            Xvfb :99 -screen 0 1280x1024x24 &
+            sleep 2
+            DISPLAY=:99 gmake XVFB_RUN= CXX=clang++ check examples
+
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS
+      - name: Measure (gcov needs GCC)
+        run: make CXX=g++ coverage | tee coverage.txt
+      - name: The coverage must not go below the threshold
+        # A ratchet: raise the number when the coverage grows, never lower it.
+        run: |
+          min=95
+          total=$(awk '/^TOTAL/ {gsub("%", "", $4); print $4}' coverage.txt)
+          echo "coverage ${total} % (minimum ${min} %)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$total" -ge "$min" ]
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.txt
+
+  size:
+    name: Binary size
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19
+      - name: Build small and measure
+        # "Small" is a goal, so it is measured. The limit is the measured
+        # size (99.5 kB of code) with a reserve; change it on purpose.
+        run: |
+          max=110000
+          make CXX=clang++-19 CXXFLAGS="-Os -ffunction-sections -fdata-sections" \
+              LDFLAGS="-s -Wl,--gc-sections" build/tiny-shell
+          size build/tiny-shell | tee size.txt
+          text=$(awk 'NR==2 {print $1}' size.txt)
+          echo "code ${text} B (limit ${max} B)" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$text" -le "$max" ]
