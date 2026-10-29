@@ -84,7 +84,7 @@ void Entry::on_key_release(const XEvent& e, void*)
 
     TINY_LOG("read string len: %d: %s", len, buf);
     if (e.xkey.keycode == XKeysymToKeycode(display, XK_BackSpace)) {
-        if (text.size()) {
+        if (!text.empty()) {
             text.erase(text.size() - 1);
         } else {
             return;

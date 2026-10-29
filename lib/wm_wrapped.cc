@@ -1,5 +1,7 @@
 #include <X11/cursorfont.h>
 
+#include <algorithm>
+
 #include "object.h"
 #include "theme.h"
 #include "wm_window.h"
@@ -56,8 +58,8 @@ Window* Wrapped::create(::Window root, ::Window child,
                         const XWindowAttributes& attrs, unsigned long functions,
                         unsigned long decorations)
 {
-    auto win = new Wrapped(child, root, attrs.width, attrs.height, functions,
-                           decorations);
+    auto* win = new Wrapped(child, root, attrs.width, attrs.height, functions,
+                            decorations);
     // TODO: move down under panel
     win->realize(root, attrs.x, attrs.y);
     win->on_focus_out(XEvent(), nullptr); // disable and GrabButton
@@ -269,7 +271,7 @@ void Wrapped::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
 
 void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 {
-    uint16_t mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
+    auto mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
     int xdiff = 0;
     int ydiff = 0;
     int mod;
@@ -305,11 +307,10 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
     }
 
     if (mask & (tiny::Position::Left | tiny::Position::Right)) {
-        if (std::max(hints->min_width + tiny::theme.wm_win_corner,
-                     tiny::theme.wm_win_min_width) > new_width) {
-            new_width = std::max(hints->min_width + tiny::theme.wm_win_corner,
-                                 tiny::theme.wm_win_min_width);
-        }
+        new_width =
+                std::max(std::max(hints->min_width + tiny::theme.wm_win_corner,
+                                  tiny::theme.wm_win_min_width),
+                         new_width);
         if ((0 < hints->max_width) && (hints->max_width < new_width)) {
             new_width = hints->max_width;
         }
@@ -317,14 +318,11 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 
     if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
         // TODO: it exist steps
-        if (std::max(hints->min_height + tiny::theme.wm_win_corner +
-                             tiny::theme.wm_win_header,
-                     tiny::theme.wm_win_min_height) > new_height) {
-            new_height =
-                    std::max(hints->min_height + tiny::theme.wm_win_corner +
-                                     tiny::theme.wm_win_header,
-                             tiny::theme.wm_win_min_height);
-        }
+        new_height = std::max(std::max(hints->min_height +
+                                               tiny::theme.wm_win_corner +
+                                               tiny::theme.wm_win_header,
+                                       tiny::theme.wm_win_min_height),
+                              new_height);
         if ((0 < hints->max_height) && (hints->max_height < new_height)) {
             new_height = hints->max_height;
         }
@@ -394,9 +392,12 @@ void Wrapped::on_property_notify(const XEvent& e, void* data)
     if (e.xproperty.atom == display.WM_NORMAL_HINTS) {
         // SDL on resize moved window relative to root
         ::Window geo_root;
-        int x, y;
-        unsigned int geo_width, geo_height;
-        unsigned int border, depth;
+        int x;
+        int y;
+        unsigned int geo_width;
+        unsigned int geo_height;
+        unsigned int border;
+        unsigned int depth;
         if (!XGetGeometry(dsp, child, &geo_root, &x, &y, &geo_width,
                           &geo_height, &border, &depth)) {
             TINY_LOG("Can't get window geometry");
@@ -404,7 +405,7 @@ void Wrapped::on_property_notify(const XEvent& e, void* data)
         }
 
         // when window is moved
-        if (x != 0 || y != static_cast<int>(tiny::theme.wm_win_header)) {
+        if (x != 0 || y != tiny::theme.wm_win_header) {
             XWindowChanges ch;
             ch.x = 0;
             ch.y = tiny::theme.wm_win_header;

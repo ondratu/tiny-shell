@@ -101,7 +101,9 @@ class ManagerTest : public ::testing::Test {
     ::Window parent_of(::Window w)
     {
         XSync(dsp(), False);
-        ::Window root, parent, *kids = nullptr;
+        ::Window root;
+        ::Window parent;
+        ::Window* kids = nullptr;
         unsigned int count;
         XQueryTree(dsp(), w, &root, &parent, &kids, &count);
         if (kids) {
@@ -330,7 +332,8 @@ TEST_F(ManagerTest, set_supported_publishes_the_supported_properties)
 
     Atom type;
     int format;
-    unsigned long count, left;
+    unsigned long count;
+    unsigned long left;
     unsigned char* data = nullptr;
     ASSERT_EQ(XGetWindowProperty(dsp(), root_window(), dsp()._NET_SUPPORTED, 0,
                                  64, False, XA_ATOM, &type, &format, &count,
@@ -604,7 +607,7 @@ TEST_F(ManagerTest, release_of_a_handled_key_is_ignored)
 {
     manage_three();
     manager->key_done = true;
-    auto second = *std::next(manager->wm_tops.begin());
+    auto* second = *std::next(manager->wm_tops.begin());
 
     XKeyEvent e = key(XK_Tab);
     e.type = KeyRelease;
@@ -617,7 +620,7 @@ TEST_F(ManagerTest, alt_tab_focuses_the_next_window)
 {
     manage_three();
     manager->key_done = false;
-    auto second = *std::next(manager->wm_tops.begin());
+    auto* second = *std::next(manager->wm_tops.begin());
 
     XKeyEvent e = key(XK_Tab);
     e.type = KeyRelease;
@@ -644,7 +647,7 @@ TEST_F(ManagerTest, alt_shift_tab_focuses_the_previous_window)
     manage_three();
     manager->key_done = false;
     manager->active = manager->wm_tops.back();
-    auto previous = *std::next(manager->wm_tops.rbegin());
+    auto* previous = *std::next(manager->wm_tops.rbegin());
 
     XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
     e.type = KeyRelease;
@@ -669,7 +672,7 @@ TEST_F(ManagerTest, alt_tab_restores_a_minimized_window)
 {
     manage_three();
     manager->key_done = false;
-    auto second = *std::next(manager->wm_tops.begin());
+    auto* second = *std::next(manager->wm_tops.begin());
     second->minimize();
     ASSERT_TRUE(second->get_minimized());
 
@@ -685,7 +688,7 @@ TEST_F(ManagerTest, alt_shift_tab_restores_a_minimized_window)
 {
     manage_three();
     manager->key_done = false;
-    auto last = manager->wm_tops.back();
+    auto* last = manager->wm_tops.back();
     last->minimize();
 
     XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);

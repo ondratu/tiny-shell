@@ -79,7 +79,9 @@ inline XWindowAttributes attributes_of(const tiny::Widget& w)
 inline std::vector<::Window> children_of(::Window parent)
 {
     XSync(tiny::get_display(), False);
-    ::Window rv_root, rv_parent, *children = nullptr;
+    ::Window rv_root;
+    ::Window rv_parent;
+    ::Window* children = nullptr;
     unsigned int count = 0;
     XQueryTree(tiny::get_display(), parent, &rv_root, &rv_parent, &children,
                &count);

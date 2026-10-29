@@ -344,7 +344,8 @@ class PixmapTest : public ::testing::Test {
                   unsigned int& depth)
     {
         ::Window r;
-        int x, y;
+        int x;
+        int y;
         unsigned int border;
         XSync(display, False);
         XGetGeometry(display, pm, &r, &x, &y, &w, &h, &border, &depth);
@@ -362,7 +363,9 @@ TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
     Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50, 50,
                                         tiny::x_uint(depth));
 
-    unsigned int w, h, d;
+    unsigned int w;
+    unsigned int h;
+    unsigned int d;
     geometry(target, w, h, d);
     EXPECT_EQ(w, 50u);
     EXPECT_EQ(h, 50u);
@@ -394,7 +397,9 @@ TEST_F(PixmapTest, resize_monochrome_pixmap)
     Pixmap target =
             tiny::resize_pixmap(display, root, origin, 64, 32, 16, 8, 1);
 
-    unsigned int w, h, d;
+    unsigned int w;
+    unsigned int h;
+    unsigned int d;
     geometry(target, w, h, d);
     EXPECT_EQ(w, 16u);
     EXPECT_EQ(h, 8u);

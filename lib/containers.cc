@@ -51,7 +51,7 @@ void Container::map_all()
 {
     Widget::map_all();
 
-    for (auto w : children) {
+    for (auto* w : children) {
         w->map_all();
     }
 }

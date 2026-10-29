@@ -22,7 +22,7 @@ static int px(double value)
 
 static int line_width()
 {
-    return std::max(1, int(lround(sc(2))));
+    return std::max(1, static_cast<int>(lround(sc(2))));
 }
 
 Button::Button():

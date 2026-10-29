@@ -27,7 +27,7 @@ class Demo : public tiny::Box {
             btns.push_back(item);
         }
 
-        for (auto it : btns) {
+        for (const auto& it : btns) {
             menu.push_start(it.get());
         }
 

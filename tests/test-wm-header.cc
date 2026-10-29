@@ -21,7 +21,9 @@ TEST(TitleBoxTest, realize_creates_input_only_window)
 TEST(TitleBoxTest, drag_signals_follow_pointer_events)
 {
     wm::TitleBox box(100, 25);
-    Recorder begin, end, motion;
+    Recorder begin;
+    Recorder end;
+    Recorder motion;
     box.on_drag_begin.connect(&begin, begin.slot());
     box.on_drag_end.connect(&end, end.slot());
     box.on_drag_motion.connect(&motion, motion.slot());

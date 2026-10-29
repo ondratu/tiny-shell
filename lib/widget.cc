@@ -41,7 +41,7 @@ Widget::~Widget()
 
 uint8_t Widget::get_theme_state() const
 {
-    uint8_t state = static_cast<uint8_t>(Style::State::Normal);
+    auto state = static_cast<uint8_t>(Style::State::Normal);
     if (is_selected) {
         state |= static_cast<uint8_t>(Style::State::Selected);
     }

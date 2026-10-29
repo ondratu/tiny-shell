@@ -57,7 +57,8 @@ XEvent property_event(::Window window, Atom atom)
 
 TEST_F(WmWindowTest, motif_hints_default_to_everything_allowed)
 {
-    unsigned long functions = 0, decorations = 0;
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
 
     EXPECT_FALSE(
             WmWindow::get_motif_hints(client.window, functions, decorations));
@@ -71,7 +72,8 @@ TEST_F(WmWindowTest, motif_hints_default_to_everything_allowed)
 TEST_F(WmWindowTest, motif_hints_without_decorations)
 {
     client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0, 0);
-    unsigned long functions = 0, decorations = 1;
+    unsigned long functions = 0;
+    unsigned long decorations = 1;
 
     EXPECT_TRUE(
             WmWindow::get_motif_hints(client.window, functions, decorations));
@@ -83,7 +85,8 @@ TEST_F(WmWindowTest, motif_hints_without_decorations)
 TEST_F(WmWindowTest, motif_hints_override_functions)
 {
     client.set_motif(MotifWMHints::FLAG_FUNCTIONS, MotifWMHints::FUNC_CLOSE, 0);
-    unsigned long functions = 0, decorations = 0;
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
 
     EXPECT_TRUE(
             WmWindow::get_motif_hints(client.window, functions, decorations));
@@ -335,8 +338,12 @@ TEST_F(WmWindowTest, wm_hints_icon_of_other_size_is_scaled)
     ASSERT_NE(window->get_icon(), 0u);
     ASSERT_NE(window->get_icon_mask(), 0u);
     ::Window root;
-    int x, y;
-    unsigned int w, h, border, depth;
+    int x;
+    int y;
+    unsigned int w;
+    unsigned int h;
+    unsigned int border;
+    unsigned int depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
                  &depth);
     EXPECT_EQ(w, tiny::theme.wm_icon);
@@ -385,8 +392,12 @@ TEST_F(WmWindowTest, small_net_wm_icon_is_scaled)
 
     ASSERT_NE(window->get_icon(), 0u);
     ::Window root;
-    int x, y;
-    unsigned int w, h, border, depth;
+    int x;
+    int y;
+    unsigned int w;
+    unsigned int h;
+    unsigned int border;
+    unsigned int depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
                  &depth);
     EXPECT_EQ(w, tiny::theme.wm_icon);

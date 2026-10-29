@@ -272,7 +272,8 @@ TEST_F(DockTest, add_creates_an_icon_and_grows_the_dock)
 
 TEST_F(DockTest, icons_are_placed_one_after_another)
 {
-    Client c1, c2;
+    Client c1;
+    Client c2;
     add(manage(c1));
     add(manage(c2));
 
@@ -283,7 +284,8 @@ TEST_F(DockTest, icons_are_placed_one_after_another)
 
 TEST_F(DockTest, dock_stays_centered_when_it_grows)
 {
-    Client c1, c2;
+    Client c1;
+    Client c2;
     add(manage(c1));
     add(manage(c2));
 
@@ -295,7 +297,8 @@ TEST_F(DockTest, dock_stays_centered_when_it_grows)
 
 TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)
 {
-    Client c1, c2;
+    Client c1;
+    Client c2;
     WmWindow* w1 = manage(c1);
     WmWindow* w2 = manage(c2);
     add(w1);
@@ -309,7 +312,8 @@ TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)
 
 TEST_F(DockTest, add_after_remove_gives_the_same_size_as_before)
 {
-    Client c1, c2;
+    Client c1;
+    Client c2;
     WmWindow* w1 = manage(c1);
     WmWindow* w2 = manage(c2);
     add(w1);
