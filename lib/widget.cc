@@ -7,7 +7,8 @@ namespace tiny {
 
 Widget::Widget(Type type, uint32_t width, uint32_t height):
     Object(), type(type), display(get_display()),
-    parent(0), window(0), event_mask(0), width(width), height(height),
+    parent(0), window(0), event_mask(0), event_done(false),
+    width(width), height(height),
     is_maped(false), is_realized(false)
 {
     name = "widget";
