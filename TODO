@@ -43,10 +43,10 @@ reviewer, keep it that way. Order of work:
    and `make check` on push; install with `pre-commit install
    --install-hooks && pre-commit install --hook-type pre-push`. CI will run
    `pre-commit run --all-files`.)
-8. **Sanitizers.** `make asan` (`-fsanitize=address,undefined
-   -fno-sanitize-recover=all`) runs the whole `make check`. The leaks of the
-   toolkit that are accepted for now go to one suppression file with a
-   comment each, not to a skipped test.
+8. ~~Sanitizers~~ (done: `make asan` runs the whole `make check` with
+   AddressSanitizer and UBSan in `build-asan/`; the accepted leaks are in
+   `tools/lsan.supp`, each with a reason: Fontconfig keeps its configuration,
+   and a test client whose connection is killed on purpose.)
 9. **GitHub workflow** (`.github/workflows/ci.yml`; a matrix, all jobs run
    `make check` under Xvfb with `STRICT=1`):
    - Debian stable with GCC and with Clang (the latest and the oldest

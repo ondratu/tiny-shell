@@ -56,7 +56,7 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage format lint
+.PHONY: all examples clean check coverage format lint asan
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
@@ -144,7 +144,7 @@ coverage:
 	                ts ? 100*(ts-tm)/ts : 100}'
 
 clean:
-	@$(RM) -r $(BUILD) $(COV_DIR)
+	@$(RM) -r $(BUILD) $(COV_DIR) $(ASAN_DIR)
 	@$(RM) compile_flags.txt .syntastic_cpp_config
 
 # Format the sources with clang-format (style in .clang-format).
@@ -166,3 +166,18 @@ lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(shell pkg-config --cflags gtest)
+
+# Run all the tests with AddressSanitizer and UndefinedBehaviorSanitizer, built
+# into build-asan. Leaks that are accepted for now are in tools/lsan.supp.
+ASAN_DIR = build-asan
+SANITIZE = -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer
+
+SYMBOLIZER := $(firstword $(shell command -v llvm-symbolizer 2>/dev/null) \
+    $(shell ls /usr/bin/llvm-symbolizer-[0-9]* 2>/dev/null | sort -V | tail -n 1))
+
+asan:
+	@ASAN_SYMBOLIZER_PATH=$(SYMBOLIZER) UBSAN_OPTIONS=print_stacktrace=1 \
+	    ASAN_OPTIONS=fast_unwind_on_malloc=0 \
+	    LSAN_OPTIONS=suppressions=$(CURDIR)/tools/lsan.supp:print_suppressions=0 \
+	    $(MAKE) BUILD=$(ASAN_DIR) check \
+	    CXXFLAGS="-g -O1 $(SANITIZE)" LDFLAGS="$(SANITIZE)"

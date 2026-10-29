@@ -134,8 +134,7 @@ Before sending a change, build without warnings and run `make check`. When
 you work on memory handling, also build with the sanitizers:
 
 ```sh
-make clean
-make CXXFLAGS="-g -fsanitize=address,undefined"
+make asan        # all the tests with AddressSanitizer and UBSan
 ```
 
 ## Tests

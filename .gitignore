@@ -1,6 +1,7 @@
 # build output
 build/
 build-cov/
+build-asan/
 *.o
 *.d
 *.a

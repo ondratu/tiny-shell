@@ -1,0 +1,9 @@
+# Leaks accepted for now (see the TODO). One entry per leak, with a reason.
+
+# Fontconfig builds its configuration on the first use and keeps it until the
+# process ends (Xft never calls FcFini). It is not ours to free.
+leak:libfontconfig.so
+
+# The test client of tests/client.h whose connection was killed on purpose
+# (close_kills_a_client_without_delete_protocol) cannot be closed cleanly.
+leak:Client::Client
