@@ -178,7 +178,7 @@ void Entry::clear()
 
 
 RunDialog::RunDialog():
-    tiny::Popover(320, tiny::theme.wm_panel*1.5),
+    tiny::Popover(320, static_cast<uint32_t>(tiny::theme.wm_panel*1.5)),
     entry(310, tiny::theme.wm_win_header)
 {
     name = "run-dialog";

@@ -12,6 +12,10 @@ namespace wm {
 static double sc(double value)
 { return value * tiny::theme.scale_factor; }
 
+// Truncates like the implicit conversion to a pixel coordinate did
+static int px(double value)
+{ return static_cast<int>(value); }
+
 static int line_width()
 { return std::max(1, int(lround(sc(2)))); }
 
@@ -73,9 +77,9 @@ void CloseButton::on_expose(const XEvent &, void *)
     int mid_y = attrs.width/2;
 
     XDrawLine(display, window, gc,
-        mid_x-sc(3.5), mid_y-sc(3.5), mid_x+sc(3.5), mid_y+sc(3.5));
+        px(mid_x-sc(3.5)), px(mid_y-sc(3.5)), px(mid_x+sc(3.5)), px(mid_y+sc(3.5)));
     XDrawLine(display, window, gc,
-        mid_x+sc(3.5), mid_y-sc(3.5), mid_x-sc(3.5), mid_y+sc(3.5));
+        px(mid_x+sc(3.5)), px(mid_y-sc(3.5)), px(mid_x-sc(3.5)), px(mid_y+sc(3.5)));
     XFreeGC(display, gc);
 }
 
@@ -106,20 +110,20 @@ void MaximizeButton::on_expose(const XEvent &, void *)
 
     if (restore){
         XPoint points[5] = {
-            tiny::x_point(mid_x-sc(2), mid_y-sc(1)),
-            tiny::x_point(mid_x+sc(2), mid_y-sc(1)),
-            tiny::x_point(mid_x+sc(2), mid_y+sc(3)),
-            tiny::x_point(mid_x-sc(2), mid_y+sc(3)),
-            tiny::x_point(mid_x-sc(2), mid_y-sc(1))};
+            tiny::x_point(px(mid_x-sc(2)), px(mid_y-sc(1))),
+            tiny::x_point(px(mid_x+sc(2)), px(mid_y-sc(1))),
+            tiny::x_point(px(mid_x+sc(2)), px(mid_y+sc(3))),
+            tiny::x_point(px(mid_x-sc(2)), px(mid_y+sc(3))),
+            tiny::x_point(px(mid_x-sc(2)), px(mid_y-sc(1)))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     } else {
         XPoint points[5] = {
-            tiny::x_point(mid_x-sc(3), mid_y-sc(3)),
-            tiny::x_point(mid_x+sc(3), mid_y-sc(3)),
-            tiny::x_point(mid_x+sc(3), mid_y+sc(3)),
-            tiny::x_point(mid_x-sc(3), mid_y+sc(3)),
-            tiny::x_point(mid_x-sc(3), mid_y-sc(3))};
+            tiny::x_point(px(mid_x-sc(3)), px(mid_y-sc(3))),
+            tiny::x_point(px(mid_x+sc(3)), px(mid_y-sc(3))),
+            tiny::x_point(px(mid_x+sc(3)), px(mid_y+sc(3))),
+            tiny::x_point(px(mid_x-sc(3)), px(mid_y+sc(3))),
+            tiny::x_point(px(mid_x-sc(3)), px(mid_y-sc(3)))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     }
@@ -159,7 +163,7 @@ void MinimizeButton::on_expose(const XEvent &, void *)
     int mid_y = attrs.width/2;
 
     XDrawLine(display, window, gc,
-        mid_x-sc(4), mid_y+sc(3.5), mid_x+sc(4), mid_y+sc(3.5));
+        px(mid_x-sc(4)), px(mid_y+sc(3.5)), px(mid_x+sc(4)), px(mid_y+sc(3.5)));
     XFreeGC(display, gc);
 }
 
