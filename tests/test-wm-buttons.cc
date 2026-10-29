@@ -117,7 +117,8 @@ TEST_F(WmButtonTest, hover_inverts_colors)
 TEST_F(WmButtonTest, enter_and_leave_signals_stay_free_for_users)
 {
     wm::CloseButton b;
-    Recorder enter, leave;
+    Recorder enter;
+    Recorder leave;
     b.on_enter.connect(&enter, enter.slot());
     b.on_leave.connect(&leave, leave.slot());
     b.realize(root_window(), 0, 0);

@@ -63,7 +63,7 @@ class ButtonTest : public ::testing::Test {
         XSync(tiny::get_display(), False);
         XImage* img = XGetImage(tiny::get_display(), w.get_window(), x, y, 1, 1,
                                 AllPlanes, ZPixmap);
-        uint32_t px = static_cast<uint32_t>(XGetPixel(img, 0, 0));
+        auto px = static_cast<uint32_t>(XGetPixel(img, 0, 0));
         XDestroyImage(img);
         return px;
     }
@@ -93,7 +93,8 @@ class ButtonTest : public ::testing::Test {
 TEST_F(ButtonTest, enter_and_leave_emit_signals)
 {
     tiny::Button b(50, 20);
-    Recorder enter, leave;
+    Recorder enter;
+    Recorder leave;
     b.on_enter.connect(&enter, enter.slot());
     b.on_leave.connect(&leave, leave.slot());
     b.realize(root(), 0, 0);

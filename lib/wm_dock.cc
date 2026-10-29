@@ -77,11 +77,12 @@ void DockButton::on_expose(const XEvent&, void*)
     unsigned int dot = static_cast<unsigned int>(
             std::max(1l, lround(5 * tiny::theme.scale_factor)));
 
-    for (int y = 3; y <= 11; y += 4)
+    for (int y = 3; y <= 11; y += 4) {
         for (int x = 3; x <= 11; x += 4) {
             XFillArc(display, window, gc, x * offset, y * offset, dot, dot, 0,
                      360 * 64);
         }
+    }
     XFreeGC(display, gc);
 }
 

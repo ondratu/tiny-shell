@@ -6,12 +6,14 @@
 
 using tiny::Style;
 
-static constexpr uint8_t NORMAL = uint8_t(Style::State::Normal);
-static constexpr uint8_t SELECTED = uint8_t(Style::State::Selected);
-static constexpr uint8_t HOVER = uint8_t(Style::State::Hover);
-static constexpr uint8_t FOCUS = uint8_t(Style::State::Focus);
-static constexpr uint8_t PRESSED = uint8_t(Style::State::Pressed);
-static constexpr uint8_t DISABLED = uint8_t(Style::State::Disabled);
+static constexpr uint8_t NORMAL = static_cast<uint8_t>(Style::State::Normal);
+static constexpr uint8_t SELECTED =
+        static_cast<uint8_t>(Style::State::Selected);
+static constexpr uint8_t HOVER = static_cast<uint8_t>(Style::State::Hover);
+static constexpr uint8_t FOCUS = static_cast<uint8_t>(Style::State::Focus);
+static constexpr uint8_t PRESSED = static_cast<uint8_t>(Style::State::Pressed);
+static constexpr uint8_t DISABLED =
+        static_cast<uint8_t>(Style::State::Disabled);
 
 class StyleTest : public ::testing::Test {
   protected:
@@ -114,7 +116,7 @@ TEST_F(StyleTest, init_opens_font)
 
 TEST(StyleDefaults, delete_through_base_pointer_closes_font)
 {
-    Style* style = new Style(tiny::theme.widget);
+    auto* style = new Style(tiny::theme.widget);
     style->init();
     ASSERT_NE(style->get_font(), nullptr);
 

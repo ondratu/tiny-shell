@@ -42,7 +42,8 @@ TEST_F(BoxTest, push_start_horizontal_moves_start_offset)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
 
     box.push_start(&a, 5);
     EXPECT_EQ(box.get_start_offset(), 25u);
@@ -55,7 +56,8 @@ TEST_F(BoxTest, push_start_vertical_moves_start_offset)
 {
     tiny::Box box(tiny::Box::Type::Vertical, 200, 100);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 15);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 15);
 
     box.push_start(&a, 0, 2);
     EXPECT_EQ(box.get_start_offset(), 12u);
@@ -87,7 +89,8 @@ TEST_F(BoxTest, remove_start_widget_restores_start_offset)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
     box.push_start(&a, 5);
     box.push_start(&b, 5);
 
@@ -209,7 +212,8 @@ TEST_F(ContainerTest, map_all_maps_container_and_children)
 {
     tiny::Container c(200, 100);
     c.realize(root(), 0, 0);
-    tiny::Widget a(20, 10), b(20, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(20, 10);
     c.add(&a);
     c.add(&b);
 
@@ -224,7 +228,8 @@ TEST_F(ContainerTest, removed_child_is_not_mapped_by_map_all)
 {
     tiny::Container c(200, 100);
     c.realize(root(), 0, 0);
-    tiny::Widget a(20, 10), b(20, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(20, 10);
     c.add(&a);
     c.add(&b);
 
@@ -249,7 +254,8 @@ TEST_F(BoxTest, push_start_places_widgets_one_after_another)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
 
     box.push_start(&a, 5, 1);
     box.push_start(&b, 5, 1);
@@ -263,7 +269,8 @@ TEST_F(BoxTest, push_back_places_widgets_from_the_end)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
 
     box.push_back(&a, 5);
     box.push_back(&b, 5);
@@ -299,7 +306,8 @@ TEST_F(BoxTest, remove_start_widget_moves_following_widgets_back)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
     box.push_start(&a, 5);
     box.push_start(&b, 5);
 
@@ -313,7 +321,8 @@ TEST_F(BoxTest, remove_end_widget_moves_remaining_end_widgets)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), b(30, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget b(30, 10);
     box.push_back(&a, 5);
     box.push_back(&b, 5);
 
@@ -327,7 +336,8 @@ TEST_F(BoxTest, remove_unknown_widget_changes_nothing)
 {
     tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
     realize(box);
-    tiny::Widget a(20, 10), stranger(20, 10);
+    tiny::Widget a(20, 10);
+    tiny::Widget stranger(20, 10);
     box.push_start(&a, 5);
 
     box.remove(&stranger);

@@ -111,7 +111,7 @@ TEST_F(WidgetTest, realize_transparent_widget_uses_32_bit_visual)
 
 TEST_F(WidgetTest, delete_through_base_pointer_destroys_window)
 {
-    tiny::Widget* w = new tiny::Widget(30, 20);
+    auto* w = new tiny::Widget(30, 20);
     w->realize(root(), 0, 0);
     ::Window window = w->get_window();
 
@@ -159,7 +159,9 @@ TEST_F(WidgetTest, destructor_destroys_window)
 
     // a destroyed window can not be queried; the error handler would be
     // triggered, so check the tree instead
-    ::Window rv_root, rv_parent, *children = nullptr;
+    ::Window rv_root;
+    ::Window rv_parent;
+    ::Window* children = nullptr;
     unsigned int count = 0;
     XQueryTree(tiny::get_display(), root(), &rv_root, &rv_parent, &children,
                &count);

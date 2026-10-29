@@ -12,7 +12,7 @@ namespace tiny {
 
 class Object;
 
-typedef void (Object::*event_signal_t)(const XEvent& e, void* data);
+using event_signal_t = void (Object::*)(const XEvent& e, void* data);
 
 class Handlers : public std::map<std::pair<uint16_t, ::Window>,
                                  std::tuple<Object*, event_signal_t, void*>> {
@@ -25,7 +25,8 @@ class Handlers : public std::map<std::pair<uint16_t, ::Window>,
     void call_hanlder(std::pair<uint16_t, ::Window> key, const XEvent& e);
 };
 
-typedef void (Object::*object_signal_t)(Object* o, const XEvent& e, void* data);
+using object_signal_t = void (Object::*)(Object* o, const XEvent& e,
+                                         void* data);
 
 class Signal {
   public:

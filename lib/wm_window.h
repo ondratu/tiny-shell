@@ -82,7 +82,6 @@ class Window : public tiny::Object {
         FOCUSED = 1L << 12
     };
 
-  public:
     Window(::Window child, ::Window root, unsigned long functions);
     ~Window() override;
 

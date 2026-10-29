@@ -32,7 +32,9 @@ TEST(EdgeTest, realize_creates_input_only_window)
 TEST(EdgeTest, drag_signals_follow_pointer_events)
 {
     wm::Edge edge(20, 10, tiny::Position::Left);
-    Recorder begin, end, motion;
+    Recorder begin;
+    Recorder end;
+    Recorder motion;
     edge.on_drag_begin.connect(&begin, begin.slot());
     edge.on_drag_end.connect(&end, end.slot());
     edge.on_drag_motion.connect(&motion, motion.slot());
@@ -250,7 +252,8 @@ TEST_F(BackWindowTest, corners_follow_the_window_by_gravity)
 
 TEST_F(BackWindowTest, edge_drag_is_reported_with_the_edge_mask)
 {
-    Recorder begin, motion;
+    Recorder begin;
+    Recorder motion;
     bw->on_move_resize_begin.connect(&begin, begin.slot());
     bw->on_move_resize_motion.connect(&motion, motion.slot());
     bw->realize(root_window(), 50, 60);

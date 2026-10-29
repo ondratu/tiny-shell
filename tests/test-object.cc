@@ -69,7 +69,8 @@ TEST(Handlers, set_and_unset)
 TEST(Handlers, set_replaces_existing_handler)
 {
     tiny::Handlers handlers;
-    Receiver first, second;
+    Receiver first;
+    Receiver second;
 
     handlers.set_handler(KeyPress, 42, &first, first.event_slot(), nullptr);
     handlers.set_handler(KeyPress, 42, &second, second.event_slot(), nullptr);
@@ -105,7 +106,8 @@ TEST(Handlers, call_passes_event_and_data)
 TEST(Handlers, handlers_are_keyed_by_type_and_window)
 {
     tiny::Handlers handlers;
-    Receiver a, b;
+    Receiver a;
+    Receiver b;
 
     handlers.set_handler(KeyPress, 1, &a, a.event_slot(), nullptr);
     handlers.set_handler(KeyPress, 2, &b, b.event_slot(), nullptr);
@@ -145,7 +147,8 @@ TEST(SignalTest, connect_data_is_default_and_call_data_overrides)
 {
     tiny::Signal signal;
     Receiver r;
-    int connected = 0, override_data = 0;
+    int connected = 0;
+    int override_data = 0;
 
     signal.connect(&r, r.signal_slot(), &connected);
 
@@ -159,7 +162,8 @@ TEST(SignalTest, connect_data_is_default_and_call_data_overrides)
 TEST(SignalTest, reconnect_replaces_target)
 {
     tiny::Signal signal;
-    Receiver first, second;
+    Receiver first;
+    Receiver second;
 
     signal.connect(&first, first.signal_slot());
     signal.connect(&second, second.signal_slot());
@@ -200,7 +204,7 @@ TEST(ObjectTest, destructor_disconnects_all_windows)
 
 TEST(ObjectTest, delete_through_base_pointer_disconnects_windows)
 {
-    Receiver* r = new Receiver;
+    auto* r = new Receiver;
     r->connect_window(KeyPress, 1004, r->event_slot());
     tiny::Object* base = r;
 
@@ -211,7 +215,7 @@ TEST(ObjectTest, delete_through_base_pointer_disconnects_windows)
 
 TEST(ObjectTest, plain_object_can_be_deleted)
 {
-    tiny::Object* o = new tiny::Object;
+    auto* o = new tiny::Object;
 
     delete o;
 }

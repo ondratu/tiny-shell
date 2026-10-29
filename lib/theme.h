@@ -39,7 +39,6 @@ class Style {
     static constexpr uint32_t GRAY50 = 0x808080;
     static constexpr uint32_t GRAY75 = 0xc0c0c0;
 
-  public:
     Style() = default;
     virtual ~Style();
 

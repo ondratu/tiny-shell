@@ -85,7 +85,7 @@ void Display::init(const char* display_name)
 
 Display& get_display()
 {
-    if (display.get() == nullptr) {
+    if (display == nullptr) {
         error("Display is not initialized!");
         abort();
     }

@@ -136,7 +136,8 @@ TEST_F(WrappedTest, create_sets_wm_state_to_normal)
 
     Atom type;
     int format;
-    unsigned long count, left;
+    unsigned long count;
+    unsigned long left;
     unsigned char* data = nullptr;
     ASSERT_EQ(XGetWindowProperty(dsp(), frame, dsp().WM_STATE, 0, 2, False,
                                  dsp().WM_STATE, &type, &format, &count, &left,
@@ -547,7 +548,9 @@ TEST_F(WrappedTest, destructor_gives_the_client_back_to_the_root)
 
     win.reset();
 
-    ::Window root, parent, *kids = nullptr;
+    ::Window root;
+    ::Window parent;
+    ::Window* kids = nullptr;
     unsigned int count;
     ASSERT_TRUE(
             XQueryTree(dsp(), client.window, &root, &parent, &kids, &count));

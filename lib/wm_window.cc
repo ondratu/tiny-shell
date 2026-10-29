@@ -96,7 +96,7 @@ Window* Window::create(::Window root, ::Window child, const XWindowAttributes&,
                        unsigned long functions)
 {
     tiny::Display& display = tiny::get_display();
-    auto win = new Window(child, root, functions);
+    auto* win = new Window(child, root, functions);
 
     XMapWindow(display, child);
     XSetWindowBorderWidth(display, child, 1);
@@ -307,7 +307,7 @@ void Window::update_protocols()
     if (XGetWMProtocols(dsp, child, &supported, &count) == 0) {
         return;
     }
-    for (size_t i = 0; i < size_t(count); ++i) {
+    for (size_t i = 0; i < static_cast<size_t>(count); ++i) {
         protocols.insert(supported[i]);
     }
     XFree(supported);
@@ -363,8 +363,11 @@ void Window::update_wm_hints()
     }
 
     ::Window geo_root;
-    int x, y; //!< unused for pixmap
-    unsigned int icon_width, icon_height, icon_border;
+    int x;
+    int y; //!< unused for pixmap
+    unsigned int icon_width;
+    unsigned int icon_height;
+    unsigned int icon_border;
     unsigned int depth; //!< unused dor pixmap
     if (!XGetGeometry(dsp, wm_hints->icon_pixmap, &geo_root, &x, &y,
                       &icon_width, &icon_height, &icon_border, &depth)) {
@@ -532,7 +535,7 @@ void Window::update_wm_name()
             XFree(data);
         }
     }
-    if (wm_name.size() == 0) {
+    if (wm_name.empty()) {
         char* data;
         if (XFetchName(dsp, child, &data)) {
             wm_name = data;
@@ -559,7 +562,7 @@ void Window::update_wm_icon_name()
             XFree(data);
         }
     }
-    if (wm_icon_name.size() == 0) {
+    if (wm_icon_name.empty()) {
         char* data;
         if (XGetIconName(dsp, child, &data)) {
             wm_icon_name = data;
@@ -590,7 +593,7 @@ void Window::update_wm_icon()
         unsigned long width = 0;
         unsigned long height = 0;
         // Yes, it can really be 64bit (unsigned long) not 32bit!
-        unsigned long* words = reinterpret_cast<unsigned long*>(data);
+        auto* words = reinterpret_cast<unsigned long*>(data);
         while (pos < nitems) {
             width = words[pos];
             height = words[pos + 1];
@@ -632,7 +635,7 @@ void Window::update_wm_icon()
         uint32_t color;
         uint8_t* pixel;
         // format is RGBA + 4 zeors on 64bit
-        for (size_t y = 0; y < height; y++)
+        for (size_t y = 0; y < height; y++) {
             for (size_t x = 0; x < width; x++) {
                 pixel = reinterpret_cast<uint8_t*>(&words[pos + y * width + x]);
                 color = static_cast<uint32_t>(pixel[0] * pixel[3] / 255) << 0;
@@ -647,6 +650,7 @@ void Window::update_wm_icon()
                                static_cast<int>(y));
                 }
             }
+        }
 
         const auto icon_px = static_cast<unsigned long>(tiny::theme.wm_icon);
         if ((width != icon_px) && (height != icon_px)) {
@@ -721,7 +725,7 @@ void Window::on_client_message(const XEvent& e, void*)
 {
     if (e.xclient.message_type == dsp._NET_WM_STATE) {
         // client want be maximized
-        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_ADD) {
+        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_ADD) {
             if (static_cast<Atom>(e.xclient.data.l[1]) ==
                         dsp._NET_WM_STATE_MAXIMIZED_VERT &&
                 static_cast<Atom>(e.xclient.data.l[2]) ==
@@ -736,7 +740,7 @@ void Window::on_client_message(const XEvent& e, void*)
             XFree(atom_name);
         }
 
-        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_REMOVE) {
+        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_REMOVE) {
             if (static_cast<Atom>(e.xclient.data.l[1]) ==
                         dsp._NET_WM_STATE_MAXIMIZED_VERT &&
                 static_cast<Atom>(e.xclient.data.l[2]) ==
@@ -751,7 +755,7 @@ void Window::on_client_message(const XEvent& e, void*)
             XFree(atom_name);
         }
 
-        if (e.xclient.data.l[0] == dsp._NET_WM_STATE_TOGGLE) {
+        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_TOGGLE) {
             char* atom_name =
                     XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
             TINY_LOG("Unhandled WM_STATE_TOGLE request %s", atom_name);

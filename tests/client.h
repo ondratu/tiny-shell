@@ -170,7 +170,8 @@ class Client {
         sync();
         Atom type;
         int format;
-        unsigned long count, left;
+        unsigned long count;
+        unsigned long left;
         unsigned char* data = nullptr;
         std::vector<Atom> rv;
         XGetWindowProperty(display, window, dsp()._NET_WM_STATE, 0, 64, False,

@@ -232,7 +232,7 @@ void Manager::main_loop()
 
 void Manager::activate_next_window()
 {
-    if (wm_windows.size() == 0) {
+    if (wm_windows.empty()) {
         return; // no window to activate
     }
 
@@ -255,7 +255,7 @@ void Manager::activate_next_window()
 
 void Manager::activate_prev_window()
 {
-    if (wm_tops.size() == 0) {
+    if (wm_tops.empty()) {
         return; // no window to activate
     }
 

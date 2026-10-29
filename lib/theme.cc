@@ -51,13 +51,15 @@ Theme::Theme()
 double Theme::env_scale_factor()
 {
     const char* env = getenv("TINY_SCALE_FACTOR");
-    if (!env)
+    if (!env) {
         return 1;
+    }
 
     char* end = nullptr;
     double factor = strtod(env, &end);
-    if (end == env || *end != '\0' || !(factor > 0) || factor > 16)
+    if (end == env || *end != '\0' || !(factor > 0) || factor > 16) {
         return 1;
+    }
     return factor;
 }
 

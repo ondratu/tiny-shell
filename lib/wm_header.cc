@@ -1,5 +1,7 @@
 #include <X11/cursorfont.h>
 
+#include <algorithm>
+
 #include "wm_header.h"
 #include "x_util.h"
 
@@ -139,9 +141,7 @@ void Header::on_expose(const XEvent&, void*)
     if ((x + extents.width) > get_end_offset()) {
         x = get_end_offset() - extents.width;
     }
-    if (x < get_padding()) {
-        x = get_padding();
-    }
+    x = std::max(x, get_padding());
 
     XSetWindowBackground(display, window, tiny::theme.wm_header.get_bg(state));
     XClearWindow(display, window);
