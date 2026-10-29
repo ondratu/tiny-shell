@@ -223,7 +223,7 @@ void BackWindow::on_configure_notify(const XEvent &e, void * data)
                 width-2*tiny::theme.wm_win_corner, tiny::theme.wm_win_border);
         XMoveResizeWindow(display, edge_right.get_window(),
                 width-tiny::theme.wm_win_border, tiny::theme.wm_win_corner,
-                tiny::theme.wm_win_corner, height-2*tiny::theme.wm_win_corner);
+                tiny::theme.wm_win_border, height-2*tiny::theme.wm_win_corner);
         XMoveResizeWindow(display, edge_bottom.get_window(),
                 tiny::theme.wm_win_corner, height-tiny::theme.wm_win_border,
                 width-2*tiny::theme.wm_win_corner, tiny::theme.wm_win_border);
