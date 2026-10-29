@@ -87,8 +87,19 @@ void Widget::realize(Window parent, int x, int y)
             break;
         case (Type::Transparent):
             XVisualInfo vinfo;
-            XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor,
-                    &vinfo);
+            if (!XMatchVisualInfo(display, XDefaultScreen(display), 32,
+                        TrueColor, &vinfo))
+            {
+                // no ARGB visual: fall back to an opaque window
+                error("tiny::Widget %s: no 32 bit visual, not transparent",
+                        name);
+                window = XCreateSimpleWindow(
+                        display, parent,
+                        x, y, width, height,
+                        get_border(), get_style().get_br(state),
+                        get_style().get_bg(state));
+                break;
+            }
 
             XSetWindowAttributes attr;
             attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
