@@ -95,7 +95,7 @@ Window::~Window()
 Window* Window::create(::Window root, ::Window child, const XWindowAttributes&,
                        unsigned long functions)
 {
-    tiny::Display& display = tiny::get_display();
+    const tiny::Display& display = tiny::get_display();
     auto* win = new Window(child, root, functions);
 
     XMapWindow(display, child);
@@ -453,7 +453,7 @@ void Window::update_wm_states()
     }
 
     char* atom_name;
-    Atom* atoms = reinterpret_cast<Atom*>(data);
+    const Atom* atoms = reinterpret_cast<Atom*>(data);
     for (unsigned long i = 0; i < nitems; i++) {
         if (atoms[i] == dsp._NET_WM_STATE_MODAL) {
             wm_states |= WMState::MODAL;
@@ -690,8 +690,8 @@ void Window::on_window_drag_begin(tiny::Object*, const XEvent& e, void*)
 
 void Window::on_window_drag_motion(tiny::Object*, const XEvent& e, void*)
 {
-    int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-    int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+    const int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+    const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
 
     XMoveWindow(dsp, child, start_attrs.x + xdiff, start_attrs.y + ydiff);
 }
@@ -895,7 +895,7 @@ int Window::get_properties(::Window window, std::set<Atom>& properties)
     int count;
     properties.clear();
 
-    tiny::Display& display = tiny::get_display();
+    const tiny::Display& display = tiny::get_display();
     Atom* props = XListProperties(display, window, &count);
 
     char* atom_name;
@@ -912,7 +912,7 @@ int Window::get_properties(::Window window, std::set<Atom>& properties)
 Window::WMType Window::get_net_wm_type(::Window window)
 {
     WMType wm_type = WMType::NORMAL; // Default value
-    tiny::Display& display = tiny::get_display();
+    const tiny::Display& display = tiny::get_display();
 
     Atom return_type;
     int size;
@@ -927,7 +927,7 @@ Window::WMType Window::get_net_wm_type(::Window window)
         return wm_type;
     }
 
-    Atom* window_types = reinterpret_cast<Atom*>(data);
+    const Atom* window_types = reinterpret_cast<Atom*>(data);
     for (unsigned long i = 0; i < nitems; i++) {
         if (window_types[i] == display._NET_WM_WINDOW_TYPE_DESKTOP) {
             wm_type = WMType::DESKTOP;
@@ -975,7 +975,7 @@ bool Window::get_motif_hints(::Window window, unsigned long& functions,
                   MotifWMHints::DECOR_MENU | MotifWMHints::DECOR_MINIMIZE |
                   MotifWMHints::DECOR_MAXIMIZE;
 
-    tiny::Display& display = tiny::get_display();
+    const tiny::Display& display = tiny::get_display();
     Atom returned_type;
     int size;
     unsigned long nitems;

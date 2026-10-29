@@ -120,9 +120,9 @@ class Client {
     // Pixmap filled with a color, in the depth of the default screen.
     Pixmap pixmap(int size, unsigned long color)
     {
-        Pixmap p = XCreatePixmap(display, DefaultRootWindow(display),
-                                 tiny::x_uint(size), tiny::x_uint(size),
-                                 tiny::x_uint(DefaultDepth(display, 0)));
+        const Pixmap p = XCreatePixmap(display, DefaultRootWindow(display),
+                                       tiny::x_uint(size), tiny::x_uint(size),
+                                       tiny::x_uint(DefaultDepth(display, 0)));
         GC gc = XCreateGC(display, p, 0, nullptr);
         XSetForeground(display, gc, color);
         XFillRectangle(display, p, gc, 0, 0, tiny::x_uint(size),

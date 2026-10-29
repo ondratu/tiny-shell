@@ -33,3 +33,4 @@ AlwaysBreakTemplateDeclarations: Yes
 ContinuationIndentWidth: 8
 SortIncludes: false
 ReflowComments: false
+QualifierAlignment: Left

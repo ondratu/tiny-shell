@@ -63,8 +63,8 @@ void Entry::on_key_release(const XEvent& e, void*)
     //                        buf, 16, &keysym, &comp);
     //int len = XmbLookupString(xic¸, const_cast<XKeyEvent*>(&e.xkey),
     //                          buf, 16, &keysym, &state);
-    int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
-                                sizeof(buf) - 1, &keysym, &state);
+    const int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
+                                      sizeof(buf) - 1, &keysym, &state);
     TINY_LOG("state: %d", state);
     if (state == XBufferOverflow) {
         TINY_LOG("\t XBufferOverflow");
@@ -100,7 +100,8 @@ void Entry::on_key_release(const XEvent& e, void*)
             //assert(ret != -1);
             std::string cmd = "exec ";
             cmd += text;
-            int ret = execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
+            const int ret =
+                    execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
             exit(ret);
         } else {
             on_exit(this, e);
@@ -125,7 +126,7 @@ void Entry::on_expose(const XEvent&, void*)
     XGlyphInfo extents;
     const int screen = 0; // XXX
     Visual* visual = XDefaultVisual(display, screen);
-    Colormap colormap = XDefaultColormap(display, screen);
+    const Colormap colormap = XDefaultColormap(display, screen);
 
     XftColorAllocName(display, visual, colormap,
                       tiny::theme.widget.get_xft_fg(get_theme_state()).data(),
@@ -138,8 +139,8 @@ void Entry::on_expose(const XEvent&, void*)
                        static_cast<int>(text.size()), &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (width - extents.width) / 2;
-    int y = (height + extents.height) / 2;
+    const int x = (width - extents.width) / 2;
+    const int y = (height + extents.height) / 2;
 
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,

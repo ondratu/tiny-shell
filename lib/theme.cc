@@ -56,7 +56,7 @@ double Theme::env_scale_factor()
     }
 
     char* end = nullptr;
-    double factor = strtod(env, &end);
+    const double factor = strtod(env, &end);
     if (end == env || *end != '\0' || !(factor > 0) || factor > 16) {
         return 1;
     }

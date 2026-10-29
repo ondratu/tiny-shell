@@ -45,7 +45,7 @@ class WidgetTest : public ::testing::Test {
 
 TEST_F(WidgetTest, constructor_sets_size_and_state)
 {
-    TestWidget w(30, 20);
+    const TestWidget w(30, 20);
 
     EXPECT_EQ(w.get_width(), 30u);
     EXPECT_EQ(w.get_height(), 20u);
@@ -56,7 +56,7 @@ TEST_F(WidgetTest, constructor_sets_size_and_state)
 
 TEST_F(WidgetTest, style_comes_from_theme)
 {
-    TestWidget w(10, 10);
+    const TestWidget w(10, 10);
 
     EXPECT_EQ(&w.get_style(), &tiny::theme.widget);
     EXPECT_EQ(w.get_border(), tiny::theme.widget.border_width);
@@ -113,7 +113,7 @@ TEST_F(WidgetTest, delete_through_base_pointer_destroys_window)
 {
     auto* w = new tiny::Widget(30, 20);
     w->realize(root(), 0, 0);
-    ::Window window = w->get_window();
+    const ::Window window = w->get_window();
 
     delete w;
 
@@ -124,11 +124,11 @@ TEST_F(WidgetTest, realize_twice_reports_error_and_keeps_window)
 {
     TestWidget w(30, 20);
     w.realize(root(), 0, 0);
-    ::Window window = w.get_window();
+    const ::Window window = w.get_window();
 
     ::testing::internal::CaptureStderr();
     w.realize(root(), 10, 10);
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("realized yet"), std::string::npos);
     EXPECT_EQ(w.get_window(), window);
@@ -181,7 +181,7 @@ TEST_F(WidgetTest, destroying_unrealized_widget_keeps_other_handlers)
     Receiver other;
     other.connect_window(ConfigureNotify, 0, other.slot());
     {
-        TestWidget w(30, 20);
+        const TestWidget w(30, 20);
     }
 
     EXPECT_EQ(tiny::handlers.count({ConfigureNotify, 0}), 1u);
@@ -193,7 +193,7 @@ TEST_F(WidgetTest, map_without_realize_reports_error)
 
     ::testing::internal::CaptureStderr();
     w.map();
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("not realized"), std::string::npos);
     EXPECT_FALSE(w.get_maped());
@@ -264,7 +264,7 @@ TEST_F(WidgetTest, resize_after_realize_waits_for_configure_notify)
 
 TEST_F(WidgetTest, theme_state_is_normal_by_default)
 {
-    TestWidget w(10, 10);
+    const TestWidget w(10, 10);
 
     EXPECT_EQ(w.get_theme_state(), uint8_t(tiny::Style::State::Normal));
 }

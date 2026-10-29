@@ -51,7 +51,7 @@ TEST_F(DockButtonTest, is_a_square_without_border)
 
 TEST_F(DockButtonTest, connects_its_events)
 {
-    for (int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
+    for (const int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
         EXPECT_TRUE(has_handler(type, button.get_window())) << type;
     }
 }
@@ -69,10 +69,10 @@ TEST_F(DockButtonTest, button_release_emits_click)
 
 TEST_F(DockButtonTest, draws_grid_of_dots)
 {
-    uint32_t bg = widget_bg(tiny::Style::State::Normal);
+    const uint32_t bg = widget_bg(tiny::Style::State::Normal);
     send(button, Expose);
 
-    Image img(button.get_window(), icon_size(), icon_size());
+    const Image img(button.get_window(), icon_size(), icon_size());
     EXPECT_NE(img.count_not(bg, icon_size()), 0u);
     EXPECT_EQ(img.at(0, 0), bg);
 }
@@ -86,10 +86,11 @@ TEST(DockButtonScaleTest, dots_are_scaled)
         button.map_all();
         send(button, Expose);
 
-        uint32_t fg = tiny::theme.widget.get_fg(
+        const uint32_t fg = tiny::theme.widget.get_fg(
                 static_cast<uint8_t>(tiny::Style::State::Normal));
-        Image img(button.get_window(), button.get_width(), button.get_height());
-        int origin = 3 * (button.get_width() / 14);
+        const Image img(button.get_window(), button.get_width(),
+                        button.get_height());
+        const int origin = 3 * (button.get_width() / 14);
 
         ASSERT_EQ(button.get_width(), 96u);
         // 10 px dot (5 px at scale 1): its far edge is still filled
@@ -102,10 +103,10 @@ TEST(DockButtonScaleTest, dots_are_scaled)
 TEST_F(DockButtonTest, hover_changes_background)
 {
     send(button, EnterNotify);
-    Image hover(button.get_window(), icon_size(), icon_size());
+    const Image hover(button.get_window(), icon_size(), icon_size());
 
     send(button, LeaveNotify);
-    Image normal(button.get_window(), icon_size(), icon_size());
+    const Image normal(button.get_window(), icon_size(), icon_size());
 
     EXPECT_EQ(hover.at(0, 0), widget_bg(tiny::Style::State::Hover));
     EXPECT_EQ(normal.at(0, 0), widget_bg(tiny::Style::State::Normal));
@@ -119,14 +120,14 @@ TEST(DockButtonLifeTest, destructor_disconnects_events)
         button.realize(root_window(), 0, 0);
         window = button.get_window();
     }
-    for (int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
+    for (const int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
         EXPECT_FALSE(has_handler(type, window)) << type;
     }
 }
 
 TEST(DockButtonLifeTest, destructor_of_unrealized_button_is_safe)
 {
-    wm::DockButton button;
+    const wm::DockButton button;
 }
 
 // ---- Icon ----
@@ -161,10 +162,10 @@ TEST_F(IconTest, click_focuses_the_task)
 
 TEST_F(IconTest, without_icon_draws_a_circle)
 {
-    uint32_t bg = widget_bg(tiny::Style::State::Normal);
+    const uint32_t bg = widget_bg(tiny::Style::State::Normal);
     send(*icon, Expose);
 
-    Image img(icon->get_window(), icon_size(), icon_size());
+    const Image img(icon->get_window(), icon_size(), icon_size());
     EXPECT_NE(img.count_not(bg, icon_size()), 0u);
     EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), bg); // hollow
 }
@@ -182,7 +183,7 @@ TEST_F(IconTest, draws_the_icon_of_the_task)
 
     send(*icon, Expose);
 
-    Image img(icon->get_window(), icon_size(), icon_size());
+    const Image img(icon->get_window(), icon_size(), icon_size());
     EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), 0xFF0000u);
     EXPECT_EQ(img.at(0, 0), 0xFF0000u);
 }
@@ -190,11 +191,11 @@ TEST_F(IconTest, draws_the_icon_of_the_task)
 TEST_F(IconTest, focused_task_is_drawn_selected)
 {
     send(*icon, Expose);
-    Image before(icon->get_window(), icon_size(), icon_size());
+    const Image before(icon->get_window(), icon_size(), icon_size());
 
     task->set_focus();
     send(*icon, Expose);
-    Image after(icon->get_window(), icon_size(), icon_size());
+    const Image after(icon->get_window(), icon_size(), icon_size());
 
     EXPECT_EQ(before.at(0, 0), widget_bg(tiny::Style::State::Normal));
     EXPECT_EQ(after.at(0, 0), widget_bg(tiny::Style::State::Selected));
@@ -347,9 +348,9 @@ TEST_F(DockTest, redraw_draws_the_icon_of_the_window)
 
     dock.redraw(w, make_event(Expose));
 
-    ::Window icon = child_at(dock.get_window(), border(), border());
+    const ::Window icon = child_at(dock.get_window(), border(), border());
     ASSERT_NE(icon, 0u);
-    Image img(icon, icon_size(), icon_size());
+    const Image img(icon, icon_size(), icon_size());
     EXPECT_EQ(img.at(0, 0), widget_bg(tiny::Style::State::Selected));
 }
 
@@ -357,7 +358,7 @@ TEST_F(DockTest, redraw_of_unknown_window_is_ignored)
 {
     Client c;
     WmWindow* w = manage(c);
-    XErrors errors;
+    const XErrors errors;
 
     dock.redraw(w, make_event(Expose));
 
@@ -369,7 +370,7 @@ TEST_F(DockTest, clicking_an_icon_focuses_its_window)
     Client c;
     WmWindow* w = manage(c);
     add(w);
-    ::Window icon = child_at(dock.get_window(), border(), border());
+    const ::Window icon = child_at(dock.get_window(), border(), border());
     ASSERT_NE(icon, 0u);
 
     send(icon, make_event(ButtonRelease));
@@ -391,7 +392,7 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
         ASSERT_EQ(children_of(dock_window).size(), 2u);
     }
 
-    XErrors errors;
+    const XErrors errors;
     XWindowAttributes attrs;
     EXPECT_EQ(XGetWindowAttributes(tiny::get_display(), dock_window, &attrs),
               0);

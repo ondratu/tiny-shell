@@ -8,7 +8,7 @@
 
 TEST(EdgeTest, keeps_mask_and_size)
 {
-    wm::Edge edge(20, 10, tiny::Position::Top);
+    const wm::Edge edge(20, 10, tiny::Position::Top);
 
     EXPECT_EQ(edge.get_mask(), tiny::Position::Top);
     EXPECT_EQ(edge.get_width(), 20u);
@@ -21,7 +21,7 @@ TEST(EdgeTest, realize_creates_input_only_window)
 
     edge.realize(root_window(), 3, 4);
 
-    XWindowAttributes attrs = attributes_of(edge);
+    const XWindowAttributes attrs = attributes_of(edge);
     EXPECT_EQ(attrs.c_class, InputOnly);
     EXPECT_EQ(attrs.x, 3);
     EXPECT_EQ(attrs.y, 4);
@@ -95,9 +95,9 @@ TEST(EdgeTest, destructor_disconnects_handlers)
 
 TEST(EdgeTest, destroying_unrealized_edge_causes_no_x_error)
 {
-    XErrors x;
+    const XErrors x;
     {
-        wm::Edge edge(20, 10, tiny::Position::Left);
+        const wm::Edge edge(20, 10, tiny::Position::Left);
     }
 
     EXPECT_EQ(x.errors(), 0);
@@ -105,7 +105,7 @@ TEST(EdgeTest, destroying_unrealized_edge_causes_no_x_error)
 
 TEST(EdgeTest, delete_through_base_pointer)
 {
-    tiny::Widget* edge = new wm::Edge(20, 10, tiny::Position::Left);
+    const tiny::Widget* edge = new wm::Edge(20, 10, tiny::Position::Left);
 
     delete edge;
 }
@@ -125,7 +125,7 @@ class BackWindowTest : public ::testing::Test {
     void expect_geometry(::Window w, int x, int y, int width, int height)
     {
         ASSERT_NE(w, 0u);
-        XWindowAttributes attrs = attributes_of(w);
+        const XWindowAttributes attrs = attributes_of(w);
         EXPECT_EQ(attrs.x, x);
         EXPECT_EQ(attrs.y, y);
         EXPECT_EQ(attrs.width, width);
@@ -145,7 +145,7 @@ TEST_F(BackWindowTest, realize_places_window_around_client_area)
 {
     bw->realize(root_window(), 50, 60);
 
-    XWindowAttributes attrs = attributes_of(*bw);
+    const XWindowAttributes attrs = attributes_of(*bw);
     EXPECT_EQ(attrs.x, 50 - border());
     EXPECT_EQ(attrs.y, 60 - border());
     EXPECT_EQ(attrs.width, 220);
@@ -156,7 +156,7 @@ TEST_F(BackWindowTest, realize_places_window_around_client_area)
 TEST_F(BackWindowTest, realize_adds_eight_edges_and_corners)
 {
     bw->realize(root_window(), 50, 60);
-    ::Window w = bw->get_window();
+    const ::Window w = bw->get_window();
 
     EXPECT_EQ(children_of(w).size(), 8u);
     // corners
@@ -177,7 +177,7 @@ TEST_F(BackWindowTest, move_moves_the_window_around_the_client_area)
 
     bw->move(100, 120);
 
-    XWindowAttributes attrs = attributes_of(*bw);
+    const XWindowAttributes attrs = attributes_of(*bw);
     EXPECT_EQ(attrs.x, 100 - border());
     EXPECT_EQ(attrs.y, 120 - border());
     EXPECT_EQ(attrs.width, 220);
@@ -189,7 +189,7 @@ TEST_F(BackWindowTest, move_resize_changes_position_and_size)
 
     bw->move_resize(100, 120, 300, 200);
 
-    XWindowAttributes attrs = attributes_of(*bw);
+    const XWindowAttributes attrs = attributes_of(*bw);
     EXPECT_EQ(attrs.x, 100 - border());
     EXPECT_EQ(attrs.y, 120 - border());
     EXPECT_EQ(attrs.width, 300 + 2 * border());
@@ -212,7 +212,7 @@ TEST_F(BackWindowTest, resize_adds_the_borders)
 
     bw->resize(300, 200);
 
-    XWindowAttributes attrs = attributes_of(*bw);
+    const XWindowAttributes attrs = attributes_of(*bw);
     EXPECT_EQ(attrs.width, 300 + 2 * border());
     EXPECT_EQ(attrs.height, 200 + 2 * border());
 }
@@ -229,7 +229,7 @@ TEST_F(BackWindowTest, configure_notify_keeps_edges_on_the_sides)
     e.xconfigure.height = 220;
     send(bw->get_window(), e);
 
-    ::Window w = bw->get_window();
+    const ::Window w = bw->get_window();
     EXPECT_EQ(bw->get_width(), 320u);
     EXPECT_EQ(bw->get_height(), 220u);
     expect_geometry(child_at(w, 20, 0), 20, 0, 280, border());     // top
@@ -244,7 +244,7 @@ TEST_F(BackWindowTest, corners_follow_the_window_by_gravity)
 
     bw->resize(300, 200);
 
-    ::Window w = bw->get_window();
+    const ::Window w = bw->get_window();
     expect_geometry(child_at(w, 300, 0), 300, 0, corner(), corner());
     expect_geometry(child_at(w, 300, 200), 300, 200, corner(), corner());
     expect_geometry(child_at(w, 0, 200), 0, 200, corner(), corner());
@@ -257,7 +257,7 @@ TEST_F(BackWindowTest, edge_drag_is_reported_with_the_edge_mask)
     bw->on_move_resize_begin.connect(&begin, begin.slot());
     bw->on_move_resize_motion.connect(&motion, motion.slot());
     bw->realize(root_window(), 50, 60);
-    ::Window top_right = child_at(bw->get_window(), 200, 0);
+    const ::Window top_right = child_at(bw->get_window(), 200, 0);
     ASSERT_NE(top_right, 0u);
 
     send(top_right, make_event(ButtonPress));
@@ -280,7 +280,7 @@ TEST_F(BackWindowTest, every_edge_reports_its_own_mask)
     Recorder motion;
     bw->on_move_resize_motion.connect(&motion, motion.slot());
     bw->realize(root_window(), 50, 60);
-    ::Window w = bw->get_window();
+    const ::Window w = bw->get_window();
 
     struct {
         int x, y;
@@ -295,7 +295,7 @@ TEST_F(BackWindowTest, every_edge_reports_its_own_mask)
             {0, 20, tiny::Position::Left},
     };
     for (auto edge : edges) {
-        ::Window child = child_at(w, edge.x, edge.y);
+        const ::Window child = child_at(w, edge.x, edge.y);
         ASSERT_NE(child, 0u);
         XEvent move = make_event(MotionNotify);
         move.xmotion.window = child;
@@ -311,8 +311,8 @@ TEST_F(BackWindowTest, every_edge_reports_its_own_mask)
 TEST_F(BackWindowTest, destructor_destroys_edges_and_disconnects_handlers)
 {
     bw->realize(root_window(), 50, 60);
-    ::Window w = bw->get_window();
-    ::Window child = child_at(w, 0, 0);
+    const ::Window w = bw->get_window();
+    const ::Window child = child_at(w, 0, 0);
     ASSERT_EQ(tiny::handlers.count({ButtonPress, child}), 1u);
 
     delete bw;
@@ -324,7 +324,7 @@ TEST_F(BackWindowTest, destructor_destroys_edges_and_disconnects_handlers)
 
 TEST_F(BackWindowTest, destroying_unrealized_back_window_causes_no_x_error)
 {
-    XErrors x;
+    const XErrors x;
     delete bw;
     bw = new wm::BackWindow(10, 10);
 

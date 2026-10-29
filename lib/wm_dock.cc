@@ -65,7 +65,7 @@ void DockButton::on_button_release(const XEvent& e, void*)
 void DockButton::on_expose(const XEvent&, void*)
 {
     GC gc = XCreateGC(display, window, 0, nullptr);
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
@@ -73,8 +73,8 @@ void DockButton::on_expose(const XEvent&, void*)
     XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
 
-    int offset = width / 14;
-    unsigned int dot = static_cast<unsigned int>(
+    const int offset = width / 14;
+    const unsigned int dot = static_cast<unsigned int>(
             std::max(1l, lround(5 * tiny::theme.scale_factor)));
 
     for (int y = 3; y <= 11; y += 4) {
@@ -105,8 +105,8 @@ void Icon::on_expose(const XEvent&, void*)
                          get_style().get_bg(get_theme_state()));
     XClearWindow(display, window);
 
-    Pixmap icon = task->get_icon();
-    Pixmap icon_mask = task->get_icon_mask();
+    const Pixmap icon = task->get_icon();
+    const Pixmap icon_mask = task->get_icon_mask();
     if (icon) {
         if (icon_mask) {
             XGCValues gc_vals;
@@ -168,7 +168,7 @@ void Dock::remove(Window* window_arg)
 
 void Dock::resize_to_children()
 {
-    int size = tiny::theme.wm_icon + tiny::theme.wm_dock_border;
+    const int size = tiny::theme.wm_icon + tiny::theme.wm_dock_border;
     resize(static_cast<int>(children.size()) * size +
                    tiny::theme.wm_dock_border,
            height);

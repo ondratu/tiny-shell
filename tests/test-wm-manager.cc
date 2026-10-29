@@ -86,7 +86,7 @@ class ManagerTest : public ::testing::Test {
     // Runs the main loop until it handled every event sent so far.
     void run_loop()
     {
-        ::Window sentinel =
+        const ::Window sentinel =
                 XCreateSimpleWindow(dsp(), root_window(), 0, 0, 1, 1, 0, 0, 0);
         Stopper stopper(&manager->running);
         tiny::handlers.set_handler(CreateNotify, sentinel, &stopper,
@@ -188,8 +188,8 @@ TEST_F(ManagerTest, connects_logout_of_the_user_menu)
 
 TEST_F(ManagerTest, adopts_the_mapped_windows)
 {
-    Client& first = add_client();
-    Client& second = add_client();
+    const Client& first = add_client();
+    const Client& second = add_client();
 
     start();
 
@@ -201,8 +201,8 @@ TEST_F(ManagerTest, adopts_the_mapped_windows)
 
 TEST_F(ManagerTest, only_the_last_adopted_window_gets_the_focus)
 {
-    Client& first = add_client();
-    Client& last = add_client();
+    const Client& first = add_client();
+    const Client& last = add_client();
 
     start();
 
@@ -235,7 +235,7 @@ TEST_F(ManagerTest, windows_that_skip_the_taskbar_have_no_dock_icon)
 
 TEST_F(ManagerTest, unmapped_windows_are_not_adopted)
 {
-    Client& c = add_client(false);
+    const Client& c = add_client(false);
 
     start();
 
@@ -258,7 +258,7 @@ TEST_F(ManagerTest, override_redirect_windows_are_not_adopted)
 
 TEST_F(ManagerTest, desktop_dock_and_splash_windows_are_not_adopted)
 {
-    for (Atom type :
+    for (const Atom type :
          {dsp()._NET_WM_WINDOW_TYPE_DESKTOP, dsp()._NET_WM_WINDOW_TYPE_DOCK,
           dsp()._NET_WM_WINDOW_TYPE_SPLASH}) {
         Client& c = add_client(false);
@@ -298,7 +298,7 @@ TEST_F(ManagerTest, window_without_decorations_is_not_framed)
 
 TEST_F(ManagerTest, window_with_decorations_is_framed)
 {
-    Client& c = add_client();
+    const Client& c = add_client();
 
     start();
 
@@ -311,9 +311,9 @@ TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
 {
     start();
 
-    XErrors errors;
+    const XErrors errors;
     Client other;
-    for (int sym : {XK_Tab, XK_F2}) {
+    for (const int sym : {XK_Tab, XK_F2}) {
         XGrabKey(other.display,
                  XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
                  Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
@@ -352,7 +352,7 @@ TEST_F(ManagerTest, destructor_releases_the_shortcuts_and_the_root_window)
     start();
     manager.reset();
 
-    XErrors errors;
+    const XErrors errors;
     Client other;
     XGrabKey(other.display, XKeysymToKeycode(other.display, XK_Tab), Mod1Mask,
              root_window(), True, GrabModeAsync, GrabModeAsync);
@@ -368,7 +368,7 @@ TEST_F(ManagerTest, destructor_leaves_the_display_of_the_caller_open)
 
     manager.reset();
 
-    XErrors errors;
+    const XErrors errors;
     XSync(dsp(), False);
     EXPECT_EQ(XPending(dsp()) >= 0, true);
     EXPECT_EQ(errors.errors(), 0);
@@ -407,7 +407,7 @@ TEST_F(ManagerTest, new_window_gets_an_icon_in_the_dock)
 TEST_F(ManagerTest, focus_of_a_new_window_makes_it_active)
 {
     start();
-    Client& c = add_client();
+    const Client& c = add_client();
 
     run_loop();
     pump_events();
@@ -445,7 +445,7 @@ TEST_F(ManagerTest, window_without_decorations_is_managed_on_map_request)
 
 TEST_F(ManagerTest, map_request_of_a_viewable_window_is_ignored)
 {
-    Client& c = add_client();
+    const Client& c = add_client();
     start();
     ASSERT_EQ(manager->wm_windows.size(), 1u);
     XMapRequestEvent e = {};
@@ -499,9 +499,9 @@ TEST_F(ManagerTest, unmapped_window_is_forgotten)
     run_loop();
     pump_events();
     ASSERT_TRUE(is_managed(c));
-    WmWindow* window = manager->wm_windows[c.window];
-    XErrors errors;
-    ::Window frame = parent_of(c.window);
+    const WmWindow* window = manager->wm_windows[c.window];
+    const XErrors errors;
+    const ::Window frame = parent_of(c.window);
 
     XUnmapWindow(c.display, c.window);
     c.sync();
@@ -552,7 +552,7 @@ TEST_F(ManagerTest, unmap_of_an_unknown_window_is_ignored)
 TEST_F(ManagerTest, unmap_of_a_minimized_window_keeps_it)
 {
     start();
-    Client& c = add_client();
+    const Client& c = add_client();
     run_loop();
     WmWindow* window = manager->wm_windows[c.window];
     window->minimize();

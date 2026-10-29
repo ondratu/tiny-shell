@@ -76,7 +76,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
             Window::get_properties(rv_child[i], properties);
 
             if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
-                Window::WMType wm_type = Window::get_net_wm_type(rv_child[i]);
+                const Window::WMType wm_type =
+                        Window::get_net_wm_type(rv_child[i]);
                 switch (wm_type) {
                     case Window::WMType::DESKTOP:
                     case Window::WMType::DOCK:
@@ -179,7 +180,7 @@ void Manager::main_loop()
 
     while (running) {
         XNextEvent(display, &event);
-        ::Window window = tiny::window_of_event(event);
+        const ::Window window = tiny::window_of_event(event);
 
         /*TINY_LOG("Event: %s (%lx)\n\t",
                  event_to_string(event), window);*/
@@ -358,7 +359,7 @@ void Manager::on_map_request(const XMapRequestEvent& e)
     Window::get_properties(e.window, properties);
 
     if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
-        Window::WMType wm_type = Window::get_net_wm_type(e.window);
+        const Window::WMType wm_type = Window::get_net_wm_type(e.window);
         switch (wm_type) {
             case Window::WMType::DESKTOP:
             case Window::WMType::DOCK:

@@ -66,7 +66,7 @@ void CloseButton::on_expose(const XEvent&, void*)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
@@ -75,8 +75,8 @@ void CloseButton::on_expose(const XEvent&, void*)
     XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
                        CapButt, JoinBevel);
 
-    int mid_x = attrs.width / 2;
-    int mid_y = attrs.width / 2;
+    const int mid_x = attrs.width / 2;
+    const int mid_y = attrs.width / 2;
 
     XDrawLine(display, window, gc, px(mid_x - sc(3.5)), px(mid_y - sc(3.5)),
               px(mid_x + sc(3.5)), px(mid_y + sc(3.5)));
@@ -95,7 +95,7 @@ void MaximizeButton::on_expose(const XEvent&, void*)
     XGetWindowAttributes(display, window, &attrs);
 
     GC gc = XCreateGC(display, window, 0, nullptr);
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
@@ -104,8 +104,8 @@ void MaximizeButton::on_expose(const XEvent&, void*)
     XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
                        CapButt, JoinMiter);
 
-    int mid_x = attrs.width / 2;
-    int mid_y = attrs.width / 2;
+    const int mid_x = attrs.width / 2;
+    const int mid_y = attrs.width / 2;
 
     if (restore) {
         XPoint points[5] = {
@@ -147,7 +147,7 @@ void MinimizeButton::on_expose(const XEvent&, void*)
 
     GC gc = XCreateGC(display, window, 0, nullptr);
 
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
@@ -156,8 +156,8 @@ void MinimizeButton::on_expose(const XEvent&, void*)
     XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
                        CapButt, JoinBevel);
 
-    int mid_x = attrs.width / 2;
-    int mid_y = attrs.width / 2;
+    const int mid_x = attrs.width / 2;
+    const int mid_y = attrs.width / 2;
 
     XDrawLine(display, window, gc, px(mid_x - sc(4)), px(mid_y + sc(3.5)),
               px(mid_x + sc(4)), px(mid_y + sc(3.5)));

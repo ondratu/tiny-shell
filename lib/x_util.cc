@@ -108,10 +108,10 @@ Pixmap resize_pixmap(::Display* display, ::Window root, Pixmap origin,
                      unsigned int t_width, unsigned int t_height,
                      unsigned int depth)
 {
-    Pixmap target = XCreatePixmap(display, root, t_width, t_height,
-                                  depth); // TODO: Screen instead of 0
+    const Pixmap target = XCreatePixmap(display, root, t_width, t_height,
+                                        depth); // TODO: Screen instead of 0
 
-    Visual* visual = XDefaultVisual(display, 0); // Right screen!
+    const Visual* visual = XDefaultVisual(display, 0); // Right screen!
     XRenderPictFormat* format;
     if (depth == 1) {
         format = XRenderFindStandardFormat(display, PictStandardA1);
@@ -119,13 +119,15 @@ Pixmap resize_pixmap(::Display* display, ::Window root, Pixmap origin,
         format = XRenderFindVisualFormat(display, visual);
     }
 
-    XRenderPictureAttributes attrs;
-    Picture src = XRenderCreatePicture(display, origin, format, 0, &attrs);
-    Picture dst = XRenderCreatePicture(display, target, format, 0, &attrs);
+    const XRenderPictureAttributes attrs = {};
+    const Picture src =
+            XRenderCreatePicture(display, origin, format, 0, &attrs);
+    const Picture dst =
+            XRenderCreatePicture(display, target, format, 0, &attrs);
 
-    double x_scale = static_cast<double>(o_width) / t_width;
-    double y_scale = static_cast<double>(o_height) / t_height;
-    double scale = std::max(x_scale, y_scale);
+    const double x_scale = static_cast<double>(o_width) / t_width;
+    const double y_scale = static_cast<double>(o_height) / t_height;
+    const double scale = std::max(x_scale, y_scale);
 
     XTransform transform = {
             {{XDoubleToFixed(scale), XDoubleToFixed(0), XDoubleToFixed(0)},

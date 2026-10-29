@@ -20,9 +20,9 @@ TEST_F(WmButtonTest, buttons_are_square_icons)
     wm::MaximizeButton maximize;
     wm::MinimizeButton minimize;
 
-    for (tiny::Widget* b : {static_cast<tiny::Widget*>(&close),
-                            static_cast<tiny::Widget*>(&maximize),
-                            static_cast<tiny::Widget*>(&minimize)}) {
+    for (const tiny::Widget* b : {static_cast<tiny::Widget*>(&close),
+                                  static_cast<tiny::Widget*>(&maximize),
+                                  static_cast<tiny::Widget*>(&minimize)}) {
         EXPECT_EQ(b->get_width(), icon());
         EXPECT_EQ(b->get_height(), icon());
         EXPECT_EQ(&b->get_style(), &tiny::theme.wm_button);
@@ -37,7 +37,7 @@ TEST_F(WmButtonTest, expose_draws_cross_on_close_button)
 
     send(b, Expose);
 
-    Image img = image_of(b);
+    const Image img = image_of(b);
     EXPECT_EQ(img.at(0, 0), bg());
     EXPECT_GT(img.count_not(bg(), icon()), 0u);
     EXPECT_EQ(img.at(icon() / 2, icon() / 2), fg()); // lines cross here
@@ -51,7 +51,7 @@ TEST_F(WmButtonTest, expose_draws_line_on_minimize_button)
 
     send(b, Expose);
 
-    Image img = image_of(b);
+    const Image img = image_of(b);
     unsigned int drawn = 0;
     for (int y = 0; y < icon(); ++y) {
         for (int x = 0; x < icon(); ++x) {
@@ -74,7 +74,7 @@ TEST_F(WmButtonTest, expose_draws_square_on_maximize_button)
 
     send(b, Expose);
 
-    Image img = image_of(b);
+    const Image img = image_of(b);
     EXPECT_GT(img.count_not(bg(), icon()), 0u);
     EXPECT_EQ(img.at(icon() / 2, icon() / 2 - 3), fg()); // top edge
     EXPECT_EQ(img.at(icon() / 2, icon() / 2), bg());     // hollow
@@ -86,10 +86,10 @@ TEST_F(WmButtonTest, maximize_button_restore_changes_the_icon)
     b.realize(root_window(), 0, 0);
     b.map();
     send(b, Expose);
-    Image maximize = image_of(b);
+    const Image maximize = image_of(b);
 
     b.set_restore(true);
-    Image restore = image_of(b);
+    const Image restore = image_of(b);
     EXPECT_FALSE(maximize == restore);
     EXPECT_GT(restore.count_not(bg(), icon()), 0u);
 
@@ -166,9 +166,9 @@ TEST_F(WmButtonTest, destructor_disconnects_handlers)
 
 TEST_F(WmButtonTest, delete_through_base_pointer)
 {
-    tiny::Widget* close = new wm::CloseButton;
-    tiny::Widget* maximize = new wm::MaximizeButton;
-    tiny::Widget* minimize = new wm::MinimizeButton;
+    const tiny::Widget* close = new wm::CloseButton;
+    const tiny::Widget* maximize = new wm::MaximizeButton;
+    const tiny::Widget* minimize = new wm::MinimizeButton;
 
     delete close;
     delete maximize;
@@ -177,11 +177,11 @@ TEST_F(WmButtonTest, delete_through_base_pointer)
 
 TEST_F(WmButtonTest, destroying_unrealized_button_causes_no_x_error)
 {
-    XErrors x;
+    const XErrors x;
     {
-        wm::CloseButton close;
-        wm::MaximizeButton maximize;
-        wm::MinimizeButton minimize;
+        const wm::CloseButton close;
+        const wm::MaximizeButton maximize;
+        const wm::MinimizeButton minimize;
     }
 
     EXPECT_EQ(x.errors(), 0);
@@ -207,7 +207,7 @@ TEST_F(ScaledWmButtonTest, close_cross_is_scaled)
     send(b, Expose);
 
     ASSERT_EQ(icon(), 42u);
-    Image img = image_of(b);
+    const Image img = image_of(b);
     // beyond the reach of the unscaled cross (3.5 px from the middle)
     EXPECT_EQ(img.at(mid() + 6, mid() + 6), fg());
     EXPECT_EQ(img.at(mid() - 6, mid() + 6), fg());
@@ -221,7 +221,7 @@ TEST_F(ScaledWmButtonTest, minimize_line_is_scaled)
 
     send(b, Expose);
 
-    Image img = image_of(b);
+    const Image img = image_of(b);
     EXPECT_EQ(img.at(mid() + 7, mid() + 7), fg());
     EXPECT_EQ(img.at(mid() - 7, mid() + 7), fg());
 }
@@ -234,7 +234,7 @@ TEST_F(ScaledWmButtonTest, maximize_square_is_scaled)
 
     send(b, Expose);
 
-    Image img = image_of(b);
+    const Image img = image_of(b);
     EXPECT_EQ(img.at(mid(), mid() - 6), fg());
     EXPECT_EQ(img.at(mid() - 6, mid()), fg());
     EXPECT_EQ(img.at(mid(), mid()), bg());

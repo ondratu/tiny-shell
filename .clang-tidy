@@ -25,7 +25,8 @@ Checks: >
   -readability-magic-numbers,
   -readability-math-missing-parentheses,
   -readability-named-parameter,
-  -readability-function-cognitive-complexity
+  -readability-function-cognitive-complexity,
+  -readability-uppercase-literal-suffix
 # Disabled because:
 #  bugprone-easily-swappable-parameters  (x, y, width, height are the X API)
 #  bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp
@@ -41,6 +42,7 @@ Checks: >
 #  readability-identifier-length          (x, y, w, h, e, dsp are clear here)
 #  readability-implicit-bool-conversion   (Xlib returns int as bool)
 #  readability-magic-numbers              (pixel sizes of the drawing code)
+#  readability-uppercase-literal-suffix  (0u and 1u are fine)
 #  readability-math-missing-parentheses, readability-named-parameter,
 #  readability-function-cognitive-complexity
 #                                         (style; revisit with the cleanup)

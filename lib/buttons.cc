@@ -104,9 +104,9 @@ void LabelButton::on_expose(const XEvent&, void*)
     XGlyphInfo extents;
     const int screen = 0; // XXX
     Visual* visual = XDefaultVisual(display, screen);
-    Colormap colormap = XDefaultColormap(display, screen);
+    const Colormap colormap = XDefaultColormap(display, screen);
 
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
     XftColorAllocName(display, visual, colormap,
                       tiny::theme.widget.get_xft_fg(state).data(), &color);
 
@@ -117,8 +117,8 @@ void LabelButton::on_expose(const XEvent&, void*)
                        static_cast<int>(text.size()), &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (width - extents.width) / 2;
-    int y = (height + extents.height) / 2;
+    const int x = (width - extents.width) / 2;
+    const int y = (height + extents.height) / 2;
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
@@ -152,8 +152,8 @@ void MenuButton::set_popover(Popover* popover_arg)
 void MenuButton::do_popup(Object*, const XEvent& e, void*)
 {
     if (popover && !popover->get_maped()) {
-        int x = e.xbutton.x_root - e.xbutton.x + width / 2;
-        int y = e.xbutton.y_root - e.xbutton.y + height;
+        const int x = e.xbutton.x_root - e.xbutton.x + width / 2;
+        const int y = e.xbutton.y_root - e.xbutton.y + height;
         popover->popup(x, y); // center x, y under Button
     }
 }
