@@ -11,16 +11,11 @@ class Demo: public wm::BackWindow {
   public:
     Demo():wm::BackWindow(300, 200)
     {
-        display = XOpenDisplay(NULL);
-        realize(display, DefaultRootWindow(display), 0, 0);
+        realize(XDefaultRootWindow(display), 0, 0);
         // XSetWindowBackground(display, window, 0x000055);
 
         set_events();
         map_all();
-    }
-
-    ~Demo(){
-        XCloseDisplay(display);
     }
 
     void set_events(){
@@ -64,6 +59,7 @@ class Demo: public wm::BackWindow {
 
 int main (int argc, char * argv[])
 {
+    tiny::Display::init();
     Demo demo;
     demo.main_loop();
     return 0;
