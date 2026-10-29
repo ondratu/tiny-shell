@@ -57,7 +57,7 @@ class Demo: public wm::BackWindow {
     }
 };
 
-int main (int argc, char * argv[])
+int main (int, char *[])
 {
     tiny::Display::init();
     Demo demo;

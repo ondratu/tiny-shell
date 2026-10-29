@@ -6,9 +6,8 @@
 #include <map>
 #include <set>
 
-#define TINY_LOG(format...) \
-    tiny::log((const char*) __FILE__, (const char*) __FUNCTION__, \
-              __LINE__, format)
+#define TINY_LOG(...) \
+    tiny::log(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 namespace tiny {
 

@@ -48,7 +48,7 @@ void Button::on_leave_notify(const XEvent &e, void* data){
     on_leave(this, e, data);
 }
 
-void Button::on_button_release(const XEvent &e, void * data){
+void Button::on_button_release(const XEvent &e, void *){
     if (on_click && is_hover){
         on_click(this, e);
     }
@@ -104,7 +104,7 @@ void LabelButton::on_leave_notify(const XEvent &e, void * data)
     on_expose(e, nullptr);
 }
 
-void LabelButton::on_expose(const XEvent &e, void * data)
+void LabelButton::on_expose(const XEvent &, void *)
 {
     XftColor color;
     XftDraw *draw;
@@ -158,7 +158,7 @@ void MenuButton::set_popover(Popover *popover)
     this->popover = popover;
 }
 
-void MenuButton::do_popup(Object *o, const XEvent &e, void *data)
+void MenuButton::do_popup(Object *, const XEvent &e, void *)
 {
     if (popover && !popover->get_maped()){
         int x = e.xbutton.x_root - e.xbutton.x + width/2;

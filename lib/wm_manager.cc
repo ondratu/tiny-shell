@@ -276,7 +276,7 @@ void Manager::activate_prev_window()
     prev->set_focus();
 }
 
-void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data)
+void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *)
 {
     if (active){
         active->return_focus();
@@ -286,7 +286,7 @@ void Manager::on_window_focus(tiny::Object *o, const XEvent &e, void *data)
     wm_dock.redraw(active, e);
 }
 
-void Manager::on_logout(tiny::Object *o, const XEvent &e, void *data){
+void Manager::on_logout(tiny::Object *, const XEvent &, void *){
     running = false;
 }
 

@@ -23,19 +23,19 @@ class Demo: public tiny::Container {
     {
         realize(XDefaultRootWindow(display), 0, 0);
 
-        char *title_utf8 = "Ďáblův advokát";
-        char *title = "Dabluv advokat";
+        const char *title_utf8 = "Ďáblův advokát";
+        const char *title = "Dabluv advokat";
 
         header.set_title(title_utf8);
         XChangeProperty(display, window,
                         display.WM_NAME, XA_STRING,
                         8, PropModeReplace,
-                        reinterpret_cast<unsigned char *>(title),
+                        reinterpret_cast<const unsigned char *>(title),
                         strlen(title));
         XChangeProperty(display, window,
                         display._NET_WM_NAME, display.UTF8_STRING,
                         8, PropModeReplace,
-                        reinterpret_cast<unsigned char *>(title_utf8),
+                        reinterpret_cast<const unsigned char *>(title_utf8),
                         strlen(title_utf8));
 
         add(&vbox);
@@ -77,7 +77,7 @@ class Demo: public tiny::Container {
         }
     }
 
-    void on_button_click(Object * w, const XEvent &e, void *)
+    void on_button_click(Object *, const XEvent &, void *)
     {
         printf("on_button_click\n");
         keep_running = false;
@@ -111,7 +111,7 @@ class Demo: public tiny::Container {
     tiny::LabelButton close_btn;
 };
 
-int main (int argc, char * argv[])
+int main (int, char *[])
 {
     tiny::Display::init();
     Demo demo;

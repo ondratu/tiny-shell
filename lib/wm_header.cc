@@ -39,7 +39,7 @@ void TitleBox::set_events(long mask)
             static_cast<tiny::event_signal_t>(&TitleBox::on_motion_notify));
 }
 
-void TitleBox::on_button_press(const XEvent &e, void * data)
+void TitleBox::on_button_press(const XEvent &e, void *)
 {
     XGrabPointer(
         display, window, false,
@@ -49,13 +49,13 @@ void TitleBox::on_button_press(const XEvent &e, void * data)
     on_drag_begin(this, e);
 }
 
-void TitleBox::on_button_release(const XEvent &e, void * data)
+void TitleBox::on_button_release(const XEvent &e, void *)
 {
     XUngrabPointer(display, CurrentTime);
     on_drag_end(this, e);
 }
 
-void TitleBox::on_motion_notify(const XEvent &e, void * data)
+void TitleBox::on_motion_notify(const XEvent &e, void *)
 {
     XEvent event = e;
     while (XCheckTypedWindowEvent(  // skip penging motion events
@@ -120,7 +120,7 @@ void Header::set_disable(bool disable)
     }
 }
 
-void Header::on_expose(const XEvent &e, void * data)
+void Header::on_expose(const XEvent &, void *)
 {
     XftColor color;
     XftDraw *draw;
@@ -140,10 +140,10 @@ void Header::on_expose(const XEvent &e, void * data)
             &extents);
 
     // Text is center normal center TODO: could be configurable
-    int x = (width-extents.width)/2;
+    int x = (static_cast<int>(width) - extents.width) / 2;
     int y = (height+extents.height)/2;
 
-    if ((x + extents.width) > get_end_offset()){
+    if ((x + extents.width) > static_cast<int>(get_end_offset())){
         x = get_end_offset() - extents.width;
     }
     if (x < (int) get_padding()) {

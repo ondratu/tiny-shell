@@ -92,7 +92,7 @@ Window::~Window()
 }
 
 Window* Window::create(::Window root, ::Window child,
-                       const XWindowAttributes& attrs,
+                       const XWindowAttributes&,
                        unsigned long functions)
 {
     tiny::Display& display = tiny::get_display();
@@ -661,7 +661,7 @@ void Window::update_wm_icon()
     }
 }
 
-void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
+void Window::on_window_drag_begin(tiny::Object *, const XEvent &e, void *)
 {
     set_focus();     // check if is not have focus yet
     if (get_maximized()){
@@ -673,7 +673,7 @@ void Window::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
 }
 
 
-void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
+void Window::on_window_drag_motion(tiny::Object *, const XEvent &e, void *)
 {
     int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
     int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
@@ -682,7 +682,7 @@ void Window::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
 }
 
 
-void Window::on_button_press(const XEvent &e, void* data)
+void Window::on_button_press(const XEvent &e, void*)
 {
     set_focus();        // set_focus is not important :-)
 
@@ -694,7 +694,7 @@ void Window::on_button_press(const XEvent &e, void* data)
                 ButtonPressMask|ButtonReleaseMask|Button1MotionMask,
                 GrabModeAsync, GrabModeAsync,
                 None, XCreateFontCursor(dsp, XC_hand1), CurrentTime);
-        on_drag_begin((Window*)this, e);
+        on_drag_begin(this, e);
         return;
     }
 
@@ -702,12 +702,12 @@ void Window::on_button_press(const XEvent &e, void* data)
     XAllowEvents(dsp, ReplayPointer, e.xbutton.time);
 }
 
-void Window::on_button_release(const XEvent &e, void * data){
+void Window::on_button_release(const XEvent &, void *){
     // Stop motion
     XUngrabPointer(dsp, CurrentTime);
 }
 
-void Window::on_client_message(const XEvent& e, void* data)
+void Window::on_client_message(const XEvent& e, void*)
 {
     if (e.xclient.message_type == dsp._NET_WM_STATE){
         // client want be maximized
@@ -761,18 +761,18 @@ void Window::on_client_message(const XEvent& e, void* data)
     XFree(atom_name);
 }
 
-void Window::on_motion_notify(const XEvent &e, void * data){
-    on_drag_motion((Window*)this, e);
+void Window::on_motion_notify(const XEvent &e, void *){
+    on_drag_motion(this, e);
 }
 
-void Window::on_focus_in(const XEvent &e, void* data){
+void Window::on_focus_in(const XEvent &e, void*){
     on_focus(this, e, nullptr);
 }
 
-void Window::on_focus_out(const XEvent &e, void* data){
+void Window::on_focus_out(const XEvent &, void*){
 }
 
-void Window::on_property_notify(const XEvent &e, void *data)
+void Window::on_property_notify(const XEvent &e, void *)
 {
     update_properties();    // the property could be new
 
@@ -823,7 +823,7 @@ void Window::on_property_notify(const XEvent &e, void *data)
     XFree(atom_name);
 }
 
-void Window::on_key_release(const XEvent &e, void* data)
+void Window::on_key_release(const XEvent &e, void*)
 {
     if (e.xkey.state & Mod1Mask
         && e.xkey.keycode == XKeysymToKeycode(dsp, XK_F4))

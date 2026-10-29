@@ -48,7 +48,7 @@ void Edge::set_events(long mask)
 }
 
 
-void Edge::on_button_press(const XEvent &e, void *data)
+void Edge::on_button_press(const XEvent &e, void *)
 {
     XGrabPointer(
         display, window, false,
@@ -59,14 +59,14 @@ void Edge::on_button_press(const XEvent &e, void *data)
     on_drag_begin(this, e);
 }
 
-void Edge::on_button_release(const XEvent &e, void *data)
+void Edge::on_button_release(const XEvent &e, void *)
 {
     XUngrabPointer(display, CurrentTime);
 
     on_drag_end(this, e);
 }
 
-void Edge::on_motion_notify(const XEvent &e, void *data)
+void Edge::on_motion_notify(const XEvent &e, void *)
 {
     XEvent event = e;
     while (XCheckTypedWindowEvent(  // skip penging motion events
@@ -196,12 +196,12 @@ void BackWindow::move_resize(int x, int y, uint32_t width, uint32_t height)
     }
 }
 
-void BackWindow::on_edge_drag_begin(Object *o, const XEvent &e, void *data)
+void BackWindow::on_edge_drag_begin(Object *, const XEvent &e, void *)
 {
     on_move_resize_begin(this, e);
 }
 
-void BackWindow::on_edge_drag_motion(Object *o, const XEvent &e, void *data)
+void BackWindow::on_edge_drag_motion(Object *o, const XEvent &e, void *)
 {
     on_move_resize_motion(this, e,
             reinterpret_cast<void*>(static_cast<Edge*>(o)->get_mask()));

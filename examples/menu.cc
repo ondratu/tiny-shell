@@ -78,7 +78,7 @@ class Demo: public tiny::Box {
     std::list<std::shared_ptr<tiny::LabelButton>> btns;
 };
 
-int main (int argc, char * argv[])
+int main (int, char *[])
 {
     tiny::Display::init();
     tiny::theme.init();

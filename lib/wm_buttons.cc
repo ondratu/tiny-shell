@@ -55,7 +55,7 @@ CloseButton::CloseButton():Button()
 CloseButton::~CloseButton()
 {}
 
-void CloseButton::on_expose(const XEvent &e, void *data)
+void CloseButton::on_expose(const XEvent &, void *)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
@@ -87,7 +87,7 @@ MaximizeButton::MaximizeButton():Button(), restore(false)
 MaximizeButton::~MaximizeButton()
 {}
 
-void MaximizeButton::on_expose(const XEvent &e, void *data)
+void MaximizeButton::on_expose(const XEvent &, void *)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
@@ -140,7 +140,7 @@ MinimizeButton::MinimizeButton():Button()
 MinimizeButton::~MinimizeButton()
 {}
 
-void MinimizeButton::on_expose(const XEvent &e, void *data)
+void MinimizeButton::on_expose(const XEvent &, void *)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
