@@ -25,7 +25,7 @@ Entry::~Entry()
     }
 }
 
-void Entry::realize(Window parent, int x, int y)
+void Entry::realize(::Window parent, int x, int y)
 {
     tiny::Widget::realize(parent, x, y);
 
@@ -58,7 +58,7 @@ void Entry::set_events(long mask)
             static_cast<tiny::event_signal_t>(&Entry::on_focus_out));
 }
 
-void Entry::on_key_release(const XEvent& e, void* data)
+void Entry::on_key_release(const XEvent& e, void*)
 {
     char buf[32] = "\0";
     KeySym keysym = NoSymbol;
@@ -124,7 +124,7 @@ void Entry::on_key_release(const XEvent& e, void* data)
     on_expose(XEvent(), nullptr);
 }
 
-void Entry::on_expose(const XEvent& e, void* data)
+void Entry::on_expose(const XEvent&, void*)
 {
     XftColor color;
     XftDraw *draw;
@@ -154,13 +154,13 @@ void Entry::on_expose(const XEvent& e, void* data)
     XftColorFree(display, visual, colormap, &color);
 }
 
-void Entry::on_focus_in(const XEvent &e, void* data)
+void Entry::on_focus_in(const XEvent &, void*)
 {
     TINY_LOG("XSetICFocus...");
     XSetICFocus(xic);
 }
 
-void Entry::on_focus_out(const XEvent &e, void* data)
+void Entry::on_focus_out(const XEvent &, void*)
 {
     TINY_LOG("XUnsetICFocus...");
     XUnsetICFocus(xic);
@@ -189,7 +189,7 @@ RunDialog::RunDialog():
 RunDialog::~RunDialog()
 {}
 
-void RunDialog::realize(::Window root, int x, int y)
+void RunDialog::realize(::Window root, int, int)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, root, &attrs);
@@ -206,7 +206,7 @@ void RunDialog::popup()
     entry.set_focus();
 }
 
-void RunDialog::popover(Object *o, const XEvent &e, void* data)
+void RunDialog::popover(Object *, const XEvent &, void*)
 {
     entry.clear();
     unmap();

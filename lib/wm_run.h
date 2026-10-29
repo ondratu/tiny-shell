@@ -11,7 +11,7 @@ class Entry: public tiny::Widget {
 
     virtual ~Entry();
 
-    virtual void realize(Window parent, int x, int y);
+    virtual void realize(::Window parent, int x, int y) override;
     virtual void set_events(long mask=0);
     void set_focus();
     void clear();

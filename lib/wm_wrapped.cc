@@ -225,15 +225,15 @@ void Wrapped::restore(int x, int y)
     }
 }
 
-void Wrapped::on_minimize_click(tiny::Object *o, const XEvent &e, void *data){
+void Wrapped::on_minimize_click(tiny::Object *, const XEvent &, void *){
     minimize();
 }
 
-void Wrapped::on_close_click(tiny::Object *o, const XEvent &e, void *data){
+void Wrapped::on_close_click(tiny::Object *, const XEvent &, void *){
     close();
 }
 
-void Wrapped::on_maximize_click(tiny::Object *o, const XEvent &e, void *data){
+void Wrapped::on_maximize_click(tiny::Object *, const XEvent &, void *){
     if (get_maximized()){
         restore();
     } else {
@@ -241,7 +241,7 @@ void Wrapped::on_maximize_click(tiny::Object *o, const XEvent &e, void *data){
     }
 }
 
-void Wrapped::on_move_resize_begin(tiny::Object *o, const XEvent &e, void *data)
+void Wrapped::on_move_resize_begin(tiny::Object *, const XEvent &e, void *)
 {
     set_maximized(false);
     start_event = e;
@@ -261,7 +261,7 @@ void Wrapped::on_move_resize_begin(tiny::Object *o, const XEvent &e, void *data)
     }
 }
 
-void Wrapped::on_move_resize_motion(tiny::Object *o, const XEvent &e, void *data)
+void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
 {
     uint16_t mask = reinterpret_cast<size_t>(data);
     int xdiff = 0;
@@ -350,7 +350,7 @@ void Wrapped::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
     XGetWindowAttributes(display, window, &start_attrs);
 }
 
-void Wrapped::on_window_drag_motion(tiny::Object *o, const XEvent &e, void *data)
+void Wrapped::on_window_drag_motion(tiny::Object *, const XEvent &e, void *)
 {
     int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
     int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
@@ -396,7 +396,7 @@ void Wrapped::on_property_notify(const XEvent &e, void *data)
         }
 
         // when window is moved
-        if (x != 0 || y != tiny::theme.wm_win_header){
+        if (x != 0 || y != static_cast<int>(tiny::theme.wm_win_header)){
             XWindowChanges ch;
             ch.x = 0;
             ch.y = tiny::theme.wm_win_header;

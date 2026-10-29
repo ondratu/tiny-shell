@@ -29,10 +29,10 @@ class Widget: public Object {
 
     virtual void realize(Window parent, int x, int y);
 
-    inline const Window get_window() const
+    inline Window get_window() const
     { return window; }
 
-    inline const Window get_parent_window() const
+    inline Window get_parent_window() const
     { return parent; }
 
     inline virtual const Style& get_style() const

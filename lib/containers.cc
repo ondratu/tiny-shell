@@ -234,7 +234,7 @@ void Popover::popup(const XButtonEvent &be){
     popup(be.x_root, be.y_root);
 }
 
-void Popover::on_focus_out(const XEvent &e, void *)
+void Popover::on_focus_out(const XEvent &, void *)
 {
     struct timeval tp;
     gettimeofday(&tp, NULL);

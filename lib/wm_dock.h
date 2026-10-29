@@ -45,6 +45,8 @@ class Dock: public tiny::Box {
         Dock();
         virtual ~Dock();
 
+        using tiny::Box::add;
+        using tiny::Box::remove;
         void add(Window* window);
         void remove(Window* window);
         void redraw(Window* window, const XEvent& e);

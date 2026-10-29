@@ -54,14 +54,14 @@ void DockButton::on_leave_notify(const XEvent &e, void *){
     on_expose(e, nullptr);
 }
 
-void DockButton::on_button_release(const XEvent &e, void * data){
+void DockButton::on_button_release(const XEvent &e, void *){
     // TODO: check if release is on window, if not do not call the handler
     if (on_click){
         on_click(this, e);
     }
 }
 
-void DockButton::on_expose(const XEvent& e, void* data)
+void DockButton::on_expose(const XEvent&, void*)
 {
     GC gc = XCreateGC(display, window, 0, nullptr);
     uint8_t state = get_theme_state();
@@ -101,7 +101,7 @@ void Icon::on_button_release(const XEvent& e, void* data){
     DockButton::on_button_release(e, data);
 }
 
-void Icon::on_expose(const XEvent& e, void* data)
+void Icon::on_expose(const XEvent&, void*)
 {
     is_selected = task->is_focused();
 

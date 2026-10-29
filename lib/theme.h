@@ -48,9 +48,9 @@ class Style {
     // Multiply border, padding and font size of the base values by factor
     void scale(double factor);
 
-    const uint32_t get_bg(uint8_t state) const;
-    const uint32_t get_fg(uint8_t state) const;
-    const uint32_t get_br(uint8_t state) const;
+    uint32_t get_bg(uint8_t state) const;
+    uint32_t get_fg(uint8_t state) const;
+    uint32_t get_br(uint8_t state) const;
     XftFont* get_font() const
     { return font; }
 
