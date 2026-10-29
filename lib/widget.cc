@@ -81,7 +81,7 @@ void Widget::realize(Window parent_arg, int x, int y)
                     get_style().get_bg(state));
             break;
         case (Type::Input):
-            // TODO: parent_arg must bew root or InputOnly
+            // TODO: parent must bew root or InputOnly
             window = XCreateWindow(
                     display, parent_arg,
                     x, y, x_dim(width), x_dim(height), 0,
@@ -147,7 +147,7 @@ void Widget::resize(int w, int h)
 {
     if (is_realized){
         XResizeWindow(display, window, x_dim(w), x_dim(h));
-        // w and h are set by on_configure_notify
+        // width and height are set by on_configure_notify
     } else {
         this->width = std::max(0, w);
         this->height = std::max(0, h);

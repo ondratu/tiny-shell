@@ -61,7 +61,7 @@ void Display::init(const char *display_name)
 {
     ::Display* dsp = XOpenDisplay(display_name);
     if (dsp == nullptr) {
-        throw std::runtime_error("Failed to open X dsp");
+        throw std::runtime_error("Failed to open X display");
     }
 
     tiny::display = std::shared_ptr<Display>(new Display(dsp));
