@@ -94,8 +94,8 @@ Pixmap resize_pixmap (::Display* display, ::Window root, Pixmap origin,
     Picture src = XRenderCreatePicture(display, origin, format, 0, &attrs);
     Picture dst = XRenderCreatePicture(display, target, format, 0, &attrs);
 
-    double x_scale = (double)o_width / t_width;
-    double y_scale = (double)o_height / t_height;
+    double x_scale = static_cast<double>(o_width) / t_width;
+    double y_scale = static_cast<double>(o_height) / t_height;
     double scale = std::max(x_scale, y_scale);
 
     XTransform transform = {{

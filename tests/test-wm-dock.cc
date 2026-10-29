@@ -16,7 +16,7 @@ uint32_t border()
 { return tiny::theme.wm_dock_border; }
 
 uint32_t widget_bg(tiny::Style::State state)
-{ return tiny::theme.widget.get_bg((uint8_t) state); }
+{ return tiny::theme.widget.get_bg(static_cast<uint8_t>(state)); }
 
 bool has_handler(int type, ::Window window)
 { return tiny::handlers.count({type, window}) == 1; }
@@ -79,7 +79,7 @@ TEST(DockButtonScaleTest, dots_are_scaled)
         send(button, Expose);
 
         uint32_t fg = tiny::theme.widget.get_fg(
-                (uint8_t) tiny::Style::State::Normal);
+                static_cast<uint8_t>(tiny::Style::State::Normal));
         Image img(button.get_window(), button.get_width(), button.get_height());
         unsigned int origin = 3 * (button.get_width() / 14);
 
@@ -284,8 +284,8 @@ TEST_F(DockTest, dock_stays_centered_when_it_grows)
 
     auto root = attributes_of(root_window());
     auto attrs = attributes_of(dock);
-    EXPECT_EQ(attrs.x, (int) (root.width / 2 - dock.get_width() / 2));
-    EXPECT_EQ(attrs.y, (int) (root.height - dock.get_height() - border()));
+    EXPECT_EQ(attrs.x, static_cast<int>(root.width / 2 - dock.get_width() / 2));
+    EXPECT_EQ(attrs.y, static_cast<int>((root.height - dock.get_height() - border())));
 }
 
 TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)

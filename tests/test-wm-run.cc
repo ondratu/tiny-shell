@@ -161,7 +161,7 @@ TEST_F(EntryTest, return_runs_the_typed_command_and_signals_exit)
     for (char c: command) {
         KeySym sym = c == ' ' ? XK_space : c == '/' ? XK_slash :
             c == '-' ? XK_minus : c == '.' ? XK_period :
-            c == '_' ? XK_underscore : (KeySym) c;
+            c == '_' ? XK_underscore : static_cast<KeySym>(c);
         XEvent e = key_event(entry, sym);
         if (c == '_') {
             e.xkey.state = ShiftMask;

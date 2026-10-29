@@ -67,7 +67,7 @@ Window* Wrapped::create(::Window root, ::Window child,
 
     XChangeProperty(tiny::get_display(), win->get_window(),
             tiny::get_display().WM_STATE, tiny::get_display().WM_STATE, 32,
-            PropModeReplace, (unsigned char *) data, 2);
+            PropModeReplace, reinterpret_cast<unsigned char*>(data), 2);
 
     return win;
 }
@@ -300,7 +300,7 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
         if (std::max(hints->min_width+tiny::theme.wm_win_corner,
-                     tiny::theme.wm_win_min_width) > (size_t)new_width)
+                     tiny::theme.wm_win_min_width) > static_cast<size_t>(new_width))
         {
             new_width = std::max(hints->min_width+tiny::theme.wm_win_corner,
                              tiny::theme.wm_win_min_width);
@@ -313,7 +313,7 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         // TODO: it exist steps
         if (std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
-                     tiny::theme.wm_win_min_height) > (size_t)new_height)
+                     tiny::theme.wm_win_min_height) > static_cast<size_t>(new_height))
         {
             new_height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
                               tiny::theme.wm_win_min_height);

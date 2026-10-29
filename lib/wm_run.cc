@@ -30,13 +30,13 @@ void Entry::realize(::Window parent_arg, int x, int y)
     tiny::Widget::realize(parent_arg, x, y);
 
     xim = XOpenIM(display, NULL, NULL, NULL);
-    TINY_LOG("xim: %p", (void*) xim);
+    TINY_LOG("xim: %p", static_cast<void*>(xim));
     xic = XCreateIC(xim,
                     XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
                     XNClientWindow, window,
                     XNFocusWindow, window,
                     NULL);
-    TINY_LOG("xic: %p", (void*) xic);
+    TINY_LOG("xic: %p", static_cast<void*>(xic));
 }
 
 void Entry::set_events(long mask)

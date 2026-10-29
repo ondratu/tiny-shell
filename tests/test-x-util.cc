@@ -346,7 +346,7 @@ TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
     geometry(target, w, h, d);
     EXPECT_EQ(w, 50u);
     EXPECT_EQ(h, 50u);
-    EXPECT_EQ(d, (unsigned int)depth);
+    EXPECT_EQ(d, static_cast<unsigned int>(depth));
     XFreePixmap(display, origin);
     XFreePixmap(display, target);
 }

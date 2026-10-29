@@ -18,8 +18,8 @@ TEST_F(WmButtonTest, buttons_are_square_icons)
     wm::MaximizeButton maximize;
     wm::MinimizeButton minimize;
 
-    for (tiny::Widget *b: {(tiny::Widget*)&close, (tiny::Widget*)&maximize,
-            (tiny::Widget*)&minimize})
+    for (tiny::Widget *b: {static_cast<tiny::Widget*>(&close), static_cast<tiny::Widget*>(&maximize),
+            static_cast<tiny::Widget*>(&minimize)})
     {
         EXPECT_EQ(b->get_width(), icon());
         EXPECT_EQ(b->get_height(), icon());
