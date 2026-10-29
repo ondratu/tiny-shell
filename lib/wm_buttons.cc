@@ -1,9 +1,19 @@
+#include <math.h>
+#include <algorithm>
+
 #include <X11/cursorfont.h>
 
 #include "wm_buttons.h"
 #include "x_util.h"
 
 namespace wm {
+
+// Symbol geometry is designed for scale 1 and follows TINY_SCALE_FACTOR
+static double sc(double value)
+{ return value * tiny::theme.scale_factor; }
+
+static int line_width()
+{ return std::max(1, int(lround(sc(2)))); }
 
 Button::Button():
     tiny::Button(
@@ -57,15 +67,15 @@ void CloseButton::on_expose(const XEvent &e, void *data)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
 
     XDrawLine(display, window, gc,
-        mid_x-3.5, mid_y-3.5, mid_x+3.5, mid_y+3.5);
+        mid_x-sc(3.5), mid_y-sc(3.5), mid_x+sc(3.5), mid_y+sc(3.5));
     XDrawLine(display, window, gc,
-        mid_x+3.5, mid_y-3.5, mid_x-3.5, mid_y+3.5);
+        mid_x+sc(3.5), mid_y-sc(3.5), mid_x-sc(3.5), mid_y+sc(3.5));
     XFreeGC(display, gc);
 }
 
@@ -89,27 +99,27 @@ void MaximizeButton::on_expose(const XEvent &e, void *data)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinMiter);
+    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinMiter);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
 
     if (restore){
         XPoint points[5] = {
-            tiny::x_point(mid_x-2, mid_y-1),
-            tiny::x_point(mid_x+2, mid_y-1),
-            tiny::x_point(mid_x+2, mid_y+3),
-            tiny::x_point(mid_x-2, mid_y+3),
-            tiny::x_point(mid_x-2, mid_y-1)};
+            tiny::x_point(mid_x-sc(2), mid_y-sc(1)),
+            tiny::x_point(mid_x+sc(2), mid_y-sc(1)),
+            tiny::x_point(mid_x+sc(2), mid_y+sc(3)),
+            tiny::x_point(mid_x-sc(2), mid_y+sc(3)),
+            tiny::x_point(mid_x-sc(2), mid_y-sc(1))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     } else {
         XPoint points[5] = {
-            tiny::x_point(mid_x-3, mid_y-3),
-            tiny::x_point(mid_x+3, mid_y-3),
-            tiny::x_point(mid_x+3, mid_y+3),
-            tiny::x_point(mid_x-3, mid_y+3),
-            tiny::x_point(mid_x-3, mid_y-3)};
+            tiny::x_point(mid_x-sc(3), mid_y-sc(3)),
+            tiny::x_point(mid_x+sc(3), mid_y-sc(3)),
+            tiny::x_point(mid_x+sc(3), mid_y+sc(3)),
+            tiny::x_point(mid_x-sc(3), mid_y+sc(3)),
+            tiny::x_point(mid_x-sc(3), mid_y-sc(3))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     }
@@ -143,13 +153,13 @@ void MinimizeButton::on_expose(const XEvent &e, void *data)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
 
     XDrawLine(display, window, gc,
-        mid_x-4, mid_y+3.5, mid_x+4, mid_y+3.5);
+        mid_x-sc(4), mid_y+sc(3.5), mid_x+sc(4), mid_y+sc(3.5));
     XFreeGC(display, gc);
 }
 
