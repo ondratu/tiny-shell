@@ -62,7 +62,7 @@ class ButtonTest: public ::testing::Test {
         XSync(tiny::get_display(), False);
         XImage *img = XGetImage(tiny::get_display(), w.get_window(), x, y, 1,
                 1, AllPlanes, ZPixmap);
-        uint32_t px = XGetPixel(img, 0, 0);
+        uint32_t px = static_cast<uint32_t>(XGetPixel(img, 0, 0));
         XDestroyImage(img);
         return px;
     }

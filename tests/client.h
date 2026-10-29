@@ -52,7 +52,7 @@ class Client {
     void set_atoms(Atom property, const std::vector<Atom> &atoms)
     {
         XChangeProperty(display, window, property, XA_ATOM, 32, PropModeReplace,
-                reinterpret_cast<const unsigned char*>(atoms.data()), atoms.size());
+                reinterpret_cast<const unsigned char*>(atoms.data()), static_cast<int>(atoms.size()));
         sync();
     }
 
@@ -60,7 +60,7 @@ class Client {
     {
         XChangeProperty(display, window, property, XA_CARDINAL, 32,
                 PropModeReplace, reinterpret_cast<const unsigned char*>(values.data()),
-                values.size());
+                static_cast<int>(values.size()));
         sync();
     }
 
@@ -68,7 +68,7 @@ class Client {
     {
         XChangeProperty(display, window, property, dsp().UTF8_STRING, 8,
                 PropModeReplace, reinterpret_cast<const unsigned char*>(text.c_str()),
-                text.size());
+                static_cast<int>(text.size()));
         sync();
     }
 
@@ -84,7 +84,7 @@ class Client {
     void set_protocols(const std::vector<Atom> &atoms)
     {
         XSetWMProtocols(display, window, const_cast<Atom *>(atoms.data()),
-                atoms.size());
+                static_cast<int>(atoms.size()));
         sync();
     }
 

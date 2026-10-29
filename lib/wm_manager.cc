@@ -408,7 +408,8 @@ void Manager::on_configure_request(const XConfigureRequestEvent &e)
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
 
-    XConfigureWindow(display, e.window, e.value_mask, &ch);
+    XConfigureWindow(display, e.window,
+            static_cast<unsigned int>(e.value_mask), &ch);
 }
 
 int Manager::on_error(::Display* display, XErrorEvent* error)
