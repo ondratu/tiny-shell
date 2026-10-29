@@ -105,7 +105,7 @@ class HeaderTest: public ::testing::Test {
     { tiny::theme.wm_header = original; }
 
     Image image_of(const wm::Header &h)
-    { return Image(h.get_window(), h.get_width(), h.get_height()); }
+    { return Image(h.get_window(), tiny::x_uint(h.get_width()), tiny::x_uint(h.get_height())); }
 
     // Darkest red channel of the text area (without the bottom line).
     unsigned int darkest_text(const Image &img)

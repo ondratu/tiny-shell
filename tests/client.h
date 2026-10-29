@@ -115,7 +115,7 @@ class Client {
     Pixmap pixmap(unsigned size, unsigned long color)
     {
         Pixmap p = XCreatePixmap(display, DefaultRootWindow(display), size,
-                size, DefaultDepth(display, 0));
+                size, tiny::x_uint(DefaultDepth(display, 0)));
         GC gc = XCreateGC(display, p, 0, nullptr);
         XSetForeground(display, gc, color);
         XFillRectangle(display, p, gc, 0, 0, size, size);

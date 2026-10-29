@@ -6,6 +6,7 @@
 #include "containers.h"
 #include "display.h"
 #include "object.h"
+#include "x_util.h"
 
 namespace tiny {
 extern Handlers handlers;
@@ -72,10 +73,10 @@ class ButtonTest: public ::testing::Test {
     {
         XSync(tiny::get_display(), False);
         XImage *img = XGetImage(tiny::get_display(), w.get_window(), 0, 0,
-                w.get_width(), w.get_height(), AllPlanes, ZPixmap);
+                tiny::x_uint(w.get_width()), tiny::x_uint(w.get_height()), AllPlanes, ZPixmap);
         bool found = false;
-        for (uint32_t y = 0; y < w.get_height() && !found; ++y) {
-            for (uint32_t x = 0; x < w.get_width() && !found; ++x) {
+        for (int y = 0; y < w.get_height() && !found; ++y) {
+            for (int x = 0; x < w.get_width() && !found; ++x) {
                 found = (XGetPixel(img, x, y) & 0xFFFFFF) != bg;
             }
         }
