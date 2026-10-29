@@ -8,12 +8,30 @@
 
 BUILD ?= build
 
+# Strict warnings. STRICT=1 turns them into errors (used by CI); it is not the
+# default, so that a newer compiler does not break the build of a user.
+WARNINGS = -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion \
+    -Wold-style-cast -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-align \
+    -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wimplicit-fallthrough
+CXX_VERSION := $(shell $(CXX) --version 2>/dev/null)
+ifneq (,$(findstring clang,$(CXX_VERSION)))
+WARNINGS += -Wextra-semi -Wunreachable-code
+else
+WARNINGS += -Wuseless-cast -Wduplicated-cond -Wlogical-op
+endif
+ifdef STRICT
+WARNINGS += -Werror
+endif
+
 PKGS = x11 xft xrender
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
+# X headers are system headers: their warnings are not ours to fix
+SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
+
 CXXFLAGS ?= -g
-override CXXFLAGS += -MMD -std=c++17 -I./lib $(PKG_CFLAGS)
+override CXXFLAGS += -MMD -std=c++17 -I./lib $(SYS_CFLAGS) $(WARNINGS)
 LDLIBS = $(PKG_LIBS)
 
 LIB_SRC = $(wildcard lib/*.cc)
