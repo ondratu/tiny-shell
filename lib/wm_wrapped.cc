@@ -307,10 +307,8 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
     }
 
     if (mask & (tiny::Position::Left | tiny::Position::Right)) {
-        new_width =
-                std::max(std::max(hints->min_width + tiny::theme.wm_win_corner,
-                                  tiny::theme.wm_win_min_width),
-                         new_width);
+        new_width = std::max({hints->min_width + tiny::theme.wm_win_corner,
+                              tiny::theme.wm_win_min_width, new_width});
         if ((0 < hints->max_width) && (hints->max_width < new_width)) {
             new_width = hints->max_width;
         }
@@ -318,11 +316,9 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 
     if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
         // TODO: it exist steps
-        new_height = std::max(std::max(hints->min_height +
-                                               tiny::theme.wm_win_corner +
-                                               tiny::theme.wm_win_header,
-                                       tiny::theme.wm_win_min_height),
-                              new_height);
+        new_height = std::max({hints->min_height + tiny::theme.wm_win_corner +
+                                       tiny::theme.wm_win_header,
+                               tiny::theme.wm_win_min_height, new_height});
         if ((0 < hints->max_height) && (hints->max_height < new_height)) {
             new_height = hints->max_height;
         }

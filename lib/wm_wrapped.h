@@ -16,7 +16,7 @@ class Wrapped : public tiny::Container, public Window {
 
     ~Wrapped() override;
 
-    static Window* create(::Window parent, ::Window child,
+    static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
                           unsigned long functions, unsigned long decorations);
 

@@ -89,9 +89,9 @@ void Entry::on_key_release(const XEvent& e, void*)
         } else {
             return;
         }
-    } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Delete)) {
+    } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Delete) ||
+               e.xkey.keycode == XKeysymToKeycode(display, XK_Tab)) {
         // TODO: working with position
-    } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Tab)) {
         // TODO: suggest like command line
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Return)) {
         TINY_LOG("run %s", text.c_str());

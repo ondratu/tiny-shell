@@ -132,12 +132,9 @@ uint32_t Style::get_bg(uint8_t state) const {GET_STATE_UINT32_COLOR(state, bg)}
 
 uint32_t Style::get_fg(uint8_t state) const {GET_STATE_UINT32_COLOR(state, fg)}
 
-uint32_t Style::get_br(uint8_t state) const
-{
-    GET_STATE_UINT32_COLOR(state, br)
-}
+uint32_t Style::get_br(uint8_t state) const {GET_STATE_UINT32_COLOR(state, br)}
 
-const std::string Style::get_xft_fg(uint8_t state) const
+std::string Style::get_xft_fg(uint8_t state) const
 {
     GET_STATE_XFT_COLOR(state, fg);
 }

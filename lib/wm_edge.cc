@@ -212,6 +212,7 @@ void BackWindow::on_edge_drag_motion(Object* o, const XEvent& e, void*)
 {
     on_move_resize_motion(
             this, e,
+            // NOLINTNEXTLINE(performance-no-int-to-ptr): the mask travels as data
             reinterpret_cast<void*>(static_cast<Edge*>(o)->get_mask()));
 }
 

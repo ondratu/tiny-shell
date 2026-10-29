@@ -36,7 +36,7 @@ class Header : public tiny::Box {
 
     void resize(int width, int height) override;
 
-    const std::string get_title() const { return title; }
+    std::string get_title() const { return title; }
 
     void set_title(const std::string& title);
 

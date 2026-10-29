@@ -312,7 +312,7 @@ TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
     start();
 
     const XErrors errors;
-    Client other;
+    const Client other;
     for (const int sym : {XK_Tab, XK_F2}) {
         XGrabKey(other.display,
                  XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
@@ -353,7 +353,7 @@ TEST_F(ManagerTest, destructor_releases_the_shortcuts_and_the_root_window)
     manager.reset();
 
     const XErrors errors;
-    Client other;
+    const Client other;
     XGrabKey(other.display, XKeysymToKeycode(other.display, XK_Tab), Mod1Mask,
              root_window(), True, GrabModeAsync, GrabModeAsync);
     XSelectInput(other.display, root_window(), SubstructureRedirectMask);
@@ -495,7 +495,7 @@ TEST_F(ManagerTest, configure_request_of_an_unmanaged_window_is_executed)
 TEST_F(ManagerTest, unmapped_window_is_forgotten)
 {
     start();
-    Client& c = add_client();
+    const Client& c = add_client();
     run_loop();
     pump_events();
     ASSERT_TRUE(is_managed(c));

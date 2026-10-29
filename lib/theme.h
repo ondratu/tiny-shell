@@ -52,7 +52,7 @@ class Style {
     uint32_t get_br(uint8_t state) const;
     XftFont* get_font() const { return font; }
 
-    const std::string get_xft_fg(uint8_t state) const;
+    std::string get_xft_fg(uint8_t state) const;
 
     // Normal state
     uint32_t normal_bg = BLACK;

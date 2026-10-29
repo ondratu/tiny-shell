@@ -16,7 +16,7 @@ static XEvent make_event(int type)
 
 TEST(EventToString, names_of_known_events)
 {
-    struct {
+    const struct {
         int type;
         const char* name;
     } cases[] = {

@@ -75,7 +75,7 @@ void DockButton::on_expose(const XEvent&, void*)
 
     const int offset = width / 14;
     const unsigned int dot = static_cast<unsigned int>(
-            std::max(1l, lround(5 * tiny::theme.scale_factor)));
+            std::max(1L, lround(5 * tiny::theme.scale_factor)));
 
     for (int y = 3; y <= 11; y += 4) {
         for (int x = 3; x <= 11; x += 4) {

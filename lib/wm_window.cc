@@ -39,7 +39,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
         update_normal_hints();
     }
 
-    if (get_maximized() && (state.width == 0 || state.height == 0)) {
+    if (Window::get_maximized() && (state.width == 0 || state.height == 0)) {
         if (hints->flags & PMinSize) {
             state.width = hints->min_width;
             state.height = hints->min_height;
@@ -611,7 +611,6 @@ void Window::update_wm_icon()
 
         width = words[pos];
         height = words[pos + 1];
-        icon_size = width * height;
 
         if (icon) { // On update
             XFreePixmap(dsp, icon);

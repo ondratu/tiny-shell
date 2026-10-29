@@ -22,8 +22,8 @@ class Demo : public tiny::Box {
         main_button.set_popover(&menu);
 
         for (int i = 0; i < 8; ++i) {
-            auto item = std::shared_ptr<tiny::LabelButton>(
-                    new tiny::LabelButton(148, 28, "Menu Item"));
+            auto item =
+                    std::make_shared<tiny::LabelButton>(148, 28, "Menu Item");
             btns.push_back(item);
         }
 

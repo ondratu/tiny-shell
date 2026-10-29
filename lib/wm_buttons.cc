@@ -56,7 +56,7 @@ void Button::on_leave_notify(const XEvent& e, void* data)
     on_expose(e, nullptr);
 }
 
-CloseButton::CloseButton() {}
+CloseButton::CloseButton() = default;
 
 CloseButton::~CloseButton() = default;
 
@@ -136,7 +136,7 @@ void MaximizeButton::set_restore(bool _restore)
     on_expose(XEvent(), nullptr);
 }
 
-MinimizeButton::MinimizeButton() {}
+MinimizeButton::MinimizeButton() = default;
 
 MinimizeButton::~MinimizeButton() = default;
 
