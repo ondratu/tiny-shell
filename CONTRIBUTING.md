@@ -117,6 +117,7 @@ sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev xvfb libgtest-dev xserver-xephyr
 make                  # build
 make check            # unit tests (run against Xvfb)
+make help             # all the targets and variables
 tools/run-xephyr.sh   # run the window manager in a nested Xephyr
 ```
 

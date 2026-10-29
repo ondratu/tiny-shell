@@ -34,6 +34,13 @@ ifdef STRICT
 WARNINGS += -Werror
 endif
 
+# HARDEN=1 adds the hardening flags for a release build (needs optimization,
+# e.g. make HARDEN=1 CXXFLAGS="-O2"). Not the default: _FORTIFY_SOURCE needs
+# glibc and _GLIBCXX_ASSERTIONS needs libstdc++.
+ifdef HARDEN
+HARDENING = -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fstack-protector-strong
+endif
+
 PKGS = x11 xft xrender
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
@@ -42,7 +49,8 @@ PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
 CXXFLAGS ?= -g
-override CXXFLAGS += -MMD -std=c++17 -I./lib $(SYS_CFLAGS) $(WARNINGS)
+override CXXFLAGS += -MMD -std=c++17 -I./lib $(SYS_CFLAGS) $(WARNINGS) \
+    $(HARDENING)
 LDLIBS = $(PKG_LIBS)
 
 LIB_SRC = $(wildcard lib/*.cc)
@@ -56,10 +64,22 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage format lint asan
+.PHONY: all examples clean check coverage format lint asan help
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
+
+help:
+	@echo "make            build build/tiny-shell"
+	@echo "make examples   build the toolkit examples"
+	@echo "make check      run the unit tests (against Xvfb)"
+	@echo "make coverage   run the tests and print the coverage table"
+	@echo "make asan       run the tests with AddressSanitizer and UBSan"
+	@echo "make lint       static analysis with clang-tidy"
+	@echo "make format     format the sources with clang-format"
+	@echo "make clean      remove the build directories"
+	@echo "Variables: CXX, CXXFLAGS, BUILD, STRICT=1 (warnings are errors),"
+	@echo "           HARDEN=1 (hardening flags for a release build)"
 
 examples: $(EXAMPLES)
 
