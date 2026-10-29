@@ -68,6 +68,22 @@ compile_flags.txt: .pkg_check
 	@echo "-I./lib" >> $@
 	@$(foreach pkg, $(PKGS), for i in $$(pkg-config --cflags $(pkg)); do echo $$i >> $@; done;)
 
+# Coverage is built out of tree in COV_DIR so it does not mix with normal objects.
+COV_DIR = build-cov
+COV_TESTS = test_memory
+
+coverage:
+	@rm -rf $(COV_DIR) && mkdir -p $(COV_DIR)/lib
+	@cp Makefile *.cc $(COV_DIR)/ && cp lib/*.cc lib/*.h $(COV_DIR)/lib/
+	@$(MAKE) -C $(COV_DIR) $(COV_TESTS) -s \
+	    CXXFLAGS="-g -O0 --coverage -std=c++17 -I./lib $(X11_CFLAGS) $(XFT_CFLAGS) $(XRENDER_CFLAGS)" \
+	    LDFLAGS="--coverage $(X11_LIBS) $(XFT_LIBS) $(XRENDER_LIBS)"
+	@cd $(COV_DIR) && for t in $(COV_TESTS); do \
+	    xvfb-run -a ./$$t || exit 1; done
+	@cd $(COV_DIR) && gcov -n -o lib $(notdir $(LIB_SRC)) 2>/dev/null | \
+	    awk -F"'" '/^File/{f=$$2} /^Lines executed/{ \
+	        if (f ~ /^lib\/[^\/]*\.cc$$/ && !(f in seen)) {seen[f]=1; print f ": " $$0}}'
+
 clean:
 	@$(RM) -v .pkg_check
 	@$(RM) -v $(OBJ)
@@ -76,3 +92,4 @@ clean:
 	@$(RM) -v lib/libtiny.a
 	@$(RM) -v $(LIB_OBJ)
 	@$(RM) -v $(LIB_DEP)
+	@$(RM) -r $(COV_DIR)
