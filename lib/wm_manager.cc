@@ -243,7 +243,6 @@ void Manager::activate_next_window()
         }
     }
 
-    active = nullptr;
     if (next->get_minimized()){
         next->restore();
     }
@@ -266,7 +265,6 @@ void Manager::activate_prev_window()
             break;
         }
     }
-    active = nullptr;
     if (prev->get_minimized()){
         prev->restore();
     }
@@ -332,6 +330,9 @@ void Manager::on_unmap_notify(const XUnmapEvent &e)
         }
         if (active == window){
             activate_prev_window();
+        }
+        if (active == window){
+            active = nullptr;
         }
         wm_tops.remove(window);
         wm_dock.remove(window);
