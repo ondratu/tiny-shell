@@ -768,6 +768,8 @@ void Window::on_focus_out(const XEvent &e, void* data){
 
 void Window::on_property_notify(const XEvent &e, void *data)
 {
+    update_properties();    // the property could be new
+
     if (e.xproperty.atom == dsp.WM_PROTOCOLS){
         update_protocols();
         return;
