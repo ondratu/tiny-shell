@@ -5,7 +5,7 @@
 
 namespace wm {
 
-TitleBox::TitleBox(uint32_t w, uint32_t h):
+TitleBox::TitleBox(int w, int h):
     tiny::Widget(Widget::Type::Input, w, h)
 {
     name = "wm_titlebox";
@@ -65,7 +65,7 @@ void TitleBox::on_motion_notify(const XEvent &e, void *)
 }
 
 
-Header::Header(uint32_t w, uint32_t h):
+Header::Header(int w, int h):
     Box(Box::Type::Horizontal, w, h),
     title_box(w, h),
     screen(0)
@@ -95,7 +95,7 @@ void Header::realize(Window parent_arg, int x, int y)
     add(&title_box, 0, 0);
 }
 
-void Header::resize(uint32_t w, uint32_t h)
+void Header::resize(int w, int h)
 {
     Box::resize(w, h);
     title_box.resize(w, h);
@@ -162,7 +162,7 @@ void Header::on_expose(const XEvent &, void *)
     // bottom line
     GC gc = XCreateGC(display, window, 0, nullptr);
     XSetForeground(display, gc, tiny::theme.wm_header.get_br(state));
-    XSetLineAttributes(display, gc, get_border(), LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, tiny::x_uint(get_border()), LineSolid, CapButt, JoinBevel);
     XDrawLine(display, window, gc, 0, height-1, width, height-1);
     XFreeGC(display, gc);
 }

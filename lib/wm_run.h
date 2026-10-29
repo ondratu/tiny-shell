@@ -7,7 +7,7 @@ namespace wm {
 
 class Entry: public tiny::Widget {
   public:
-    Entry(uint32_t width, uint32_t height);
+    Entry(int width, int height);
 
     virtual ~Entry();
 

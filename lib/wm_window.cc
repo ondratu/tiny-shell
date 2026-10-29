@@ -46,12 +46,12 @@ Window::Window(::Window child_arg, ::Window root_arg, unsigned long functions_ar
 
         XWindowAttributes attrs;
         XGetWindowAttributes(dsp, root_arg, &attrs);  //!< TODO: get screen size instead
-        state.width = std::max(state.width, static_cast<uint32_t>(attrs.width)/3*2);
-        state.height = std::max(state.height, static_cast<uint32_t>(attrs.height)/3*2);
+        state.width = std::max(state.width, attrs.width/3*2);
+        state.height = std::max(state.height, attrs.height/3*2);
 
         if (hints->flags & PMaxSize) {
-            state.width = std::min(state.width, static_cast<uint32_t>(hints->max_width));
-            state.height = std::min(state.height, static_cast<uint32_t>(hints->max_height));
+            state.width = std::min(state.width, hints->max_width);
+            state.height = std::min(state.height, hints->max_height);
         }
         if (hints->flags & PAspect){
             // TODO: fix ratio if is set
@@ -112,7 +112,7 @@ void Window::set_minimized(bool minimized)
     if (minimized){
         wm_states |= WMState::HIDDEN;
     } else {
-        wm_states &= ~(WMState::HIDDEN);
+        wm_states &= static_cast<unsigned long>(~(WMState::HIDDEN));
     }
 
     std::vector<Atom> atoms;
@@ -130,8 +130,8 @@ void Window::set_maximized(bool maximized)
         wm_states |= WMState::MAXIMIZED_VERT;
         wm_states |= WMState::MAXIMIZED_HORZ;
     } else {
-        wm_states &= ~(WMState::MAXIMIZED_VERT);
-        wm_states &= ~(WMState::MAXIMIZED_HORZ);
+        wm_states &= static_cast<unsigned long>(~(WMState::MAXIMIZED_VERT));
+        wm_states &= static_cast<unsigned long>(~(WMState::MAXIMIZED_HORZ));
     }
 
     std::vector<Atom> atoms;
@@ -195,7 +195,7 @@ void Window::set_focus()
         msg.display = dsp;
         msg.window = child;
         msg.format = 32;
-        msg.data.l[0] = dsp.WM_TAKE_FOCUS;
+        msg.data.l[0] = static_cast<long>(dsp.WM_TAKE_FOCUS);
         msg.data.l[1] = CurrentTime;
 
         XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
@@ -215,7 +215,7 @@ void Window::set_focus()
 
 void Window::return_focus()
 {
-    wm_states &= ~(WMState::FOCUSED);
+    wm_states &= static_cast<unsigned long>(~(WMState::FOCUSED));
 
     std::vector<Atom> atoms;
     get_wm_states(atoms);
@@ -235,7 +235,7 @@ void Window::close()
         msg.type = ClientMessage;
         msg.format = 32;
         msg.message_type = dsp.WM_PROTOCOLS;
-        msg.data.l[0] = dsp.WM_DELETE_WINDOW;
+        msg.data.l[0] = static_cast<long>(dsp.WM_DELETE_WINDOW);
         XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
     } else {
         XKillClient(dsp, child);
@@ -267,7 +267,7 @@ void Window::maximize()
 
     XGetWindowAttributes(dsp, root, &attrs);  //!< TODO: get screen size instead
                                               // TODO: move under the panel
-    XMoveResizeWindow(dsp, child, 0, 0, attrs.width, attrs.height);
+    XMoveResizeWindow(dsp, child, 0, 0, tiny::x_uint(attrs.width), tiny::x_uint(attrs.height));
     set_maximized(true);
 }
 
@@ -279,7 +279,7 @@ void Window::restore(int x, int y)
         y = y ? (y - state.height/2) : state.y;
 
         XMoveResizeWindow(dsp, child,
-                x, y, state.width, state.height);
+                x, y, tiny::x_uint(state.width), tiny::x_uint(state.height));
         XSetWindowBorderWidth(dsp, child, 1);
         set_maximized(false);
     } else {
@@ -328,18 +328,18 @@ void Window::update_normal_hints()
     if (!(supplied & PMinSize) && !(supplied & PMaxSize))
     {
         //? Really
-        functions &= ~(MotifWMHints::FUNC_ALL);
-        functions &= ~(MotifWMHints::FUNC_RESIZE);
-        functions &= ~(MotifWMHints::FUNC_MAXIMIZE);
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_ALL));
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_RESIZE));
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_MAXIMIZE));
     }
     // Min and Max are set but are same
     if (supplied & PMinSize && supplied &PMaxSize &&
             (hints->min_width == hints->max_width) &&
             (hints->min_height == hints->max_height))
     {
-        functions &= ~(MotifWMHints::FUNC_ALL);
-        functions &= ~(MotifWMHints::FUNC_RESIZE);
-        functions &= ~(MotifWMHints::FUNC_MAXIMIZE);
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_ALL));
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_RESIZE));
+        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_MAXIMIZE));
     }
 }
 
@@ -365,6 +365,9 @@ void Window::update_wm_hints()
         XFree(wm_hints);
         return;
     }
+    const int iw = static_cast<int>(icon_width);
+    const int ih = static_cast<int>(icon_height);
+    const int ib = static_cast<int>(icon_border);
 
     if (icon){  // On update
         XFreePixmap(dsp, icon);
@@ -375,42 +378,42 @@ void Window::update_wm_hints()
         icon_mask = 0;
     }
 
-    if (icon_width == tiny::theme.wm_icon || icon_height == tiny::theme.wm_icon)
+    if (iw == tiny::theme.wm_icon || ih == tiny::theme.wm_icon)
     {
         icon = XCreatePixmap(dsp, geo_root,
-            tiny::theme.wm_icon, tiny::theme.wm_icon,
-            XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
+            tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon),
+            tiny::x_uint(XDefaultDepth(dsp, 0))); // TODO: Screen instead of 0
 
         GC gc = XCreateGC(dsp, icon, 0, nullptr);
         XCopyArea(dsp, wm_hints->icon_pixmap, icon, gc,
-                icon_border+wm_hints->icon_x, icon_border+wm_hints->icon_y,
-                tiny::theme.wm_icon, tiny::theme.wm_icon,
-                tiny::theme.wm_icon/2 - icon_width/2,
-                tiny::theme.wm_icon/2 - icon_height/2);
+                ib+wm_hints->icon_x, ib+wm_hints->icon_y,
+                tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon),
+                tiny::theme.wm_icon/2 - iw/2,
+                tiny::theme.wm_icon/2 - ih/2);
         XFreeGC(dsp, gc);
 
         if (wm_hints->flags & IconMaskHint){
             icon_mask = XCreatePixmap(dsp, geo_root,
-                    tiny::theme.wm_icon, tiny::theme.wm_icon,
+                    tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon),
                     1);
 
             GC mask_gc = XCreateGC(dsp, icon_mask, 0, nullptr);
             XCopyArea(dsp, wm_hints->icon_mask, icon_mask, mask_gc,
-                    icon_border+wm_hints->icon_x, icon_border+wm_hints->icon_y,
-                    tiny::theme.wm_icon, tiny::theme.wm_icon,
-                    tiny::theme.wm_icon/2 - icon_width/2,
-                    tiny::theme.wm_icon/2 - icon_height/2);
+                    ib+wm_hints->icon_x, ib+wm_hints->icon_y,
+                    tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon),
+                    tiny::theme.wm_icon/2 - iw/2,
+                    tiny::theme.wm_icon/2 - ih/2);
             XFreeGC(dsp, gc);
         }
 
     } else {
         icon = resize_pixmap(dsp, geo_root, wm_hints->icon_pixmap,
                 icon_width, icon_height,
-                tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
+                tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(XDefaultDepth(dsp, 0)));
         if (wm_hints->flags & IconMaskHint){
             icon_mask = resize_pixmap(dsp, geo_root, wm_hints->icon_mask,
                 icon_width, icon_height,
-                tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
+                tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon), 1);
         }
     }
 
@@ -428,7 +431,7 @@ void Window::update_wm_states()
     unsigned char *data = NULL;
 
     if (XGetWindowProperty(dsp, child,
-                dsp._NET_WM_STATE, 0L, ULONG_MAX,
+                dsp._NET_WM_STATE, 0L, static_cast<long>(ULONG_MAX),
                 false, XA_ATOM,
                 &returned_type, &size,
                 &nitems, &bytes_left, &data) != Success || !nitems)
@@ -574,7 +577,7 @@ void Window::update_wm_icon()
         unsigned long bytes_left;
         uint8_t *data = nullptr;
         if (XGetWindowProperty(dsp, child,
-                    dsp._NET_WM_ICON, 0L, ULONG_MAX,
+                    dsp._NET_WM_ICON, 0L, static_cast<long>(ULONG_MAX),
                     false, XA_CARDINAL,
                     &returned_type, &size,
                     &nitems, &bytes_left, &data) != Success)
@@ -600,7 +603,7 @@ void Window::update_wm_icon()
 
         for (auto it: icons){   // Find the best icon size
             pos = it.second;
-            if (it.first >= tiny::theme.wm_icon){
+            if (it.first >= static_cast<unsigned long>(tiny::theme.wm_icon)){
                 break;
             }
         }
@@ -618,7 +621,7 @@ void Window::update_wm_icon()
 
         icon = XCreatePixmap(dsp, root, static_cast<unsigned>(width),
                 static_cast<unsigned>(height),
-                XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
+                tiny::x_uint(XDefaultDepth(dsp, 0))); // TODO: Screen instead of 0
         GC gc = XCreateGC(dsp, icon, 0, nullptr);
 
         icon_mask = XCreatePixmap(dsp, root, static_cast<unsigned>(width),
@@ -634,9 +637,9 @@ void Window::update_wm_icon()
             for (size_t x = 0; x < width; x++)
             {
                 pixel = reinterpret_cast<uint8_t*>(&words[pos+y*width+x]);
-                color = (pixel[0] * pixel[3]/255) << 0;
-                color |= (pixel[1] * pixel[3]/255) << 8;
-                color |= (pixel[2] * pixel[3]/255) << 16;
+                color = static_cast<uint32_t>(pixel[0] * pixel[3]/255) << 0;
+                color |= static_cast<uint32_t>(pixel[1] * pixel[3]/255) << 8;
+                color |= static_cast<uint32_t>(pixel[2] * pixel[3]/255) << 16;
 
                 XSetForeground(dsp, gc, color);
                 XDrawPoint(dsp, icon, gc, static_cast<int>(x), static_cast<int>(y));
@@ -644,18 +647,19 @@ void Window::update_wm_icon()
                         static_cast<int>(x), static_cast<int>(y)); }
             }
 
-        if ((width != tiny::theme.wm_icon) && (height != tiny::theme.wm_icon))
+        const auto icon_px = static_cast<unsigned long>(tiny::theme.wm_icon);
+        if ((width != icon_px) && (height != icon_px))
         {
             Pixmap orig = icon;
             icon = resize_pixmap(dsp, root, orig,
                 static_cast<unsigned>(width), static_cast<unsigned>(height),
-                tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
+                tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(XDefaultDepth(dsp, 0)));
             XFreePixmap(dsp, orig);
 
             orig = icon_mask;
             icon_mask = resize_pixmap(dsp, root, orig,
                 static_cast<unsigned>(width), static_cast<unsigned>(height),
-                tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
+                tiny::x_uint(tiny::theme.wm_icon), tiny::x_uint(tiny::theme.wm_icon), 1);
             XFreePixmap(dsp, orig);
 
         }
@@ -725,7 +729,7 @@ void Window::on_client_message(const XEvent& e, void*)
                 return;
             }
 
-            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            char* atom_name = XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
             TINY_LOG("Unhandled WM_STATE_ADD request %s", atom_name);
             XFree(atom_name);
         }
@@ -739,14 +743,14 @@ void Window::on_client_message(const XEvent& e, void*)
                 return;
             }
 
-            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            char* atom_name = XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
             TINY_LOG("Unhandled WM_STATE_REMOVE request %s", atom_name);
             XFree(atom_name);
         }
 
         if (e.xclient.data.l[0] == dsp._NET_WM_STATE_TOGGLE)
         {
-            char* atom_name = XGetAtomName(dsp, e.xclient.data.l[1]);
+            char* atom_name = XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
             TINY_LOG("Unhandled WM_STATE_TOGLE request %s", atom_name);
             XFree(atom_name);
         }
@@ -905,7 +909,7 @@ Window::WMType Window::get_net_wm_type(::Window window)
     unsigned long bytes_left;
     unsigned char *data = NULL;
     if (XGetWindowProperty(display, window,
-                display._NET_WM_WINDOW_TYPE, 0L, ULONG_MAX,
+                display._NET_WM_WINDOW_TYPE, 0L, static_cast<long>(ULONG_MAX),
                 false, XA_ATOM,
                 &return_type, &size,
                 &nitems, &bytes_left, &data) != Success)

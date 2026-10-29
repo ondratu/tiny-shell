@@ -1,6 +1,7 @@
 #include <math.h>
 #include <algorithm>
 
+#include "x_util.h"
 #include "wm_dock.h"
 #include "object.h"
 #include "wm_window.h"
@@ -122,7 +123,7 @@ void Icon::on_expose(const XEvent&, void*)
 
         XCopyArea(display, icon, window, gc,
                         0, 0,
-                        width, height,
+                        tiny::x_uint(width), tiny::x_uint(height),
                         0, 0);
     } else {
         // TODO: move to wm_window
@@ -130,7 +131,7 @@ void Icon::on_expose(const XEvent&, void*)
         XSetLineAttributes(display, gc, 2, LineSolid, CapButt, JoinBevel);
 
         XDrawArc(display, window, gc,
-                1, 1, width-3, height-3, 0, 360*64);
+                1, 1, tiny::x_uint(width-3), tiny::x_uint(height-3), 0, 360*64);
     }
     XFreeGC(display, gc);
 }
@@ -176,8 +177,8 @@ void Dock::remove(Window* window_arg)
 
 void Dock::resize_to_children()
 {
-    uint32_t size = tiny::theme.wm_icon+tiny::theme.wm_dock_border;
-    resize(static_cast<uint32_t>(children.size())*size+tiny::theme.wm_dock_border, height);
+    int size = tiny::theme.wm_icon+tiny::theme.wm_dock_border;
+    resize(static_cast<int>(children.size())*size+tiny::theme.wm_dock_border, height);
 }
 
 void Dock::redraw(Window* window_arg, const XEvent& e)
@@ -196,7 +197,7 @@ void Dock::realize(::Window parent_arg, int x, int y)
     push_back(&icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
 }
 
-void Dock::resize(uint32_t w, uint32_t h)
+void Dock::resize(int w, int h)
 {
     Box::resize(w, h);
 

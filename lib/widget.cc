@@ -1,20 +1,23 @@
 #include <X11/Xutil.h>
 
+#include <algorithm>
+
 #include "widget.h"
+#include "x_util.h"
 #include "display.h"
 
 namespace tiny {
 
-Widget::Widget(Type type_arg, uint32_t w, uint32_t h):
+Widget::Widget(Type type_arg, int w, int h):
     Object(), type(type_arg), display(get_display()),
     parent(0), window(0), event_mask(0), event_done(false),
-    width(w), height(h),
+    width(std::max(0, w)), height(std::max(0, h)),
     is_maped(false), is_realized(false)
 {
     name = "widget";
 }
 
-Widget::Widget(uint32_t w, uint32_t h):
+Widget::Widget(int w, int h):
     Widget(Type::Normal, w, h)
 {}
 
@@ -73,15 +76,15 @@ void Widget::realize(Window parent_arg, int x, int y)
         case (Type::Normal):
             window = XCreateSimpleWindow(
                     display, parent_arg,
-                    x, y, width, height,
-                    get_border(), get_style().get_br(state),
+                    x, y, x_dim(width), x_dim(height),
+                    x_uint(get_border()), get_style().get_br(state),
                     get_style().get_bg(state));
             break;
         case (Type::Input):
             // TODO: parent_arg must bew root or InputOnly
             window = XCreateWindow(
                     display, parent_arg,
-                    x, y, width, height, 0,
+                    x, y, x_dim(width), x_dim(height), 0,
                     CopyFromParent, InputOnly, CopyFromParent,
                     CopyFromParent, nullptr);
             break;
@@ -95,8 +98,8 @@ void Widget::realize(Window parent_arg, int x, int y)
                         name);
                 window = XCreateSimpleWindow(
                         display, parent_arg,
-                        x, y, width, height,
-                        get_border(), get_style().get_br(state),
+                        x, y, x_dim(width), x_dim(height),
+                        x_uint(get_border()), get_style().get_br(state),
                         get_style().get_bg(state));
                 break;
             }
@@ -108,7 +111,7 @@ void Widget::realize(Window parent_arg, int x, int y)
 
             window = XCreateWindow(
                     display, parent_arg,
-                    x, y, width, height, get_border(),
+                    x, y, x_dim(width), x_dim(height), x_uint(get_border()),
                     vinfo.depth, InputOutput, vinfo.visual,
                     CWColormap | CWBorderPixel | CWBackPixel, &attr);
             break;
@@ -140,14 +143,14 @@ void Widget::unmap()
     }
 }
 
-void Widget::resize(uint32_t w, uint32_t h)
+void Widget::resize(int w, int h)
 {
     if (is_realized){
-        XResizeWindow(display, window, w, h);
+        XResizeWindow(display, window, x_dim(w), x_dim(h));
         // w and h are set by on_configure_notify
     } else {
-        this->width = w;
-        this->height = h;
+        this->width = std::max(0, w);
+        this->height = std::max(0, h);
     }
 }
 

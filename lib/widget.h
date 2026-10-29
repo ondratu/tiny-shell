@@ -13,17 +13,17 @@ namespace tiny {
 struct Rect {
     int x;
     int y;
-    uint32_t width;
-    uint32_t height;
+    int width;
+    int height;
 };
 
 class Widget: public Object {
   public:
     enum class Type {Normal, Transparent, Input};
 
-    Widget(Type type, uint32_t width, uint32_t height);
+    Widget(Type type, int width, int height);
 
-    Widget(uint32_t width, uint32_t height);
+    Widget(int width, int height);
 
     virtual ~Widget();
 
@@ -38,16 +38,16 @@ class Widget: public Object {
     inline virtual const Style& get_style() const
     { return theme.widget; }
 
-    inline virtual uint32_t get_border() const
+    inline virtual int get_border() const
     { return get_style().border_width; }
 
-    inline virtual uint32_t get_padding() const
+    inline virtual int get_padding() const
     { return get_style().padding_width; }
 
-    inline uint32_t get_width() const
+    inline int get_width() const
     { return width; }
 
-    inline uint32_t get_height() const
+    inline int get_height() const
     { return height; }
 
     inline bool get_maped() const
@@ -65,7 +65,7 @@ class Widget: public Object {
     virtual void unmap();
 
     // Generate ResizeRequest and Expose when Expose when size is smaller
-    virtual void resize(uint32_t width, uint32_t height);
+    virtual void resize(int width, int height);
 
   protected:
     void connect(uint16_t event_type, event_signal_t signal,
@@ -85,8 +85,8 @@ class Widget: public Object {
 
     long event_mask;
     bool event_done;
-    uint32_t width;
-    uint32_t height;
+    int width;
+    int height;
 
     bool is_maped;
     bool is_realized;

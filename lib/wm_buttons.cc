@@ -71,7 +71,7 @@ void CloseButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
@@ -103,7 +103,7 @@ void MaximizeButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinMiter);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinMiter);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;
@@ -157,7 +157,7 @@ void MinimizeButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, line_width(), LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinBevel);
 
     int mid_x = attrs.width/2;
     int mid_y = attrs.width/2;

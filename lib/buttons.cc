@@ -5,7 +5,7 @@
 
 namespace tiny {
 
-Button::Button(uint32_t w, uint32_t h):
+Button::Button(int w, int h):
     Widget(w, h)
 {
     name = "button";
@@ -56,7 +56,7 @@ void Button::on_button_release(const XEvent &e, void *){
 
 
 
-LabelButton::LabelButton(uint32_t w, uint32_t h,
+LabelButton::LabelButton(int w, int h,
         const std::string &text_arg):
     Button(w, h),
     text(text_arg)
@@ -137,7 +137,7 @@ void LabelButton::on_expose(const XEvent &, void *)
 }
 
 
-MenuButton::MenuButton(uint32_t w, uint32_t h, const std::string &text_arg):
+MenuButton::MenuButton(int w, int h, const std::string &text_arg):
     LabelButton(w, h, text_arg)
 {
     name = "menubutton";

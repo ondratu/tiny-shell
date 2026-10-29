@@ -35,7 +35,7 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
     }
 }
 
-Container::Container(Widget::Type type_arg, uint32_t w, uint32_t h,
+Container::Container(Widget::Type type_arg, int w, int h,
         const char* name_arg):
     Widget(type_arg, w, h)
 {
@@ -43,7 +43,7 @@ Container::Container(Widget::Type type_arg, uint32_t w, uint32_t h,
 }
 
 
-Container::Container(uint32_t w, uint32_t h, const char* name_arg):
+Container::Container(int w, int h, const char* name_arg):
     Container(Widget::Type::Normal, w, h, name_arg)
 {}
 
@@ -80,7 +80,7 @@ void Container::remove(Widget* widget)
 }
 
 
-Box::Box(Type type_arg, uint32_t w, uint32_t h):
+Box::Box(Type type_arg, int w, int h):
     Container(w, h),
     type(type_arg), start_offset(0)
 {
@@ -95,7 +95,7 @@ Box::Box(Type type_arg, uint32_t w, uint32_t h):
 Box::~Box()
 {}
 
-void Box::resize(uint32_t w, uint32_t h){
+void Box::resize(int w, int h){
     if (type == Type::Horizontal){
         end_offset += w - this->width;
     } else { // Type::Vertical
@@ -134,7 +134,7 @@ void Box::push_back(Widget * widget, int x_spacing, int y_spacing, int gravity)
 
 void Box::remove(Widget* widget)
 {
-    uint32_t offset = 0;
+    int offset = 0;
     auto it = offsets.find(widget);
 
     Container::remove(widget);
@@ -174,7 +174,7 @@ void Box::remove(Widget* widget)
 }
 
 
-Popover::Popover(Box::Type type_arg, uint32_t w, uint32_t h):
+Popover::Popover(Box::Type type_arg, int w, int h):
     Box(type_arg, w, h),
     time_from_unmap(0)
 {
@@ -182,7 +182,7 @@ Popover::Popover(Box::Type type_arg, uint32_t w, uint32_t h):
 }
 
 
-Popover::Popover(uint32_t w, uint32_t h):
+Popover::Popover(int w, int h):
     Popover(Box::Type::Vertical, w, h)
 {}
 

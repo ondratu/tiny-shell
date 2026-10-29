@@ -5,7 +5,7 @@
 
 namespace wm {
 
-Entry::Entry(uint32_t w, uint32_t h):
+Entry::Entry(int w, int h):
     tiny::Widget(Widget::Type::Normal, w, h),
     xim(0), xic(0)
 {
@@ -178,7 +178,7 @@ void Entry::clear()
 
 
 RunDialog::RunDialog():
-    tiny::Popover(320, static_cast<uint32_t>(tiny::theme.wm_panel*1.5)),
+    tiny::Popover(320, static_cast<int>(tiny::theme.wm_panel*1.5)),
     entry(310, tiny::theme.wm_win_header)
 {
     name = "run-dialog";

@@ -33,9 +33,9 @@ namespace tiny {
 
 Theme theme;  // default_theme
 
-static uint32_t scaled(uint32_t value, double factor)
+static int scaled(int value, double factor)
 {
-    return uint32_t(lround(value * factor));
+    return static_cast<int>(lround(value * factor));
 }
 
 Theme::Theme()

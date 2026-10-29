@@ -9,7 +9,7 @@ namespace tiny {
 
 class Button: public Widget {
   public:
-    Button(uint32_t width, uint32_t height);
+    Button(int width, int height);
 
     virtual ~Button();
 
@@ -28,7 +28,7 @@ class Button: public Widget {
 
 class LabelButton: public Button {
   public:
-    LabelButton(uint32_t width, uint32_t height, const std::string &text);
+    LabelButton(int width, int height, const std::string &text);
 
     virtual ~LabelButton();
 
@@ -52,7 +52,7 @@ class LabelButton: public Button {
 
 class MenuButton: public LabelButton {
   public:
-    MenuButton(uint32_t width, uint32_t height, const std::string &text);
+    MenuButton(int width, int height, const std::string &text);
 
     ~MenuButton();
 

@@ -20,9 +20,9 @@ class Position {
 
 class Container: public Widget {
   public:
-    Container(Widget::Type type, uint32_t width, uint32_t height,
+    Container(Widget::Type type, int width, int height,
             const char* name = "container");
-    Container(uint32_t width, uint32_t height, const char* name = "container");
+    Container(int width, int height, const char* name = "container");
 
     virtual ~Container();
 
@@ -42,19 +42,19 @@ class Box: public Container {
   public:
     enum class Type {Horizontal, Vertical};
 
-    Box(Type type, uint32_t width, uint32_t height);
+    Box(Type type, int width, int height);
 
     virtual ~Box();
 
-    virtual void resize(uint32_t widget, uint32_t height) override;
+    virtual void resize(int widget, int height) override;
 
     inline Type get_type() const
     { return type; }
 
-    inline uint32_t get_start_offset() const
+    inline int get_start_offset() const
     { return start_offset; }
 
-    inline uint32_t get_end_offset() const
+    inline int get_end_offset() const
     { return end_offset; }
 
     virtual void push_start(Widget * widget, int x_spacing=0, int y_spacing=0,
@@ -74,16 +74,16 @@ class Box: public Container {
 
     Type type;
 
-    uint32_t start_offset;
-    uint32_t end_offset;
+    int start_offset;
+    int end_offset;
     std::map<Widget*, Offset> offsets;
 };
 
 
 class Popover: public Box {
   public:
-    Popover(Box::Type type, uint32_t width, uint32_t height);
-    Popover(uint32_t width, uint32_t height);
+    Popover(Box::Type type, int width, int height);
+    Popover(int width, int height);
 
     virtual ~Popover();
 
