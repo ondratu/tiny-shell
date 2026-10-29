@@ -21,7 +21,21 @@ Wrapped::Wrapped(::Window child, ::Window root, uint32_t width, uint32_t height,
     shadow(width, height+tiny::theme.wm_win_header)
 {}
 
+static int ignore_x_error(::Display *, XErrorEvent *)
+{ return 0; }
+
 Wrapped::~Wrapped(){
+    // Give the client back to the root, so it survives the frame (it can be
+    // gone already, e.g. when it was closed).
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(display, window, &attrs)) {
+        XErrorHandler old = XSetErrorHandler(ignore_x_error);
+        XReparentWindow(display, child, parent, attrs.x,
+                attrs.y + tiny::theme.wm_win_header);
+        XSync(display, False);
+        XSetErrorHandler(old);
+    }
+
     tiny::Container::disconnect_window(PropertyNotify, child);
 
     XUngrabButton(display, Button1, AnyModifier, window);
