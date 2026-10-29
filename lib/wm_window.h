@@ -202,7 +202,7 @@ class Window: public tiny::Object {
         tiny::Display& dsp;
 
         XSizeHints* hints;
-        tiny::Rect state = {0, 0, 1, 1};
+        tiny::Rect state = {0, 0, 0, 0};
 
         unsigned long functions = 0;
         unsigned long wm_states = 0;
