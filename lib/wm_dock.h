@@ -56,6 +56,8 @@ class Dock: public tiny::Box {
         { return tiny::theme.wm_dock; }
 
     private:
+        void resize_to_children();
+
         DockButton icon;
         std::map<Window*, Icon*> wm_task_icons;
 };

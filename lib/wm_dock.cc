@@ -151,19 +151,28 @@ void Dock::add(Window* window)
 {
     Icon* icon = new Icon(window);
     wm_task_icons[window] = icon;
-    uint32_t size = icon->get_width()+tiny::theme.wm_dock_border;
     push_start(icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
-    resize(children.size()*size+tiny::theme.wm_dock_border, height);
+    resize_to_children();
     icon->map_all();
 }
 
 void Dock::remove(Window* window)
 {
-    Icon* icon = wm_task_icons[window];
+    auto it = wm_task_icons.find(window);
+    if (it == wm_task_icons.end()){
+        return;
+    }
+    Icon* icon = it->second;
     Box::remove(icon);
-    wm_task_icons.erase(window);
+    wm_task_icons.erase(it);
     delete(icon);
-    resize(children.size()*height, height);
+    resize_to_children();
+}
+
+void Dock::resize_to_children()
+{
+    uint32_t size = tiny::theme.wm_icon+tiny::theme.wm_dock_border;
+    resize(children.size()*size+tiny::theme.wm_dock_border, height);
 }
 
 void Dock::redraw(Window* window, const XEvent& e)
