@@ -13,10 +13,12 @@ TitleBox::TitleBox(uint32_t width, uint32_t height):
 
 TitleBox::~TitleBox()
 {
-    XUngrabButton(display, Button1, AnyModifier, window);
-    disconnect(ButtonPress);
-    disconnect(ButtonRelease);
-    disconnect(MotionNotify);
+    if (event_done) {
+        XUngrabButton(display, Button1, AnyModifier, window);
+        disconnect(ButtonPress);
+        disconnect(ButtonRelease);
+        disconnect(MotionNotify);
+    }
 }
 
 void TitleBox::set_events(long mask)
@@ -73,8 +75,10 @@ Header::Header(uint32_t width, uint32_t height):
 
 Header::~Header()
 {
-    XUngrabButton(display, Button1, AnyModifier, window);
-    disconnect(Expose);
+    if (event_done) {
+        XUngrabButton(display, Button1, AnyModifier, window);
+        disconnect(Expose);
+    }
 }
 
 void Header::set_events(long mask){
