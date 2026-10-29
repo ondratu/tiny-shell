@@ -13,11 +13,13 @@ DockButton::DockButton():
 
 DockButton::~DockButton()
 {
-    XUngrabButton(display, Button1, AnyModifier, window);
-    disconnect(ExposureMask);
-    disconnect(EnterNotify);
-    disconnect(LeaveNotify);
-    disconnect(ButtonRelease);
+    if (event_done) {
+        XUngrabButton(display, Button1, AnyModifier, window);
+        disconnect(Expose);
+        disconnect(EnterNotify);
+        disconnect(LeaveNotify);
+        disconnect(ButtonRelease);
+    }
 }
 
 void DockButton::set_events(long mask)
