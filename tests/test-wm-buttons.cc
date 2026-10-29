@@ -183,3 +183,58 @@ TEST_F(WmButtonTest, destroying_unrealized_button_causes_no_x_error)
 
     EXPECT_EQ(x.errors(), 0);
 }
+
+// ---- scaling (TINY_SCALE_FACTOR) ----
+
+class ScaledWmButtonTest: public WmButtonTest {
+  protected:
+    void SetUp() override
+    { tiny::theme.scale(2); }
+
+    void TearDown() override
+    { tiny::theme.scale(1); }
+
+    unsigned int mid() const { return icon() / 2; }
+};
+
+TEST_F(ScaledWmButtonTest, close_cross_is_scaled)
+{
+    wm::CloseButton b;
+    b.realize(root_window(), 0, 0);
+    b.map();
+
+    send(b, Expose);
+
+    ASSERT_EQ(icon(), 42u);
+    Image img = image_of(b);
+    // beyond the reach of the unscaled cross (3.5 px from the middle)
+    EXPECT_EQ(img.at(mid() + 6, mid() + 6), fg());
+    EXPECT_EQ(img.at(mid() - 6, mid() + 6), fg());
+}
+
+TEST_F(ScaledWmButtonTest, minimize_line_is_scaled)
+{
+    wm::MinimizeButton b;
+    b.realize(root_window(), 0, 0);
+    b.map();
+
+    send(b, Expose);
+
+    Image img = image_of(b);
+    EXPECT_EQ(img.at(mid() + 7, mid() + 7), fg());
+    EXPECT_EQ(img.at(mid() - 7, mid() + 7), fg());
+}
+
+TEST_F(ScaledWmButtonTest, maximize_square_is_scaled)
+{
+    wm::MaximizeButton b;
+    b.realize(root_window(), 0, 0);
+    b.map();
+
+    send(b, Expose);
+
+    Image img = image_of(b);
+    EXPECT_EQ(img.at(mid(), mid() - 6), fg());
+    EXPECT_EQ(img.at(mid() - 6, mid()), fg());
+    EXPECT_EQ(img.at(mid(), mid()), bg());
+}
