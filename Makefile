@@ -96,6 +96,10 @@ compile_flags.txt: $(BUILD)/.pkg_check
 # Use XVFB_RUN= to run against the current $DISPLAY instead.
 XVFB_RUN ?= xvfb-run -a
 
+# googletest is a system header like Xlib: its warnings are not ours (it can be
+# in /usr/pkg/include and the like, where the compiler does not know that)
+GTEST_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags gtest))
+
 TEST_SRC = $(wildcard tests/test-*.cc)
 TESTS = $(TEST_SRC:%.cc=$(BUILD)/%)
 TEST_OBJ = $(TEST_SRC:%.cc=$(BUILD)/%.o) $(BUILD)/tests/main.o
@@ -103,7 +107,7 @@ DEP += $(TEST_OBJ:.o=.d)
 
 -include $(TEST_OBJ:.o=.d)
 
-$(BUILD)/tests/%.o: override CXXFLAGS += $(shell pkg-config --cflags gtest)
+$(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS)
 
 $(BUILD)/tests/test-%: $(BUILD)/tests/test-%.o $(BUILD)/tests/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
@@ -165,7 +169,7 @@ lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	@printf '%s\n' $(LINT_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
-	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(shell pkg-config --cflags gtest)
+	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS)
 
 # Run all the tests with AddressSanitizer and UndefinedBehaviorSanitizer, built
 # into build-asan. Leaks that are accepted for now are in tools/lsan.supp.
