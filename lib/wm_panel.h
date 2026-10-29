@@ -49,4 +49,4 @@ class Panel: public tiny::Box {
     UserMenu menu_user;
 };
 
-}; // namespace wm
+} // namespace wm

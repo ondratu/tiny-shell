@@ -15,9 +15,16 @@
 #include "wm_wrapped.h"
 
 // The tests look at (and prepare) the state the manager keeps private.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wkeyword-macro"
+#endif
 #define private public
 #include "wm_manager.h"
 #undef private
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 using WmWindow = wm::Window;
 

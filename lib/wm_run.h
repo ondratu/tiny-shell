@@ -12,7 +12,7 @@ class Entry: public tiny::Widget {
     virtual ~Entry();
 
     virtual void realize(::Window parent, int x, int y) override;
-    virtual void set_events(long mask=0);
+    virtual void set_events(long mask=0) override;
     void set_focus();
     void clear();
 
@@ -46,4 +46,4 @@ class RunDialog: public tiny::Popover {
 
 };
 
-}; // namespace wm
+} // namespace wm

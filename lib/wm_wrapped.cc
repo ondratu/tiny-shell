@@ -62,8 +62,8 @@ Window* Wrapped::create(::Window root, ::Window child,
 
     unsigned long data[2];      /* "suggested" by ICCCM version 1 */
 
-    data[0] = (unsigned long) NormalState;
-    data[1] = (unsigned long) None;
+    data[0] = static_cast<unsigned long>(NormalState);
+    data[1] = static_cast<unsigned long>(None);
 
     XChangeProperty(tiny::get_display(), win->get_window(),
             tiny::get_display().WM_STATE, tiny::get_display().WM_STATE, 32,
