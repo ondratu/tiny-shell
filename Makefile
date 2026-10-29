@@ -56,7 +56,7 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage
+.PHONY: all examples clean check coverage format
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
@@ -146,3 +146,11 @@ coverage:
 clean:
 	@$(RM) -r $(BUILD) $(COV_DIR)
 	@$(RM) compile_flags.txt .syntastic_cpp_config
+
+# Format the sources with clang-format (style in .clang-format).
+# CLANG_FORMAT picks the tool, e.g. make format CLANG_FORMAT=clang-format-21.
+CLANG_FORMAT ?= clang-format
+FORMAT_FILES = $(wildcard lib/*.cc lib/*.h src/*.cc examples/*.cc tests/*.cc tests/*.h)
+
+format:
+	$(CLANG_FORMAT) -i $(FORMAT_FILES)

@@ -32,9 +32,12 @@ reviewer, keep it that way. Order of work:
 5. ~~Clang by default~~ (done: `clang++`, else the newest `clang++-N`, else
    `g++`). Still open: `-D_FORTIFY_SOURCE=3`, `-D_GLIBCXX_ASSERTIONS` and
    `-fstack-protector-strong` for release builds.
-6. **Formatting and static analysis.** Commit `.clang-format` (the style of
-   CONTRIBUTING.md, one reformatting commit with no other change) and
-   `.clang-tidy` (`bugprone-*`, `clang-analyzer-*`, `cert-*`,
+6. **Formatting and static analysis.** Done: `.clang-format` (the style of
+   the existing code), `make format`, one formatting-only commit listed in
+   `.git-blame-ignore-revs` (`git config blame.ignoreRevsFile
+   .git-blame-ignore-revs`). Still open: `.clang-tidy` and `make lint`
+   (clang-tidy is not installed on the development machine yet).
+   Plan for the rest: `.clang-tidy` (`bugprone-*`, `clang-analyzer-*`, `cert-*`,
    `cppcoreguidelines-*` with the noisy checks listed and explained,
    `misc-*`, `modernize-*`, `performance-*`, `readability-*`).
    `WarningsAsErrors: '*'`. Targets `make format`, `make lint` (clang-tidy
