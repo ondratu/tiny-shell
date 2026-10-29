@@ -807,6 +807,7 @@ void Window::on_property_notify(const XEvent &e, void *data)
             wm_icon_name = data;
             XFree(data);
         }
+        return;
     }
     if (e.xproperty.atom == dsp._NET_WM_ICON_NAME){
         update_wm_icon_name();
