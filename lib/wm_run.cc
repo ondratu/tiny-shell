@@ -5,8 +5,8 @@
 
 namespace wm {
 
-Entry::Entry(uint32_t width, uint32_t height):
-    tiny::Widget(Widget::Type::Normal, width, height),
+Entry::Entry(uint32_t w, uint32_t h):
+    tiny::Widget(Widget::Type::Normal, w, h),
     xim(0), xic(0)
 {
     name = "entry";
@@ -25,9 +25,9 @@ Entry::~Entry()
     }
 }
 
-void Entry::realize(::Window parent, int x, int y)
+void Entry::realize(::Window parent_arg, int x, int y)
 {
-    tiny::Widget::realize(parent, x, y);
+    tiny::Widget::realize(parent_arg, x, y);
 
     xim = XOpenIM(display, NULL, NULL, NULL);
     TINY_LOG("xim: %p", (void*) xim);

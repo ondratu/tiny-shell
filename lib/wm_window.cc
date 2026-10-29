@@ -17,11 +17,11 @@
 
 namespace wm {
 
-Window::Window(::Window child, ::Window root, unsigned long functions):
-    child(child),
-    root(root),
+Window::Window(::Window child_arg, ::Window root_arg, unsigned long functions_arg):
+    child(child_arg),
+    root(root_arg),
     dsp(tiny::get_display()),
-    functions(functions)
+    functions(functions_arg)
 {
     hints = XAllocSizeHints();
     if (hints == nullptr) {
@@ -45,7 +45,7 @@ Window::Window(::Window child, ::Window root, unsigned long functions):
         }
 
         XWindowAttributes attrs;
-        XGetWindowAttributes(dsp, root, &attrs);  //!< TODO: get screen size instead
+        XGetWindowAttributes(dsp, root_arg, &attrs);  //!< TODO: get screen size instead
         state.width = std::max(state.width, (uint32_t)attrs.width/3*2);
         state.height = std::max(state.height, (uint32_t)attrs.height/3*2);
 
@@ -72,7 +72,7 @@ Window::Window(::Window child, ::Window root, unsigned long functions):
         icon_size->max_width = tiny::theme.wm_icon;
         icon_size->max_height = tiny::theme.wm_icon;
         // Request the best icon
-        XSetIconSizes(dsp, child, icon_size, 1);
+        XSetIconSizes(dsp, child_arg, icon_size, 1);
         XFree(icon_size);
         update_wm_hints();
     }
@@ -354,11 +354,11 @@ void Window::update_wm_hints()
         return;     // No Icon in WMHints
     }
 
-    ::Window root;
+    ::Window geo_root;
     int x, y;           //!< unused for pixmap
     unsigned int icon_width, icon_height, icon_border;
     unsigned int depth; //!< unused dor pixmap
-    if (!XGetGeometry(dsp, wm_hints->icon_pixmap, &root, &x, &y,
+    if (!XGetGeometry(dsp, wm_hints->icon_pixmap, &geo_root, &x, &y,
                     &icon_width, &icon_height, &icon_border, &depth))
     {
         TINY_LOG("Can't read geometry from icon!");
@@ -377,7 +377,7 @@ void Window::update_wm_hints()
 
     if (icon_width == tiny::theme.wm_icon || icon_height == tiny::theme.wm_icon)
     {
-        icon = XCreatePixmap(dsp, root,
+        icon = XCreatePixmap(dsp, geo_root,
             tiny::theme.wm_icon, tiny::theme.wm_icon,
             XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
 
@@ -390,12 +390,12 @@ void Window::update_wm_hints()
         XFreeGC(dsp, gc);
 
         if (wm_hints->flags & IconMaskHint){
-            icon_mask = XCreatePixmap(dsp, root,
+            icon_mask = XCreatePixmap(dsp, geo_root,
                     tiny::theme.wm_icon, tiny::theme.wm_icon,
                     1);
 
-            GC gc = XCreateGC(dsp, icon_mask, 0, nullptr);
-            XCopyArea(dsp, wm_hints->icon_mask, icon_mask, gc,
+            GC mask_gc = XCreateGC(dsp, icon_mask, 0, nullptr);
+            XCopyArea(dsp, wm_hints->icon_mask, icon_mask, mask_gc,
                     icon_border+wm_hints->icon_x, icon_border+wm_hints->icon_y,
                     tiny::theme.wm_icon, tiny::theme.wm_icon,
                     tiny::theme.wm_icon/2 - icon_width/2,
@@ -404,11 +404,11 @@ void Window::update_wm_hints()
         }
 
     } else {
-        icon = resize_pixmap(dsp, root, wm_hints->icon_pixmap,
+        icon = resize_pixmap(dsp, geo_root, wm_hints->icon_pixmap,
                 icon_width, icon_height,
                 tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
         if (wm_hints->flags & IconMaskHint){
-            icon_mask = resize_pixmap(dsp, root, wm_hints->icon_mask,
+            icon_mask = resize_pixmap(dsp, geo_root, wm_hints->icon_mask,
                 icon_width, icon_height,
                 tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
         }

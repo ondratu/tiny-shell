@@ -5,17 +5,17 @@
 
 namespace tiny {
 
-Widget::Widget(Type type, uint32_t width, uint32_t height):
-    Object(), type(type), display(get_display()),
+Widget::Widget(Type type_arg, uint32_t w, uint32_t h):
+    Object(), type(type_arg), display(get_display()),
     parent(0), window(0), event_mask(0), event_done(false),
-    width(width), height(height),
+    width(w), height(h),
     is_maped(false), is_realized(false)
 {
     name = "widget";
 }
 
-Widget::Widget(uint32_t width, uint32_t height):
-    Widget(Type::Normal, width, height)
+Widget::Widget(uint32_t w, uint32_t h):
+    Widget(Type::Normal, w, h)
 {}
 
 Widget::~Widget(){
@@ -60,27 +60,27 @@ void Widget::set_events(long mask){
     event_done = true;
 }
 
-void Widget::realize(Window parent, int x, int y)
+void Widget::realize(Window parent_arg, int x, int y)
 {
     if (is_realized){
         return error("tiny::Widget is realized yet!");
     }
-    this->parent = parent;
+    this->parent = parent_arg;
     uint8_t state = get_theme_state();
     // TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
 
     switch(type) {
         case (Type::Normal):
             window = XCreateSimpleWindow(
-                    display, parent,
+                    display, parent_arg,
                     x, y, width, height,
                     get_border(), get_style().get_br(state),
                     get_style().get_bg(state));
             break;
         case (Type::Input):
-            // TODO: parent must bew root or InputOnly
+            // TODO: parent_arg must bew root or InputOnly
             window = XCreateWindow(
-                    display, parent,
+                    display, parent_arg,
                     x, y, width, height, 0,
                     CopyFromParent, InputOnly, CopyFromParent,
                     CopyFromParent, nullptr);
@@ -94,7 +94,7 @@ void Widget::realize(Window parent, int x, int y)
                 error("tiny::Widget %s: no 32 bit visual, not transparent",
                         name);
                 window = XCreateSimpleWindow(
-                        display, parent,
+                        display, parent_arg,
                         x, y, width, height,
                         get_border(), get_style().get_br(state),
                         get_style().get_bg(state));
@@ -102,12 +102,12 @@ void Widget::realize(Window parent, int x, int y)
             }
 
             XSetWindowAttributes attr;
-            attr.colormap = XCreateColormap(display, parent, vinfo.visual, AllocNone);
+            attr.colormap = XCreateColormap(display, parent_arg, vinfo.visual, AllocNone);
             attr.border_pixel = get_style().get_br(state);
             attr.background_pixel = get_style().get_bg(state);
 
             window = XCreateWindow(
-                    display, parent,
+                    display, parent_arg,
                     x, y, width, height, get_border(),
                     vinfo.depth, InputOutput, vinfo.visual,
                     CWColormap | CWBorderPixel | CWBackPixel, &attr);
@@ -140,14 +140,14 @@ void Widget::unmap()
     }
 }
 
-void Widget::resize(uint32_t width, uint32_t height)
+void Widget::resize(uint32_t w, uint32_t h)
 {
     if (is_realized){
-        XResizeWindow(display, window, width, height);
-        // width and height are set by on_configure_notify
+        XResizeWindow(display, window, w, h);
+        // w and h are set by on_configure_notify
     } else {
-        this->width = width;
-        this->height = height;
+        this->width = w;
+        this->height = h;
     }
 }
 

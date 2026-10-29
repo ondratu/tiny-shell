@@ -36,18 +36,18 @@ void Handlers::call_hanlder(
 Signal::Signal():object(nullptr), method(nullptr), data(nullptr)
 {}
 
-void Signal::operator ()(Object *owner, const XEvent &e, void *data)
+void Signal::operator ()(Object *owner, const XEvent &e, void *event_data)
 {
     if (object && method){
-        (object->*method)(owner, e, (data ? data : this->data));
+        (object->*method)(owner, e, (event_data ? event_data : this->data));
     }
 }
 
-void Signal::connect(Object *object, object_signal_t method, void *data)
+void Signal::connect(Object *object_arg, object_signal_t method_arg, void *data_arg)
 {
-    this->object = object;
-    this->method = method;
-    this->data = data;
+    this->object = object_arg;
+    this->method = method_arg;
+    this->data = data_arg;
 }
 
 Object::~Object()

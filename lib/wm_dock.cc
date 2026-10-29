@@ -87,9 +87,9 @@ void DockButton::on_expose(const XEvent&, void*)
 }
 
 
-Icon::Icon(Window* task):
+Icon::Icon(Window* task_arg):
     DockButton(),
-    task(task)
+    task(task_arg)
 {}
 
 Icon::~Icon()
@@ -151,25 +151,25 @@ Dock::~Dock()
     wm_task_icons.clear();
 }
 
-void Dock::add(Window* window)
+void Dock::add(Window* window_arg)
 {
-    Icon* icon = new Icon(window);
-    wm_task_icons[window] = icon;
-    push_start(icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
+    Icon* task_icon = new Icon(window_arg);
+    wm_task_icons[window_arg] = task_icon;
+    push_start(task_icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
     resize_to_children();
-    icon->map_all();
+    task_icon->map_all();
 }
 
-void Dock::remove(Window* window)
+void Dock::remove(Window* window_arg)
 {
-    auto it = wm_task_icons.find(window);
+    auto it = wm_task_icons.find(window_arg);
     if (it == wm_task_icons.end()){
         return;
     }
-    Icon* icon = it->second;
-    Box::remove(icon);
+    Icon* task_icon = it->second;
+    Box::remove(task_icon);
     wm_task_icons.erase(it);
-    delete(icon);
+    delete(task_icon);
     resize_to_children();
 }
 
@@ -179,32 +179,32 @@ void Dock::resize_to_children()
     resize(children.size()*size+tiny::theme.wm_dock_border, height);
 }
 
-void Dock::redraw(Window* window, const XEvent& e)
+void Dock::redraw(Window* window_arg, const XEvent& e)
 {
-    auto wm_task = wm_task_icons.find(window);
+    auto wm_task = wm_task_icons.find(window_arg);
     if (wm_task != wm_task_icons.end()){
-        Icon* icon = wm_task_icons[window];
-        icon->redraw(e);
+        Icon* task_icon = wm_task_icons[window_arg];
+        task_icon->redraw(e);
     }
 }
 
-void Dock::realize(::Window parent, int x, int y)
+void Dock::realize(::Window parent_arg, int x, int y)
 {
-    tiny::Box::realize(parent, x, y);
+    tiny::Box::realize(parent_arg, x, y);
 
     push_back(&icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
 }
 
-void Dock::resize(uint32_t width, uint32_t height)
+void Dock::resize(uint32_t w, uint32_t h)
 {
-    Box::resize(width, height);
+    Box::resize(w, h);
 
     if (is_realized){
         XWindowAttributes attrs;
         XGetWindowAttributes(display, parent, &attrs);
         XMoveWindow(display, window,
-                attrs.width/2-width/2,
-                attrs.height - height-tiny::theme.wm_dock_border);
+                attrs.width/2-w/2,
+                attrs.height - h-tiny::theme.wm_dock_border);
     }
 }
 

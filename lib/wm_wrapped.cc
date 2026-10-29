@@ -12,13 +12,13 @@ namespace tiny {
 
 namespace wm {
 
-Wrapped::Wrapped(::Window child, ::Window root, uint32_t width, uint32_t height,
-        unsigned long functions, unsigned long decorations):
-    tiny::Container(width, height+tiny::theme.wm_win_header, "wm_window"),
-    Window(child, root, functions),
-    decorations(decorations),
-    header(width, tiny::theme.wm_win_header),
-    shadow(width, height+tiny::theme.wm_win_header)
+Wrapped::Wrapped(::Window child_arg, ::Window root_arg, uint32_t w, uint32_t h,
+        unsigned long functions_arg, unsigned long decorations_arg):
+    tiny::Container(w, h+tiny::theme.wm_win_header, "wm_window"),
+    Window(child_arg, root_arg, functions_arg),
+    decorations(decorations_arg),
+    header(w, tiny::theme.wm_win_header),
+    shadow(w, h+tiny::theme.wm_win_header)
 {}
 
 static int ignore_x_error(::Display *, XErrorEvent *)
@@ -72,13 +72,13 @@ Window* Wrapped::create(::Window root, ::Window child,
     return win;
 }
 
-void Wrapped::realize(::Window parent, int x, int y)
+void Wrapped::realize(::Window parent_arg, int x, int y)
 {
     update_properties();
-    tiny::Container::realize(parent, x, y);
+    tiny::Container::realize(parent_arg, x, y);
 
     if (is_resizable()){
-        shadow.realize(parent, x, y);
+        shadow.realize(parent_arg, x, y);
     }
 
     add(&header, 0, 0);
@@ -283,43 +283,43 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
         }
     }
 
-    int width = start_attrs.width;
-    int height = start_attrs.height;
+    int new_width = start_attrs.width;
+    int new_height = start_attrs.height;
 
     if (mask & tiny::Position::Right){
-        width += xdiff;
+        new_width += xdiff;
     } else {    // ::Position::Left
-        width -= xdiff;
+        new_width -= xdiff;
     }
 
     if (mask &tiny::Position::Bottom){
-        height += ydiff;
+        new_height += ydiff;
     } else {    // ::Position::Top
-        height -= ydiff;
+        new_height -= ydiff;
     }
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
         if (std::max(hints->min_width+tiny::theme.wm_win_corner,
-                     tiny::theme.wm_win_min_width) > (size_t)width)
+                     tiny::theme.wm_win_min_width) > (size_t)new_width)
         {
-            width = std::max(hints->min_width+tiny::theme.wm_win_corner,
+            new_width = std::max(hints->min_width+tiny::theme.wm_win_corner,
                              tiny::theme.wm_win_min_width);
         }
-        if ((0 < hints->max_width) && (hints->max_width < width)) {
-            width = hints->max_width;
+        if ((0 < hints->max_width) && (hints->max_width < new_width)) {
+            new_width = hints->max_width;
         }
     }
 
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         // TODO: it exist steps
         if (std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
-                     tiny::theme.wm_win_min_height) > (size_t)height)
+                     tiny::theme.wm_win_min_height) > (size_t)new_height)
         {
-            height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
+            new_height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
                               tiny::theme.wm_win_min_height);
         }
-        if ((0 < hints->max_height) && (hints->max_height < height)) {
-            height = hints->max_height;
+        if ((0 < hints->max_height) && (hints->max_height < new_height)) {
+            new_height = hints->max_height;
         }
     }
 
@@ -333,15 +333,15 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
             y += ydiff;
         }
 
-        XMoveResizeWindow(display, window, x, y, width, height);
-        shadow.move_resize(x, y, width, height);
+        XMoveResizeWindow(display, window, x, y, new_width, new_height);
+        shadow.move_resize(x, y, new_width, new_height);
     } else {
-        XResizeWindow(display, window, width, height);
-        shadow.resize(width, height);
+        XResizeWindow(display, window, new_width, new_height);
+        shadow.resize(new_width, new_height);
     }
 
-    XResizeWindow(display, child, width, height-tiny::theme.wm_win_header);
-    header.resize(width, tiny::theme.wm_win_header);
+    XResizeWindow(display, child, new_width, new_height-tiny::theme.wm_win_header);
+    header.resize(new_width, tiny::theme.wm_win_header);
 }
 
 void Wrapped::on_window_drag_begin(tiny::Object *o, const XEvent &e, void *data)
@@ -384,12 +384,12 @@ void Wrapped::on_property_notify(const XEvent &e, void *data)
     if (e.xproperty.atom == display.WM_NORMAL_HINTS)
     {
         // SDL on resize moved window relative to root
-        ::Window root;
+        ::Window geo_root;
         int x, y;
-        unsigned int width, height;
+        unsigned int geo_width, geo_height;
         unsigned int border, depth;
-        if (!XGetGeometry(dsp, child, &root,
-                &x, &y, &width, &height, &border, &depth))
+        if (!XGetGeometry(dsp, child, &geo_root,
+                &x, &y, &geo_width, &geo_height, &border, &depth))
         {
             TINY_LOG("Can't get window geometry");
             return;
