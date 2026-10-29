@@ -1,0 +1,3 @@
+[codespell]
+ignore-words-list = requestor,wont
+skip = ./.git,./build,./build-cov,./LICENSE

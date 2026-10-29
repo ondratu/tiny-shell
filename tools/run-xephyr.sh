@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 
 XEPHYR_DISPLAY=:100
 XEPHYR_SCREEN=1024x768
+# shellcheck source=/dev/null
 [ -f local/env.sh ] && . ./local/env.sh
 
 mkdir -p local

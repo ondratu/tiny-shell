@@ -1,0 +1,58 @@
+# Install once with: pre-commit install --install-hooks
+#                    pre-commit install --hook-type pre-push
+# Run on everything: pre-commit run --all-files
+# Fast checks run on commit, the slow ones (lint, tests) before push.
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=200]
+      - id: check-yaml
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-case-conflict
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        exclude: ^LICENSE$
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+  # The tools of the project are used from the system, so that pre-commit,
+  # make and CI use the same style and checks. CLANG_FORMAT and CLANG_TIDY
+  # can name a versioned tool (the same variables as in the Makefile).
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: tools/run-tool.sh clang-format --dry-run --Werror
+        language: system
+        types_or: [c++, c]
+        files: ^(lib|src|examples|tests)/
+      - id: clang-tidy
+        name: make lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+        types_or: [c++, c]
+        stages: [pre-push]
+      - id: tests
+        name: make check
+        entry: make check
+        language: system
+        pass_filenames: false
+        types_or: [c++, c]
+        stages: [pre-push]

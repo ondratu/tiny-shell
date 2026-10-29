@@ -149,7 +149,7 @@ clean:
 
 # Format the sources with clang-format (style in .clang-format).
 # CLANG_FORMAT picks the tool, e.g. make format CLANG_FORMAT=clang-format-21.
-CLANG_FORMAT ?= clang-format
+CLANG_FORMAT ?= tools/run-tool.sh clang-format
 FORMAT_FILES = $(wildcard lib/*.cc lib/*.h src/*.cc examples/*.cc tests/*.cc tests/*.h)
 
 format:
@@ -157,7 +157,7 @@ format:
 
 # Static analysis with clang-tidy (checks in .clang-tidy); runs in parallel.
 # CLANG_TIDY picks the tool, e.g. make lint CLANG_TIDY=clang-tidy-22.
-CLANG_TIDY ?= clang-tidy
+CLANG_TIDY ?= tools/run-tool.sh clang-tidy
 LINT_FLAGS = -std=c++17 -I./lib $(SYS_CFLAGS)
 LINT_SRC = $(LIB_SRC) $(wildcard src/*.cc examples/*.cc)
 
