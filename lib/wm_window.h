@@ -126,6 +126,7 @@ class Window : public tiny::Object {
     virtual bool is_focused() const { return wm_states & WMState::FOCUSED; }
 
     void get_wm_states(std::vector<Atom>& atoms);
+    void publish_wm_states();
 
     std::string get_wm_name() const { return wm_name; }
 
