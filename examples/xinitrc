@@ -1,0 +1,12 @@
+# Example session for tiny-shell, started by tools/run-xephyr.sh.
+# The script copies this file to local/xinitrc (ignored by git) on its first
+# run; change the copy as you like.
+export GDK_BACKEND=x11
+
+# Applications started with the session
+xterm &
+#xclock &
+
+#ulimit -c unlimited
+#exec valgrind "$TINY_SHELL"
+exec "$TINY_SHELL"
