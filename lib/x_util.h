@@ -1,4 +1,6 @@
 #pragma once
+
+#include <algorithm>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 
@@ -87,10 +89,25 @@ namespace tiny {
  */
 ::Window window_of_event(const XEvent& e);
 
+/**
+ * @short Size for the X requests that take unsigned width or height.
+ *
+ * Geometry is computed with int. X refuses a zero size (BadValue) and the
+ * protocol has 16 bits for it, so the value is limited to 1..65535.
+ */
+inline unsigned int x_dim(int size){
+    return static_cast<unsigned int>(std::clamp(size, 1, 65535));
+}
+
+/// An int that must not be negative for an X request that takes unsigned.
+inline unsigned int x_uint(int value){
+    return static_cast<unsigned int>(std::max(value, 0));
+}
+
 inline XPoint x_point(int x, int y){
     XPoint rv;
-    rv.x = static_cast<short>(x);
-    rv.y = static_cast<short>(y);
+    rv.x = static_cast<short>(std::clamp(x, -32768, 32767));
+    rv.y = static_cast<short>(std::clamp(y, -32768, 32767));
     return rv;
 }
 

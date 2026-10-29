@@ -12,7 +12,7 @@ namespace tiny {
 
 namespace wm {
 
-Wrapped::Wrapped(::Window child_arg, ::Window root_arg, uint32_t w, uint32_t h,
+Wrapped::Wrapped(::Window child_arg, ::Window root_arg, int w, int h,
         unsigned long functions_arg, unsigned long decorations_arg):
     tiny::Container(w, h+tiny::theme.wm_win_header, "wm_window"),
     Window(child_arg, root_arg, functions_arg),
@@ -187,9 +187,9 @@ void Wrapped::maximize()
     XGetWindowAttributes(display, root, &attrs);
     XSetWindowBorderWidth(display, window, 0);
 
-    XMoveResizeWindow(display, window, 0, 0, attrs.width, attrs.height);
+    XMoveResizeWindow(display, window, 0, 0, tiny::x_uint(attrs.width), tiny::x_uint(attrs.height));
     XResizeWindow(display, child,
-            attrs.width, attrs.height-tiny::theme.wm_win_header);
+            tiny::x_uint(attrs.width), tiny::x_uint(attrs.height-tiny::theme.wm_win_header));
 
     if (is_resizable()){
         shadow.move_resize(0, 0, attrs.width, attrs.height);
@@ -212,9 +212,9 @@ void Wrapped::restore(int x, int y)
         }
         header.resize(state.width, tiny::theme.wm_win_header);
         XResizeWindow(display, child,
-                state.width, state.height-tiny::theme.wm_win_header);
+                tiny::x_uint(state.width), tiny::x_uint(state.height-tiny::theme.wm_win_header));
         XMoveResizeWindow(display, window,
-                x, y, state.width, state.height);
+                x, y, tiny::x_uint(state.width), tiny::x_uint(state.height));
         XSetWindowBorderWidth(display, window, 1);
 
         max_btn.set_restore(false);
@@ -300,7 +300,7 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
 
     if (mask & (tiny::Position::Left|tiny::Position::Right)){
         if (std::max(hints->min_width+tiny::theme.wm_win_corner,
-                     tiny::theme.wm_win_min_width) > static_cast<size_t>(new_width))
+                     tiny::theme.wm_win_min_width) > new_width)
         {
             new_width = std::max(hints->min_width+tiny::theme.wm_win_corner,
                              tiny::theme.wm_win_min_width);
@@ -313,7 +313,7 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
     if (mask & (tiny::Position::Top|tiny::Position::Bottom)){
         // TODO: it exist steps
         if (std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
-                     tiny::theme.wm_win_min_height) > static_cast<size_t>(new_height))
+                     tiny::theme.wm_win_min_height) > new_height)
         {
             new_height = std::max(hints->min_height+tiny::theme.wm_win_corner+tiny::theme.wm_win_header,
                               tiny::theme.wm_win_min_height);
@@ -333,14 +333,14 @@ void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
             y += ydiff;
         }
 
-        XMoveResizeWindow(display, window, x, y, new_width, new_height);
+        XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width), tiny::x_dim(new_height));
         shadow.move_resize(x, y, new_width, new_height);
     } else {
-        XResizeWindow(display, window, new_width, new_height);
+        XResizeWindow(display, window, tiny::x_dim(new_width), tiny::x_dim(new_height));
         shadow.resize(new_width, new_height);
     }
 
-    XResizeWindow(display, child, new_width, new_height-tiny::theme.wm_win_header);
+    XResizeWindow(display, child, tiny::x_uint(new_width), tiny::x_dim(new_height-tiny::theme.wm_win_header));
     header.resize(new_width, tiny::theme.wm_win_header);
 }
 

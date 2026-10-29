@@ -86,8 +86,8 @@ class Style {
     uint32_t selected_fg = INHERITED;
     uint32_t selected_br = INHERITED;
 
-    uint32_t border_width = 1;
-    uint32_t padding_width = 1;
+    int border_width = 1;
+    int padding_width = 1;
 
   protected:
     const char* font_family = "Cantarell";
@@ -97,8 +97,8 @@ class Style {
 
   private:
     bool base_set = false;
-    uint32_t base_border_width = 0;
-    uint32_t base_padding_width = 0;
+    int base_border_width = 0;
+    int base_padding_width = 0;
     double base_font_size = 0;
 
 }; // Style
@@ -163,20 +163,20 @@ class Theme {
         static double env_scale_factor();
 
         uint32_t root_background = 0x729FCF;
-        uint32_t wm_win_header = 25;
-        uint32_t wm_win_icon = 21;  // wm_win_header - 2*header.padding
-        uint32_t wm_win_border = 10;
-        uint32_t wm_win_corner = wm_win_border*2;
-        uint32_t wm_win_min_width = 10;
-        uint32_t wm_win_min_height = 10+wm_win_header;
+        int wm_win_header = 25;
+        int wm_win_icon = 21;  // wm_win_header - 2*header.padding
+        int wm_win_border = 10;
+        int wm_win_corner = wm_win_border*2;
+        int wm_win_min_width = 10;
+        int wm_win_min_height = 10+wm_win_header;
 
-        uint32_t wm_panel = 30;
-        uint32_t wm_icon = 48;
-        uint32_t wm_dock_border = 5;
-        uint32_t wm_panel_app_width = 200;
-        uint32_t wm_panel_login_width = 120;
-        uint32_t wm_menu_width = 120;
-        uint32_t wm_menu_item_height = 20;
+        int wm_panel = 30;
+        int wm_icon = 48;
+        int wm_dock_border = 5;
+        int wm_panel_app_width = 200;
+        int wm_panel_login_width = 120;
+        int wm_menu_width = 120;
+        int wm_menu_item_height = 20;
 
         double scale_factor = 1;
 

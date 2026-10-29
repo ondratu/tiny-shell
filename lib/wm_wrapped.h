@@ -11,7 +11,7 @@ namespace wm {
 class Wrapped: public tiny::Container, public Window {
 
   public:
-    Wrapped(::Window child, ::Window root, uint32_t width, uint32_t height,
+    Wrapped(::Window child, ::Window root, int width, int height,
             unsigned long functions, unsigned long decorations);
 
     ~Wrapped();

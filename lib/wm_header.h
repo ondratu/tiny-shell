@@ -8,7 +8,7 @@ namespace wm {
 
 class TitleBox: public tiny::Widget {
   public:
-    TitleBox(uint32_t width, uint32_t height);
+    TitleBox(int width, int height);
 
     virtual ~TitleBox();
 
@@ -27,7 +27,7 @@ class TitleBox: public tiny::Widget {
 
 class Header: public tiny::Box {
   public:
-    Header(uint32_t width, uint32_t height);
+    Header(int width, int height);
 
     virtual ~Header();
 
@@ -35,7 +35,7 @@ class Header: public tiny::Box {
 
     virtual void realize(::Window parent, int x, int y);
 
-    virtual void resize(uint32_t width, uint32_t height);
+    virtual void resize(int width, int height);
 
     inline const std::string get_title() const
     { return title; }

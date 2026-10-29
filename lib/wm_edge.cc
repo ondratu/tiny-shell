@@ -1,10 +1,11 @@
 #include <X11/cursorfont.h>
 
+#include "x_util.h"
 #include "wm_edge.h"
 
 namespace wm {
 
-Edge::Edge(uint32_t w, uint32_t h, uint16_t mask_arg):
+Edge::Edge(int w, int h, uint16_t mask_arg):
     tiny::Widget(tiny::Widget::Type::Input, w, h),
     mask(mask_arg)
 {
@@ -78,7 +79,7 @@ void Edge::on_motion_notify(const XEvent &e, void *)
 
 
 
-BackWindow::BackWindow(uint32_t w, uint32_t h):
+BackWindow::BackWindow(int w, int h):
     tiny::Container(tiny::Widget::Type::Input,
             w+2*tiny::theme.wm_win_border, h+2*tiny::theme.wm_win_border),
     corner_right_top(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
@@ -173,7 +174,7 @@ void BackWindow::realize(Window parent_arg, int x, int y)
     add(&edge_left, 0, tiny::theme.wm_win_corner, WestGravity);
 }
 
-void BackWindow::resize(uint32_t w, uint32_t h)
+void BackWindow::resize(int w, int h)
 {
     tiny::Container::resize(w+2*tiny::theme.wm_win_border,
                             h+2*tiny::theme.wm_win_border);
@@ -186,13 +187,13 @@ void BackWindow::move(int x, int y){
     }
 }
 
-void BackWindow::move_resize(int x, int y, uint32_t w, uint32_t h)
+void BackWindow::move_resize(int x, int y, int w, int h)
 {
     if (is_realized){
         XMoveResizeWindow(display, window,
                 x-tiny::theme.wm_win_border, y-tiny::theme.wm_win_border,
-                w+2*tiny::theme.wm_win_border,
-                h+2*tiny::theme.wm_win_border);
+                tiny::x_uint(w+2*tiny::theme.wm_win_border),
+                tiny::x_uint(h+2*tiny::theme.wm_win_border));
     }
 }
 
@@ -214,22 +215,22 @@ void BackWindow::on_configure_notify(const XEvent &e, void * data)
             display, event.xconfigure.window, ConfigureNotify, &event))
     {}
 
-    uint32_t old_width = width;
-    uint32_t old_height = height;
+    int old_width = width;
+    int old_height = height;
     tiny::Container::on_configure_notify(event, data);
     if (width != old_width || height != old_height){
         XMoveResizeWindow(display, edge_top.get_window(),
                 tiny::theme.wm_win_corner, 0,
-                width-2*tiny::theme.wm_win_corner, tiny::theme.wm_win_border);
+                tiny::x_uint(width-2*tiny::theme.wm_win_corner), tiny::x_uint(tiny::theme.wm_win_border));
         XMoveResizeWindow(display, edge_right.get_window(),
                 width-tiny::theme.wm_win_border, tiny::theme.wm_win_corner,
-                tiny::theme.wm_win_border, height-2*tiny::theme.wm_win_corner);
+                tiny::x_uint(tiny::theme.wm_win_border), tiny::x_uint(height-2*tiny::theme.wm_win_corner));
         XMoveResizeWindow(display, edge_bottom.get_window(),
                 tiny::theme.wm_win_corner, height-tiny::theme.wm_win_border,
-                width-2*tiny::theme.wm_win_corner, tiny::theme.wm_win_border);
+                tiny::x_uint(width-2*tiny::theme.wm_win_corner), tiny::x_uint(tiny::theme.wm_win_border));
         XMoveResizeWindow(display, edge_left.get_window(),
                 0, tiny::theme.wm_win_corner,
-                tiny::theme.wm_win_border, height-2*tiny::theme.wm_win_corner);
+                tiny::x_uint(tiny::theme.wm_win_border), tiny::x_uint(height-2*tiny::theme.wm_win_corner));
     }
 }
 

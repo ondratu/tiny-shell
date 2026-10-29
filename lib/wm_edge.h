@@ -5,7 +5,7 @@ namespace wm {
 
 class Edge: public tiny::Widget {
   public:
-    Edge(uint32_t width, uint32_t height, uint16_t mask);
+    Edge(int width, int height, uint16_t mask);
 
     virtual ~Edge();
 
@@ -33,7 +33,7 @@ class Edge: public tiny::Widget {
 class BackWindow: public tiny::Container {
   public:
 
-    BackWindow(uint32_t width, uint32_t height);
+    BackWindow(int width, int height);
 
     virtual ~BackWindow();
 
@@ -41,11 +41,11 @@ class BackWindow: public tiny::Container {
 
     virtual void set_events(long mask=0);
 
-    virtual void resize(uint32_t width, uint32_t height);
+    virtual void resize(int width, int height);
 
     virtual void move(int x, int y);
 
-    virtual void move_resize(int x, int y, uint32_t width, uint32_t height);
+    virtual void move_resize(int x, int y, int width, int height);
 
     tiny::Signal on_move_resize_begin;
     tiny::Signal on_move_resize_motion;

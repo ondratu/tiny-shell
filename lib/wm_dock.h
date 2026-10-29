@@ -11,7 +11,7 @@ class DockButton: public tiny::Widget {
         DockButton();
         virtual ~DockButton();
 
-        inline virtual uint32_t get_border() const override
+        inline virtual int get_border() const override
         { return 0; }
 
         virtual void set_events(long mask=0) override;
@@ -52,7 +52,7 @@ class Dock: public tiny::Box {
         void redraw(Window* window, const XEvent& e);
 
         virtual void realize(::Window parent, int x, int y) override;
-        virtual void resize(uint32_t width, uint32_t height) override;
+        virtual void resize(int width, int height) override;
 
         inline virtual const tiny::Style& get_style() const override
         { return tiny::theme.wm_dock; }
