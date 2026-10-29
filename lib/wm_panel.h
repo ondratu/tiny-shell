@@ -5,19 +5,19 @@
 
 namespace wm {
 
-class AppMenu: public tiny::Popover {
+class AppMenu : public tiny::Popover {
   public:
     AppMenu();
 
     ~AppMenu();
 
     virtual void realize(::Window parent, int x = 0, int y = 0);
+
   private:
     //tiny::LabelButton urxvt;
 };
 
-
-class UserMenu: public tiny::Popover {
+class UserMenu : public tiny::Popover {
   public:
     UserMenu();
 
@@ -31,8 +31,7 @@ class UserMenu: public tiny::Popover {
     tiny::LabelButton logout;
 };
 
-
-class Panel: public tiny::Box {
+class Panel : public tiny::Box {
   public:
     Panel();
 

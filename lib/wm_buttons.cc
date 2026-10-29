@@ -10,23 +10,28 @@ namespace wm {
 
 // Symbol geometry is designed for scale 1 and follows TINY_SCALE_FACTOR
 static double sc(double value)
-{ return value * tiny::theme.scale_factor; }
+{
+    return value * tiny::theme.scale_factor;
+}
 
 // Truncates like the implicit conversion to a pixel coordinate did
 static int px(double value)
-{ return static_cast<int>(value); }
-
-static int line_width()
-{ return std::max(1, int(lround(sc(2)))); }
-
-Button::Button():
-    tiny::Button(
-        tiny::theme.wm_win_icon,      // TODO: WM_WIN_HEADER_PADDING
-        tiny::theme.wm_win_icon)
 {
+    return static_cast<int>(value);
 }
 
-Button::~Button(){
+static int line_width()
+{
+    return std::max(1, int(lround(sc(2))));
+}
+
+Button::Button():
+    tiny::Button(tiny::theme.wm_win_icon, // TODO: WM_WIN_HEADER_PADDING
+                 tiny::theme.wm_win_icon)
+{}
+
+Button::~Button()
+{
     if (event_done) {
         disconnect(Expose);
     }
@@ -34,32 +39,28 @@ Button::~Button(){
 
 void Button::set_events(long mask)
 {
-    tiny::Button::set_events(ExposureMask|mask);
+    tiny::Button::set_events(ExposureMask | mask);
 
-    connect(Expose,
-            static_cast<tiny::event_signal_t>(&Button::on_expose));
+    connect(Expose, static_cast<tiny::event_signal_t>(&Button::on_expose));
 }
 
-void Button::on_enter_notify(const XEvent &e, void *data)
+void Button::on_enter_notify(const XEvent& e, void* data)
 {
     tiny::Button::on_enter_notify(e, data);
     on_expose(e, nullptr);
 }
 
-void Button::on_leave_notify(const XEvent &e, void *data)
+void Button::on_leave_notify(const XEvent& e, void* data)
 {
     tiny::Button::on_leave_notify(e, data);
     on_expose(e, nullptr);
 }
 
+CloseButton::CloseButton(): Button() {}
 
-CloseButton::CloseButton():Button()
-{}
+CloseButton::~CloseButton() {}
 
-CloseButton::~CloseButton()
-{}
-
-void CloseButton::on_expose(const XEvent &, void *)
+void CloseButton::on_expose(const XEvent&, void*)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
@@ -71,27 +72,24 @@ void CloseButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
+                       CapButt, JoinBevel);
 
-    int mid_x = attrs.width/2;
-    int mid_y = attrs.width/2;
+    int mid_x = attrs.width / 2;
+    int mid_y = attrs.width / 2;
 
-    XDrawLine(display, window, gc,
-        px(mid_x-sc(3.5)), px(mid_y-sc(3.5)), px(mid_x+sc(3.5)), px(mid_y+sc(3.5)));
-    XDrawLine(display, window, gc,
-        px(mid_x+sc(3.5)), px(mid_y-sc(3.5)), px(mid_x-sc(3.5)), px(mid_y+sc(3.5)));
+    XDrawLine(display, window, gc, px(mid_x - sc(3.5)), px(mid_y - sc(3.5)),
+              px(mid_x + sc(3.5)), px(mid_y + sc(3.5)));
+    XDrawLine(display, window, gc, px(mid_x + sc(3.5)), px(mid_y - sc(3.5)),
+              px(mid_x - sc(3.5)), px(mid_y + sc(3.5)));
     XFreeGC(display, gc);
 }
 
+MaximizeButton::MaximizeButton(): Button(), restore(false) {}
 
+MaximizeButton::~MaximizeButton() {}
 
-MaximizeButton::MaximizeButton():Button(), restore(false)
-{}
-
-MaximizeButton::~MaximizeButton()
-{}
-
-void MaximizeButton::on_expose(const XEvent &, void *)
+void MaximizeButton::on_expose(const XEvent&, void*)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
@@ -103,27 +101,28 @@ void MaximizeButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinMiter);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
+                       CapButt, JoinMiter);
 
-    int mid_x = attrs.width/2;
-    int mid_y = attrs.width/2;
+    int mid_x = attrs.width / 2;
+    int mid_y = attrs.width / 2;
 
-    if (restore){
+    if (restore) {
         XPoint points[5] = {
-            tiny::x_point(px(mid_x-sc(2)), px(mid_y-sc(1))),
-            tiny::x_point(px(mid_x+sc(2)), px(mid_y-sc(1))),
-            tiny::x_point(px(mid_x+sc(2)), px(mid_y+sc(3))),
-            tiny::x_point(px(mid_x-sc(2)), px(mid_y+sc(3))),
-            tiny::x_point(px(mid_x-sc(2)), px(mid_y-sc(1)))};
+                tiny::x_point(px(mid_x - sc(2)), px(mid_y - sc(1))),
+                tiny::x_point(px(mid_x + sc(2)), px(mid_y - sc(1))),
+                tiny::x_point(px(mid_x + sc(2)), px(mid_y + sc(3))),
+                tiny::x_point(px(mid_x - sc(2)), px(mid_y + sc(3))),
+                tiny::x_point(px(mid_x - sc(2)), px(mid_y - sc(1)))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     } else {
         XPoint points[5] = {
-            tiny::x_point(px(mid_x-sc(3)), px(mid_y-sc(3))),
-            tiny::x_point(px(mid_x+sc(3)), px(mid_y-sc(3))),
-            tiny::x_point(px(mid_x+sc(3)), px(mid_y+sc(3))),
-            tiny::x_point(px(mid_x-sc(3)), px(mid_y+sc(3))),
-            tiny::x_point(px(mid_x-sc(3)), px(mid_y-sc(3)))};
+                tiny::x_point(px(mid_x - sc(3)), px(mid_y - sc(3))),
+                tiny::x_point(px(mid_x + sc(3)), px(mid_y - sc(3))),
+                tiny::x_point(px(mid_x + sc(3)), px(mid_y + sc(3))),
+                tiny::x_point(px(mid_x - sc(3)), px(mid_y + sc(3))),
+                tiny::x_point(px(mid_x - sc(3)), px(mid_y - sc(3)))};
         // maybe CoordModePrevious
         XDrawLines(display, window, gc, points, 5, CoordModeOrigin);
     }
@@ -137,14 +136,11 @@ void MaximizeButton::set_restore(bool _restore)
     on_expose(XEvent(), nullptr);
 }
 
+MinimizeButton::MinimizeButton(): Button() {}
 
-MinimizeButton::MinimizeButton():Button()
-{}
+MinimizeButton::~MinimizeButton() {}
 
-MinimizeButton::~MinimizeButton()
-{}
-
-void MinimizeButton::on_expose(const XEvent &, void *)
+void MinimizeButton::on_expose(const XEvent&, void*)
 {
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
@@ -157,13 +153,14 @@ void MinimizeButton::on_expose(const XEvent &, void *)
     XClearWindow(display, window);
 
     XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid, CapButt, JoinBevel);
+    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
+                       CapButt, JoinBevel);
 
-    int mid_x = attrs.width/2;
-    int mid_y = attrs.width/2;
+    int mid_x = attrs.width / 2;
+    int mid_y = attrs.width / 2;
 
-    XDrawLine(display, window, gc,
-        px(mid_x-sc(4)), px(mid_y+sc(3.5)), px(mid_x+sc(4)), px(mid_y+sc(3.5)));
+    XDrawLine(display, window, gc, px(mid_x - sc(4)), px(mid_y + sc(3.5)),
+              px(mid_x + sc(4)), px(mid_y + sc(3.5)));
     XFreeGC(display, gc);
 }
 

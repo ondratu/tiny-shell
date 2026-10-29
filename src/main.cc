@@ -7,7 +7,7 @@ bool wm_detected = false;
 
 int on_wm_detected(::Display* display, XErrorEvent* error)
 {
-    if (static_cast<int>(error->error_code) == BadAccess){
+    if (static_cast<int>(error->error_code) == BadAccess) {
         wm_detected = true;
     }
     return 0;
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 
         wm::Manager manager(display, root);
         manager.main_loop();
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         fprintf(stderr, "Failed to initialize window manager.");
         return EXIT_FAILURE;
     }

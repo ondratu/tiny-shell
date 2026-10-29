@@ -8,7 +8,7 @@
 
 namespace wm {
 
-class Wrapped: public tiny::Container, public Window {
+class Wrapped : public tiny::Container, public Window {
 
   public:
     Wrapped(::Window child, ::Window root, int width, int height,
@@ -16,13 +16,13 @@ class Wrapped: public tiny::Container, public Window {
 
     ~Wrapped();
 
-    static Window * create(::Window parent, ::Window child,
-            const XWindowAttributes& attrs,
-            unsigned long functions, unsigned long decorations);
+    static Window* create(::Window parent, ::Window child,
+                          const XWindowAttributes& attrs,
+                          unsigned long functions, unsigned long decorations);
 
     virtual void realize(::Window parent, int x, int y) override;
 
-    virtual void set_events(long mask=0) override;
+    virtual void set_events(long mask = 0) override;
 
     virtual void map_all() override;
 
@@ -31,37 +31,37 @@ class Wrapped: public tiny::Container, public Window {
     //! Minimize (Iconify) window
     virtual void minimize() override;
 
-    virtual void restore(int x=0, int y=0) override;
+    virtual void restore(int x = 0, int y = 0) override;
 
     virtual void maximize() override;
 
     /* signal handlers */
-    void on_close_click(tiny::Object *o, const XEvent &e, void * data);
+    void on_close_click(tiny::Object* o, const XEvent& e, void* data);
 
-    void on_minimize_click(tiny::Object *o, const XEvent &e, void * data);
+    void on_minimize_click(tiny::Object* o, const XEvent& e, void* data);
 
-    void on_maximize_click(tiny::Object *o, const XEvent &e, void * data);
+    void on_maximize_click(tiny::Object* o, const XEvent& e, void* data);
 
-    void on_resize(tiny::Object *o, const XEvent &e, void * data);
+    void on_resize(tiny::Object* o, const XEvent& e, void* data);
 
-    void on_move_resize_begin(tiny::Object *o, const XEvent &e, void * data);
+    void on_move_resize_begin(tiny::Object* o, const XEvent& e, void* data);
 
-    void on_move_resize_motion(tiny::Object *o, const XEvent &e, void * data);
+    void on_move_resize_motion(tiny::Object* o, const XEvent& e, void* data);
 
-    virtual void on_window_drag_begin(tiny::Object *o, const XEvent &e,
-            void * data) override;
+    virtual void on_window_drag_begin(tiny::Object* o, const XEvent& e,
+                                      void* data) override;
 
-    virtual void on_window_drag_motion(tiny::Object *o, const XEvent &e,
-            void * data) override;
+    virtual void on_window_drag_motion(tiny::Object* o, const XEvent& e,
+                                       void* data) override;
 
   protected:
     /* event handlers */
 
-    virtual void on_focus_in(const XEvent &e, void *data) override;
+    virtual void on_focus_in(const XEvent& e, void* data) override;
 
-    virtual void on_focus_out(const XEvent &e, void *data) override;
+    virtual void on_focus_out(const XEvent& e, void* data) override;
 
-    virtual void on_property_notify(const XEvent &e, void *data) override;
+    virtual void on_property_notify(const XEvent& e, void* data) override;
 
     unsigned long decorations = 0;
 
@@ -72,4 +72,4 @@ class Wrapped: public tiny::Container, public Window {
     BackWindow shadow;
 };
 
-} // namespace
+} // namespace wm

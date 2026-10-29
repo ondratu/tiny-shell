@@ -7,35 +7,33 @@
 #include "x_util.h"
 
 namespace tiny {
-    extern Handlers handlers;
+extern Handlers handlers;
 }
 
 bool keep_running;
 
-class Demo: public tiny::Container {
+class Demo : public tiny::Container {
   public:
     Demo():
-            tiny::Container(300, 200),
-            vbox(tiny::Box::Type::Vertical, 300-2, 200-2),
-            header(300-2, tiny::theme.wm_win_header),
-            buttons(tiny::Box::Type::Horizontal, 300-4, 30),
-            close_btn(80, 27, "Close")
+        tiny::Container(300, 200),
+        vbox(tiny::Box::Type::Vertical, 300 - 2, 200 - 2),
+        header(300 - 2, tiny::theme.wm_win_header),
+        buttons(tiny::Box::Type::Horizontal, 300 - 4, 30),
+        close_btn(80, 27, "Close")
     {
         realize(XDefaultRootWindow(display), 0, 0);
 
-        const char *title_utf8 = "Ďáblův advokát";
-        const char *title = "Dabluv advokat";
+        const char* title_utf8 = "Ďáblův advokát";
+        const char* title = "Dabluv advokat";
 
         header.set_title(title_utf8);
-        XChangeProperty(display, window,
-                        display.WM_NAME, XA_STRING,
-                        8, PropModeReplace,
-                        reinterpret_cast<const unsigned char *>(title),
+        XChangeProperty(display, window, display.WM_NAME, XA_STRING, 8,
+                        PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(title),
                         static_cast<int>(strlen(title)));
-        XChangeProperty(display, window,
-                        display._NET_WM_NAME, display.UTF8_STRING,
-                        8, PropModeReplace,
-                        reinterpret_cast<const unsigned char *>(title_utf8),
+        XChangeProperty(display, window, display._NET_WM_NAME,
+                        display.UTF8_STRING, 8, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(title_utf8),
                         static_cast<int>(strlen(title_utf8)));
 
         add(&vbox);
@@ -48,16 +46,17 @@ class Demo: public tiny::Container {
 
         buttons.push_back(&close_btn);
 
-        close_btn.on_click.connect(this,
-                static_cast<tiny::object_signal_t>(&Demo::on_button_click));
-        x_btn.on_click.connect(this,
-                static_cast<tiny::object_signal_t>(&Demo::on_button_click));
+        close_btn.on_click.connect(this, static_cast<tiny::object_signal_t>(
+                                                 &Demo::on_button_click));
+        x_btn.on_click.connect(this, static_cast<tiny::object_signal_t>(
+                                             &Demo::on_button_click));
 
         set_events();
         map_all();
     }
 
-    void set_events(long mask = 0) override {
+    void set_events(long mask = 0) override
+    {
         Container::set_events(mask);
 
         Atom wm_delete_window = display.WM_DELETE_WINDOW;
@@ -67,23 +66,24 @@ class Demo: public tiny::Container {
                 static_cast<tiny::event_signal_t>(&Demo::on_client_message));
     }
 
-    void on_client_message(const XEvent &e, void *)
+    void on_client_message(const XEvent& e, void*)
     {
         if (e.xclient.message_type == display.WM_PROTOCOLS &&
-            static_cast<Atom>(e.xclient.data.l[0]) == display.WM_DELETE_WINDOW)
-        {
+            static_cast<Atom>(e.xclient.data.l[0]) ==
+                    display.WM_DELETE_WINDOW) {
             printf("This is it!\n");
             keep_running = false;
         }
     }
 
-    void on_button_click(Object *, const XEvent &, void *)
+    void on_button_click(Object*, const XEvent&, void*)
     {
         printf("on_button_click\n");
         keep_running = false;
     }
 
-    void main_loop(){
+    void main_loop()
+    {
         keep_running = true;
 
         XEvent event;
@@ -92,7 +92,7 @@ class Demo: public tiny::Container {
             auto signal_id = std::make_pair(event.type, event.xany.window);
 
             // call manager handlers first
-            if (tiny::handlers.count(signal_id)){
+            if (tiny::handlers.count(signal_id)) {
                 tiny::handlers.call_hanlder(signal_id, event);
                 continue;
             }
@@ -111,7 +111,7 @@ class Demo: public tiny::Container {
     tiny::LabelButton close_btn;
 };
 
-int main (int, char *[])
+int main(int, char*[])
 {
     tiny::Display::init();
     Demo demo;

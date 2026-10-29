@@ -10,20 +10,28 @@ using WmWindow = wm::Window;
 namespace {
 
 int icon_size()
-{ return tiny::theme.wm_icon; }
+{
+    return tiny::theme.wm_icon;
+}
 
 int border()
-{ return tiny::theme.wm_dock_border; }
+{
+    return tiny::theme.wm_dock_border;
+}
 
 uint32_t widget_bg(tiny::Style::State state)
-{ return tiny::theme.widget.get_bg(static_cast<uint8_t>(state)); }
+{
+    return tiny::theme.widget.get_bg(static_cast<uint8_t>(state));
+}
 
 bool has_handler(int type, ::Window window)
-{ return tiny::handlers.count({type, window}) == 1; }
+{
+    return tiny::handlers.count({type, window}) == 1;
+}
 
 // ---- DockButton ----
 
-class DockButtonTest: public ::testing::Test {
+class DockButtonTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
@@ -43,7 +51,7 @@ TEST_F(DockButtonTest, is_a_square_without_border)
 
 TEST_F(DockButtonTest, connects_its_events)
 {
-    for (int type: {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
+    for (int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
         EXPECT_TRUE(has_handler(type, button.get_window())) << type;
     }
 }
@@ -99,10 +107,8 @@ TEST_F(DockButtonTest, hover_changes_background)
     send(button, LeaveNotify);
     Image normal(button.get_window(), icon_size(), icon_size());
 
-    EXPECT_EQ(hover.at(0, 0),
-            widget_bg(tiny::Style::State::Hover));
-    EXPECT_EQ(normal.at(0, 0),
-            widget_bg(tiny::Style::State::Normal));
+    EXPECT_EQ(hover.at(0, 0), widget_bg(tiny::Style::State::Hover));
+    EXPECT_EQ(normal.at(0, 0), widget_bg(tiny::Style::State::Normal));
 }
 
 TEST(DockButtonLifeTest, destructor_disconnects_events)
@@ -113,7 +119,7 @@ TEST(DockButtonLifeTest, destructor_disconnects_events)
         button.realize(root_window(), 0, 0);
         window = button.get_window();
     }
-    for (int type: {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
+    for (int type : {Expose, EnterNotify, LeaveNotify, ButtonRelease}) {
         EXPECT_FALSE(has_handler(type, window)) << type;
     }
 }
@@ -125,13 +131,12 @@ TEST(DockButtonLifeTest, destructor_of_unrealized_button_is_safe)
 
 // ---- Icon ----
 
-class IconTest: public ::testing::Test {
+class IconTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
         client.map();
-        task = std::make_unique<WmWindow>(client.window, root_window(),
-                0xFFFF);
+        task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
         icon = std::make_unique<wm::Icon>(task.get());
         icon->realize(root_window(), 0, 0);
         icon->map_all();
@@ -161,14 +166,14 @@ TEST_F(IconTest, without_icon_draws_a_circle)
 
     Image img(icon->get_window(), icon_size(), icon_size());
     EXPECT_NE(img.count_not(bg, icon_size()), 0u);
-    EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), bg);    // hollow
+    EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), bg); // hollow
 }
 
 TEST_F(IconTest, draws_the_icon_of_the_task)
 {
     icon.reset();
     task.reset();
-    client.set_icon_pixmap(icon_size(), false);   // red
+    client.set_icon_pixmap(icon_size(), false); // red
     task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
     icon = std::make_unique<wm::Icon>(task.get());
     icon->realize(root_window(), 0, 0);
@@ -191,15 +196,13 @@ TEST_F(IconTest, focused_task_is_drawn_selected)
     send(*icon, Expose);
     Image after(icon->get_window(), icon_size(), icon_size());
 
-    EXPECT_EQ(before.at(0, 0),
-            widget_bg(tiny::Style::State::Normal));
-    EXPECT_EQ(after.at(0, 0),
-            widget_bg(tiny::Style::State::Selected));
+    EXPECT_EQ(before.at(0, 0), widget_bg(tiny::Style::State::Normal));
+    EXPECT_EQ(after.at(0, 0), widget_bg(tiny::Style::State::Selected));
 }
 
 // ---- Dock ----
 
-class DockTest: public ::testing::Test {
+class DockTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
@@ -208,28 +211,30 @@ class DockTest: public ::testing::Test {
         dock.map_all();
     }
 
-    void add(WmWindow *w)
+    void add(WmWindow* w)
     {
         dock.add(w);
-        pump_events();      // ConfigureNotify updates the dock size
+        pump_events(); // ConfigureNotify updates the dock size
     }
 
-    void remove(WmWindow *w)
+    void remove(WmWindow* w)
     {
         dock.remove(w);
         pump_events();
     }
 
-    WmWindow *manage(Client &c)
+    WmWindow* manage(Client& c)
     {
         c.map();
-        windows.push_back(std::make_unique<WmWindow>(c.window, root_window(),
-                    0xFFFF));
+        windows.push_back(
+                std::make_unique<WmWindow>(c.window, root_window(), 0xFFFF));
         return windows.back().get();
     }
 
     int task_width(int tasks) const
-    { return (tasks + 1) * (icon_size() + border()) + border(); }
+    {
+        return (tasks + 1) * (icon_size() + border()) + border();
+    }
 
     wm::Dock dock;
     std::vector<std::unique_ptr<WmWindow>> windows;
@@ -273,7 +278,7 @@ TEST_F(DockTest, icons_are_placed_one_after_another)
 
     EXPECT_NE(child_at(dock.get_window(), border(), border()), 0u);
     EXPECT_NE(child_at(dock.get_window(), 2 * border() + icon_size(), border()),
-            0u);
+              0u);
 }
 
 TEST_F(DockTest, dock_stays_centered_when_it_grows)
@@ -291,8 +296,8 @@ TEST_F(DockTest, dock_stays_centered_when_it_grows)
 TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)
 {
     Client c1, c2;
-    WmWindow *w1 = manage(c1);
-    WmWindow *w2 = manage(c2);
+    WmWindow* w1 = manage(c1);
+    WmWindow* w2 = manage(c2);
     add(w1);
     add(w2);
 
@@ -305,8 +310,8 @@ TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)
 TEST_F(DockTest, add_after_remove_gives_the_same_size_as_before)
 {
     Client c1, c2;
-    WmWindow *w1 = manage(c1);
-    WmWindow *w2 = manage(c2);
+    WmWindow* w1 = manage(c1);
+    WmWindow* w2 = manage(c2);
     add(w1);
     add(w2);
     remove(w1);
@@ -318,10 +323,10 @@ TEST_F(DockTest, add_after_remove_gives_the_same_size_as_before)
 TEST_F(DockTest, remove_of_unknown_window_changes_nothing)
 {
     Client c;
-    WmWindow *w = manage(c);
+    WmWindow* w = manage(c);
     add(w);
     Client other;
-    WmWindow *unknown = manage(other);
+    WmWindow* unknown = manage(other);
 
     remove(unknown);
 
@@ -332,7 +337,7 @@ TEST_F(DockTest, remove_of_unknown_window_changes_nothing)
 TEST_F(DockTest, redraw_draws_the_icon_of_the_window)
 {
     Client c;
-    WmWindow *w = manage(c);
+    WmWindow* w = manage(c);
     add(w);
     w->set_focus();
 
@@ -341,14 +346,13 @@ TEST_F(DockTest, redraw_draws_the_icon_of_the_window)
     ::Window icon = child_at(dock.get_window(), border(), border());
     ASSERT_NE(icon, 0u);
     Image img(icon, icon_size(), icon_size());
-    EXPECT_EQ(img.at(0, 0),
-            widget_bg(tiny::Style::State::Selected));
+    EXPECT_EQ(img.at(0, 0), widget_bg(tiny::Style::State::Selected));
 }
 
 TEST_F(DockTest, redraw_of_unknown_window_is_ignored)
 {
     Client c;
-    WmWindow *w = manage(c);
+    WmWindow* w = manage(c);
     XErrors errors;
 
     dock.redraw(w, make_event(Expose));
@@ -359,7 +363,7 @@ TEST_F(DockTest, redraw_of_unknown_window_is_ignored)
 TEST_F(DockTest, clicking_an_icon_focuses_its_window)
 {
     Client c;
-    WmWindow *w = manage(c);
+    WmWindow* w = manage(c);
     add(w);
     ::Window icon = child_at(dock.get_window(), border(), border());
     ASSERT_NE(icon, 0u);
@@ -386,7 +390,7 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
     XErrors errors;
     XWindowAttributes attrs;
     EXPECT_EQ(XGetWindowAttributes(tiny::get_display(), dock_window, &attrs),
-            0);
+              0);
 }
 
 } // namespace

@@ -40,7 +40,7 @@ class Style {
     static constexpr uint32_t GRAY75 = 0xc0c0c0;
 
   public:
-    Style(){}
+    Style() {}
     virtual ~Style();
 
     void init();
@@ -51,8 +51,7 @@ class Style {
     uint32_t get_bg(uint8_t state) const;
     uint32_t get_fg(uint8_t state) const;
     uint32_t get_br(uint8_t state) const;
-    XftFont* get_font() const
-    { return font; }
+    XftFont* get_font() const { return font; }
 
     const std::string get_xft_fg(uint8_t state) const;
 
@@ -91,7 +90,7 @@ class Style {
 
   protected:
     const char* font_family = "Cantarell";
-    const char* font_style = "";            // e.g. ":bold"
+    const char* font_style = ""; // e.g. ":bold"
     double font_size = 12;
     XftFont* font = nullptr;
 
@@ -103,10 +102,10 @@ class Style {
 
 }; // Style
 
-
-class WMButtonStyle: public Style {
+class WMButtonStyle : public Style {
   public:
-      WMButtonStyle(){
+    WMButtonStyle()
+    {
         // Normal state
         normal_bg = 0xF8F8F8;
         normal_fg = 0x2E3436;
@@ -117,13 +116,13 @@ class WMButtonStyle: public Style {
         hover_fg = 0xF8F8F8;
 
         border_width = 0;
-      }
+    }
 }; // WMButtonStyle
 
-
-class WMHeaderStyle: public Style {
+class WMHeaderStyle : public Style {
   public:
-      WMHeaderStyle(){
+    WMHeaderStyle()
+    {
         normal_bg = 0xF8F8F8;
         normal_fg = 0x0E1416;
 
@@ -133,61 +132,60 @@ class WMHeaderStyle: public Style {
         padding_width = 2;
 
         font_style = ":bold";
-      }
+    }
 
 }; // WMHeaderStyle
 
-
-class WMDockStyle: public Style {
-    public:
-        WMDockStyle()
-        {
-            border_width = 0;
-            padding_width = 5;
-        }
+class WMDockStyle : public Style {
+  public:
+    WMDockStyle()
+    {
+        border_width = 0;
+        padding_width = 5;
+    }
 
 }; // WMDockStyle
 
 class Theme {
-    public:
-        // Scale factor is read from TINY_SCALE_FACTOR (default 1)
-        Theme();
-        ~Theme(){}
+  public:
+    // Scale factor is read from TINY_SCALE_FACTOR (default 1)
+    Theme();
+    ~Theme() {}
 
-        void init();
+    void init();
 
-        // Scale all metrics and fonts (relative to the default theme)
-        void scale(double factor);
+    // Scale all metrics and fonts (relative to the default theme)
+    void scale(double factor);
 
-        // Parse TINY_SCALE_FACTOR; invalid or non-positive value gives 1
-        static double env_scale_factor();
+    // Parse TINY_SCALE_FACTOR; invalid or non-positive value gives 1
+    static double env_scale_factor();
 
-        uint32_t root_background = 0x729FCF;
-        int wm_win_header = 25;
-        int wm_win_icon = 21;  // wm_win_header - 2*header.padding
-        int wm_win_border = 10;
-        int wm_win_corner = wm_win_border*2;
-        int wm_win_min_width = 10;
-        int wm_win_min_height = 10+wm_win_header;
+    uint32_t root_background = 0x729FCF;
+    int wm_win_header = 25;
+    int wm_win_icon = 21; // wm_win_header - 2*header.padding
+    int wm_win_border = 10;
+    int wm_win_corner = wm_win_border * 2;
+    int wm_win_min_width = 10;
+    int wm_win_min_height = 10 + wm_win_header;
 
-        int wm_panel = 30;
-        int wm_icon = 48;
-        int wm_dock_border = 5;
-        int wm_panel_app_width = 200;
-        int wm_panel_login_width = 120;
-        int wm_menu_width = 120;
-        int wm_menu_item_height = 20;
+    int wm_panel = 30;
+    int wm_icon = 48;
+    int wm_dock_border = 5;
+    int wm_panel_app_width = 200;
+    int wm_panel_login_width = 120;
+    int wm_menu_width = 120;
+    int wm_menu_item_height = 20;
 
-        double scale_factor = 1;
+    double scale_factor = 1;
 
-        Style widget;
-        WMButtonStyle wm_button;
-        WMHeaderStyle wm_header;
-        WMDockStyle wm_dock;
+    Style widget;
+    WMButtonStyle wm_button;
+    WMHeaderStyle wm_header;
+    WMDockStyle wm_dock;
 }; // Theme
 
 extern Theme theme;
 
-} // namespace
+} // namespace tiny
 
 // default tiny-shel widgets are dark

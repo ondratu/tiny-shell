@@ -16,23 +16,22 @@ using WmWindow = wm::Window;
 
 namespace {
 
-class WmWindowTest: public ::testing::Test {
+class WmWindowTest : public ::testing::Test {
   protected:
     Client client;
 
     // Screen size, used by maximize.
-    XWindowAttributes screen() const
-    { return attributes_of(root_window()); }
+    XWindowAttributes screen() const { return attributes_of(root_window()); }
 
     std::unique_ptr<WmWindow> manage(unsigned long functions = 0xFFFF)
     {
         return std::make_unique<WmWindow>(client.window, root_window(),
-                functions);
+                                          functions);
     }
 };
 
 XEvent client_message(::Window window, Atom type, long l0 = 0, long l1 = 0,
-        long l2 = 0)
+                      long l2 = 0)
 {
     XEvent e = make_event(ClientMessage);
     e.xclient.window = window;
@@ -60,7 +59,8 @@ TEST_F(WmWindowTest, motif_hints_default_to_everything_allowed)
 {
     unsigned long functions = 0, decorations = 0;
 
-    EXPECT_FALSE(WmWindow::get_motif_hints(client.window, functions, decorations));
+    EXPECT_FALSE(
+            WmWindow::get_motif_hints(client.window, functions, decorations));
 
     EXPECT_TRUE(functions & MotifWMHints::FUNC_RESIZE);
     EXPECT_TRUE(functions & MotifWMHints::FUNC_CLOSE);
@@ -73,43 +73,48 @@ TEST_F(WmWindowTest, motif_hints_without_decorations)
     client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0, 0);
     unsigned long functions = 0, decorations = 1;
 
-    EXPECT_TRUE(WmWindow::get_motif_hints(client.window, functions, decorations));
+    EXPECT_TRUE(
+            WmWindow::get_motif_hints(client.window, functions, decorations));
 
     EXPECT_EQ(decorations, 0u);
-    EXPECT_TRUE(functions & MotifWMHints::FUNC_MOVE);  // not overridden
+    EXPECT_TRUE(functions & MotifWMHints::FUNC_MOVE); // not overridden
 }
 
 TEST_F(WmWindowTest, motif_hints_override_functions)
 {
-    client.set_motif(MotifWMHints::FLAG_FUNCTIONS, MotifWMHints::FUNC_CLOSE,
-            0);
+    client.set_motif(MotifWMHints::FLAG_FUNCTIONS, MotifWMHints::FUNC_CLOSE, 0);
     unsigned long functions = 0, decorations = 0;
 
-    EXPECT_TRUE(WmWindow::get_motif_hints(client.window, functions, decorations));
+    EXPECT_TRUE(
+            WmWindow::get_motif_hints(client.window, functions, decorations));
 
     EXPECT_EQ(functions, static_cast<unsigned long>(MotifWMHints::FUNC_CLOSE));
-    EXPECT_TRUE(decorations & MotifWMHints::DECOR_TITLE);  // not overridden
+    EXPECT_TRUE(decorations & MotifWMHints::DECOR_TITLE); // not overridden
 }
 
 TEST_F(WmWindowTest, net_wm_type_defaults_to_normal)
 {
-    EXPECT_EQ(WmWindow::get_net_wm_type(client.window), WmWindow::WMType::NORMAL);
+    EXPECT_EQ(WmWindow::get_net_wm_type(client.window),
+              WmWindow::WMType::NORMAL);
 }
 
 TEST_F(WmWindowTest, net_wm_type_is_read_from_the_property)
 {
-    struct { Atom atom; WmWindow::WMType type; } cases[] = {
-        {dsp()._NET_WM_WINDOW_TYPE_DESKTOP, WmWindow::WMType::DESKTOP},
-        {dsp()._NET_WM_WINDOW_TYPE_DOCK, WmWindow::WMType::DOCK},
-        {dsp()._NET_WM_WINDOW_TYPE_TOOLBAR, WmWindow::WMType::TOOLBAR},
-        {dsp()._NET_WM_WINDOW_TYPE_MENU, WmWindow::WMType::MENU},
-        {dsp()._NET_WM_WINDOW_TYPE_UTILITY, WmWindow::WMType::UTILITY},
-        {dsp()._NET_WM_WINDOW_TYPE_SPLASH, WmWindow::WMType::SPLASH},
-        {dsp()._NET_WM_WINDOW_TYPE_DIALOG, WmWindow::WMType::DIALOG},
-        {dsp()._NET_WM_WINDOW_TYPE_NORMAL, WmWindow::WMType::NORMAL},
+    struct {
+        Atom atom;
+        WmWindow::WMType type;
+    } cases[] = {
+            {dsp()._NET_WM_WINDOW_TYPE_DESKTOP, WmWindow::WMType::DESKTOP},
+            {dsp()._NET_WM_WINDOW_TYPE_DOCK, WmWindow::WMType::DOCK},
+            {dsp()._NET_WM_WINDOW_TYPE_TOOLBAR, WmWindow::WMType::TOOLBAR},
+            {dsp()._NET_WM_WINDOW_TYPE_MENU, WmWindow::WMType::MENU},
+            {dsp()._NET_WM_WINDOW_TYPE_UTILITY, WmWindow::WMType::UTILITY},
+            {dsp()._NET_WM_WINDOW_TYPE_SPLASH, WmWindow::WMType::SPLASH},
+            {dsp()._NET_WM_WINDOW_TYPE_DIALOG, WmWindow::WMType::DIALOG},
+            {dsp()._NET_WM_WINDOW_TYPE_NORMAL, WmWindow::WMType::NORMAL},
     };
 
-    for (auto &c: cases) {
+    for (auto& c : cases) {
         client.set_atoms(dsp()._NET_WM_WINDOW_TYPE, {c.atom});
         EXPECT_EQ(WmWindow::get_net_wm_type(client.window), c.type);
     }
@@ -118,10 +123,11 @@ TEST_F(WmWindowTest, net_wm_type_is_read_from_the_property)
 TEST_F(WmWindowTest, net_wm_type_uses_the_first_known_type)
 {
     client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
-            {dsp().WM_NAME, dsp()._NET_WM_WINDOW_TYPE_DIALOG,
-             dsp()._NET_WM_WINDOW_TYPE_DOCK});
+                     {dsp().WM_NAME, dsp()._NET_WM_WINDOW_TYPE_DIALOG,
+                      dsp()._NET_WM_WINDOW_TYPE_DOCK});
 
-    EXPECT_EQ(WmWindow::get_net_wm_type(client.window), WmWindow::WMType::DIALOG);
+    EXPECT_EQ(WmWindow::get_net_wm_type(client.window),
+              WmWindow::WMType::DIALOG);
 }
 
 TEST_F(WmWindowTest, get_properties_lists_window_properties)
@@ -177,8 +183,9 @@ TEST_F(WmWindowTest, resize_and_maximize_depend_on_functions)
 TEST_F(WmWindowTest, initial_wm_states_are_read)
 {
     client.set_state({dsp()._NET_WM_STATE_SKIP_TASKBAR,
-            dsp()._NET_WM_STATE_SKIP_PAGER, dsp()._NET_WM_STATE_FULLSCREEN,
-            dsp()._NET_WM_STATE_HIDDEN, dsp()._NET_WM_STATE_FOCUSED});
+                      dsp()._NET_WM_STATE_SKIP_PAGER,
+                      dsp()._NET_WM_STATE_FULLSCREEN,
+                      dsp()._NET_WM_STATE_HIDDEN, dsp()._NET_WM_STATE_FOCUSED});
 
     auto window = manage();
 
@@ -192,14 +199,19 @@ TEST_F(WmWindowTest, initial_wm_states_are_read)
 
 TEST_F(WmWindowTest, all_wm_states_round_trip_through_the_property)
 {
-    std::vector<Atom> all = {
-        dsp()._NET_WM_STATE_MODAL, dsp()._NET_WM_STATE_STICKY,
-        dsp()._NET_WM_STATE_MAXIMIZED_VERT, dsp()._NET_WM_STATE_MAXIMIZED_HORZ,
-        dsp()._NET_WM_STATE_SHADED, dsp()._NET_WM_STATE_SKIP_TASKBAR,
-        dsp()._NET_WM_STATE_SKIP_PAGER, dsp()._NET_WM_STATE_HIDDEN,
-        dsp()._NET_WM_STATE_FULLSCREEN, dsp()._NET_WM_STATE_ABOVE,
-        dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
-        dsp()._NET_WM_STATE_FOCUSED};
+    std::vector<Atom> all = {dsp()._NET_WM_STATE_MODAL,
+                             dsp()._NET_WM_STATE_STICKY,
+                             dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                             dsp()._NET_WM_STATE_MAXIMIZED_HORZ,
+                             dsp()._NET_WM_STATE_SHADED,
+                             dsp()._NET_WM_STATE_SKIP_TASKBAR,
+                             dsp()._NET_WM_STATE_SKIP_PAGER,
+                             dsp()._NET_WM_STATE_HIDDEN,
+                             dsp()._NET_WM_STATE_FULLSCREEN,
+                             dsp()._NET_WM_STATE_ABOVE,
+                             dsp()._NET_WM_STATE_BELOW,
+                             dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
+                             dsp()._NET_WM_STATE_FOCUSED};
     client.set_state(all);
     auto window = manage();
 
@@ -251,7 +263,8 @@ TEST_F(WmWindowTest, normal_hints_without_limits_disable_resizing)
 {
     client.set_size_hints(PPosition, 0, 0, 0, 0);
 
-    auto window = manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
+    auto window =
+            manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
 
     EXPECT_FALSE(window->is_resizable());
     EXPECT_FALSE(window->is_maximizable());
@@ -261,7 +274,8 @@ TEST_F(WmWindowTest, normal_hints_with_equal_limits_disable_resizing)
 {
     client.set_size_hints(PMinSize | PMaxSize, 300, 200, 300, 200);
 
-    auto window = manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
+    auto window =
+            manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
 
     EXPECT_FALSE(window->is_resizable());
     EXPECT_FALSE(window->is_maximizable());
@@ -271,7 +285,8 @@ TEST_F(WmWindowTest, normal_hints_with_range_keep_resizing)
 {
     client.set_size_hints(PMinSize | PMaxSize, 100, 100, 800, 600);
 
-    auto window = manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
+    auto window =
+            manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
 
     EXPECT_TRUE(window->is_resizable());
     EXPECT_TRUE(window->is_maximizable());
@@ -323,7 +338,7 @@ TEST_F(WmWindowTest, wm_hints_icon_of_other_size_is_scaled)
     int x, y;
     unsigned int w, h, border, depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
-            &depth);
+                 &depth);
     EXPECT_EQ(w, tiny::theme.wm_icon);
     EXPECT_EQ(h, tiny::theme.wm_icon);
 }
@@ -343,7 +358,7 @@ TEST_F(WmWindowTest, wm_hints_with_a_broken_icon_pixmap_leave_no_icon)
 {
     XWMHints hints = {};
     hints.flags = IconPixmapHint;
-    hints.icon_pixmap = 0x7fffff;   // no such pixmap
+    hints.icon_pixmap = 0x7fffff; // no such pixmap
     {
         XErrors errors;
         XSetWMHints(client.display, client.window, &hints);
@@ -373,7 +388,7 @@ TEST_F(WmWindowTest, small_net_wm_icon_is_scaled)
     int x, y;
     unsigned int w, h, border, depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
-            &depth);
+                 &depth);
     EXPECT_EQ(w, tiny::theme.wm_icon);
     EXPECT_EQ(h, tiny::theme.wm_icon);
 }
@@ -437,31 +452,33 @@ TEST_F(WmWindowTest, create_maps_and_prepares_the_client)
 {
     XWindowAttributes attrs = client.attrs();
 
-    std::unique_ptr<WmWindow> window(WmWindow::create(root_window(), client.window,
-                attrs, 0xFFFF));
+    std::unique_ptr<WmWindow> window(
+            WmWindow::create(root_window(), client.window, attrs, 0xFFFF));
 
     attrs = client.attrs();
     EXPECT_EQ(attrs.map_state, IsViewable);
     EXPECT_EQ(attrs.border_width, 1);
-    long mask = attrs.your_event_mask;      // the client's own selection
-    (void) mask;
+    long mask = attrs.your_event_mask; // the client's own selection
+    (void)mask;
     EXPECT_TRUE(tiny::handlers.count({FocusIn, client.window}));
     EXPECT_TRUE(tiny::handlers.count({PropertyNotify, client.window}));
 }
 
-TEST_F(WmWindowTest, set_events_connects_all_handlers_and_destructor_removes_them)
+TEST_F(WmWindowTest,
+       set_events_connects_all_handlers_and_destructor_removes_them)
 {
     {
         auto window = manage();
         window->set_events();
-        for (int type: {FocusIn, FocusOut, ClientMessage, PropertyNotify,
-                KeyRelease, ButtonPress, ButtonRelease, MotionNotify}) {
+        for (int type :
+             {FocusIn, FocusOut, ClientMessage, PropertyNotify, KeyRelease,
+              ButtonPress, ButtonRelease, MotionNotify}) {
             EXPECT_TRUE(tiny::handlers.count({type, client.window})) << type;
         }
     }
 
-    for (int type: {FocusIn, FocusOut, ClientMessage, PropertyNotify,
-            KeyRelease, ButtonPress, ButtonRelease, MotionNotify}) {
+    for (int type : {FocusIn, FocusOut, ClientMessage, PropertyNotify,
+                     KeyRelease, ButtonPress, ButtonRelease, MotionNotify}) {
         EXPECT_FALSE(tiny::handlers.count({type, client.window})) << type;
     }
 }
@@ -474,7 +491,7 @@ TEST_F(WmWindowTest, set_events_grabs_alt_f4)
 
     // another client can't grab the same key: BadAccess
     XGrabKey(client.display, XKeysymToKeycode(client.display, XK_F4), Mod1Mask,
-            client.window, False, GrabModeAsync, GrabModeAsync);
+             client.window, False, GrabModeAsync, GrabModeAsync);
     client.sync();
 
     EXPECT_EQ(errors.errors(), 1);
@@ -567,7 +584,7 @@ TEST_F(WmWindowTest, minimize_hides_the_window_and_restore_shows_it)
     EXPECT_TRUE(window->get_minimized());
     EXPECT_TRUE(client.state_has(dsp()._NET_WM_STATE_HIDDEN));
 
-    window->minimize();     // already minimized, nothing changes
+    window->minimize(); // already minimized, nothing changes
     EXPECT_TRUE(window->get_minimized());
 
     window->restore();
@@ -581,7 +598,7 @@ TEST_F(WmWindowTest, window_maximized_at_start_gets_a_usable_restore_size)
 {
     client.map();
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
-            dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
     auto window = manage();
     ASSERT_TRUE(window->get_maximized());
 
@@ -682,7 +699,7 @@ TEST_F(WmWindowTest, close_kills_a_client_without_delete_protocol)
     XErrors errors;
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp(), client.window, &attrs);
-    EXPECT_EQ(errors.errors(), 1);      // BadWindow: the client is gone
+    EXPECT_EQ(errors.errors(), 1); // BadWindow: the client is gone
     client.abandon();
 }
 
@@ -717,14 +734,18 @@ TEST_F(WmWindowTest, client_message_maximizes_and_restores)
     auto window = manage();
     window->set_events();
 
-    send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                static_cast<long>(dsp()._NET_WM_STATE_ADD), static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
-                static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(dsp()._NET_WM_STATE_ADD),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_TRUE(window->get_maximized());
 
-    send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                static_cast<long>(dsp()._NET_WM_STATE_REMOVE), static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
-                static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(dsp()._NET_WM_STATE_REMOVE),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_FALSE(window->get_maximized());
 }
 
@@ -734,12 +755,18 @@ TEST_F(WmWindowTest, client_message_with_other_state_changes_is_ignored)
     auto window = manage();
     window->set_events();
 
-    send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                static_cast<long>(dsp()._NET_WM_STATE_ADD), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
-    send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                static_cast<long>(dsp()._NET_WM_STATE_REMOVE), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
-    send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
-                static_cast<long>(dsp()._NET_WM_STATE_TOGGLE), static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(dsp()._NET_WM_STATE_ADD),
+                        static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(dsp()._NET_WM_STATE_REMOVE),
+                        static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(dsp()._NET_WM_STATE_TOGGLE),
+                        static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
 
     EXPECT_FALSE(window->get_maximized());
 }
@@ -750,8 +777,8 @@ TEST_F(WmWindowTest, client_message_can_iconify_the_window)
     auto window = manage();
     window->set_events();
 
-    send(client.window, client_message(client.window, dsp().WM_CHANGE_STATE,
-                IconicState));
+    send(client.window,
+         client_message(client.window, dsp().WM_CHANGE_STATE, IconicState));
 
     EXPECT_TRUE(window->get_minimized());
     EXPECT_EQ(client.attrs().map_state, IsUnmapped);
@@ -763,8 +790,8 @@ TEST_F(WmWindowTest, unknown_client_message_is_ignored)
     window->set_events();
 
     send(client.window, client_message(client.window, dsp().WM_NAME));
-    send(client.window, client_message(client.window, dsp().WM_CHANGE_STATE,
-                NormalState));
+    send(client.window,
+         client_message(client.window, dsp().WM_CHANGE_STATE, NormalState));
 
     EXPECT_FALSE(window->get_minimized());
 }
@@ -925,7 +952,7 @@ TEST_F(WmWindowTest, alt_click_starts_dragging_and_motion_moves_the_window)
     EXPECT_EQ(attrs.x, 10 + 30);
     EXPECT_EQ(attrs.y, 20 + 50);
 
-    send(client.window, make_event(ButtonRelease));     // ungrabs the pointer
+    send(client.window, make_event(ButtonRelease)); // ungrabs the pointer
 }
 
 TEST_F(WmWindowTest, dragging_a_maximized_window_restores_it_first)

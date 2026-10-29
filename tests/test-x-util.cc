@@ -16,32 +16,48 @@ static XEvent make_event(int type)
 
 TEST(EventToString, names_of_known_events)
 {
-    struct { int type; const char *name; } cases[] = {
-        {KeyPress, "KeyPress"}, {KeyRelease, "KeyRelease"},
-        {ButtonPress, "ButtonPress"}, {ButtonRelease, "ButtonRelease"},
-        {MotionNotify, "MotionNotify"}, {EnterNotify, "EnterNotify"},
-        {LeaveNotify, "LeaveNotify"}, {FocusIn, "FocusIn"},
-        {FocusOut, "FocusOut"}, {KeymapNotify, "KeymapNotify"},
-        {Expose, "Expose"}, {GraphicsExpose, "GraphicsExpose"},
-        {NoExpose, "NoExpose"}, {VisibilityNotify, "VisibilityNotify"},
-        {CreateNotify, "CreateNotify"}, {DestroyNotify, "DestroyNotify"},
-        {UnmapNotify, "UnmapNotify"}, {MapNotify, "MapNotify"},
-        {MapRequest, "MapRequest"}, {ReparentNotify, "ReparentNotify"},
-        {ConfigureNotify, "ConfigureNotify"},
-        {ConfigureRequest, "ConfigureRequest"},
-        {GravityNotify, "GravityNotify"}, {ResizeRequest, "ResizeRequest"},
-        {CirculateNotify, "CirculateNotify"},
-        {CirculateRequest, "CirculateRequest"},
-        {PropertyNotify, "PropertyNotify"},
-        {SelectionClear, "SelectionClear"},
-        {SelectionRequest, "SelectionRequest"},
-        {SelectionNotify, "SelectionNotify"},
-        {ColormapNotify, "ColormapNotify"}, {ClientMessage, "ClientMessage"},
-        {MappingNotify, "MappingNotify"}, {GenericEvent, "GenericEvent"},
-        {LASTEvent, "LASTEvent"},
+    struct {
+        int type;
+        const char* name;
+    } cases[] = {
+            {KeyPress, "KeyPress"},
+            {KeyRelease, "KeyRelease"},
+            {ButtonPress, "ButtonPress"},
+            {ButtonRelease, "ButtonRelease"},
+            {MotionNotify, "MotionNotify"},
+            {EnterNotify, "EnterNotify"},
+            {LeaveNotify, "LeaveNotify"},
+            {FocusIn, "FocusIn"},
+            {FocusOut, "FocusOut"},
+            {KeymapNotify, "KeymapNotify"},
+            {Expose, "Expose"},
+            {GraphicsExpose, "GraphicsExpose"},
+            {NoExpose, "NoExpose"},
+            {VisibilityNotify, "VisibilityNotify"},
+            {CreateNotify, "CreateNotify"},
+            {DestroyNotify, "DestroyNotify"},
+            {UnmapNotify, "UnmapNotify"},
+            {MapNotify, "MapNotify"},
+            {MapRequest, "MapRequest"},
+            {ReparentNotify, "ReparentNotify"},
+            {ConfigureNotify, "ConfigureNotify"},
+            {ConfigureRequest, "ConfigureRequest"},
+            {GravityNotify, "GravityNotify"},
+            {ResizeRequest, "ResizeRequest"},
+            {CirculateNotify, "CirculateNotify"},
+            {CirculateRequest, "CirculateRequest"},
+            {PropertyNotify, "PropertyNotify"},
+            {SelectionClear, "SelectionClear"},
+            {SelectionRequest, "SelectionRequest"},
+            {SelectionNotify, "SelectionNotify"},
+            {ColormapNotify, "ColormapNotify"},
+            {ClientMessage, "ClientMessage"},
+            {MappingNotify, "MappingNotify"},
+            {GenericEvent, "GenericEvent"},
+            {LASTEvent, "LASTEvent"},
     };
 
-    for (auto c: cases) {
+    for (auto c : cases) {
         EXPECT_STREQ(event_to_string(make_event(c.type)), c.name);
     }
 }
@@ -204,9 +220,12 @@ TEST(WindowOfEvent, structure_events_return_the_affected_window)
 
 TEST(WindowOfEvent, events_without_window)
 {
-    EXPECT_EQ(tiny::window_of_event(make_event(MappingNotify)), static_cast<::Window>(None));
-    EXPECT_EQ(tiny::window_of_event(make_event(GenericEvent)), static_cast<::Window>(None));
-    EXPECT_EQ(tiny::window_of_event(make_event(0)), static_cast<::Window>(None));
+    EXPECT_EQ(tiny::window_of_event(make_event(MappingNotify)),
+              static_cast<::Window>(None));
+    EXPECT_EQ(tiny::window_of_event(make_event(GenericEvent)),
+              static_cast<::Window>(None));
+    EXPECT_EQ(tiny::window_of_event(make_event(0)),
+              static_cast<::Window>(None));
 }
 
 TEST(XPoint, x_point_sets_coordinates)
@@ -222,14 +241,14 @@ TEST(XPoint, x_point_sets_coordinates)
 static int grab_errors = 0;
 static unsigned char last_error_code = 0;
 
-static int count_errors(::Display *, XErrorEvent *e)
+static int count_errors(::Display*, XErrorEvent* e)
 {
     ++grab_errors;
     last_error_code = e->error_code;
     return 0;
 }
 
-class GrabTest: public ::testing::Test {
+class GrabTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
@@ -252,12 +271,13 @@ class GrabTest: public ::testing::Test {
     // The other client tries to grab every Num Lock / Caps Lock variant.
     int grab_from_other_client()
     {
-        const unsigned int mods[] = {Mod1Mask, Mod1Mask|Mod2Mask,
-            Mod1Mask|LockMask, Mod1Mask|Mod2Mask|LockMask};
+        const unsigned int mods[] = {Mod1Mask, Mod1Mask | Mod2Mask,
+                                     Mod1Mask | LockMask,
+                                     Mod1Mask | Mod2Mask | LockMask};
         grab_errors = 0;
-        for (unsigned int m: mods) {
+        for (unsigned int m : mods) {
             XGrabKey(other, keycode, m, root, True, GrabModeAsync,
-                    GrabModeAsync);
+                     GrabModeAsync);
         }
         XSync(other, False);
         return grab_errors;
@@ -269,8 +289,8 @@ class GrabTest: public ::testing::Test {
         XSync(other, False);
     }
 
-    ::Display *display;
-    ::Display *other;
+    ::Display* display;
+    ::Display* other;
     ::Window root;
     int keycode;
     XErrorHandler old_handler;
@@ -301,7 +321,7 @@ TEST_F(GrabTest, ungrab_releases_all_lock_modifiers)
 
 // ---- resize_pixmap ----
 
-class PixmapTest: public ::testing::Test {
+class PixmapTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
@@ -310,7 +330,7 @@ class PixmapTest: public ::testing::Test {
     }
 
     Pixmap filled(unsigned int w, unsigned int h, unsigned int depth,
-            unsigned long color)
+                  unsigned long color)
     {
         Pixmap pm = XCreatePixmap(display, root, w, h, depth);
         GC gc = XCreateGC(display, pm, 0, nullptr);
@@ -320,8 +340,8 @@ class PixmapTest: public ::testing::Test {
         return pm;
     }
 
-    void geometry(Pixmap pm, unsigned int &w, unsigned int &h,
-            unsigned int &depth)
+    void geometry(Pixmap pm, unsigned int& w, unsigned int& h,
+                  unsigned int& depth)
     {
         ::Window r;
         int x, y;
@@ -330,7 +350,7 @@ class PixmapTest: public ::testing::Test {
         XGetGeometry(display, pm, &r, &x, &y, &w, &h, &border, &depth);
     }
 
-    ::Display *display;
+    ::Display* display;
     ::Window root;
 };
 
@@ -339,8 +359,8 @@ TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
     int depth = DefaultDepth(display, 0);
     Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
-    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50,
-            50, tiny::x_uint(depth));
+    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50, 50,
+                                        tiny::x_uint(depth));
 
     unsigned int w, h, d;
     geometry(target, w, h, d);
@@ -356,11 +376,11 @@ TEST_F(PixmapTest, resize_keeps_color)
     int depth = DefaultDepth(display, 0);
     Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
-    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50,
-            50, tiny::x_uint(depth));
+    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50, 50,
+                                        tiny::x_uint(depth));
 
     XSync(display, False);
-    XImage *img = XGetImage(display, target, 10, 10, 1, 1, AllPlanes, ZPixmap);
+    XImage* img = XGetImage(display, target, 10, 10, 1, 1, AllPlanes, ZPixmap);
     EXPECT_EQ(XGetPixel(img, 0, 0) & 0xFFFFFF, 0xFF0000u);
     XDestroyImage(img);
     XFreePixmap(display, origin);
@@ -371,8 +391,8 @@ TEST_F(PixmapTest, resize_monochrome_pixmap)
 {
     Pixmap origin = filled(64, 32, 1, 1);
 
-    Pixmap target = tiny::resize_pixmap(display, root, origin, 64, 32, 16, 8,
-            1);
+    Pixmap target =
+            tiny::resize_pixmap(display, root, origin, 64, 32, 16, 8, 1);
 
     unsigned int w, h, d;
     geometry(target, w, h, d);

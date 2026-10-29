@@ -10,7 +10,7 @@
 
 #include "wm_run.h"
 
-static XEvent key_event(const tiny::Widget &w, KeySym key, int type = KeyPress)
+static XEvent key_event(const tiny::Widget& w, KeySym key, int type = KeyPress)
 {
     XEvent e = make_event(type);
     e.xkey.display = tiny::get_display();
@@ -20,11 +20,13 @@ static XEvent key_event(const tiny::Widget &w, KeySym key, int type = KeyPress)
     return e;
 }
 
-static void type_key(const tiny::Widget &w, KeySym key)
-{ send(w.get_window(), key_event(w, key)); }
+static void type_key(const tiny::Widget& w, KeySym key)
+{
+    send(w.get_window(), key_event(w, key));
+}
 
 // Waits (up to 2 s) for the process started by Return to create `path`.
-static bool appears(const std::filesystem::path &path)
+static bool appears(const std::filesystem::path& path)
 {
     for (int i = 0; i < 200; ++i) {
         if (std::filesystem::exists(path)) {
@@ -35,7 +37,7 @@ static bool appears(const std::filesystem::path &path)
     return false;
 }
 
-class EntryTest: public ::testing::Test {
+class EntryTest : public ::testing::Test {
   protected:
     WidgetFont font;
     wm::Entry entry{100, 30};
@@ -51,7 +53,7 @@ class EntryTest: public ::testing::Test {
     unsigned int drawn()
     {
         return Image(entry.get_window(), 100, 30)
-            .count_not(tiny::theme.widget.normal_bg, 30);
+                .count_not(tiny::theme.widget.normal_bg, 30);
     }
 };
 
@@ -151,17 +153,20 @@ TEST_F(EntryTest, clear_removes_the_text)
 TEST_F(EntryTest, return_runs_the_typed_command_and_signals_exit)
 {
     auto marker = std::filesystem::temp_directory_path() /
-        ("tiny-test-run-" + std::to_string(getpid()));
+                  ("tiny-test-run-" + std::to_string(getpid()));
     std::filesystem::remove(marker);
     entry.map();
     send(entry, FocusIn);
 
     // "touch" + marker path, typed key by key
     std::string command = "touch " + marker.string();
-    for (char c: command) {
-        KeySym sym = c == ' ' ? XK_space : c == '/' ? XK_slash :
-            c == '-' ? XK_minus : c == '.' ? XK_period :
-            c == '_' ? XK_underscore : static_cast<KeySym>(c);
+    for (char c : command) {
+        KeySym sym = c == ' '   ? XK_space
+                     : c == '/' ? XK_slash
+                     : c == '-' ? XK_minus
+                     : c == '.' ? XK_period
+                     : c == '_' ? XK_underscore
+                                : static_cast<KeySym>(c);
         XEvent e = key_event(entry, sym);
         if (c == '_') {
             e.xkey.state = ShiftMask;
@@ -210,7 +215,7 @@ TEST(EntryLifeTest, destructor_disconnects_key_handler)
 
 // ---- RunDialog ----
 
-class RunDialogTest: public ::testing::Test {
+class RunDialogTest : public ::testing::Test {
   protected:
     WidgetFont font;
 };

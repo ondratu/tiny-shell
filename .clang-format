@@ -1,0 +1,35 @@
+# The style of CONTRIBUTING.md: 4 spaces, braces on the same line.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++17
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 80
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterNamespace: false
+  AfterClass: false
+  AfterStruct: false
+  AfterEnum: false
+  AfterControlStatement: Never
+  BeforeElse: false
+  SplitEmptyFunction: false
+SpaceBeforeCtorInitializerColon: false
+BreakConstructorInitializers: AfterColon
+ConstructorInitializerIndentWidth: 4
+PackConstructorInitializers: NextLine
+AllowShortBlocksOnASingleLine: Empty
+SpaceBeforeCpp11BracedList: false
+AccessModifierOffset: -2
+IndentCaseLabels: true
+NamespaceIndentation: None
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+ContinuationIndentWidth: 8
+SortIncludes: false
+ReflowComments: false

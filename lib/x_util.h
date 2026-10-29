@@ -4,8 +4,9 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 
-inline const char * event_to_string(const XEvent e){
-    switch (e.type){
+inline const char* event_to_string(const XEvent e)
+{
+    switch (e.type) {
         case KeyPress:
             return "KeyPress";
         case KeyRelease:
@@ -24,7 +25,7 @@ inline const char * event_to_string(const XEvent e){
             return "FocusIn";
         case FocusOut:
             return "FocusOut";
-         case KeymapNotify:
+        case KeymapNotify:
             return "KeymapNotify";
         case Expose:
             return "Expose";
@@ -81,7 +82,6 @@ inline const char * event_to_string(const XEvent e){
     }
 }
 
-
 namespace tiny {
 
 /**
@@ -95,16 +95,19 @@ namespace tiny {
  * Geometry is computed with int. X refuses a zero size (BadValue) and the
  * protocol has 16 bits for it, so the value is limited to 1..65535.
  */
-inline unsigned int x_dim(int size){
+inline unsigned int x_dim(int size)
+{
     return static_cast<unsigned int>(std::clamp(size, 1, 65535));
 }
 
 /// An int that must not be negative for an X request that takes unsigned.
-inline unsigned int x_uint(int value){
+inline unsigned int x_uint(int value)
+{
     return static_cast<unsigned int>(std::max(value, 0));
 }
 
-inline XPoint x_point(int x, int y){
+inline XPoint x_point(int x, int y)
+{
     XPoint rv;
     rv.x = static_cast<short>(std::clamp(x, -32768, 32767));
     rv.y = static_cast<short>(std::clamp(y, -32768, 32767));
@@ -112,14 +115,14 @@ inline XPoint x_point(int x, int y){
 }
 
 void x_grab_key(::Display* display, int keycode, unsigned int modifiers,
-        ::Window window);
+                ::Window window);
 
 void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
-        ::Window window);
+                  ::Window window);
 
 Pixmap resize_pixmap(::Display* display, ::Window root, Pixmap origin,
-        unsigned int o_width, unsigned int o_height,
-        unsigned int t_width, unsigned int t_height,
-        unsigned int depth);
+                     unsigned int o_width, unsigned int o_height,
+                     unsigned int t_width, unsigned int t_height,
+                     unsigned int depth);
 
 } // namespace tiny

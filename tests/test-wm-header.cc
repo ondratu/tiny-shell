@@ -50,7 +50,7 @@ TEST(TitleBoxTest, mapped_title_box_can_grab_the_pointer)
     box.map();
 
     send(box, ButtonPress);
-    send(box, ButtonRelease);   // releases the grab
+    send(box, ButtonRelease); // releases the grab
 }
 
 TEST(TitleBoxTest, destructor_disconnects_handlers)
@@ -80,14 +80,14 @@ TEST(TitleBoxTest, destroying_unrealized_title_box_causes_no_x_error)
 
 TEST(TitleBoxTest, delete_through_base_pointer)
 {
-    tiny::Widget *box = new wm::TitleBox(100, 25);
+    tiny::Widget* box = new wm::TitleBox(100, 25);
 
     delete box;
 }
 
 // ---- Header ----
 
-class HeaderTest: public ::testing::Test {
+class HeaderTest : public ::testing::Test {
   protected:
     uint32_t bg() const { return tiny::theme.wm_header.normal_bg; }
 
@@ -101,14 +101,15 @@ class HeaderTest: public ::testing::Test {
         tiny::theme.wm_header = with_font;
     }
 
-    void TearDown() override
-    { tiny::theme.wm_header = original; }
+    void TearDown() override { tiny::theme.wm_header = original; }
 
-    Image image_of(const wm::Header &h)
-    { return Image(h.get_window(), h.get_width(), h.get_height()); }
+    Image image_of(const wm::Header& h)
+    {
+        return Image(h.get_window(), h.get_width(), h.get_height());
+    }
 
     // Darkest red channel of the text area (without the bottom line).
-    unsigned int darkest_text(const Image &img)
+    unsigned int darkest_text(const Image& img)
     {
         unsigned int darkest = 255;
         for (int y = 0; y < img.height - 1; ++y) {
@@ -148,7 +149,7 @@ TEST_F(HeaderTest, realize_adds_title_box_inside_header)
 
     h.realize(root_window(), 0, 0);
 
-    wm::TitleBox *box = h.get_title_box();
+    wm::TitleBox* box = h.get_title_box();
     EXPECT_TRUE(box->get_realized());
     EXPECT_EQ(box->get_parent_window(), h.get_window());
     XWindowAttributes attrs = attributes_of(*box);
@@ -176,8 +177,8 @@ TEST_F(HeaderTest, expose_draws_title_text_and_bottom_line)
 
     Image img = image_of(h);
     EXPECT_EQ(img.at(0, 0), bg());
-    EXPECT_GT(img.count_not(bg(), 24), 0u);                 // text
-    EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br);  // line
+    EXPECT_GT(img.count_not(bg(), 24), 0u);                    // text
+    EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br); // line
 }
 
 TEST_F(HeaderTest, header_without_title_draws_only_the_bottom_line)
@@ -217,7 +218,7 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
     Image img = image_of(h);
     EXPECT_GT(img.count_not(bg(), 24), 0u);
     for (int y = 0; y < 24; ++y) {
-        EXPECT_EQ(img.at(0, y), bg()) << "row " << y;   // not cut on the left
+        EXPECT_EQ(img.at(0, y), bg()) << "row " << y; // not cut on the left
     }
 }
 
@@ -244,7 +245,7 @@ TEST_F(HeaderTest, set_disable_before_map_does_not_draw)
     wm::Header h(300, 25);
     h.realize(root_window(), 0, 0);
 
-    h.set_disable(true);    // not mapped: no repaint, no crash
+    h.set_disable(true); // not mapped: no repaint, no crash
 }
 
 TEST_F(HeaderTest, resize_before_realize_changes_header_and_title_box)
@@ -333,7 +334,7 @@ TEST_F(HeaderTest, destroying_unrealized_header_causes_no_x_error)
 
 TEST_F(HeaderTest, delete_through_base_pointer)
 {
-    tiny::Widget *h = new wm::Header(300, 25);
+    tiny::Widget* h = new wm::Header(300, 25);
 
     delete h;
 }

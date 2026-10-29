@@ -6,71 +6,61 @@
 #include <map>
 #include <set>
 
-#define TINY_LOG(...) \
-    tiny::log(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#define TINY_LOG(...) tiny::log(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 namespace tiny {
 
 class Object;
 
-typedef void (Object::*event_signal_t)(const XEvent &e, void * data);
+typedef void (Object::*event_signal_t)(const XEvent& e, void* data);
 
-class Handlers : public std::map<
-        std::pair<uint16_t, ::Window>,
-        std::tuple<Object*, event_signal_t, void*>>
-{
+class Handlers : public std::map<std::pair<uint16_t, ::Window>,
+                                 std::tuple<Object*, event_signal_t, void*>> {
   public:
-    void set_handler(uint16_t event_type, ::Window window,
-            Object*o, event_signal_t signal, void * data);
+    void set_handler(uint16_t event_type, ::Window window, Object* o,
+                     event_signal_t signal, void* data);
 
     void unset_handler(uint16_t event_type, ::Window window);
 
-    void call_hanlder(std::pair<uint16_t, ::Window> key, const XEvent &e);
+    void call_hanlder(std::pair<uint16_t, ::Window> key, const XEvent& e);
 };
 
-typedef void (Object::*object_signal_t)(Object * o, const XEvent &e,
-                                          void * data);
+typedef void (Object::*object_signal_t)(Object* o, const XEvent& e, void* data);
 
 class Signal {
   public:
     Signal();
 
-    void operator ()(Object * owner, const XEvent &e, void *data=nullptr);
+    void operator()(Object* owner, const XEvent& e, void* data = nullptr);
 
-    operator bool () const
-    {
-        return (object && method);
-    }
+    operator bool() const { return (object && method); }
 
-    void connect(Object * object, object_signal_t method,
-                 void *data=nullptr);
+    void connect(Object* object, object_signal_t method, void* data = nullptr);
 
   private:
-    Object *object;           // method owner
-    object_signal_t method;     // method to call
-    void * data;                // user data to send
+    Object* object;         // method owner
+    object_signal_t method; // method to call
+    void* data;             // user data to send
 };
-
 
 class Object {
   public:
-    Object()
-    {}
+    Object() {}
 
     virtual ~Object();
 
   protected:
-    void connect_window (uint16_t event_type, ::Window window,
-            event_signal_t signal, void * data=nullptr);
+    void connect_window(uint16_t event_type, ::Window window,
+                        event_signal_t signal, void* data = nullptr);
 
-    void disconnect_window (uint16_t event_type, ::Window window);
+    void disconnect_window(uint16_t event_type, ::Window window);
+
   private:
     std::set<std::pair<uint16_t, ::Window>> connected_events;
 };
 
+void log(const char* file, const char* function, uint32_t line,
+         const char* format, ...) __attribute__((format(printf, 4, 5)));
 
-void log(const char *file, const char* function, uint32_t line,
-        const char *format, ...) __attribute__((format(printf, 4, 5)));
-
-void error(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void error(const char* format, ...) __attribute__((format(printf, 1, 2)));
 } // namespace tiny

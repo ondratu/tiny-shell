@@ -2,14 +2,16 @@
 
 #include "wm_buttons.h"
 
-class WmButtonTest: public ::testing::Test {
+class WmButtonTest : public ::testing::Test {
   protected:
     uint32_t bg() const { return tiny::theme.wm_button.normal_bg; }
     uint32_t fg() const { return tiny::theme.wm_button.normal_fg; }
-    int icon()  const { return tiny::theme.wm_win_icon; }
+    int icon() const { return tiny::theme.wm_win_icon; }
 
-    Image image_of(const tiny::Widget &w)
-    { return Image(w.get_window(), w.get_width(), w.get_height()); }
+    Image image_of(const tiny::Widget& w)
+    {
+        return Image(w.get_window(), w.get_width(), w.get_height());
+    }
 };
 
 TEST_F(WmButtonTest, buttons_are_square_icons)
@@ -18,9 +20,9 @@ TEST_F(WmButtonTest, buttons_are_square_icons)
     wm::MaximizeButton maximize;
     wm::MinimizeButton minimize;
 
-    for (tiny::Widget *b: {static_cast<tiny::Widget*>(&close), static_cast<tiny::Widget*>(&maximize),
-            static_cast<tiny::Widget*>(&minimize)})
-    {
+    for (tiny::Widget* b : {static_cast<tiny::Widget*>(&close),
+                            static_cast<tiny::Widget*>(&maximize),
+                            static_cast<tiny::Widget*>(&minimize)}) {
         EXPECT_EQ(b->get_width(), icon());
         EXPECT_EQ(b->get_height(), icon());
         EXPECT_EQ(&b->get_style(), &tiny::theme.wm_button);
@@ -38,7 +40,7 @@ TEST_F(WmButtonTest, expose_draws_cross_on_close_button)
     Image img = image_of(b);
     EXPECT_EQ(img.at(0, 0), bg());
     EXPECT_GT(img.count_not(bg(), icon()), 0u);
-    EXPECT_EQ(img.at(icon() / 2, icon() / 2), fg());    // lines cross here
+    EXPECT_EQ(img.at(icon() / 2, icon() / 2), fg()); // lines cross here
 }
 
 TEST_F(WmButtonTest, expose_draws_line_on_minimize_button)
@@ -74,8 +76,8 @@ TEST_F(WmButtonTest, expose_draws_square_on_maximize_button)
 
     Image img = image_of(b);
     EXPECT_GT(img.count_not(bg(), icon()), 0u);
-    EXPECT_EQ(img.at(icon() / 2, icon() / 2 - 3), fg());    // top edge
-    EXPECT_EQ(img.at(icon() / 2, icon() / 2), bg());        // hollow
+    EXPECT_EQ(img.at(icon() / 2, icon() / 2 - 3), fg()); // top edge
+    EXPECT_EQ(img.at(icon() / 2, icon() / 2), bg());     // hollow
 }
 
 TEST_F(WmButtonTest, maximize_button_restore_changes_the_icon)
@@ -106,7 +108,7 @@ TEST_F(WmButtonTest, hover_inverts_colors)
     send(b, EnterNotify);
     EXPECT_EQ(image_of(b).at(0, 0), tiny::theme.wm_button.hover_bg);
     EXPECT_EQ(image_of(b).at(icon() / 2, icon() / 2),
-            tiny::theme.wm_button.hover_fg);
+              tiny::theme.wm_button.hover_fg);
 
     send(b, LeaveNotify);
     EXPECT_EQ(image_of(b).at(0, 0), bg());
@@ -163,9 +165,9 @@ TEST_F(WmButtonTest, destructor_disconnects_handlers)
 
 TEST_F(WmButtonTest, delete_through_base_pointer)
 {
-    tiny::Widget *close = new wm::CloseButton;
-    tiny::Widget *maximize = new wm::MaximizeButton;
-    tiny::Widget *minimize = new wm::MinimizeButton;
+    tiny::Widget* close = new wm::CloseButton;
+    tiny::Widget* maximize = new wm::MaximizeButton;
+    tiny::Widget* minimize = new wm::MinimizeButton;
 
     delete close;
     delete maximize;
@@ -186,13 +188,11 @@ TEST_F(WmButtonTest, destroying_unrealized_button_causes_no_x_error)
 
 // ---- scaling (TINY_SCALE_FACTOR) ----
 
-class ScaledWmButtonTest: public WmButtonTest {
+class ScaledWmButtonTest : public WmButtonTest {
   protected:
-    void SetUp() override
-    { tiny::theme.scale(2); }
+    void SetUp() override { tiny::theme.scale(2); }
 
-    void TearDown() override
-    { tiny::theme.scale(1); }
+    void TearDown() override { tiny::theme.scale(1); }
 
     int mid() const { return icon() / 2; }
 };

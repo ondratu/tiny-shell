@@ -31,29 +31,32 @@ using WmWindow = wm::Window;
 namespace {
 
 int border()
-{ return tiny::theme.wm_dock_border; }
+{
+    return tiny::theme.wm_dock_border;
+}
 
 // Stops the main loop: the loop reaches it after all earlier events.
-class Stopper: public tiny::Object {
+class Stopper : public tiny::Object {
   public:
-    Stopper(bool *running_arg): running(running_arg) {}
+    Stopper(bool* running_arg): running(running_arg) {}
 
-    void on_event(const XEvent &, void *)
-    { *running = false; }
+    void on_event(const XEvent&, void*) { *running = false; }
 
     tiny::event_signal_t slot()
-    { return static_cast<tiny::event_signal_t>(&Stopper::on_event); }
+    {
+        return static_cast<tiny::event_signal_t>(&Stopper::on_event);
+    }
 
   private:
-    bool *running;
+    bool* running;
 };
 
-class ManagerTest: public ::testing::Test {
+class ManagerTest : public ::testing::Test {
   protected:
     ~ManagerTest() override
     {
         if (manager) {
-            for (auto &it: manager->wm_windows) {
+            for (auto& it : manager->wm_windows) {
                 delete it.second;
             }
             manager->wm_windows.clear();
@@ -64,7 +67,7 @@ class ManagerTest: public ::testing::Test {
 
     // A client window of the test (10,20 200x100); it is created at once and
     // mapped when `mapped` is set (mapping needs the manager when it runs).
-    Client &add_client(bool mapped = true)
+    Client& add_client(bool mapped = true)
     {
         clients.push_back(std::make_unique<Client>());
         if (mapped) {
@@ -75,19 +78,19 @@ class ManagerTest: public ::testing::Test {
 
     void start()
     {
-        ::Display *display = tiny::get_display();
+        ::Display* display = tiny::get_display();
         manager = std::make_unique<wm::Manager>(display, root_window());
-        XSync(display, False);      // the server is grabbed until the ungrab
+        XSync(display, False); // the server is grabbed until the ungrab
     }
 
     // Runs the main loop until it handled every event sent so far.
     void run_loop()
     {
-        ::Window sentinel = XCreateSimpleWindow(dsp(), root_window(), 0, 0, 1,
-                1, 0, 0, 0);
+        ::Window sentinel =
+                XCreateSimpleWindow(dsp(), root_window(), 0, 0, 1, 1, 0, 0, 0);
         Stopper stopper(&manager->running);
         tiny::handlers.set_handler(CreateNotify, sentinel, &stopper,
-                stopper.slot(), nullptr);
+                                   stopper.slot(), nullptr);
         XSync(dsp(), False);
         manager->main_loop();
         tiny::handlers.unset_handler(CreateNotify, sentinel);
@@ -107,15 +110,21 @@ class ManagerTest: public ::testing::Test {
         return parent;
     }
 
-    bool is_managed(const Client &c) const
-    { return manager->wm_windows.count(c.window) == 1; }
+    bool is_managed(const Client& c) const
+    {
+        return manager->wm_windows.count(c.window) == 1;
+    }
 
     // `window` is wrapped in a frame
-    bool is_framed(const Client &c)
-    { return parent_of(c.window) != root_window(); }
+    bool is_framed(const Client& c)
+    {
+        return parent_of(c.window) != root_window();
+    }
 
-    void set_window_type(Client &c, Atom type)
-    { c.set_atoms(dsp()._NET_WM_WINDOW_TYPE, {type}); }
+    void set_window_type(Client& c, Atom type)
+    {
+        c.set_atoms(dsp()._NET_WM_WINDOW_TYPE, {type});
+    }
 
     XKeyEvent key(KeySym keysym, unsigned int state = Mod1Mask)
     {
@@ -161,8 +170,7 @@ TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
     auto root = attributes_of(root_window());
     auto dock = attributes_of(manager->wm_dock);
     EXPECT_EQ(dock.x, root.width / 2);
-    EXPECT_EQ(dock.y, root.height - manager->wm_dock.get_height()
-                - border());
+    EXPECT_EQ(dock.y, root.height - manager->wm_dock.get_height() - border());
 }
 
 TEST_F(ManagerTest, connects_logout_of_the_user_menu)
@@ -170,7 +178,7 @@ TEST_F(ManagerTest, connects_logout_of_the_user_menu)
     start();
     ASSERT_TRUE(manager->running);
 
-    auto &logout = manager->wm_panel.menu_user.logout;
+    auto& logout = manager->wm_panel.menu_user.logout;
     logout.on_click(&logout, make_event(ButtonRelease));
 
     EXPECT_FALSE(manager->running);
@@ -178,8 +186,8 @@ TEST_F(ManagerTest, connects_logout_of_the_user_menu)
 
 TEST_F(ManagerTest, adopts_the_mapped_windows)
 {
-    Client &first = add_client();
-    Client &second = add_client();
+    Client& first = add_client();
+    Client& second = add_client();
 
     start();
 
@@ -191,8 +199,8 @@ TEST_F(ManagerTest, adopts_the_mapped_windows)
 
 TEST_F(ManagerTest, only_the_last_adopted_window_gets_the_focus)
 {
-    Client &first = add_client();
-    Client &last = add_client();
+    Client& first = add_client();
+    Client& last = add_client();
 
     start();
 
@@ -213,7 +221,7 @@ TEST_F(ManagerTest, adopted_windows_get_an_icon_in_the_dock)
 
 TEST_F(ManagerTest, windows_that_skip_the_taskbar_have_no_dock_icon)
 {
-    Client &c = add_client();
+    Client& c = add_client();
     c.set_state({dsp()._NET_WM_STATE_SKIP_TASKBAR});
 
     start();
@@ -225,7 +233,7 @@ TEST_F(ManagerTest, windows_that_skip_the_taskbar_have_no_dock_icon)
 
 TEST_F(ManagerTest, unmapped_windows_are_not_adopted)
 {
-    Client &c = add_client(false);
+    Client& c = add_client(false);
 
     start();
 
@@ -235,7 +243,7 @@ TEST_F(ManagerTest, unmapped_windows_are_not_adopted)
 
 TEST_F(ManagerTest, override_redirect_windows_are_not_adopted)
 {
-    Client &c = add_client(false);
+    Client& c = add_client(false);
     XSetWindowAttributes attrs;
     attrs.override_redirect = True;
     XChangeWindowAttributes(c.display, c.window, CWOverrideRedirect, &attrs);
@@ -248,10 +256,10 @@ TEST_F(ManagerTest, override_redirect_windows_are_not_adopted)
 
 TEST_F(ManagerTest, desktop_dock_and_splash_windows_are_not_adopted)
 {
-    for (Atom type: {dsp()._NET_WM_WINDOW_TYPE_DESKTOP,
-            dsp()._NET_WM_WINDOW_TYPE_DOCK, dsp()._NET_WM_WINDOW_TYPE_SPLASH})
-    {
-        Client &c = add_client(false);
+    for (Atom type :
+         {dsp()._NET_WM_WINDOW_TYPE_DESKTOP, dsp()._NET_WM_WINDOW_TYPE_DOCK,
+          dsp()._NET_WM_WINDOW_TYPE_SPLASH}) {
+        Client& c = add_client(false);
         set_window_type(c, type);
         c.map();
     }
@@ -263,7 +271,7 @@ TEST_F(ManagerTest, desktop_dock_and_splash_windows_are_not_adopted)
 
 TEST_F(ManagerTest, other_window_types_are_adopted)
 {
-    Client &c = add_client(false);
+    Client& c = add_client(false);
     set_window_type(c, dsp()._NET_WM_WINDOW_TYPE_DIALOG);
     c.map();
 
@@ -274,7 +282,7 @@ TEST_F(ManagerTest, other_window_types_are_adopted)
 
 TEST_F(ManagerTest, window_without_decorations_is_not_framed)
 {
-    Client &c = add_client(false);
+    Client& c = add_client(false);
     c.set_motif(wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
     c.map();
 
@@ -282,19 +290,19 @@ TEST_F(ManagerTest, window_without_decorations_is_not_framed)
 
     ASSERT_TRUE(is_managed(c));
     EXPECT_FALSE(is_framed(c));
-    EXPECT_EQ(dynamic_cast<wm::Wrapped *>(manager->wm_windows[c.window]),
-            nullptr);
+    EXPECT_EQ(dynamic_cast<wm::Wrapped*>(manager->wm_windows[c.window]),
+              nullptr);
 }
 
 TEST_F(ManagerTest, window_with_decorations_is_framed)
 {
-    Client &c = add_client();
+    Client& c = add_client();
 
     start();
 
     ASSERT_TRUE(is_managed(c));
-    EXPECT_NE(dynamic_cast<wm::Wrapped *>(manager->wm_windows[c.window]),
-            nullptr);
+    EXPECT_NE(dynamic_cast<wm::Wrapped*>(manager->wm_windows[c.window]),
+              nullptr);
 }
 
 TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
@@ -303,13 +311,14 @@ TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
 
     XErrors errors;
     Client other;
-    for (int sym: {XK_Tab, XK_F2}) {
-        XGrabKey(other.display, XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
-                Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
+    for (int sym : {XK_Tab, XK_F2}) {
+        XGrabKey(other.display,
+                 XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
+                 Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
     }
     other.sync();
 
-    EXPECT_EQ(errors.errors(), 2);      // BadAccess: already grabbed
+    EXPECT_EQ(errors.errors(), 2); // BadAccess: already grabbed
 }
 
 TEST_F(ManagerTest, set_supported_publishes_the_supported_properties)
@@ -322,10 +331,11 @@ TEST_F(ManagerTest, set_supported_publishes_the_supported_properties)
     Atom type;
     int format;
     unsigned long count, left;
-    unsigned char *data = nullptr;
+    unsigned char* data = nullptr;
     ASSERT_EQ(XGetWindowProperty(dsp(), root_window(), dsp()._NET_SUPPORTED, 0,
-                64, False, XA_ATOM, &type, &format, &count, &left, &data),
-            Success);
+                                 64, False, XA_ATOM, &type, &format, &count,
+                                 &left, &data),
+              Success);
     ASSERT_EQ(count, 4u);
     EXPECT_EQ((reinterpret_cast<Atom*>(data))[0], dsp()._NET_SUPPORTED);
     EXPECT_EQ((reinterpret_cast<Atom*>(data))[3], dsp()._NET_WM_WINDOW_TYPE);
@@ -342,7 +352,7 @@ TEST_F(ManagerTest, destructor_releases_the_shortcuts_and_the_root_window)
     XErrors errors;
     Client other;
     XGrabKey(other.display, XKeysymToKeycode(other.display, XK_Tab), Mod1Mask,
-            root_window(), True, GrabModeAsync, GrabModeAsync);
+             root_window(), True, GrabModeAsync, GrabModeAsync);
     XSelectInput(other.display, root_window(), SubstructureRedirectMask);
     other.sync();
 
@@ -360,7 +370,7 @@ TEST_F(ManagerTest, destructor_leaves_the_display_of_the_caller_open)
     EXPECT_EQ(XPending(dsp()) >= 0, true);
     EXPECT_EQ(errors.errors(), 0);
     Client c;
-    c.map();    // not redirected any more
+    c.map(); // not redirected any more
     EXPECT_EQ(c.attrs().map_state, IsViewable);
 }
 
@@ -369,7 +379,7 @@ TEST_F(ManagerTest, destructor_leaves_the_display_of_the_caller_open)
 TEST_F(ManagerTest, new_window_is_framed_mapped_and_focused)
 {
     start();
-    Client &c = add_client();
+    Client& c = add_client();
 
     run_loop();
 
@@ -394,7 +404,7 @@ TEST_F(ManagerTest, new_window_gets_an_icon_in_the_dock)
 TEST_F(ManagerTest, focus_of_a_new_window_makes_it_active)
 {
     start();
-    Client &c = add_client();
+    Client& c = add_client();
 
     run_loop();
     pump_events();
@@ -405,7 +415,7 @@ TEST_F(ManagerTest, focus_of_a_new_window_makes_it_active)
 TEST_F(ManagerTest, the_window_of_a_dock_type_is_mapped_but_not_managed)
 {
     start();
-    Client &c = add_client(false);
+    Client& c = add_client(false);
     set_window_type(c, dsp()._NET_WM_WINDOW_TYPE_DOCK);
     c.map();
 
@@ -419,7 +429,7 @@ TEST_F(ManagerTest, the_window_of_a_dock_type_is_mapped_but_not_managed)
 TEST_F(ManagerTest, window_without_decorations_is_managed_on_map_request)
 {
     start();
-    Client &c = add_client(false);
+    Client& c = add_client(false);
     c.set_motif(wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
     c.map();
 
@@ -432,13 +442,12 @@ TEST_F(ManagerTest, window_without_decorations_is_managed_on_map_request)
 
 TEST_F(ManagerTest, map_request_of_a_viewable_window_is_ignored)
 {
-    Client &c = add_client();
+    Client& c = add_client();
     start();
     ASSERT_EQ(manager->wm_windows.size(), 1u);
     XMapRequestEvent e = {};
     e.type = MapRequest;
-    e.window = XCreateSimpleWindow(dsp(), root_window(), 0, 0, 10, 10, 0, 0,
-            0);
+    e.window = XCreateSimpleWindow(dsp(), root_window(), 0, 0, 10, 10, 0, 0, 0);
     XMapWindow(dsp(), e.window);
     XSync(dsp(), False);
 
@@ -446,7 +455,7 @@ TEST_F(ManagerTest, map_request_of_a_viewable_window_is_ignored)
 
     EXPECT_EQ(manager->wm_windows.size(), 1u);
     XDestroyWindow(dsp(), e.window);
-    (void) c;
+    (void)c;
 }
 
 TEST_F(ManagerTest, map_request_of_an_override_redirect_window_is_ignored)
@@ -457,8 +466,8 @@ TEST_F(ManagerTest, map_request_of_an_override_redirect_window_is_ignored)
     XMapRequestEvent e = {};
     e.type = MapRequest;
     e.window = XCreateWindow(dsp(), root_window(), 0, 0, 10, 10, 0,
-            CopyFromParent, InputOutput, CopyFromParent, CWOverrideRedirect,
-            &attrs);
+                             CopyFromParent, InputOutput, CopyFromParent,
+                             CWOverrideRedirect, &attrs);
 
     manager->on_map_request(e);
 
@@ -469,7 +478,7 @@ TEST_F(ManagerTest, map_request_of_an_override_redirect_window_is_ignored)
 TEST_F(ManagerTest, configure_request_of_an_unmanaged_window_is_executed)
 {
     start();
-    Client &c = add_client(false);
+    Client& c = add_client(false);
 
     XResizeWindow(c.display, c.window, 300, 150);
     c.sync();
@@ -483,11 +492,11 @@ TEST_F(ManagerTest, configure_request_of_an_unmanaged_window_is_executed)
 TEST_F(ManagerTest, unmapped_window_is_forgotten)
 {
     start();
-    Client &c = add_client();
+    Client& c = add_client();
     run_loop();
     pump_events();
     ASSERT_TRUE(is_managed(c));
-    WmWindow *window = manager->wm_windows[c.window];
+    WmWindow* window = manager->wm_windows[c.window];
     XErrors errors;
     ::Window frame = parent_of(c.window);
 
@@ -498,18 +507,19 @@ TEST_F(ManagerTest, unmapped_window_is_forgotten)
 
     EXPECT_FALSE(is_managed(c));
     EXPECT_EQ(std::count(manager->wm_tops.begin(), manager->wm_tops.end(),
-                window), 0);
+                         window),
+              0);
     EXPECT_NE(manager->active, window);
     EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
     XWindowAttributes attrs;
-    EXPECT_EQ(XGetWindowAttributes(dsp(), frame, &attrs), 0);   // frame is gone
-    EXPECT_EQ(parent_of(c.window), root_window());      // the client is not
+    EXPECT_EQ(XGetWindowAttributes(dsp(), frame, &attrs), 0); // frame is gone
+    EXPECT_EQ(parent_of(c.window), root_window()); // the client is not
 }
 
 TEST_F(ManagerTest, window_hidden_by_the_client_can_be_shown_again)
 {
     start();
-    Client &c = add_client();
+    Client& c = add_client();
     run_loop();
     XUnmapWindow(c.display, c.window);
     c.sync();
@@ -539,9 +549,9 @@ TEST_F(ManagerTest, unmap_of_an_unknown_window_is_ignored)
 TEST_F(ManagerTest, unmap_of_a_minimized_window_keeps_it)
 {
     start();
-    Client &c = add_client();
+    Client& c = add_client();
     run_loop();
-    WmWindow *window = manager->wm_windows[c.window];
+    WmWindow* window = manager->wm_windows[c.window];
     window->minimize();
     XUnmapEvent e = {};
     e.type = UnmapNotify;
@@ -556,8 +566,8 @@ TEST_F(ManagerTest, focus_moves_the_active_window)
 {
     manage_three();
     auto it = manager->wm_tops.begin();
-    WmWindow *first = *it++;
-    WmWindow *second = *it;
+    WmWindow* first = *it++;
+    WmWindow* second = *it;
     first->set_focus();
     ASSERT_TRUE(first->is_focused());
 
