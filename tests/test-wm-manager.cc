@@ -161,8 +161,8 @@ TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
     auto root = attributes_of(root_window());
     auto dock = attributes_of(manager->wm_dock);
     EXPECT_EQ(dock.x, root.width / 2);
-    EXPECT_EQ(dock.y, static_cast<int>(root.height - manager->wm_dock.get_height()
-                - border()));
+    EXPECT_EQ(dock.y, root.height - manager->wm_dock.get_height()
+                - border());
 }
 
 TEST_F(ManagerTest, connects_logout_of_the_user_menu)

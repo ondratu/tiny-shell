@@ -86,7 +86,7 @@ TEST_F(WrappedTest, frame_wraps_the_client)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 200);
-    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()));
+    EXPECT_EQ(f.height, (100 + header_height()));
     EXPECT_EQ(f.map_state, IsViewable);
 }
 
@@ -96,7 +96,7 @@ TEST_F(WrappedTest, client_is_reparented_under_the_header)
 
     auto c = child();
     EXPECT_EQ(c.x, 0);
-    EXPECT_EQ(c.y, static_cast<int>(header_height()));
+    EXPECT_EQ(c.y, header_height());
     EXPECT_EQ(c.border_width, 0);
     EXPECT_EQ(c.width, 200);
     EXPECT_EQ(c.height, 100);
@@ -205,7 +205,7 @@ TEST_F(WrappedTest, maximize_button_fills_the_screen)
     EXPECT_EQ(f.width, s.width);
     EXPECT_EQ(f.height, s.height);
     EXPECT_EQ(child().width, s.width);
-    EXPECT_EQ(child().height, s.height - static_cast<int>(header_height()));
+    EXPECT_EQ(child().height, s.height - header_height());
 }
 
 TEST_F(WrappedTest, maximize_button_restores_a_maximized_window)
@@ -220,7 +220,7 @@ TEST_F(WrappedTest, maximize_button_restores_a_maximized_window)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 200);
-    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()));
+    EXPECT_EQ(f.height, (100 + header_height()));
     EXPECT_EQ(child().width, 200);
     EXPECT_EQ(child().height, 100);
 }
@@ -246,7 +246,7 @@ TEST_F(WrappedTest, restore_can_center_the_window_on_the_pointer)
     win->restore(500, 400);
 
     EXPECT_EQ(frame().x, 500 - 100);
-    EXPECT_EQ(frame().y, 400 - static_cast<int>(100 + header_height()) / 2);
+    EXPECT_EQ(frame().y, 400 - (100 + header_height()) / 2);
 }
 
 // ---- close ----
@@ -370,7 +370,7 @@ TEST_F(WrappedTest, normal_hints_change_puts_a_moved_client_back)
     send(client.window, e);
 
     EXPECT_EQ(child().x, 0);
-    EXPECT_EQ(child().y, static_cast<int>(header_height()));
+    EXPECT_EQ(child().y, header_height());
 }
 
 TEST_F(WrappedTest, normal_hints_change_of_a_gone_client_is_survived)
@@ -444,7 +444,7 @@ TEST_F(WrappedTest, resizing_the_right_bottom_corner_grows_the_window)
     EXPECT_EQ(f.x, 10);
     EXPECT_EQ(f.y, 20);
     EXPECT_EQ(f.width, 250);
-    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()) + 30);
+    EXPECT_EQ(f.height, (100 + header_height()) + 30);
     EXPECT_EQ(child().width, 250);
     EXPECT_EQ(child().height, 130);
     EXPECT_EQ(win->header.get_width(), 250u);
@@ -464,7 +464,7 @@ TEST_F(WrappedTest, resizing_the_left_top_corner_moves_the_window)
     EXPECT_EQ(f.x, -10);
     EXPECT_EQ(f.y, -10);
     EXPECT_EQ(f.width, 220);
-    EXPECT_EQ(f.height, static_cast<int>(100 + header_height()) + 30);
+    EXPECT_EQ(f.height, (100 + header_height()) + 30);
 }
 
 TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
@@ -553,7 +553,7 @@ TEST_F(WrappedTest, destructor_gives_the_client_back_to_the_root)
     EXPECT_EQ(parent, root_window());
     auto c = child();
     EXPECT_EQ(c.x, 10);
-    EXPECT_EQ(c.y, 20 + static_cast<int>(header_height()));
+    EXPECT_EQ(c.y, 20 + header_height());
     EXPECT_EQ(c.width, 200);
 }
 
