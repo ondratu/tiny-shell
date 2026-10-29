@@ -10,9 +10,9 @@ class TitleBox : public tiny::Widget {
   public:
     TitleBox(int width, int height);
 
-    virtual ~TitleBox();
+    ~TitleBox() override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_end;
@@ -28,23 +28,23 @@ class Header : public tiny::Box {
   public:
     Header(int width, int height);
 
-    virtual ~Header();
+    ~Header() override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
-    virtual void realize(::Window parent, int x, int y);
+    void realize(::Window parent, int x, int y) override;
 
-    virtual void resize(int width, int height);
+    void resize(int width, int height) override;
 
-    inline const std::string get_title() const { return title; }
+    const std::string get_title() const { return title; }
 
     void set_title(const std::string& title);
 
-    inline TitleBox* get_title_box() { return &title_box; }
+    TitleBox* get_title_box() { return &title_box; }
 
     void set_disable(bool disable);
 
-    inline virtual const tiny::Style& get_style() const
+    const tiny::Style& get_style() const override
     {
         return tiny::theme.wm_header;
     }

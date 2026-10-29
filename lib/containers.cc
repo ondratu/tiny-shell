@@ -45,7 +45,7 @@ Container::Container(int w, int h, const char* name_arg):
     Container(Widget::Type::Normal, w, h, name_arg)
 {}
 
-Container::~Container() {}
+Container::~Container() = default;
 
 void Container::map_all()
 {
@@ -87,7 +87,7 @@ Box::Box(Type type_arg, int w, int h):
     }
 }
 
-Box::~Box() {}
+Box::~Box() = default;
 
 void Box::resize(int w, int h)
 {
@@ -202,7 +202,7 @@ void Popover::set_events(long mask)
 void Popover::popup(int x, int y)
 {
     struct timeval tp;
-    gettimeofday(&tp, NULL);
+    gettimeofday(&tp, nullptr);
     long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
     if (ms - time_from_unmap < 200) { // 200 ms timeout
@@ -227,7 +227,7 @@ void Popover::popup(const XButtonEvent& be)
 void Popover::on_focus_out(const XEvent&, void*)
 {
     struct timeval tp;
-    gettimeofday(&tp, NULL);
+    gettimeofday(&tp, nullptr);
     time_from_unmap = tp.tv_sec * 1000 + tp.tv_usec / 1000;
     unmap();
 }

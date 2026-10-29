@@ -12,7 +12,7 @@ class Display {
 
     static void init(const char* display = nullptr);
 
-    inline operator ::Display*() const { return display; }
+    operator ::Display*() const { return display; }
 
     static const constexpr long _NET_WM_STATE_REMOVE = 0;
     static const constexpr long _NET_WM_STATE_ADD = 1;

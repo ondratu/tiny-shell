@@ -8,18 +8,18 @@ class Button : public tiny::Button {
   public:
     Button();
 
-    virtual ~Button();
+    ~Button() override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
-    inline virtual const tiny::Style& get_style() const
+    const tiny::Style& get_style() const override
     {
         return tiny::theme.wm_button;
     }
 
   protected:
-    virtual void on_enter_notify(const XEvent& e, void* data);
-    virtual void on_leave_notify(const XEvent& e, void* data);
+    void on_enter_notify(const XEvent& e, void* data) override;
+    void on_leave_notify(const XEvent& e, void* data) override;
     virtual void on_expose(const XEvent& e, void* data) = 0;
 };
 
@@ -27,22 +27,22 @@ class CloseButton : public Button {
   public:
     CloseButton();
 
-    virtual ~CloseButton();
+    ~CloseButton() override;
 
   protected:
-    virtual void on_expose(const XEvent& e, void* data);
+    void on_expose(const XEvent& e, void* data) override;
 };
 
 class MaximizeButton : public Button {
   public:
     MaximizeButton();
 
-    virtual ~MaximizeButton();
+    ~MaximizeButton() override;
 
     void set_restore(bool restore);
 
   protected:
-    virtual void on_expose(const XEvent& e, void* data);
+    void on_expose(const XEvent& e, void* data) override;
 
   private:
     bool restore;
@@ -52,10 +52,10 @@ class MinimizeButton : public Button {
   public:
     MinimizeButton();
 
-    virtual ~MinimizeButton();
+    ~MinimizeButton() override;
 
   protected:
-    virtual void on_expose(const XEvent& e, void* data);
+    void on_expose(const XEvent& e, void* data) override;
 };
 
 } // namespace wm

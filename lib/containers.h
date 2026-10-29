@@ -23,9 +23,9 @@ class Container : public Widget {
               const char* name = "container");
     Container(int width, int height, const char* name = "container");
 
-    virtual ~Container();
+    ~Container() override;
 
-    virtual void map_all();
+    void map_all() override;
 
     virtual void add(Widget* widget, int x = 0, int y = 0,
                      int gravity = NorthWestGravity);
@@ -42,15 +42,15 @@ class Box : public Container {
 
     Box(Type type, int width, int height);
 
-    virtual ~Box();
+    ~Box() override;
 
-    virtual void resize(int widget, int height) override;
+    void resize(int widget, int height) override;
 
-    inline Type get_type() const { return type; }
+    Type get_type() const { return type; }
 
-    inline int get_start_offset() const { return start_offset; }
+    int get_start_offset() const { return start_offset; }
 
-    inline int get_end_offset() const { return end_offset; }
+    int get_end_offset() const { return end_offset; }
 
     virtual void push_start(Widget* widget, int x_spacing = 0,
                             int y_spacing = 0, int gravity = AutoGravity);
@@ -58,7 +58,7 @@ class Box : public Container {
     virtual void push_back(Widget* widget, int x_spacing = 0, int y_spacing = 0,
                            int gravity = AutoGravity);
 
-    virtual void remove(Widget* widget) override;
+    void remove(Widget* widget) override;
 
   protected:
     struct Offset {
@@ -79,11 +79,11 @@ class Popover : public Box {
     Popover(Box::Type type, int width, int height);
     Popover(int width, int height);
 
-    virtual ~Popover();
+    ~Popover() override;
 
-    virtual void realize(::Window root, int x = 0, int y = 0);
+    void realize(::Window root, int x = 0, int y = 0) override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
     void popup(int x, int y);
     void popup(const XButtonEvent& be);

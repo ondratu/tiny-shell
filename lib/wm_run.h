@@ -9,10 +9,10 @@ class Entry : public tiny::Widget {
   public:
     Entry(int width, int height);
 
-    virtual ~Entry();
+    ~Entry() override;
 
-    virtual void realize(::Window parent, int x, int y) override;
-    virtual void set_events(long mask = 0) override;
+    void realize(::Window parent, int x, int y) override;
+    void set_events(long mask = 0) override;
     void set_focus();
     void clear();
 
@@ -35,9 +35,9 @@ class RunDialog : public tiny::Popover {
   public:
     RunDialog();
 
-    ~RunDialog();
+    ~RunDialog() override;
 
-    virtual void realize(::Window root, int x = 0, int y = 0);
+    void realize(::Window root, int x = 0, int y = 0) override;
     void popup();
     void popover(Object* o, const XEvent& e, void* data);
 

@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include <X11/cursorfont.h>
@@ -56,9 +56,9 @@ void Button::on_leave_notify(const XEvent& e, void* data)
     on_expose(e, nullptr);
 }
 
-CloseButton::CloseButton(): Button() {}
+CloseButton::CloseButton() {}
 
-CloseButton::~CloseButton() {}
+CloseButton::~CloseButton() = default;
 
 void CloseButton::on_expose(const XEvent&, void*)
 {
@@ -85,9 +85,9 @@ void CloseButton::on_expose(const XEvent&, void*)
     XFreeGC(display, gc);
 }
 
-MaximizeButton::MaximizeButton(): Button(), restore(false) {}
+MaximizeButton::MaximizeButton(): restore(false) {}
 
-MaximizeButton::~MaximizeButton() {}
+MaximizeButton::~MaximizeButton() = default;
 
 void MaximizeButton::on_expose(const XEvent&, void*)
 {
@@ -136,9 +136,9 @@ void MaximizeButton::set_restore(bool _restore)
     on_expose(XEvent(), nullptr);
 }
 
-MinimizeButton::MinimizeButton(): Button() {}
+MinimizeButton::MinimizeButton() {}
 
-MinimizeButton::~MinimizeButton() {}
+MinimizeButton::~MinimizeButton() = default;
 
 void MinimizeButton::on_expose(const XEvent&, void*)
 {

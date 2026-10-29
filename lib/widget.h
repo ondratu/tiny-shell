@@ -25,27 +25,27 @@ class Widget : public Object {
 
     Widget(int width, int height);
 
-    virtual ~Widget();
+    ~Widget() override;
 
     virtual void realize(Window parent, int x, int y);
 
-    inline Window get_window() const { return window; }
+    Window get_window() const { return window; }
 
-    inline Window get_parent_window() const { return parent; }
+    Window get_parent_window() const { return parent; }
 
-    inline virtual const Style& get_style() const { return theme.widget; }
+    virtual const Style& get_style() const { return theme.widget; }
 
-    inline virtual int get_border() const { return get_style().border_width; }
+    virtual int get_border() const { return get_style().border_width; }
 
-    inline virtual int get_padding() const { return get_style().padding_width; }
+    virtual int get_padding() const { return get_style().padding_width; }
 
-    inline int get_width() const { return width; }
+    int get_width() const { return width; }
 
-    inline int get_height() const { return height; }
+    int get_height() const { return height; }
 
-    inline bool get_maped() const { return is_maped; }
+    bool get_maped() const { return is_maped; }
 
-    inline bool get_realized() const { return is_realized; }
+    bool get_realized() const { return is_realized; }
 
     virtual void set_events(long mask = 0);
 

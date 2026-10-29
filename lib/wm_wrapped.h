@@ -14,26 +14,26 @@ class Wrapped : public tiny::Container, public Window {
     Wrapped(::Window child, ::Window root, int width, int height,
             unsigned long functions, unsigned long decorations);
 
-    ~Wrapped();
+    ~Wrapped() override;
 
     static Window* create(::Window parent, ::Window child,
                           const XWindowAttributes& attrs,
                           unsigned long functions, unsigned long decorations);
 
-    virtual void realize(::Window parent, int x, int y) override;
+    void realize(::Window parent, int x, int y) override;
 
-    virtual void set_events(long mask = 0) override;
+    void set_events(long mask = 0) override;
 
-    virtual void map_all() override;
+    void map_all() override;
 
-    virtual void set_focus() override;
+    void set_focus() override;
 
     //! Minimize (Iconify) window
-    virtual void minimize() override;
+    void minimize() override;
 
-    virtual void restore(int x = 0, int y = 0) override;
+    void restore(int x = 0, int y = 0) override;
 
-    virtual void maximize() override;
+    void maximize() override;
 
     /* signal handlers */
     void on_close_click(tiny::Object* o, const XEvent& e, void* data);
@@ -48,20 +48,20 @@ class Wrapped : public tiny::Container, public Window {
 
     void on_move_resize_motion(tiny::Object* o, const XEvent& e, void* data);
 
-    virtual void on_window_drag_begin(tiny::Object* o, const XEvent& e,
-                                      void* data) override;
+    void on_window_drag_begin(tiny::Object* o, const XEvent& e,
+                              void* data) override;
 
-    virtual void on_window_drag_motion(tiny::Object* o, const XEvent& e,
-                                       void* data) override;
+    void on_window_drag_motion(tiny::Object* o, const XEvent& e,
+                               void* data) override;
 
   protected:
     /* event handlers */
 
-    virtual void on_focus_in(const XEvent& e, void* data) override;
+    void on_focus_in(const XEvent& e, void* data) override;
 
-    virtual void on_focus_out(const XEvent& e, void* data) override;
+    void on_focus_out(const XEvent& e, void* data) override;
 
-    virtual void on_property_notify(const XEvent& e, void* data) override;
+    void on_property_notify(const XEvent& e, void* data) override;
 
     unsigned long decorations = 0;
 

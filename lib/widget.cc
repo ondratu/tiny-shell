@@ -9,7 +9,7 @@
 namespace tiny {
 
 Widget::Widget(Type type_arg, int w, int h):
-    Object(),
+
     type(type_arg),
     display(get_display()),
     parent(0),
@@ -80,19 +80,19 @@ void Widget::realize(Window parent_arg, int x, int y)
     // TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
 
     switch (type) {
-        case (Type::Normal):
+        case Type::Normal:
             window = XCreateSimpleWindow(
                     display, parent_arg, x, y, x_dim(width), x_dim(height),
                     x_uint(get_border()), get_style().get_br(state),
                     get_style().get_bg(state));
             break;
-        case (Type::Input):
+        case Type::Input:
             // TODO: parent must bew root or InputOnly
             window = XCreateWindow(display, parent_arg, x, y, x_dim(width),
                                    x_dim(height), 0, CopyFromParent, InputOnly,
                                    CopyFromParent, CopyFromParent, nullptr);
             break;
-        case (Type::Transparent):
+        case Type::Transparent:
             XVisualInfo vinfo;
             if (!XMatchVisualInfo(display, XDefaultScreen(display), 32,
                                   TrueColor, &vinfo)) {

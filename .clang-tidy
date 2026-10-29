@@ -1,0 +1,48 @@
+# Strict, with the checks that do not fit this project switched off. Every
+# switched off check has a reason; revisit them when the reason is gone.
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  cert-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-reserved-identifier,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -modernize-avoid-c-arrays,
+  -portability-avoid-pragma-once,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-named-parameter,
+  -readability-function-cognitive-complexity
+# Disabled because:
+#  bugprone-easily-swappable-parameters  (x, y, width, height are the X API)
+#  bugprone-reserved-identifier, cert-dcl37-c, cert-dcl51-cpp
+#                                         (atoms are named _NET_WM_STATE ...)
+#  misc-include-cleaner                  (X11 headers define things everywhere)
+#  misc-non-private-member-variables-in-classes
+#                                         (the toolkit keeps public state; the
+#                                          TODO plans to reduce it)
+#  modernize-use-trailing-return-type, modernize-use-nodiscard
+#                                         (style, not a defect)
+#  modernize-avoid-c-arrays               (X structures need C arrays)
+#  portability-avoid-pragma-once          (CONTRIBUTING.md chooses #pragma once)
+#  readability-identifier-length          (x, y, w, h, e, dsp are clear here)
+#  readability-implicit-bool-conversion   (Xlib returns int as bool)
+#  readability-magic-numbers              (pixel sizes of the drawing code)
+#  readability-math-missing-parentheses, readability-named-parameter,
+#  readability-function-cognitive-complexity
+#                                         (style; revisit with the cleanup)
+HeaderFilterRegex: '(lib|src|tests)/.*'
+WarningsAsErrors: '*'

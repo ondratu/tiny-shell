@@ -15,7 +15,7 @@ class Manager : public tiny::Object {
   public:
     Manager(Display* display, ::Window root);
 
-    ~Manager();
+    ~Manager() override;
 
     void main_loop();
 
@@ -47,7 +47,7 @@ class Manager : public tiny::Object {
 
     ::Display* display;
     ::Window root;
-    XErrorHandler old_error_handler = 0;
+    XErrorHandler old_error_handler = nullptr;
 
     Panel wm_panel;
     RunDialog wm_run;

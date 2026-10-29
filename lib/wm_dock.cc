@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include "x_util.h"
@@ -85,9 +85,9 @@ void DockButton::on_expose(const XEvent&, void*)
     XFreeGC(display, gc);
 }
 
-Icon::Icon(Window* task_arg): DockButton(), task(task_arg) {}
+Icon::Icon(Window* task_arg): task(task_arg) {}
 
-Icon::~Icon() {}
+Icon::~Icon() = default;
 
 void Icon::on_button_release(const XEvent& e, void* data)
 {
@@ -161,7 +161,7 @@ void Dock::remove(Window* window_arg)
     Icon* task_icon = it->second;
     Box::remove(task_icon);
     wm_task_icons.erase(it);
-    delete (task_icon);
+    delete task_icon;
     resize_to_children();
 }
 

@@ -7,7 +7,7 @@ AppMenu::AppMenu(): tiny::Popover(10, 10)
     name = "wm_appmenu";
 }
 
-AppMenu::~AppMenu() {}
+AppMenu::~AppMenu() = default;
 
 void AppMenu::realize(::Window parent_arg, int x, int y)
 {
@@ -26,7 +26,7 @@ UserMenu::UserMenu():
     name = "wm_usermanu";
 }
 
-UserMenu::~UserMenu() {}
+UserMenu::~UserMenu() = default;
 
 void UserMenu::realize(::Window parent_arg, int x, int y)
 {
@@ -40,16 +40,15 @@ Panel::Panel():
     tiny::Box(tiny::Box::Type::Horizontal, 0, tiny::theme.wm_panel),
     btn_app(tiny::theme.wm_panel_app_width, tiny::theme.wm_panel,
             "Application"),
-    btn_login(tiny::theme.wm_panel_login_width, tiny::theme.wm_panel, "Login"),
-    menu_app(),
-    menu_user()
+    btn_login(tiny::theme.wm_panel_login_width, tiny::theme.wm_panel, "Login")
+
 {
     name = "wm_panel";
     //btn_app.set_text_colors(WM_PANEL_TEXT, WM_PANEL_TEXT);
     //btn_login.set_text_colors(WM_PANEL_TEXT, WM_PANEL_TEXT);
 }
 
-Panel::~Panel() {}
+Panel::~Panel() = default;
 
 void Panel::realize(::Window root, int x, int y)
 {

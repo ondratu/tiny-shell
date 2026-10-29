@@ -11,9 +11,9 @@ class Button : public Widget {
   public:
     Button(int width, int height);
 
-    virtual ~Button();
+    ~Button() override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
     Signal on_click;
     Signal on_enter;
@@ -29,19 +29,19 @@ class LabelButton : public Button {
   public:
     LabelButton(int width, int height, const std::string& text);
 
-    virtual ~LabelButton();
+    ~LabelButton() override;
 
-    virtual void realize(Window parent, int x, int y);
+    void realize(Window parent, int x, int y) override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
     void set_text(const std::string& text);
 
-    inline const std::string get_text() const { return text; }
+    const std::string get_text() const { return text; }
 
   protected:
-    virtual void on_enter_notify(const XEvent& e, void* data);
-    virtual void on_leave_notify(const XEvent& e, void* data);
+    void on_enter_notify(const XEvent& e, void* data) override;
+    void on_leave_notify(const XEvent& e, void* data) override;
     virtual void on_expose(const XEvent& e, void* data);
 
     std::string text;
@@ -51,9 +51,9 @@ class MenuButton : public LabelButton {
   public:
     MenuButton(int width, int height, const std::string& text);
 
-    ~MenuButton();
+    ~MenuButton() override;
 
-    virtual void set_events(long mask = 0);
+    void set_events(long mask = 0) override;
 
     void set_popover(Popover* popover);
 

@@ -112,7 +112,7 @@ void Window::set_minimized(bool minimized)
     if (minimized) {
         wm_states |= WMState::HIDDEN;
     } else {
-        wm_states &= static_cast<unsigned long>(~(WMState::HIDDEN));
+        wm_states &= static_cast<unsigned long>(~WMState::HIDDEN);
     }
 
     std::vector<Atom> atoms;
@@ -129,8 +129,8 @@ void Window::set_maximized(bool maximized)
         wm_states |= WMState::MAXIMIZED_VERT;
         wm_states |= WMState::MAXIMIZED_HORZ;
     } else {
-        wm_states &= static_cast<unsigned long>(~(WMState::MAXIMIZED_VERT));
-        wm_states &= static_cast<unsigned long>(~(WMState::MAXIMIZED_HORZ));
+        wm_states &= static_cast<unsigned long>(~WMState::MAXIMIZED_VERT);
+        wm_states &= static_cast<unsigned long>(~WMState::MAXIMIZED_HORZ);
     }
 
     std::vector<Atom> atoms;
@@ -225,7 +225,7 @@ void Window::set_focus()
 
 void Window::return_focus()
 {
-    wm_states &= static_cast<unsigned long>(~(WMState::FOCUSED));
+    wm_states &= static_cast<unsigned long>(~WMState::FOCUSED);
 
     std::vector<Atom> atoms;
     get_wm_states(atoms);
@@ -337,17 +337,17 @@ void Window::update_normal_hints()
     // Min and Max size are not set
     if (!(supplied & PMinSize) && !(supplied & PMaxSize)) {
         //? Really
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_ALL));
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_RESIZE));
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_MAXIMIZE));
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_ALL);
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_RESIZE);
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_MAXIMIZE);
     }
     // Min and Max are set but are same
     if (supplied & PMinSize && supplied & PMaxSize &&
         (hints->min_width == hints->max_width) &&
         (hints->min_height == hints->max_height)) {
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_ALL));
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_RESIZE));
-        functions &= static_cast<unsigned long>(~(MotifWMHints::FUNC_MAXIMIZE));
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_ALL);
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_RESIZE);
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_MAXIMIZE);
     }
 }
 
@@ -438,7 +438,7 @@ void Window::update_wm_states()
     int size;
     unsigned long nitems;
     unsigned long bytes_left;
-    unsigned char* data = NULL;
+    unsigned char* data = nullptr;
 
     if (XGetWindowProperty(dsp, child, dsp._NET_WM_STATE, 0L,
                            static_cast<long>(ULONG_MAX), false, XA_ATOM,
@@ -521,7 +521,7 @@ void Window::update_wm_name()
         int actual_format;
         unsigned long nitems;
         unsigned long leftover;
-        unsigned char* data = NULL;
+        unsigned char* data = nullptr;
         if (XGetWindowProperty(dsp, child, dsp._NET_WM_NAME, 0L, BUFSIZ, false,
                                dsp.UTF8_STRING, &actual_type, &actual_format,
                                &nitems, &leftover, &data) == Success) {
@@ -548,7 +548,7 @@ void Window::update_wm_icon_name()
         int actual_format;
         unsigned long nitems;
         unsigned long leftover;
-        unsigned char* data = NULL;
+        unsigned char* data = nullptr;
         if (XGetWindowProperty(dsp, child, dsp._NET_WM_ICON_NAME, 0L, BUFSIZ,
                                false, dsp.UTF8_STRING, &actual_type,
                                &actual_format, &nitems, &leftover,
@@ -914,7 +914,7 @@ Window::WMType Window::get_net_wm_type(::Window window)
     int size;
     unsigned long nitems;
     unsigned long bytes_left;
-    unsigned char* data = NULL;
+    unsigned char* data = nullptr;
     if (XGetWindowProperty(display, window, display._NET_WM_WINDOW_TYPE, 0L,
                            static_cast<long>(ULONG_MAX), false, XA_ATOM,
                            &return_type, &size, &nitems, &bytes_left,

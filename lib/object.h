@@ -45,7 +45,7 @@ class Signal {
 
 class Object {
   public:
-    Object() {}
+    Object() = default;
 
     virtual ~Object();
 

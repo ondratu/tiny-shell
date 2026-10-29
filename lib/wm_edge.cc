@@ -95,7 +95,7 @@ BackWindow::BackWindow(int w, int h):
     name = "wm_backwindow";
 }
 
-BackWindow::~BackWindow() {}
+BackWindow::~BackWindow() = default;
 
 void BackWindow::set_events(long mask)
 {
