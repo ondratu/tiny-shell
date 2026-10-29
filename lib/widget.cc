@@ -76,7 +76,7 @@ void Widget::realize(Window parent_arg, int x, int y)
         return error("tiny::Widget is realized yet!");
     }
     this->parent = parent_arg;
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
     // TINY_LOG("%s background: %x", name, tiny::theme.widget.get_bg(state));
 
     switch (type) {

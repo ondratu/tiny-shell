@@ -121,9 +121,9 @@ void Header::on_expose(const XEvent&, void*)
     XftDraw* draw;
     XGlyphInfo extents;
     Visual* visual = XDefaultVisual(display, screen);
-    Colormap colormap = XDefaultColormap(display, screen);
+    const Colormap colormap = XDefaultColormap(display, screen);
 
-    uint8_t state = get_theme_state();
+    const uint8_t state = get_theme_state();
 
     XftColorAllocName(display, visual, colormap,
                       get_style().get_xft_fg(state).c_str(), &color);
@@ -136,7 +136,7 @@ void Header::on_expose(const XEvent&, void*)
 
     // Text is center normal center TODO: could be configurable
     int x = (width - extents.width) / 2;
-    int y = (height + extents.height) / 2;
+    const int y = (height + extents.height) / 2;
 
     if ((x + extents.width) > get_end_offset()) {
         x = get_end_offset() - extents.width;

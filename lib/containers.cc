@@ -203,7 +203,7 @@ void Popover::popup(int x, int y)
 {
     struct timeval tp;
     gettimeofday(&tp, nullptr);
-    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    const long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
 
     if (ms - time_from_unmap < 200) { // 200 ms timeout
         return;

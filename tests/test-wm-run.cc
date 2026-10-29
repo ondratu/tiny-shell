@@ -59,7 +59,7 @@ class EntryTest : public ::testing::Test {
 
 TEST_F(EntryTest, realize_creates_window)
 {
-    XWindowAttributes attrs = attributes_of(entry);
+    const XWindowAttributes attrs = attributes_of(entry);
 
     EXPECT_EQ(attrs.width, 100);
     EXPECT_EQ(attrs.height, 30);
@@ -68,7 +68,7 @@ TEST_F(EntryTest, realize_creates_window)
 
 TEST_F(EntryTest, set_events_selects_keyboard_and_focus_events)
 {
-    long mask = attributes_of(entry).your_event_mask;
+    const long mask = attributes_of(entry).your_event_mask;
 
     EXPECT_TRUE(mask & ExposureMask);
     EXPECT_TRUE(mask & KeyPressMask);
@@ -159,14 +159,14 @@ TEST_F(EntryTest, return_runs_the_typed_command_and_signals_exit)
     send(entry, FocusIn);
 
     // "touch" + marker path, typed key by key
-    std::string command = "touch " + marker.string();
-    for (char c : command) {
-        KeySym sym = c == ' '   ? XK_space
-                     : c == '/' ? XK_slash
-                     : c == '-' ? XK_minus
-                     : c == '.' ? XK_period
-                     : c == '_' ? XK_underscore
-                                : static_cast<KeySym>(c);
+    const std::string command = "touch " + marker.string();
+    for (const char c : command) {
+        const KeySym sym = c == ' '   ? XK_space
+                           : c == '/' ? XK_slash
+                           : c == '-' ? XK_minus
+                           : c == '.' ? XK_period
+                           : c == '_' ? XK_underscore
+                                      : static_cast<KeySym>(c);
         XEvent e = key_event(entry, sym);
         if (c == '_') {
             e.xkey.state = ShiftMask;
@@ -226,8 +226,8 @@ TEST_F(RunDialogTest, realize_centers_the_dialog_on_the_root_window)
 
     dialog.realize(root_window());
 
-    XWindowAttributes root = attributes_of(root_window());
-    XWindowAttributes attrs = attributes_of(dialog);
+    const XWindowAttributes root = attributes_of(root_window());
+    const XWindowAttributes attrs = attributes_of(dialog);
     EXPECT_EQ(attrs.width, 320);
     EXPECT_EQ(attrs.x, root.width / 2 - 320 / 2);
     EXPECT_EQ(attrs.y, root.height / 2 - attrs.height / 2);
@@ -271,7 +271,7 @@ TEST_F(RunDialogTest, escape_in_the_entry_hides_the_dialog)
     wm::RunDialog dialog;
     dialog.realize(root_window());
     dialog.popup();
-    ::Window entry = children_of(dialog.get_window())[0];
+    const ::Window entry = children_of(dialog.get_window())[0];
 
     XEvent e = make_event(KeyPress);
     e.xkey.display = tiny::get_display();

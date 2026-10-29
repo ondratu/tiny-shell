@@ -24,7 +24,7 @@ class BoxTest : public ::testing::Test {
 
 TEST_F(BoxTest, initial_offsets_horizontal)
 {
-    tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
+    const tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
 
     EXPECT_EQ(box.get_start_offset(), 0u);
     EXPECT_EQ(box.get_end_offset(), 199u);
@@ -32,7 +32,7 @@ TEST_F(BoxTest, initial_offsets_horizontal)
 
 TEST_F(BoxTest, initial_offsets_vertical)
 {
-    tiny::Box box(tiny::Box::Type::Vertical, 200, 50);
+    const tiny::Box box(tiny::Box::Type::Vertical, 200, 50);
 
     EXPECT_EQ(box.get_start_offset(), 0u);
     EXPECT_EQ(box.get_end_offset(), 49u);
@@ -179,7 +179,7 @@ TEST_F(ContainerTest, add_realizes_child_inside_container)
 
     EXPECT_TRUE(child.get_realized());
     EXPECT_EQ(child.get_parent_window(), c.get_window());
-    XWindowAttributes attrs = attributes_of(child);
+    const XWindowAttributes attrs = attributes_of(child);
     EXPECT_EQ(attrs.x, 7);
     EXPECT_EQ(attrs.y, 9);
 }
@@ -202,7 +202,7 @@ TEST_F(ContainerTest, add_to_unrealized_container_reports_error)
 
     ::testing::internal::CaptureStderr();
     c.add(&child);
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("must be realized"), std::string::npos);
     EXPECT_FALSE(child.get_realized());
@@ -355,14 +355,15 @@ TEST_F(BoxTest, remove_from_vertical_box_is_not_implemented)
 
     ::testing::internal::CaptureStderr();
     box.remove(&a);
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("Not implemented yet"), std::string::npos);
 }
 
 TEST_F(BoxTest, delete_through_base_pointer)
 {
-    tiny::Container* box = new tiny::Box(tiny::Box::Type::Vertical, 10, 10);
+    const tiny::Container* box =
+            new tiny::Box(tiny::Box::Type::Vertical, 10, 10);
 
     delete box;
 }
@@ -383,7 +384,7 @@ class PopoverTest : public ::testing::Test {
 
 TEST_F(PopoverTest, default_popover_is_vertical)
 {
-    tiny::Popover p(100, 50);
+    const tiny::Popover p(100, 50);
 
     EXPECT_EQ(p.get_type(), tiny::Box::Type::Vertical);
 }
@@ -405,7 +406,7 @@ TEST_F(PopoverTest, popup_centers_under_x_and_maps)
     p.popup(300, 50);
 
     EXPECT_TRUE(p.get_maped());
-    XWindowAttributes attrs = attributes_of(p);
+    const XWindowAttributes attrs = attributes_of(p);
     EXPECT_EQ(attrs.x, 200);
     EXPECT_EQ(attrs.y, 50);
     EXPECT_EQ(attrs.map_state, IsViewable);
@@ -428,7 +429,7 @@ TEST_F(PopoverTest, popup_from_button_event_uses_root_coordinates)
 
     p.popup(be);
 
-    XWindowAttributes attrs = attributes_of(p);
+    const XWindowAttributes attrs = attributes_of(p);
     EXPECT_EQ(attrs.x, 300);
     EXPECT_EQ(attrs.y, 70);
 }

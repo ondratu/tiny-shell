@@ -33,7 +33,7 @@ class WrappedTest : public ::testing::Test {
     // Properties of the client must be set before.
     Probe* build(unsigned long functions = 0xFFFF)
     {
-        XWindowAttributes a = client.attrs();
+        const XWindowAttributes a = client.attrs();
         win = std::make_unique<Probe>(client.window, root_window(), a.width,
                                       a.height, functions, 0xFFFF);
         win->setup(root_window(), a.x, a.y);
@@ -128,10 +128,10 @@ TEST_F(WrappedTest, window_without_maximize_function_has_no_maximize_button)
 
 TEST_F(WrappedTest, create_sets_wm_state_to_normal)
 {
-    XWindowAttributes a = client.attrs();
-    std::unique_ptr<wm::Window> w(wm::Wrapped::create(
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<wm::Window> w(wm::Wrapped::create(
             root_window(), client.window, a, 0xFFFF, 0xFFFF));
-    ::Window frame = static_cast<wm::Wrapped*>(w.get())->get_window();
+    const ::Window frame = static_cast<wm::Wrapped*>(w.get())->get_window();
     XSync(dsp(), False);
 
     Atom type;
@@ -271,7 +271,7 @@ TEST_F(WrappedTest, close_button_kills_an_uncooperative_client)
     click(win->cls_btn);
     XSync(dsp(), False);
 
-    XErrors errors;
+    const XErrors errors;
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp(), client.window, &attrs);
     EXPECT_EQ(errors.errors(), 1);
@@ -285,7 +285,7 @@ TEST_F(WrappedTest, set_focus_raises_the_window)
     build();
     Client other(100, 100);
     other.map();
-    XWindowAttributes a = other.attrs();
+    const XWindowAttributes a = other.attrs();
     Probe second(other.window, root_window(), a.width, a.height, 0xFFFF,
                  0xFFFF);
     second.setup(root_window(), a.x, a.y);
@@ -313,10 +313,10 @@ TEST_F(WrappedTest, focus_events_enable_and_disable_the_header)
         return Image(win->header.get_window(), win->header.get_width(),
                      win->header.get_height());
     };
-    Image disabled = header_image();
+    const Image disabled = header_image();
 
     send(client.window, make_event(FocusIn));
-    Image enabled = header_image();
+    const Image enabled = header_image();
     EXPECT_FALSE(enabled == disabled);
 
     send(client.window, make_event(FocusOut));
@@ -378,7 +378,7 @@ TEST_F(WrappedTest, normal_hints_change_puts_a_moved_client_back)
 TEST_F(WrappedTest, normal_hints_change_of_a_gone_client_is_survived)
 {
     build();
-    XErrors errors;
+    const XErrors errors;
     XDestroyWindow(client.display, client.window);
     client.sync();
     XEvent e = make_event(PropertyNotify);
@@ -406,7 +406,7 @@ TEST_F(WrappedTest, dragging_the_title_moves_the_shadow_too)
 {
     build();
     auto* title = win->header.get_title_box();
-    int before = attributes_of(win->shadow).x;
+    const int before = attributes_of(win->shadow).x;
 
     title->on_drag_begin(title, pointer(100, 100));
     title->on_drag_motion(title, pointer(130, 140, MotionNotify));
@@ -527,16 +527,16 @@ TEST_F(WrappedTest, resizing_unmaximizes_the_window)
 TEST_F(WrappedTest, destructor_disconnects_handlers_and_destroys_the_frame)
 {
     build();
-    ::Window f = win->get_window();
-    ::Window kid = client.window;
+    const ::Window f = win->get_window();
+    const ::Window kid = client.window;
     ASSERT_TRUE(tiny::handlers.count({FocusIn, kid}));
 
     win.reset();
 
-    for (int type : {FocusIn, FocusOut, PropertyNotify}) {
+    for (const int type : {FocusIn, FocusOut, PropertyNotify}) {
         EXPECT_FALSE(tiny::handlers.count({type, kid})) << type;
     }
-    XErrors errors;
+    const XErrors errors;
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp(), f, &attrs);
     EXPECT_EQ(errors.errors(), 1); // BadWindow
@@ -570,7 +570,7 @@ TEST_F(WrappedTest, destructor_survives_a_client_that_is_gone)
     XDestroyWindow(client.display, client.window);
     client.sync();
 
-    XErrors errors;
+    const XErrors errors;
     win.reset();
 
     EXPECT_EQ(errors.errors(), 0);

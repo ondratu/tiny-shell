@@ -26,7 +26,7 @@ void Handlers::call_hanlder(std::pair<uint16_t, Window> key, const XEvent& e)
 {
     auto val = (*this)[key];
     Object* o = std::get<0>(val);
-    event_signal_t signal = std::get<1>(val);
+    const event_signal_t signal = std::get<1>(val);
     (o->*signal)(e, std::get<2>(val));
 }
 

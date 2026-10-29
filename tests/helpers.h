@@ -95,8 +95,8 @@ inline std::vector<::Window> children_of(::Window parent)
 // Child of `parent` placed at x, y (0 when there is none).
 inline ::Window child_at(::Window parent, int x, int y)
 {
-    for (::Window w : children_of(parent)) {
-        XWindowAttributes attrs = attributes_of(w);
+    for (const ::Window w : children_of(parent)) {
+        const XWindowAttributes attrs = attributes_of(w);
         if (attrs.x == x && attrs.y == y) {
             return w;
         }
@@ -213,7 +213,8 @@ inline void pump_events()
     XEvent e;
     while (XPending(tiny::get_display())) {
         XNextEvent(tiny::get_display(), &e);
-        std::pair<uint16_t, ::Window> key(e.type, tiny::window_of_event(e));
+        const std::pair<uint16_t, ::Window> key(e.type,
+                                                tiny::window_of_event(e));
         if (tiny::handlers.count(key)) {
             tiny::handlers.call_hanlder(key, e);
         }

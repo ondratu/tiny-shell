@@ -206,7 +206,7 @@ TEST(ObjectTest, delete_through_base_pointer_disconnects_windows)
 {
     auto* r = new Receiver;
     r->connect_window(KeyPress, 1004, r->event_slot());
-    tiny::Object* base = r;
+    const tiny::Object* base = r;
 
     delete base;
 
@@ -224,7 +224,7 @@ TEST(LogTest, error_prints_formatted_message_to_stderr)
 {
     ::testing::internal::CaptureStderr();
     tiny::error("value %d and %s", 42, "text");
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("value 42 and text"), std::string::npos);
 }
@@ -233,7 +233,7 @@ TEST(LogTest, log_prints_function_and_message)
 {
     ::testing::internal::CaptureStderr();
     TINY_LOG("hello %d", 1);
-    std::string out = ::testing::internal::GetCapturedStderr();
+    const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("hello 1"), std::string::npos);
     EXPECT_NE(out.find("TestBody"), std::string::npos);

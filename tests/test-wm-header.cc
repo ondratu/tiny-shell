@@ -10,7 +10,7 @@ TEST(TitleBoxTest, realize_creates_input_only_window)
 
     box.realize(root_window(), 1, 2);
 
-    XWindowAttributes attrs = attributes_of(box);
+    const XWindowAttributes attrs = attributes_of(box);
     EXPECT_EQ(attrs.c_class, InputOnly);
     EXPECT_EQ(attrs.x, 1);
     EXPECT_EQ(attrs.y, 2);
@@ -72,9 +72,9 @@ TEST(TitleBoxTest, destructor_disconnects_handlers)
 
 TEST(TitleBoxTest, destroying_unrealized_title_box_causes_no_x_error)
 {
-    XErrors x;
+    const XErrors x;
     {
-        wm::TitleBox box(100, 25);
+        const wm::TitleBox box(100, 25);
     }
 
     EXPECT_EQ(x.errors(), 0);
@@ -82,7 +82,7 @@ TEST(TitleBoxTest, destroying_unrealized_title_box_causes_no_x_error)
 
 TEST(TitleBoxTest, delete_through_base_pointer)
 {
-    tiny::Widget* box = new wm::TitleBox(100, 25);
+    const tiny::Widget* box = new wm::TitleBox(100, 25);
 
     delete box;
 }
@@ -128,7 +128,7 @@ class HeaderTest : public ::testing::Test {
 
 TEST_F(HeaderTest, new_header_is_horizontal_box_without_title)
 {
-    wm::Header h(300, 25);
+    const wm::Header h(300, 25);
 
     EXPECT_EQ(h.get_type(), tiny::Box::Type::Horizontal);
     EXPECT_EQ(h.get_title(), "");
@@ -151,10 +151,10 @@ TEST_F(HeaderTest, realize_adds_title_box_inside_header)
 
     h.realize(root_window(), 0, 0);
 
-    wm::TitleBox* box = h.get_title_box();
+    const wm::TitleBox* box = h.get_title_box();
     EXPECT_TRUE(box->get_realized());
     EXPECT_EQ(box->get_parent_window(), h.get_window());
-    XWindowAttributes attrs = attributes_of(*box);
+    const XWindowAttributes attrs = attributes_of(*box);
     EXPECT_EQ(attrs.x, 0);
     EXPECT_EQ(attrs.y, 0);
 }
@@ -177,7 +177,7 @@ TEST_F(HeaderTest, expose_draws_title_text_and_bottom_line)
 
     send(h, Expose);
 
-    Image img = image_of(h);
+    const Image img = image_of(h);
     EXPECT_EQ(img.at(0, 0), bg());
     EXPECT_GT(img.count_not(bg(), 24), 0u);                    // text
     EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br); // line
@@ -191,7 +191,7 @@ TEST_F(HeaderTest, header_without_title_draws_only_the_bottom_line)
 
     send(h, Expose);
 
-    Image img = image_of(h);
+    const Image img = image_of(h);
     EXPECT_EQ(img.count_not(bg(), 24), 0u);
     EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br);
 }
@@ -217,7 +217,7 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
 
     h.set_title("A very long title that does not fit into the header");
 
-    Image img = image_of(h);
+    const Image img = image_of(h);
     EXPECT_GT(img.count_not(bg(), 24), 0u);
     for (int y = 0; y < 24; ++y) {
         EXPECT_EQ(img.at(0, y), bg()) << "row " << y; // not cut on the left
@@ -230,10 +230,10 @@ TEST_F(HeaderTest, set_disable_makes_the_text_lighter)
     h.realize(root_window(), 0, 0);
     h.map_all();
     h.set_title("Window title");
-    unsigned int active = darkest_text(image_of(h));
+    const unsigned int active = darkest_text(image_of(h));
 
     h.set_disable(true);
-    unsigned int disabled = darkest_text(image_of(h));
+    const unsigned int disabled = darkest_text(image_of(h));
 
     EXPECT_LT(active, 0x40u);
     EXPECT_GT(disabled, 0x60u);
@@ -292,7 +292,7 @@ TEST_F(HeaderTest, resize_mapped_header_redraws)
     send(h.get_window(), configure);
     send(h, Expose);
 
-    Image img = image_of(h);
+    const Image img = image_of(h);
     EXPECT_EQ(img.width, 400u);
     EXPECT_EQ(img.at(5, 29), tiny::theme.wm_header.normal_br);
 }
@@ -326,9 +326,9 @@ TEST_F(HeaderTest, destructor_disconnects_expose_handler)
 
 TEST_F(HeaderTest, destroying_unrealized_header_causes_no_x_error)
 {
-    XErrors x;
+    const XErrors x;
     {
-        wm::Header h(300, 25);
+        const wm::Header h(300, 25);
     }
 
     EXPECT_EQ(x.errors(), 0);
@@ -336,7 +336,7 @@ TEST_F(HeaderTest, destroying_unrealized_header_causes_no_x_error)
 
 TEST_F(HeaderTest, delete_through_base_pointer)
 {
-    tiny::Widget* h = new wm::Header(300, 25);
+    const tiny::Widget* h = new wm::Header(300, 25);
 
     delete h;
 }

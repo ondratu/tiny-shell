@@ -230,7 +230,7 @@ TEST(WindowOfEvent, events_without_window)
 
 TEST(XPoint, x_point_sets_coordinates)
 {
-    XPoint p = tiny::x_point(-3, 7);
+    const XPoint p = tiny::x_point(-3, 7);
 
     EXPECT_EQ(p.x, -3);
     EXPECT_EQ(p.y, 7);
@@ -275,7 +275,7 @@ class GrabTest : public ::testing::Test {
                                      Mod1Mask | LockMask,
                                      Mod1Mask | Mod2Mask | LockMask};
         grab_errors = 0;
-        for (unsigned int m : mods) {
+        for (const unsigned int m : mods) {
             XGrabKey(other, keycode, m, root, True, GrabModeAsync,
                      GrabModeAsync);
         }
@@ -332,7 +332,7 @@ class PixmapTest : public ::testing::Test {
     Pixmap filled(unsigned int w, unsigned int h, unsigned int depth,
                   unsigned long color)
     {
-        Pixmap pm = XCreatePixmap(display, root, w, h, depth);
+        const Pixmap pm = XCreatePixmap(display, root, w, h, depth);
         GC gc = XCreateGC(display, pm, 0, nullptr);
         XSetForeground(display, gc, color);
         XFillRectangle(display, pm, gc, 0, 0, w, h);
@@ -357,11 +357,11 @@ class PixmapTest : public ::testing::Test {
 
 TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
 {
-    int depth = DefaultDepth(display, 0);
-    Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
+    const int depth = DefaultDepth(display, 0);
+    const Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
-    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50, 50,
-                                        tiny::x_uint(depth));
+    const Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100,
+                                              50, 50, tiny::x_uint(depth));
 
     unsigned int w;
     unsigned int h;
@@ -376,11 +376,11 @@ TEST_F(PixmapTest, resize_creates_pixmap_of_target_size)
 
 TEST_F(PixmapTest, resize_keeps_color)
 {
-    int depth = DefaultDepth(display, 0);
-    Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
+    const int depth = DefaultDepth(display, 0);
+    const Pixmap origin = filled(100, 100, tiny::x_uint(depth), 0xFF0000);
 
-    Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100, 50, 50,
-                                        tiny::x_uint(depth));
+    const Pixmap target = tiny::resize_pixmap(display, root, origin, 100, 100,
+                                              50, 50, tiny::x_uint(depth));
 
     XSync(display, False);
     XImage* img = XGetImage(display, target, 10, 10, 1, 1, AllPlanes, ZPixmap);
@@ -392,9 +392,9 @@ TEST_F(PixmapTest, resize_keeps_color)
 
 TEST_F(PixmapTest, resize_monochrome_pixmap)
 {
-    Pixmap origin = filled(64, 32, 1, 1);
+    const Pixmap origin = filled(64, 32, 1, 1);
 
-    Pixmap target =
+    const Pixmap target =
             tiny::resize_pixmap(display, root, origin, 64, 32, 16, 8, 1);
 
     unsigned int w;

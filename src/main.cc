@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         // TODO: tema musi byt až tady, musím mít display - resp. je potřeba
         // pro inicializaci stylu -> fontu
 
-        ::Window root = XDefaultRootWindow(display);
+        const ::Window root = XDefaultRootWindow(display);
         XErrorHandler old = XSetErrorHandler(&on_wm_detected);
         XSelectInput(display, root,
                      SubstructureRedirectMask | SubstructureNotifyMask);

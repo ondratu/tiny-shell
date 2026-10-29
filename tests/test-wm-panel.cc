@@ -11,7 +11,7 @@ TEST(AppMenuTest, realize_creates_window_of_given_size)
     menu.realize(root_window(), 5, 6);
 
     ASSERT_TRUE(menu.get_realized());
-    XWindowAttributes attrs = attributes_of(menu);
+    const XWindowAttributes attrs = attributes_of(menu);
     EXPECT_EQ(attrs.width, 10);
     EXPECT_EQ(attrs.height, 10);
     EXPECT_EQ(attrs.x, 5);
@@ -26,9 +26,9 @@ TEST(UserMenuTest, realize_stacks_three_buttons_under_each_other)
 
     menu.realize(root_window());
 
-    ::Window top = child_at(menu.get_window(), 0, 0);
-    ::Window middle = child_at(menu.get_window(), 0, 20);
-    ::Window bottom = child_at(menu.get_window(), 0, 40);
+    const ::Window top = child_at(menu.get_window(), 0, 0);
+    const ::Window middle = child_at(menu.get_window(), 0, 20);
+    const ::Window bottom = child_at(menu.get_window(), 0, 40);
     EXPECT_EQ(top, menu.restart.get_window());
     EXPECT_EQ(middle, menu.shutdown.get_window());
     EXPECT_EQ(bottom, menu.logout.get_window());
@@ -37,7 +37,7 @@ TEST(UserMenuTest, realize_stacks_three_buttons_under_each_other)
 
 TEST(UserMenuTest, buttons_have_labels)
 {
-    wm::UserMenu menu;
+    const wm::UserMenu menu;
 
     EXPECT_EQ(menu.restart.get_text(), "Restart");
     EXPECT_EQ(menu.shutdown.get_text(), "Shutdown");
@@ -46,7 +46,7 @@ TEST(UserMenuTest, buttons_have_labels)
 
 TEST(UserMenuTest, logout_click_is_signalled)
 {
-    WidgetFont font;
+    const WidgetFont font;
     wm::UserMenu menu;
     Recorder recorder;
     menu.logout.on_click.connect(&recorder, recorder.slot());
@@ -67,8 +67,8 @@ TEST(PanelTest, realize_stretches_panel_over_the_root_window)
 
     panel.realize(root_window(), 0, 0);
 
-    XWindowAttributes root = attributes_of(root_window());
-    XWindowAttributes attrs = attributes_of(panel);
+    const XWindowAttributes root = attributes_of(root_window());
+    const XWindowAttributes attrs = attributes_of(panel);
     EXPECT_EQ(attrs.width, root.width);
     EXPECT_EQ(attrs.height, static_cast<int>(tiny::theme.wm_panel));
 }
@@ -79,13 +79,13 @@ TEST(PanelTest, realize_puts_menu_buttons_to_both_ends)
 
     panel.realize(root_window(), 0, 0);
 
-    XWindowAttributes root = attributes_of(root_window());
+    const XWindowAttributes root = attributes_of(root_window());
     ASSERT_EQ(children_of(panel.get_window()).size(), 2u);
-    ::Window app = child_at(panel.get_window(), 0, 0);
+    const ::Window app = child_at(panel.get_window(), 0, 0);
     ASSERT_NE(app, 0u);
     EXPECT_EQ(attributes_of(app).width, 200);
     // the login button is aligned to the right end (Box keeps 1 px free)
-    ::Window login = child_at(panel.get_window(), root.width - 121, 0);
+    const ::Window login = child_at(panel.get_window(), root.width - 121, 0);
     ASSERT_NE(login, 0u);
     EXPECT_EQ(attributes_of(login).width, 120);
 }
@@ -114,12 +114,12 @@ TEST(PanelTest, menus_stay_hidden_until_the_button_is_used)
 
 TEST(PanelTest, login_button_click_opens_the_user_menu)
 {
-    WidgetFont font;
+    const WidgetFont font;
     wm::Panel panel;
     panel.realize(root_window(), 0, 0);
     panel.map_all();
-    XWindowAttributes root = attributes_of(root_window());
-    ::Window login = child_at(panel.get_window(), root.width - 121, 0);
+    const XWindowAttributes root = attributes_of(root_window());
+    const ::Window login = child_at(panel.get_window(), root.width - 121, 0);
     ASSERT_NE(login, 0u);
 
     send(login, make_event(EnterNotify));
@@ -143,7 +143,7 @@ TEST_F(ScaledPanelTest, user_menu_is_scaled)
 
     menu.realize(root_window());
 
-    XWindowAttributes attrs = attributes_of(menu);
+    const XWindowAttributes attrs = attributes_of(menu);
     EXPECT_EQ(attrs.width, 240);
     EXPECT_EQ(attrs.height, 120);
 }
@@ -162,7 +162,7 @@ TEST_F(ScaledPanelTest, user_menu_buttons_are_scaled_and_stacked)
 
 TEST_F(ScaledPanelTest, panel_height_is_scaled)
 {
-    wm::Panel panel;
+    const wm::Panel panel;
 
     EXPECT_EQ(panel.get_height(), 60u);
 }

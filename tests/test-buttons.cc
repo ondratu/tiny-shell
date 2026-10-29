@@ -156,7 +156,7 @@ TEST_F(ButtonTest, destructor_disconnects_handlers)
 
 TEST_F(ButtonTest, delete_unrealized_button_through_base_pointer)
 {
-    tiny::Widget* b = new tiny::Button(50, 20);
+    const tiny::Widget* b = new tiny::Button(50, 20);
 
     delete b;
 }
@@ -236,14 +236,14 @@ TEST_F(ButtonTest, label_button_destructor_disconnects_expose)
 
 TEST_F(ButtonTest, delete_label_button_through_base_pointer)
 {
-    tiny::Widget* b = new tiny::LabelButton(100, 28, "x");
+    const tiny::Widget* b = new tiny::LabelButton(100, 28, "x");
 
     delete b;
 }
 
 TEST_F(ButtonTest, delete_menu_button_through_base_pointer)
 {
-    tiny::Widget* b = new tiny::MenuButton(100, 28, "x");
+    const tiny::Widget* b = new tiny::MenuButton(100, 28, "x");
 
     delete b;
 }

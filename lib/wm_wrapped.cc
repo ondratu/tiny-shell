@@ -360,8 +360,8 @@ void Wrapped::on_window_drag_begin(tiny::Object* o, const XEvent& e, void* data)
 
 void Wrapped::on_window_drag_motion(tiny::Object*, const XEvent& e, void*)
 {
-    int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-    int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+    const int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+    const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
 
     if (is_resizable()) {
         shadow.move(start_attrs.x + xdiff, start_attrs.y + ydiff);

@@ -139,7 +139,7 @@ TEST_F(WmWindowTest, get_properties_lists_window_properties)
     client.set_state({});
     std::set<Atom> properties;
 
-    int count = WmWindow::get_properties(client.window, properties);
+    const int count = WmWindow::get_properties(client.window, properties);
 
     EXPECT_EQ(count, static_cast<int>(properties.size()));
     EXPECT_TRUE(properties.count(dsp().WM_NAME));
@@ -202,19 +202,19 @@ TEST_F(WmWindowTest, initial_wm_states_are_read)
 
 TEST_F(WmWindowTest, all_wm_states_round_trip_through_the_property)
 {
-    std::vector<Atom> all = {dsp()._NET_WM_STATE_MODAL,
-                             dsp()._NET_WM_STATE_STICKY,
-                             dsp()._NET_WM_STATE_MAXIMIZED_VERT,
-                             dsp()._NET_WM_STATE_MAXIMIZED_HORZ,
-                             dsp()._NET_WM_STATE_SHADED,
-                             dsp()._NET_WM_STATE_SKIP_TASKBAR,
-                             dsp()._NET_WM_STATE_SKIP_PAGER,
-                             dsp()._NET_WM_STATE_HIDDEN,
-                             dsp()._NET_WM_STATE_FULLSCREEN,
-                             dsp()._NET_WM_STATE_ABOVE,
-                             dsp()._NET_WM_STATE_BELOW,
-                             dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
-                             dsp()._NET_WM_STATE_FOCUSED};
+    const std::vector<Atom> all = {dsp()._NET_WM_STATE_MODAL,
+                                   dsp()._NET_WM_STATE_STICKY,
+                                   dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                                   dsp()._NET_WM_STATE_MAXIMIZED_HORZ,
+                                   dsp()._NET_WM_STATE_SHADED,
+                                   dsp()._NET_WM_STATE_SKIP_TASKBAR,
+                                   dsp()._NET_WM_STATE_SKIP_PAGER,
+                                   dsp()._NET_WM_STATE_HIDDEN,
+                                   dsp()._NET_WM_STATE_FULLSCREEN,
+                                   dsp()._NET_WM_STATE_ABOVE,
+                                   dsp()._NET_WM_STATE_BELOW,
+                                   dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
+                                   dsp()._NET_WM_STATE_FOCUSED};
     client.set_state(all);
     auto window = manage();
 
@@ -367,7 +367,7 @@ TEST_F(WmWindowTest, wm_hints_with_a_broken_icon_pixmap_leave_no_icon)
     hints.flags = IconPixmapHint;
     hints.icon_pixmap = 0x7fffff; // no such pixmap
     {
-        XErrors errors;
+        const XErrors errors;
         XSetWMHints(client.display, client.window, &hints);
         client.sync();
         EXPECT_EQ(manage()->get_icon(), 0u);
@@ -424,7 +424,7 @@ TEST_F(WmWindowTest, icon_update_replaces_the_icon)
     auto window = manage();
     window->set_events();
     ASSERT_NE(window->get_icon(), 0u);
-    Pixmap first = window->get_icon();
+    const Pixmap first = window->get_icon();
 
     client.set_net_icon(32, 32);
     send(client.window, property_event(client.window, dsp()._NET_WM_ICON));
@@ -463,13 +463,13 @@ TEST_F(WmWindowTest, create_maps_and_prepares_the_client)
 {
     XWindowAttributes attrs = client.attrs();
 
-    std::unique_ptr<WmWindow> window(
+    const std::unique_ptr<WmWindow> window(
             WmWindow::create(root_window(), client.window, attrs, 0xFFFF));
 
     attrs = client.attrs();
     EXPECT_EQ(attrs.map_state, IsViewable);
     EXPECT_EQ(attrs.border_width, 1);
-    long mask = attrs.your_event_mask; // the client's own selection
+    const long mask = attrs.your_event_mask; // the client's own selection
     (void)mask;
     EXPECT_TRUE(tiny::handlers.count({FocusIn, client.window}));
     EXPECT_TRUE(tiny::handlers.count({PropertyNotify, client.window}));
@@ -481,15 +481,16 @@ TEST_F(WmWindowTest,
     {
         auto window = manage();
         window->set_events();
-        for (int type :
+        for (const int type :
              {FocusIn, FocusOut, ClientMessage, PropertyNotify, KeyRelease,
               ButtonPress, ButtonRelease, MotionNotify}) {
             EXPECT_TRUE(tiny::handlers.count({type, client.window})) << type;
         }
     }
 
-    for (int type : {FocusIn, FocusOut, ClientMessage, PropertyNotify,
-                     KeyRelease, ButtonPress, ButtonRelease, MotionNotify}) {
+    for (const int type :
+         {FocusIn, FocusOut, ClientMessage, PropertyNotify, KeyRelease,
+          ButtonPress, ButtonRelease, MotionNotify}) {
         EXPECT_FALSE(tiny::handlers.count({type, client.window})) << type;
     }
 }
@@ -498,7 +499,7 @@ TEST_F(WmWindowTest, set_events_grabs_alt_f4)
 {
     auto window = manage();
     window->set_events();
-    XErrors errors;
+    const XErrors errors;
 
     // another client can't grab the same key: BadAccess
     XGrabKey(client.display, XKeysymToKeycode(client.display, XK_F4), Mod1Mask,
@@ -544,7 +545,7 @@ TEST_F(WmWindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 
     window->maximize();
 
-    XWindowAttributes max = client.attrs();
+    const XWindowAttributes max = client.attrs();
     EXPECT_EQ(max.x, 0);
     EXPECT_EQ(max.y, 0);
     EXPECT_EQ(max.width, screen().width);
@@ -553,7 +554,7 @@ TEST_F(WmWindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 
     window->restore();
 
-    XWindowAttributes restored = client.attrs();
+    const XWindowAttributes restored = client.attrs();
     EXPECT_EQ(restored.x, 10);
     EXPECT_EQ(restored.y, 20);
     EXPECT_EQ(restored.width, 200);
@@ -581,7 +582,7 @@ TEST_F(WmWindowTest, restore_of_maximized_window_centers_it_on_the_pointer)
 
     window->restore(500, 400);
 
-    XWindowAttributes attrs = client.attrs();
+    const XWindowAttributes attrs = client.attrs();
     EXPECT_EQ(attrs.x, 500 - 200 / 2);
     EXPECT_EQ(attrs.y, 400 - 100 / 2);
 }
@@ -707,7 +708,7 @@ TEST_F(WmWindowTest, close_kills_a_client_without_delete_protocol)
     window->close();
     XSync(dsp(), False);
 
-    XErrors errors;
+    const XErrors errors;
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp(), client.window, &attrs);
     EXPECT_EQ(errors.errors(), 1); // BadWindow: the client is gone
@@ -959,7 +960,7 @@ TEST_F(WmWindowTest, alt_click_starts_dragging_and_motion_moves_the_window)
     motion.xbutton.x_root = 130;
     motion.xbutton.y_root = 150;
     send(client.window, motion);
-    XWindowAttributes attrs = client.attrs();
+    const XWindowAttributes attrs = client.attrs();
     EXPECT_EQ(attrs.x, 10 + 30);
     EXPECT_EQ(attrs.y, 20 + 50);
 
@@ -981,7 +982,7 @@ TEST_F(WmWindowTest, dragging_a_maximized_window_restores_it_first)
     send(client.window, press);
 
     EXPECT_FALSE(window->get_maximized());
-    XWindowAttributes attrs = client.attrs();
+    const XWindowAttributes attrs = client.attrs();
     EXPECT_EQ(attrs.width, 200);
     EXPECT_EQ(attrs.x, 300 - 200 / 2);
     send(client.window, make_event(ButtonRelease));
@@ -990,7 +991,7 @@ TEST_F(WmWindowTest, dragging_a_maximized_window_restores_it_first)
 TEST_F(WmWindowTest, icon_update_without_mask_causes_no_x_error)
 {
     client.set_icon_pixmap(tiny::theme.wm_icon, true);
-    XErrors errors;
+    const XErrors errors;
     {
         auto window = manage();
         client.set_icon_pixmap(tiny::theme.wm_icon, false);

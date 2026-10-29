@@ -221,8 +221,8 @@ void BackWindow::on_configure_notify(const XEvent& e, void* data)
     while (XCheckTypedWindowEvent( // skip penging motion events
             display, event.xconfigure.window, ConfigureNotify, &event)) {}
 
-    int old_width = width;
-    int old_height = height;
+    const int old_width = width;
+    const int old_height = height;
     tiny::Container::on_configure_notify(event, data);
     if (width != old_width || height != old_height) {
         XMoveResizeWindow(display, edge_top.get_window(),
