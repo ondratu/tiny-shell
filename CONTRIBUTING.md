@@ -138,9 +138,9 @@ make asan        # all the tests with AddressSanitizer and UBSan
 ```
 
 The same checks run in GitHub Actions (`.github/workflows/ci.yml`) with GCC,
-Clang, on Alpine (musl) and FreeBSD, plus pre-commit,
+Clang, on Alpine (musl) and NetBSD, plus pre-commit,
 clang-tidy, the sanitizers, a coverage minimum and a binary size limit. A
-change should pass all of them; the FreeBSD job is best effort.
+change should pass all of them; the NetBSD job is best effort.
 
 ## Tests
 
