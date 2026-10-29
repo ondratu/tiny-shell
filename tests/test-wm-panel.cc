@@ -127,3 +127,44 @@ TEST(PanelTest, login_button_click_opens_the_user_menu)
 
     EXPECT_EQ(attributes_of(panel.menu_user).map_state, IsViewable);
 }
+
+// ---- scaling (TINY_SCALE_FACTOR) ----
+
+class ScaledPanelTest: public ::testing::Test {
+  protected:
+    void SetUp() override
+    { tiny::theme.scale(2); }
+
+    void TearDown() override
+    { tiny::theme.scale(1); }
+};
+
+TEST_F(ScaledPanelTest, user_menu_is_scaled)
+{
+    wm::UserMenu menu;
+
+    menu.realize(root_window());
+
+    XWindowAttributes attrs = attributes_of(menu);
+    EXPECT_EQ(attrs.width, 240);
+    EXPECT_EQ(attrs.height, 120);
+}
+
+TEST_F(ScaledPanelTest, user_menu_buttons_are_scaled_and_stacked)
+{
+    wm::UserMenu menu;
+
+    menu.realize(root_window());
+
+    EXPECT_EQ(attributes_of(menu.logout).width, 240);
+    EXPECT_EQ(attributes_of(menu.logout).height, 40);
+    EXPECT_EQ(child_at(menu.get_window(), 0, 40), menu.shutdown.get_window());
+    EXPECT_EQ(child_at(menu.get_window(), 0, 80), menu.logout.get_window());
+}
+
+TEST_F(ScaledPanelTest, panel_height_is_scaled)
+{
+    wm::Panel panel;
+
+    EXPECT_EQ(panel.get_height(), 60u);
+}

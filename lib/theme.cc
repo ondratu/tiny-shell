@@ -70,6 +70,10 @@ void Theme::scale(double factor)
     wm_panel = scaled(30, factor);
     wm_icon = scaled(48, factor);
     wm_dock_border = scaled(5, factor);
+    wm_panel_app_width = scaled(200, factor);
+    wm_panel_login_width = scaled(120, factor);
+    wm_menu_width = scaled(120, factor);
+    wm_menu_item_height = scaled(20, factor);
 
     widget.scale(factor);
     wm_button.scale(factor);
