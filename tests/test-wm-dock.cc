@@ -69,6 +69,28 @@ TEST_F(DockButtonTest, draws_grid_of_dots)
     EXPECT_EQ(img.at(0, 0), bg);
 }
 
+TEST(DockButtonScaleTest, dots_are_scaled)
+{
+    tiny::theme.scale(2);
+    {
+        wm::DockButton button;
+        button.realize(root_window(), 0, 0);
+        button.map_all();
+        send(button, Expose);
+
+        uint32_t fg = tiny::theme.widget.get_fg(
+                (uint8_t) tiny::Style::State::Normal);
+        Image img(button.get_window(), button.get_width(), button.get_height());
+        unsigned int origin = 3 * (button.get_width() / 14);
+
+        ASSERT_EQ(button.get_width(), 96u);
+        // 10 px dot (5 px at scale 1): its far edge is still filled
+        EXPECT_EQ(img.at(origin + 5, origin + 8), fg);
+        EXPECT_EQ(img.at(origin + 8, origin + 5), fg);
+    }
+    tiny::theme.scale(1);
+}
+
 TEST_F(DockButtonTest, hover_changes_background)
 {
     send(button, EnterNotify);

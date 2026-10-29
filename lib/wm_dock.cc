@@ -1,3 +1,6 @@
+#include <math.h>
+#include <algorithm>
+
 #include "wm_dock.h"
 #include "object.h"
 #include "wm_window.h"
@@ -70,6 +73,7 @@ void DockButton::on_expose(const XEvent& e, void* data)
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
 
     int offset = width/14;
+    unsigned int dot = std::max(1l, lround(5*tiny::theme.scale_factor));
 
     for (int y = 3; y <= 11; y+=4)
         for (int x = 3; x <= 11; x+=4)
@@ -77,7 +81,7 @@ void DockButton::on_expose(const XEvent& e, void* data)
         XFillArc(display, window, gc,
                 x*offset,
                 y*offset,
-                5, 5, 0, 360*64);
+                dot, dot, 0, 360*64);
     }
     XFreeGC(display, gc);
 }
