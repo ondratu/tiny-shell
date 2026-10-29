@@ -87,8 +87,10 @@ void log(const char* file, const char* function, uint32_t line,
         return;
     }
 
-    fprintf(stderr, "%ld.%04ld in %s: %s (%s:%u)\n", tp.tv_sec, tp.tv_usec,
-            function, buffer, file, line);
+    // time_t and suseconds_t differ between systems, e.g. NetBSD has an int
+    fprintf(stderr, "%lld.%04lld in %s: %s (%s:%u)\n",
+            static_cast<long long>(tp.tv_sec),
+            static_cast<long long>(tp.tv_usec), function, buffer, file, line);
     free(buffer);
 }
 
@@ -107,7 +109,8 @@ void error(const char* format, ...)
         return;
     }
 
-    fprintf(stderr, "%ld.%04ld %s\n", tp.tv_sec, tp.tv_usec, buffer);
+    fprintf(stderr, "%lld.%04lld %s\n", static_cast<long long>(tp.tv_sec),
+            static_cast<long long>(tp.tv_usec), buffer);
     free(buffer);
 }
 
