@@ -64,7 +64,7 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage format lint asan help
+.PHONY: all examples clean check coverage format lint asan cppcheck help
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
@@ -76,6 +76,7 @@ help:
 	@echo "make coverage   run the tests and print the coverage table"
 	@echo "make asan       run the tests with AddressSanitizer and UBSan"
 	@echo "make lint       static analysis with clang-tidy"
+	@echo "make cppcheck  second opinion on the sources (only reports, not in CI)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
 	@echo "Variables: CXX, CXXFLAGS, BUILD, STRICT=1 (warnings are errors),"
@@ -190,6 +191,16 @@ lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS)
+
+# A second opinion next to clang-tidy. It only reports: the findings are not
+# triaged yet, so it is not a part of CI or the git hooks. The tests are left
+# out (cppcheck does not know the googletest macros).
+CPPCHECK ?= cppcheck
+CPPCHECK_FLAGS = --enable=warning,style,performance,portability --std=c++17 \
+    -I lib --inline-suppr --quiet
+
+cppcheck:
+	$(CPPCHECK) $(CPPCHECK_FLAGS) lib src examples
 
 # Run all the tests with AddressSanitizer and UndefinedBehaviorSanitizer, built
 # into build-asan. Leaks that are accepted for now are in tools/lsan.supp.
