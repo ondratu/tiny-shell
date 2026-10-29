@@ -263,7 +263,7 @@ void Wrapped::on_move_resize_begin(tiny::Object *, const XEvent &e, void *)
 
 void Wrapped::on_move_resize_motion(tiny::Object *, const XEvent &e, void *data)
 {
-    uint16_t mask = reinterpret_cast<size_t>(data);
+    uint16_t mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
     int xdiff = 0;
     int ydiff = 0;
     int mod;

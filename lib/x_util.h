@@ -87,10 +87,10 @@ namespace tiny {
  */
 ::Window window_of_event(const XEvent& e);
 
-inline XPoint x_point(short x, short y){
+inline XPoint x_point(int x, int y){
     XPoint rv;
-    rv.x = x;
-    rv.y = y;
+    rv.x = static_cast<short>(x);
+    rv.y = static_cast<short>(y);
     return rv;
 }
 

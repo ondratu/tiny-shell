@@ -120,7 +120,7 @@ void LabelButton::on_expose(const XEvent &, void *)
     draw = XftDrawCreate(display, window, visual, colormap);
 
     XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
-            reinterpret_cast<const FcChar8*>(text.c_str()), text.size(),
+            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()),
             &extents);
 
     // Text is center normal center TODO: could be configurable
@@ -130,7 +130,7 @@ void LabelButton::on_expose(const XEvent &, void *)
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
-            reinterpret_cast<const FcChar8*>(text.c_str()), text.size());
+            reinterpret_cast<const FcChar8*>(text.c_str()), static_cast<int>(text.size()));
 
     XftDrawDestroy(draw);
     XftColorFree(display, visual, colormap, &color);

@@ -136,7 +136,7 @@ void Header::on_expose(const XEvent &, void *)
     draw = XftDrawCreate(display, window, visual, colormap);
 
     XftTextExtentsUtf8(display, tiny::theme.wm_header.get_font(),
-            reinterpret_cast<const FcChar8*>(title.c_str()), title.size(),
+            reinterpret_cast<const FcChar8*>(title.c_str()), static_cast<int>(title.size()),
             &extents);
 
     // Text is center normal center TODO: could be configurable
@@ -154,7 +154,7 @@ void Header::on_expose(const XEvent &, void *)
             tiny::theme.wm_header.get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, tiny::theme.wm_header.get_font(), x, y,
-            reinterpret_cast<const FcChar8*>(title.c_str()), title.size());
+            reinterpret_cast<const FcChar8*>(title.c_str()), static_cast<int>(title.size()));
 
     XftDrawDestroy(draw);
     XftColorFree(display, visual, colormap, &color);

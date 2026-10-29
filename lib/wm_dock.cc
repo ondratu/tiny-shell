@@ -73,7 +73,8 @@ void DockButton::on_expose(const XEvent&, void*)
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
 
     int offset = width/14;
-    unsigned int dot = std::max(1l, lround(5*tiny::theme.scale_factor));
+    unsigned int dot = static_cast<unsigned int>(
+        std::max(1l, lround(5*tiny::theme.scale_factor)));
 
     for (int y = 3; y <= 11; y+=4)
         for (int x = 3; x <= 11; x+=4)
@@ -176,7 +177,7 @@ void Dock::remove(Window* window_arg)
 void Dock::resize_to_children()
 {
     uint32_t size = tiny::theme.wm_icon+tiny::theme.wm_dock_border;
-    resize(children.size()*size+tiny::theme.wm_dock_border, height);
+    resize(static_cast<uint32_t>(children.size())*size+tiny::theme.wm_dock_border, height);
 }
 
 void Dock::redraw(Window* window_arg, const XEvent& e)

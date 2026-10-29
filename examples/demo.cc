@@ -31,12 +31,12 @@ class Demo: public tiny::Container {
                         display.WM_NAME, XA_STRING,
                         8, PropModeReplace,
                         reinterpret_cast<const unsigned char *>(title),
-                        strlen(title));
+                        static_cast<int>(strlen(title)));
         XChangeProperty(display, window,
                         display._NET_WM_NAME, display.UTF8_STRING,
                         8, PropModeReplace,
                         reinterpret_cast<const unsigned char *>(title_utf8),
-                        strlen(title_utf8));
+                        static_cast<int>(strlen(title_utf8)));
 
         add(&vbox);
         vbox.push_start(&header);

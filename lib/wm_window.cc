@@ -121,7 +121,7 @@ void Window::set_minimized(bool minimized)
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
             32, PropModeReplace,
             reinterpret_cast<unsigned char *>(&(*atoms.begin())),
-            atoms.size());
+            static_cast<int>(atoms.size()));
 }
 
 void Window::set_maximized(bool maximized)
@@ -140,7 +140,7 @@ void Window::set_maximized(bool maximized)
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
             32, PropModeReplace,
             reinterpret_cast<unsigned char *>(&(*atoms.begin())),
-            atoms.size());
+            static_cast<int>(atoms.size()));
 }
 
 void Window::get_wm_states(std::vector<Atom>& atoms)
@@ -210,7 +210,7 @@ void Window::set_focus()
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
             32, PropModeReplace,
             reinterpret_cast<unsigned char *>(&(*atoms.begin())),
-            atoms.size());
+            static_cast<int>(atoms.size()));
 }
 
 void Window::return_focus()
@@ -223,7 +223,7 @@ void Window::return_focus()
     XChangeProperty(dsp, child, dsp._NET_WM_STATE, XA_ATOM,
             32, PropModeReplace,
             reinterpret_cast<unsigned char *>(&(*atoms.begin())),
-            atoms.size());
+            static_cast<int>(atoms.size()));
 }
 
 void Window::close()
@@ -616,11 +616,13 @@ void Window::update_wm_icon()
             XFreePixmap(dsp, icon_mask);
         }
 
-        icon = XCreatePixmap(dsp, root, width, height,
+        icon = XCreatePixmap(dsp, root, static_cast<unsigned>(width),
+                static_cast<unsigned>(height),
                 XDefaultDepth(dsp, 0)); // TODO: Screen instead of 0
         GC gc = XCreateGC(dsp, icon, 0, nullptr);
 
-        icon_mask = XCreatePixmap(dsp, root, width, height, 1);
+        icon_mask = XCreatePixmap(dsp, root, static_cast<unsigned>(width),
+                static_cast<unsigned>(height), 1);
         GC gc_mask = XCreateGC(dsp, icon_mask, 0, nullptr);
         XSetForeground(dsp, gc_mask, 1);
 
@@ -637,19 +639,22 @@ void Window::update_wm_icon()
                 color |= (pixel[2] * pixel[3]/255) << 16;
 
                 XSetForeground(dsp, gc, color);
-                XDrawPoint(dsp, icon, gc, x, y);
-                if (color) { XDrawPoint(dsp, icon_mask, gc_mask, x, y); }
+                XDrawPoint(dsp, icon, gc, static_cast<int>(x), static_cast<int>(y));
+                if (color) { XDrawPoint(dsp, icon_mask, gc_mask,
+                        static_cast<int>(x), static_cast<int>(y)); }
             }
 
         if ((width != tiny::theme.wm_icon) && (height != tiny::theme.wm_icon))
         {
             Pixmap orig = icon;
-            icon = resize_pixmap(dsp, root, orig, width, height,
+            icon = resize_pixmap(dsp, root, orig,
+                static_cast<unsigned>(width), static_cast<unsigned>(height),
                 tiny::theme.wm_icon, tiny::theme.wm_icon, XDefaultDepth(dsp, 0));
             XFreePixmap(dsp, orig);
 
             orig = icon_mask;
-            icon_mask = resize_pixmap(dsp, root, orig, width, height,
+            icon_mask = resize_pixmap(dsp, root, orig,
+                static_cast<unsigned>(width), static_cast<unsigned>(height),
                 tiny::theme.wm_icon, tiny::theme.wm_icon, 1);
             XFreePixmap(dsp, orig);
 
