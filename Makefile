@@ -87,7 +87,7 @@ COV_DIR = build-cov
 coverage:
 	@rm -rf $(COV_DIR) && mkdir -p $(COV_DIR)/lib $(COV_DIR)/tests
 	@cp Makefile *.cc $(COV_DIR)/ && cp lib/*.cc lib/*.h $(COV_DIR)/lib/
-	@cp tests/*.cc $(COV_DIR)/tests/
+	@cp tests/*.cc tests/*.h $(COV_DIR)/tests/
 	@GTEST_BRIEF=1 $(MAKE) -C $(COV_DIR) check -s \
 	    CXXFLAGS="-g -O0 --coverage" LDFLAGS="--coverage"
 	@cd $(COV_DIR) && gcov -n -o lib $(notdir $(LIB_SRC)) 2>/dev/null | \
