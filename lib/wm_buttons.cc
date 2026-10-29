@@ -13,7 +13,9 @@ Button::Button():
 }
 
 Button::~Button(){
-    disconnect(ExposureMask);
+    if (event_done) {
+        disconnect(Expose);
+    }
 }
 
 void Button::set_events(long mask)
@@ -22,10 +24,18 @@ void Button::set_events(long mask)
 
     connect(Expose,
             static_cast<tiny::event_signal_t>(&Button::on_expose));
-    on_enter.connect(this,
-            reinterpret_cast<tiny::object_signal_t>(&Button::on_expose));
-    on_leave.connect(this,
-            reinterpret_cast<tiny::object_signal_t>(&Button::on_expose));
+}
+
+void Button::on_enter_notify(const XEvent &e, void *data)
+{
+    tiny::Button::on_enter_notify(e, data);
+    on_expose(e, nullptr);
+}
+
+void Button::on_leave_notify(const XEvent &e, void *data)
+{
+    tiny::Button::on_leave_notify(e, data);
+    on_expose(e, nullptr);
 }
 
 
