@@ -173,6 +173,10 @@ class Theme {
         uint32_t wm_panel = 30;
         uint32_t wm_icon = 48;
         uint32_t wm_dock_border = 5;
+        uint32_t wm_panel_app_width = 200;
+        uint32_t wm_panel_login_width = 120;
+        uint32_t wm_menu_width = 120;
+        uint32_t wm_menu_item_height = 20;
 
         double scale_factor = 1;
 
