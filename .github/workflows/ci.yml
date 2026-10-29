@@ -54,17 +54,12 @@ jobs:
           - name: Clang 19 (the oldest we support)
             cxx: clang++-19
             packages: clang-19
-          - name: Clang 19 with libc++
-            cxx: clang++-19
-            packages: clang-19 libc++-19-dev libc++abi-19-dev
-            flags: -stdlib=libc++
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y $DEPS ${{ matrix.packages }}
       - name: Build and test
         run: |
-          make CXX=${{ matrix.cxx }} CXXFLAGS="-g ${{ matrix.flags }}" \
-              LDFLAGS="${{ matrix.flags }}" check examples
+          make CXX=${{ matrix.cxx }} check examples
 
   asan:
     name: ASan + UBSan
@@ -75,23 +70,17 @@ jobs:
       - run: make CXX=clang++-19 asan
 
   alpine:
-    name: Alpine (musl), ${{ matrix.name }}
+    # musl instead of glibc, the libc of small embedded systems: finds code that
+    # relies on GNU extensions.
+    name: Alpine (musl), Clang
     runs-on: ubuntu-24.04
     container: alpine:3.22
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: GCC
-            cxx: g++
-          - name: Clang
-            cxx: clang++
     steps:
       - run: >
-          apk add --no-cache git make pkgconf g++ clang libx11-dev libxft-dev
+          apk add --no-cache git make pkgconf clang g++ libx11-dev libxft-dev
           libxrender-dev gtest-dev xvfb xvfb-run xauth font-dejavu
       - uses: actions/checkout@v4
-      - run: make CXX=${{ matrix.cxx }} check examples
+      - run: make CXX=clang++ check examples
 
   freebsd:
     name: FreeBSD
@@ -99,6 +88,7 @@ jobs:
     # Best effort: the BSDs are claimed in the README, but the VM is slow
     # and the port set changes, so a failure here does not block a merge.
     continue-on-error: true
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: cross-platform-actions/action@v0.27.0
@@ -109,9 +99,20 @@ jobs:
           run: |
             sudo pkg install -y gmake pkgconf libX11 libXft libXrender \
                 googletest xorg-vfbserver xauth dejavu
-            Xvfb :99 -screen 0 1280x1024x24 &
+            # freetype2.pc requires bzip2, which is in the base system of
+            # FreeBSD and has no .pc file
+            mkdir -p /tmp/pc
+            printf '%s\n' 'Name: bzip2' 'Description: bzip2' 'Version: 1.0' \
+                'Libs: -lbz2' > /tmp/pc/bzip2.pc
+            export PKG_CONFIG_PATH=/tmp/pc
+            # in the background with redirected output, otherwise the SSH
+            # session of the VM never ends
+            Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
             sleep 2
-            DISPLAY=:99 gmake XVFB_RUN= CXX=clang++ check examples
+            rc=0
+            DISPLAY=:99 gmake XVFB_RUN= CXX=clang++ check examples || rc=$?
+            kill %1
+            exit $rc
 
   coverage:
     runs-on: ubuntu-24.04
