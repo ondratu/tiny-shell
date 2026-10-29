@@ -88,7 +88,7 @@ class Style {
 
   protected:
     const char* font_name = "Cantarell-12";
-    XftFont* font;
+    XftFont* font = nullptr;
 
 }; // Style
 
