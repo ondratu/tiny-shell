@@ -199,3 +199,119 @@ TEST_F(ImageTest, a_picture_that_needs_too_much_memory_is_refused)
     EXPECT_FALSE(tiny::load_image(
             write("big2.xpm", "/* XPM */ /*" + comment + "*/"), 48));
 }
+
+TEST(ScaleImage, keeps_the_aspect_ratio_up_and_down)
+{
+    tiny::Image image;
+    image.width = 4;
+    image.height = 2;
+    image.pixels.assign(8, 0xFF102030U);
+
+    const auto up = tiny::scale_image(image, 8);
+    if (!up) {
+        FAIL() << "not scaled up";
+    }
+    EXPECT_EQ(up->width, 8);
+    EXPECT_EQ(up->height, 4);
+    EXPECT_EQ(up->pixels.size(), 32u);
+    EXPECT_EQ(up->at(3, 2), 0xFF102030U);
+
+    const auto down = tiny::scale_image(image, 2);
+    if (!down) {
+        FAIL() << "not scaled down";
+    }
+    EXPECT_EQ(down->width, 2);
+    EXPECT_EQ(down->height, 1);
+    EXPECT_EQ(down->at(1, 0), 0xFF102030U);
+
+    const auto same = tiny::scale_image(image, 4);
+    if (!same) {
+        FAIL() << "not copied";
+    }
+    EXPECT_EQ(same->pixels, image.pixels);
+}
+
+TEST(ScaleImage, blends_the_neighbours)
+{
+    tiny::Image image;
+    image.width = 2;
+    image.height = 1;
+    image.pixels = {0x00000000U, 0xFF0000FFU};
+
+    const auto big = tiny::scale_image(image, 4);
+    if (!big) {
+        FAIL() << "not scaled";
+    }
+    EXPECT_EQ(big->width, 4);
+    EXPECT_EQ(big->height, 2);
+    EXPECT_EQ(big->at(0, 0), 0x00000000U);
+    EXPECT_EQ(big->at(3, 0), 0xFF0000FFU);
+    const uint32_t middle = big->at(1, 0);
+    EXPECT_GT(middle >> 24, 0u);
+    EXPECT_LT(middle >> 24, 0xFFu);
+}
+
+TEST(ScaleImage, thin_picture_stays_one_pixel_thick)
+{
+    tiny::Image image;
+    image.width = 100;
+    image.height = 1;
+    image.pixels.assign(100, 0xFFFFFFFFU);
+
+    const auto small = tiny::scale_image(image, 10);
+    if (!small) {
+        FAIL() << "not scaled";
+    }
+    EXPECT_EQ(small->width, 10);
+    EXPECT_EQ(small->height, 1);
+}
+
+TEST(ScaleImage, refuses_wrong_input)
+{
+    tiny::Image image;
+    EXPECT_FALSE(tiny::scale_image(image, 16));
+
+    image.width = 2;
+    image.height = 2;
+    image.pixels.assign(3, 0);
+    EXPECT_FALSE(tiny::scale_image(image, 16));
+
+    image.pixels.assign(4, 0);
+    EXPECT_FALSE(tiny::scale_image(image, 0));
+    EXPECT_FALSE(tiny::scale_image(image, tiny::MAX_ICON_SIZE + 1));
+}
+
+TEST(ScaleImage, big_reduction_keeps_a_thin_line)
+{
+    tiny::Image image;
+    image.width = 256;
+    image.height = 256;
+    image.pixels.assign(256U * 256U, 0);
+    for (int y = 0; y < 256; ++y) {
+        image.pixels[static_cast<size_t>(y) * 256U + 100U] = 0xFFFFFFFFU;
+    }
+
+    const auto small = tiny::scale_image(image, 16);
+    if (!small) {
+        FAIL() << "not scaled";
+    }
+    // the column 100 of 256 is the column 6 of 16: the average is 1/16
+    EXPECT_NEAR(static_cast<double>(small->at(6, 8) & 0xFFU), 16.0, 1.0);
+    EXPECT_EQ(small->at(2, 8), 0u);
+}
+
+TEST(ScaleImage, average_of_equal_pixels_is_the_pixel)
+{
+    tiny::Image image;
+    image.width = 100;
+    image.height = 70;
+    image.pixels.assign(7000, 0x80402010U);
+
+    const auto small = tiny::scale_image(image, 33);
+    if (!small) {
+        FAIL() << "not scaled";
+    }
+    for (const uint32_t pixel : small->pixels) {
+        EXPECT_EQ(pixel, 0x80402010U);
+    }
+}
