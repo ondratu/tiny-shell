@@ -445,6 +445,22 @@ TEST_F(WmWindowTest, icon_name_is_read)
     EXPECT_EQ(window->get_wm_icon_name(), "short");
 }
 
+TEST_F(WmWindowTest, icon_name_falls_back_to_the_plain_wm_icon_name)
+{
+    // XSetIconName also writes _NET_WM_ICON_NAME, so set only the old property.
+    const char name[] = "plain";
+    XChangeProperty(client.display, client.window, XA_WM_ICON_NAME, XA_STRING,
+                    8, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(name), 5);
+    client.sync();
+    auto window = manage();
+    window->set_events();
+
+    send(client.window, property_event(client.window, dsp().WM_ICON_NAME));
+
+    EXPECT_EQ(window->get_wm_icon_name(), "plain");
+}
+
 TEST_F(WmWindowTest, net_wm_icon_name_is_preferred)
 {
     client.set_utf8(dsp()._NET_WM_ICON_NAME, "dlouhé");
@@ -455,6 +471,67 @@ TEST_F(WmWindowTest, net_wm_icon_name_is_preferred)
     send(client.window, property_event(client.window, dsp()._NET_WM_ICON_NAME));
 
     EXPECT_EQ(window->get_wm_icon_name(), "dlouhé");
+}
+
+// ---- initial size of a window that starts maximized ----
+
+namespace {
+
+// Opens the protected restore size of the window.
+class SizedWindow : public WmWindow {
+  public:
+    using WmWindow::WmWindow;
+    tiny::Rect restore_size() const { return state; }
+};
+
+} // namespace
+
+TEST_F(WmWindowTest, maximized_window_without_size_gets_two_thirds_of_screen)
+{
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+
+    SizedWindow window(client.window, root_window(), 0xFFFF);
+
+    EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
+    EXPECT_EQ(window.restore_size().height, screen().height / 3 * 2);
+}
+
+TEST_F(WmWindowTest, maximized_window_is_not_smaller_than_its_minimum_size)
+{
+    const int min_w = screen().width;
+    const int min_h = screen().height;
+    client.set_size_hints(PMinSize, min_w, min_h, 0, 0);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+
+    SizedWindow window(client.window, root_window(), 0xFFFF);
+
+    EXPECT_EQ(window.restore_size().width, min_w);
+    EXPECT_EQ(window.restore_size().height, min_h);
+}
+
+TEST_F(WmWindowTest, maximized_window_is_not_bigger_than_its_maximum_size)
+{
+    client.set_size_hints(PMaxSize, 0, 0, 120, 90);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+
+    SizedWindow window(client.window, root_window(), 0xFFFF);
+
+    EXPECT_EQ(window.restore_size().width, 120);
+    EXPECT_EQ(window.restore_size().height, 90);
+}
+
+TEST_F(WmWindowTest, maximized_window_with_aspect_ratio_still_gets_a_size)
+{
+    client.set_size_hints(PAspect, 0, 0, 0, 0);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+
+    SizedWindow window(client.window, root_window(), 0xFFFF);
+
+    EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
 }
 
 // ---- create ----
