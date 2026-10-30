@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <csignal>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -81,6 +82,14 @@ TEST(Spawn, shell_command_line_has_shell_features)
     std::filesystem::remove(marker);
 }
 
+TEST(Spawn, shell_runs_a_whole_command_line)
+{
+    const auto marker = temp_file("tiny-spawn-and-");
+    EXPECT_GT(tiny::spawn_shell("true && touch " + marker.string()), 0);
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    std::filesystem::remove(marker);
+}
+
 TEST(Spawn, arguments_are_passed_without_a_shell)
 {
     const auto marker = temp_file("tiny-spawn a b;c-");
@@ -109,4 +118,55 @@ TEST(Spawn, unknown_shell_command_does_not_stop_the_caller)
 {
     tiny::reap_children();
     EXPECT_GT(tiny::spawn_shell("/nonexistent/program"), 0);
+}
+
+namespace {
+
+// Lowers a limit of the process to zero for the lifetime of the object.
+class NoResource {
+  public:
+    explicit NoResource(int resource_arg): resource(resource_arg)
+    {
+        getrlimit(resource, &old);
+        rlimit none = old;
+        none.rlim_cur = 0;
+        setrlimit(resource, &none);
+    }
+
+    ~NoResource() { setrlimit(resource, &old); }
+
+  private:
+    int resource;
+    rlimit old = {};
+};
+
+} // namespace
+
+TEST(Spawn, no_free_descriptor_is_reported)
+{
+    errno = 0;
+    pid_t pid = 0;
+    {
+        const NoResource limit(RLIMIT_NOFILE);
+        pid = tiny::spawn({"true"});
+    }
+
+    EXPECT_EQ(pid, -1);
+    EXPECT_EQ(errno, EMFILE);
+}
+
+TEST(Spawn, failed_fork_is_reported)
+{
+    if (geteuid() == 0) {
+        GTEST_SKIP() << "the limit of processes does not apply to root";
+    }
+    errno = 0;
+    pid_t pid = 0;
+    {
+        const NoResource limit(RLIMIT_NPROC);
+        pid = tiny::spawn({"true"});
+    }
+
+    EXPECT_EQ(pid, -1);
+    EXPECT_EQ(errno, EAGAIN);
 }
