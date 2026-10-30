@@ -32,12 +32,13 @@ bool has_extension(const std::string& path, const char* extension)
 // non-premultiplied RGBA bytes -> premultiplied ARGB
 Image convert(const unsigned char* rgba, int width, int height)
 {
+    const size_t count =
+            static_cast<size_t>(width) * static_cast<size_t>(height);
     Image image;
     image.width = width;
     image.height = height;
-    image.pixels.reserve(static_cast<size_t>(width) *
-                         static_cast<size_t>(height));
-    for (size_t i = 0; i < image.pixels.capacity(); ++i) {
+    image.pixels.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
         const unsigned char* p = rgba + 4 * i;
         const uint32_t a = p[3];
         const auto mul = [a](uint32_t c) { return (c * a + 127) / 255; };
