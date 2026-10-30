@@ -70,6 +70,7 @@ TEST_F(ImageTest, png_keeps_its_size_and_is_premultiplied)
     EXPECT_EQ(image->at(1, 0), 0xff00ff00u);
     EXPECT_EQ(image->at(0, 1), 0xff0000ffu);
     EXPECT_EQ(image->at(1, 1), 0x80808080u);
+    EXPECT_EQ(image->pixels.size(), 4u);
 }
 
 TEST_F(ImageTest, extension_is_case_insensitive)
