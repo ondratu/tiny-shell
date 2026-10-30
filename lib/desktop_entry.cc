@@ -218,6 +218,7 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.comment = unescape(get("Comment"));
     entry.exec = unescape(get("Exec"));
     entry.try_exec = unescape(get("TryExec"));
+    entry.path = unescape(get("Path"));
     entry.icon = unescape(get("Icon"));
     entry.categories = split_list(get("Categories"));
     entry.keywords = split_list(get("Keywords"));

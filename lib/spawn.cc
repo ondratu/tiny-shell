@@ -19,8 +19,10 @@ void on_sigchld(int)
     errno = saved_errno;
 }
 
-// The child reports a failed exec through the pipe (closed by a good exec).
-[[noreturn]] void exec_child(const std::vector<std::string>& argv, int report)
+// The child reports a failed chdir or exec through the pipe (closed by a
+// good exec).
+[[noreturn]] void exec_child(const std::vector<std::string>& argv,
+                             const std::string& directory, int report)
 {
     setsid();
 
@@ -36,7 +38,9 @@ void on_sigchld(int)
     }
     args.push_back(nullptr);
 
-    execvp(args[0], args.data());
+    if (directory.empty() || chdir(directory.c_str()) == 0) {
+        execvp(args[0], args.data());
+    }
 
     // nothing more can be done in the child if this write fails
     static_cast<void>(write(report, &errno, sizeof(errno)));
@@ -45,7 +49,7 @@ void on_sigchld(int)
 
 } // namespace
 
-pid_t spawn(const std::vector<std::string>& argv)
+pid_t spawn(const std::vector<std::string>& argv, const std::string& directory)
 {
     if (argv.empty() || argv[0].empty()) {
         errno = EINVAL;
@@ -60,7 +64,7 @@ pid_t spawn(const std::vector<std::string>& argv)
     const pid_t pid = fork();
     if (pid == 0) {
         close(report[0]);
-        exec_child(argv, report[1]);
+        exec_child(argv, directory, report[1]);
     }
 
     const int fork_errno = errno;

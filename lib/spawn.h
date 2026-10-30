@@ -14,10 +14,13 @@ namespace tiny {
  * passed as they are. The program does not die with its parent and does not
  * share its terminal.
  *
+ * A non-empty `directory` becomes the working directory of the program.
+ *
  * Returns the pid of the child. When the program can't be started (empty
- * argv, fork or exec failure) returns -1 and sets errno.
+ * argv, fork, chdir or exec failure) returns -1 and sets errno.
  */
-pid_t spawn(const std::vector<std::string>& argv);
+pid_t spawn(const std::vector<std::string>& argv,
+            const std::string& directory = "");
 
 /// Run a shell command line (pipes, variables, ~) with `/bin/sh -c`.
 pid_t spawn_shell(const std::string& command);

@@ -24,6 +24,7 @@ TEST(DesktopEntryParse, reads_the_basic_keys)
                                                "Exec=firefox %u\n"
                                                "TryExec=firefox\n"
                                                "Icon=firefox\n"
+                                               "Path=/opt/firefox\n"
                                                "Terminal=false\n");
 
     EXPECT_EQ(e.type, "Application");
@@ -33,6 +34,7 @@ TEST(DesktopEntryParse, reads_the_basic_keys)
     EXPECT_EQ(e.exec, "firefox %u");
     EXPECT_EQ(e.try_exec, "firefox");
     EXPECT_EQ(e.icon, "firefox");
+    EXPECT_EQ(e.path, "/opt/firefox");
     EXPECT_FALSE(e.terminal);
 }
 
