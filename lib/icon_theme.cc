@@ -208,6 +208,25 @@ void IconTheme::load(const std::string& name, std::vector<std::string>& parents)
     }
 }
 
+bool IconTheme::exists(const std::string& dir, const std::string& file) const
+{
+    auto it = listings.find(dir);
+    if (it == listings.end()) {
+        std::set<std::string> names;
+        std::error_code error;
+        fs::directory_iterator files(dir, error);
+        for (const fs::directory_iterator end; !error && files != end;
+             files.increment(error)) {
+            std::error_code ignored;
+            if (fs::is_regular_file(files->status(ignored))) { // follows links
+                names.insert(files->path().filename().string());
+            }
+        }
+        it = listings.emplace(dir, std::move(names)).first;
+    }
+    return it->second.count(file) != 0;
+}
+
 std::string IconTheme::find_in(const Theme& theme, std::string_view name,
                                int size) const
 {
@@ -227,17 +246,18 @@ std::string IconTheme::find_in(const Theme& theme, std::string_view name,
                                  distance >= bitmap_distance)) {
                     continue; // the first of the equally good ones stays
                 }
-                std::string file = base;
-                file += "/";
-                file += theme.name;
-                file += "/";
-                file += dir.name;
-                file += "/";
-                file += name;
-                file += extension;
-                if (!is_file(file)) {
+                std::string where = base;
+                where += "/";
+                where += theme.name;
+                where += "/";
+                where += dir.name;
+                std::string leaf(name);
+                leaf += extension;
+                if (!exists(where, leaf)) {
                     continue;
                 }
+                std::string file = where + "/";
+                file += leaf;
                 if (is_vector) {
                     vector = std::move(file);
                 } else if (distance == 0) {
@@ -273,11 +293,10 @@ std::string IconTheme::find_uncached(std::string_view name, int size) const
     plain.insert(plain.end(), pixmaps.begin(), pixmaps.end());
     for (const auto& dir : plain) {
         for (const auto extension : EXTENSIONS) {
-            std::string file = dir + "/";
-            file += name;
-            file += extension;
-            if (is_file(file)) {
-                return file;
+            std::string leaf(name);
+            leaf += extension;
+            if (exists(dir, leaf)) {
+                return dir + "/" + leaf;
             }
         }
     }

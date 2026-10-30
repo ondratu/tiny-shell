@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,7 +30,8 @@ std::vector<std::string> pixmap_dirs(const char* data_home,
  * `hicolor` at the end, then the files right in the icon directories (GTK does that too) and the
  * pixmap directories. In a theme a bitmap
  * (`.png`, `.xpm`) of the wanted size wins, then an `.svg` (it can be drawn
- * in any size), then the bitmap with the closest size. Results are cached, so one object should live as long as
+ * in any size), then the bitmap with the closest size. Results are cached, and so are the listings of the directories (an icon installed
+ * later is not seen), so one object should live as long as
  * the icons are needed; it is not thread safe.
  */
 class IconTheme {
@@ -60,6 +62,8 @@ class IconTheme {
         std::vector<SubDir> dirs;
     };
 
+    //! Is there such a file in the directory? Directories are listed once.
+    bool exists(const std::string& dir, const std::string& file) const;
     std::string find_uncached(std::string_view name, int size) const;
     std::string find_in(const Theme& theme, std::string_view name,
                         int size) const;
@@ -69,6 +73,7 @@ class IconTheme {
     std::vector<std::string> pixmaps;
     std::vector<Theme> themes; //!< the theme, its parents, hicolor
     mutable std::map<std::pair<std::string, int>, std::string> cache;
+    mutable std::map<std::string, std::set<std::string>> listings;
 };
 
 } // namespace tiny

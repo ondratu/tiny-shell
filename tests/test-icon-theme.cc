@@ -305,7 +305,10 @@ TEST_F(IconThemeTest, the_result_is_cached)
     const auto first = theme.find("app", 16);
     fs::remove(first);
     EXPECT_EQ(theme.find("app", 16), first);
-    EXPECT_EQ(theme.find("app", 48), ""); // another size is another question
+
+    // the directories are listed once, so a new icon is not seen
+    touch("icons/hicolor/16x16/apps/late.png");
+    EXPECT_EQ(theme.find("late", 16), "");
 }
 
 TEST_F(IconThemeTest, theme_in_more_base_directories)
