@@ -162,22 +162,29 @@ void Entry::on_expose(const XEvent&, void*)
     XftColorFree(display, visual, colormap, &color);
 }
 
-void Entry::on_focus_in(const XEvent&, void*)
+void Entry::set_focus_state(bool focus, const XEvent& e)
 {
-    is_focus = true;
+    // With the pointer over the entry the server reports the focus of the
+    // pointer window (NotifyPointer) and the focus of the entry twice: it is
+    // not a change and must not redraw the entry.
+    if (e.xfocus.detail == NotifyPointer || is_focus == focus) {
+        return;
+    }
+    is_focus = focus;
     if (xic) {
-        XSetICFocus(xic);
+        focus ? XSetICFocus(xic) : XUnsetICFocus(xic);
     }
     redraw();
 }
 
-void Entry::on_focus_out(const XEvent&, void*)
+void Entry::on_focus_in(const XEvent& e, void*)
 {
-    is_focus = false;
-    if (xic) {
-        XUnsetICFocus(xic);
-    }
-    redraw();
+    set_focus_state(true, e);
+}
+
+void Entry::on_focus_out(const XEvent& e, void*)
+{
+    set_focus_state(false, e);
 }
 
 } // namespace tiny

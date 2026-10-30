@@ -46,6 +46,7 @@ class Entry : public Widget {
 
   private:
     void redraw();
+    void set_focus_state(bool focus, const XEvent& e);
 
     std::string text;
 
