@@ -10,6 +10,8 @@
 #include <iterator>
 #include <set>
 
+#include "xdg.h"
+
 namespace tiny {
 
 namespace fs = std::filesystem;
@@ -18,21 +20,6 @@ namespace {
 
 // a loop of symbolic links must end
 constexpr size_t MAX_DEPTH = 8;
-
-std::vector<std::string> split_paths(std::string_view paths)
-{
-    std::vector<std::string> out;
-    while (!paths.empty()) {
-        const auto colon = paths.find(':');
-        const auto part = paths.substr(0, colon);
-        if (!part.empty()) {
-            out.emplace_back(part);
-        }
-        paths.remove_prefix(colon == std::string_view::npos ? paths.size()
-                                                            : colon + 1);
-    }
-    return out;
-}
 
 bool is_executable_file(const std::string& file)
 {
@@ -46,24 +33,6 @@ std::string lower(std::string_view text)
     std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
     });
-    return out;
-}
-
-// "/usr/share/" -> "/usr/share"; a relative path is nothing
-std::string absolute_dir(std::string dir)
-{
-    if (dir.empty() || dir[0] != '/') {
-        return {};
-    }
-    std::string out;
-    for (const char c : dir) {
-        if (c != '/' || out.empty() || out.back() != '/') {
-            out += c;
-        }
-    }
-    if (out.size() > 1 && out.back() == '/') {
-        out.pop_back();
-    }
     return out;
 }
 
@@ -155,31 +124,9 @@ struct Scanner {
 std::vector<std::string>
 application_dirs(const char* data_home, const char* data_dirs, const char* home)
 {
-    std::vector<std::string> dirs;
-    const auto add = [&](const std::string& dir) {
-        const std::string clean = absolute_dir(dir);
-        if (!clean.empty()) {
-            const std::string applications =
-                    (clean == "/" ? "" : clean) + "/applications";
-            if (std::find(dirs.begin(), dirs.end(), applications) ==
-                dirs.end()) {
-                dirs.push_back(applications);
-            }
-        }
-    };
-
-    if (data_home != nullptr && !absolute_dir(data_home).empty()) {
-        add(data_home);
-    } else if (home != nullptr && *home != '\0') {
-        add(std::string(home) + "/.local/share");
-    }
-
-    const std::string_view system =
-            (data_dirs != nullptr && *data_dirs != '\0')
-                    ? std::string_view(data_dirs)
-                    : std::string_view("/usr/local/share:/usr/share");
-    for (const auto& dir : split_paths(system)) {
-        add(dir);
+    std::vector<std::string> dirs = xdg_data_dirs(data_home, data_dirs, home);
+    for (auto& dir : dirs) {
+        dir += dir == "/" ? "applications" : "/applications";
     }
     return dirs;
 }
@@ -192,7 +139,7 @@ bool executable_exists(std::string_view program, std::string_view path)
     if (program.find('/') != std::string_view::npos) {
         return is_executable_file(std::string(program));
     }
-    const auto dirs = split_paths(path);
+    const auto dirs = split_path_list(path);
     return std::any_of(dirs.begin(), dirs.end(), [&](const std::string& dir) {
         return is_executable_file(dir + "/" + std::string(program));
     });
