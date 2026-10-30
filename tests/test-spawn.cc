@@ -198,6 +198,16 @@ TEST(SpawnCommand, shell_syntax_goes_to_the_shell)
 
 TEST(Spawn, child_does_not_inherit_blocked_signals)
 {
+    {
+        // only Linux procfs tells the mask (NetBSD has another format)
+        std::ifstream status("/proc/self/status");
+        std::string line;
+        while (std::getline(status, line) && line.rfind("SigBlk:", 0) != 0) {}
+        if (line.rfind("SigBlk:", 0) != 0) {
+            GTEST_SKIP() << "no SigBlk in /proc/self/status";
+        }
+    }
+
     const auto out = temp_file("tiny-spawn-mask-");
     sigset_t block;
     sigset_t before;
