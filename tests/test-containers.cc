@@ -390,6 +390,26 @@ class PopoverTest : public ::testing::Test {
     }
 };
 
+namespace {
+
+int ignore_x_error_for_test(::Display*, XErrorEvent*)
+{
+    return 0;
+}
+
+} // namespace
+
+TEST_F(PopoverTest, focus_check_leaves_the_error_handler_as_it_was)
+{
+    tiny::Popover p(100, 50);
+    p.realize(root(), 0, 0);
+    const XErrorHandler previous = XSetErrorHandler(ignore_x_error_for_test);
+
+    focus_out(p);
+
+    EXPECT_EQ(XSetErrorHandler(previous), &ignore_x_error_for_test);
+}
+
 TEST_F(PopoverTest, default_popover_is_vertical)
 {
     const tiny::Popover p(100, 50);
