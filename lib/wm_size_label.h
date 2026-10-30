@@ -32,7 +32,8 @@ class SizeLabel : public tiny::Widget {
     void on_expose(const XEvent& e, void* data);
 
   private:
-    void center();
+    //! Returns true when the size of the box changed
+    bool center();
 
     std::string text;
     int area_width = 0;
