@@ -139,6 +139,21 @@ TEST_F(ImageTest, transparent_part_of_an_svg_is_empty)
     EXPECT_EQ(image->at(18, 10), 0u);
 }
 
+TEST_F(ImageTest, xpm_keeps_its_size)
+{
+    const auto image = tiny::load_image(
+            write("a.xpm", "/* XPM */\nstatic char * a[] = {\n\"2 1 1 1\",\n"
+                           "\"a c #00ff00\",\n\"aa\"};\n"),
+            48);
+
+    if (!image) {
+        FAIL() << "the image was not loaded";
+    }
+    EXPECT_EQ(image->width, 2);
+    EXPECT_EQ(image->height, 1);
+    EXPECT_EQ(image->at(1, 0), 0xff00ff00u);
+}
+
 TEST_F(ImageTest, broken_and_unsupported_files)
 {
     EXPECT_FALSE(tiny::load_image((root / "missing.png").string(), 16));
@@ -146,6 +161,7 @@ TEST_F(ImageTest, broken_and_unsupported_files)
     EXPECT_FALSE(tiny::load_image(write("bad.svg", "not an svg"), 16));
     EXPECT_FALSE(tiny::load_image(write("empty.svg", "<svg/>"), 16));
     EXPECT_FALSE(tiny::load_image(write("a.xpm", "/* XPM */"), 16));
+    EXPECT_FALSE(tiny::load_image(write("b.ico", "x"), 16));
     EXPECT_FALSE(tiny::load_image(write("noext", "x"), 16));
 }
 
