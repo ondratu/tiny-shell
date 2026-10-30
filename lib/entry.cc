@@ -1,6 +1,7 @@
 #include <X11/keysym.h>
 
 #include <algorithm>
+#include <array>
 
 #include "entry.h"
 #include "x_util.h"
@@ -69,20 +70,51 @@ void Entry::clear()
     set_text("");
 }
 
+std::string latin1_to_utf8(const char* bytes, int len)
+{
+    std::string out;
+    for (int i = 0; i < len; ++i) {
+        const auto c = static_cast<unsigned char>(bytes[i]);
+        if (c < 0x80) {
+            out += static_cast<char>(c);
+        } else {
+            out += static_cast<char>(0xC0 | (c >> 6));
+            out += static_cast<char>(0x80 | (c & 0x3F));
+        }
+    }
+    return out;
+}
+
+std::string Entry::lookup(const XKeyEvent& key, KeySym& keysym)
+{
+    auto* const event = const_cast<XKeyEvent*>(&key);
+    if (!xic) { // no input method: Latin-1 only
+        std::array<char, 32> buf{};
+        const int len =
+                XLookupString(event, buf.data(), buf.size(), &keysym, nullptr);
+        return latin1_to_utf8(buf.data(), len);
+    }
+
+    std::string buf(32, '\0');
+    Status state = 0;
+    int len = Xutf8LookupString(xic, event, buf.data(),
+                                static_cast<int>(buf.size()), &keysym, &state);
+    if (state == XBufferOverflow) { // `len` is the needed size
+        buf.assign(static_cast<size_t>(len), '\0');
+        len = Xutf8LookupString(xic, event, buf.data(),
+                                static_cast<int>(buf.size()), &keysym, &state);
+    }
+    if (state != XLookupChars && state != XLookupBoth) {
+        return {}; // a key without characters; `len` means nothing
+    }
+    buf.resize(static_cast<size_t>(std::max(len, 0)));
+    return buf;
+}
+
 void Entry::on_key_press(const XEvent& e, void*)
 {
-    char buf[32] = "\0";
     KeySym keysym = NoSymbol;
-    Status state;
-    int len = 0;
-
-    if (xic) {
-        len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
-                                sizeof(buf) - 1, &keysym, &state);
-    } else { // no input method: Latin-1 only
-        len = XLookupString(const_cast<XKeyEvent*>(&e.xkey), buf,
-                            sizeof(buf) - 1, &keysym, nullptr);
-    }
+    const std::string typed = lookup(e.xkey, keysym);
 
     switch (keysym) {
         case XK_BackSpace:
@@ -107,12 +139,11 @@ void Entry::on_key_press(const XEvent& e, void*)
             return;
         default:
             // control characters (Ctrl+key, DEL, ...) are not text
-            if (len <= 0 || static_cast<unsigned char>(buf[0]) < 0x20 ||
-                buf[0] == 0x7F) {
+            if (typed.empty() || static_cast<unsigned char>(typed[0]) < 0x20 ||
+                typed[0] == 0x7F) {
                 return;
             }
-            buf[len] = 0;
-            text += buf;
+            text += typed;
             break;
     }
 
