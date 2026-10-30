@@ -4,6 +4,9 @@
 # Fast checks run on commit, the slow ones (lint, tests) before push.
 default_install_hook_types: [pre-commit, pre-push]
 
+# vendored code is kept as it was published
+exclude: ^lib/third_party/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

@@ -94,6 +94,11 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   Lua for scripting is the planned example.
 - Prefer a small vendored single-file library (public domain or permissive,
   e.g. `stb_image.h`) over a new shared library.
+- Vendored libraries live in `lib/third_party/` unchanged, with their licence
+  and the version in `lib/third_party/README.md`. They are compiled as system
+  headers (`-isystem`), skipped by the formatter, the linter and the
+  spell checker, and not counted in the coverage. Update them by copying the
+  new files and the version, never by editing.
 - Keep binary size and memory use in mind; do not add dependencies only for
   convenience.
 
