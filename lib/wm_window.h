@@ -18,8 +18,12 @@ namespace wm {
  * The result is min..max (an unset limit does not count) and, when the client
  * asks for a resize increment, base + n * increment (ICCCM 4.1.2.3). Apply it
  * to the size of the client, not of its frame.
+ *
+ * `floor` is a minimum of the window manager (not of the client). It is kept
+ * on the grid, but the maximum of the client wins over it.
  */
-int fit_client_size(const XSizeHints& hints, bool horizontal, int size);
+int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
+                    int floor = 0);
 
 /// Number of increments (e.g. columns or rows of a terminal) in a client size.
 int client_size_units(const XSizeHints& hints, bool horizontal, int size);

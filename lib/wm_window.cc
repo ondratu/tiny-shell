@@ -52,21 +52,29 @@ Axis axis_of(const XSizeHints& hints, bool horizontal)
 
 } // namespace
 
-int fit_client_size(const XSizeHints& hints, bool horizontal, int size)
+int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
+                    int floor)
 {
     const Axis axis = axis_of(hints, horizontal);
+    const auto on_grid = [&axis](int value) {
+        return axis.inc > 0
+                       ? axis.base + (value - axis.base) / axis.inc * axis.inc
+                       : value;
+    };
 
     if (axis.max > 0) {
         size = std::min(size, axis.max);
+        // the limit of the client wins over the floor of the window manager
+        floor = std::min(floor, on_grid(axis.max));
     }
-    if (axis.inc > 0) {
-        size = axis.base + (size - axis.base) / axis.inc * axis.inc;
-    }
-    if (size < axis.min) {
+    size = on_grid(size);
+
+    const int lowest = std::max(axis.min, floor);
+    if (size < lowest) {
         // the first size of the grid that is not under the minimum
-        size = axis.inc > 0 ? size + (axis.min - size + axis.inc - 1) /
-                                              axis.inc * axis.inc
-                            : axis.min;
+        size = axis.inc > 0 ? size + (lowest - size + axis.inc - 1) / axis.inc *
+                                              axis.inc
+                            : lowest;
     }
     return size;
 }
@@ -389,7 +397,9 @@ void Window::update_normal_hints()
      * PBaseSize|PWinGravity
      */
     long supplied; // fields Xlib understands, the client's are in hints->flags
-    XGetWMNormalHints(dsp, child, hints, &supplied);
+    if (!XGetWMNormalHints(dsp, child, hints, &supplied)) {
+        hints->flags = 0; // no hints: no limits
+    }
     // No limits means no restriction (ICCCM); only equal limits fix the size
     if (hints->flags & PMinSize && hints->flags & PMaxSize &&
         (hints->min_width == hints->max_width) &&

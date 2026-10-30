@@ -27,6 +27,20 @@ class Probe : public wm::Wrapped {
     }
 };
 
+// Sets the minimum width of a frame for the lifetime of the object.
+class FrameMinWidth {
+  public:
+    explicit FrameMinWidth(int width): old(tiny::theme.wm_win_min_width)
+    {
+        tiny::theme.wm_win_min_width = width;
+    }
+
+    ~FrameMinWidth() { tiny::theme.wm_win_min_width = old; }
+
+  private:
+    int old;
+};
+
 class WrappedTest : public ::testing::Test {
   protected:
     void SetUp() override { client.map(); }
@@ -557,6 +571,48 @@ TEST_F(WrappedTest, resizing_snaps_to_the_grid_of_the_base_size)
     EXPECT_EQ((child().height - 5) % 30, 0);
     EXPECT_EQ(child().width, 3 + 12 * 16); // 195
     EXPECT_EQ(child().height, 5 + 3 * 30); // 95
+}
+
+TEST_F(WrappedTest, minimum_of_the_window_manager_keeps_the_grid)
+{
+    // the grid 3 + n * 7 has no size equal to the minimum width of the frame
+    XSizeHints hints = {};
+    hints.flags = PBaseSize | PResizeInc;
+    hints.base_width = 3;
+    hints.width_inc = 7;
+    const FrameMinWidth min_width(12);
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(0, 300, MotionNotify), mask);
+
+    EXPECT_GE(child().width, 12);
+    EXPECT_EQ((child().width - 3) % 7, 0);
+    EXPECT_EQ(child().width, 17);
+}
+
+TEST_F(WrappedTest,
+       maximum_of_the_client_wins_over_the_minimum_of_the_window_manager)
+{
+    XSizeHints hints = {};
+    hints.flags = PMaxSize;
+    hints.max_width = 6;
+    hints.max_height = 600;
+    const FrameMinWidth min_width(12);
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Right));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(0, 300, MotionNotify), mask);
+
+    EXPECT_EQ(child().width, 6);
 }
 
 TEST_F(WrappedTest, resizing_the_left_edge_keeps_the_right_edge_on_the_grid)

@@ -358,6 +358,50 @@ TEST(SizeHints, size_snaps_even_when_the_start_is_not_on_the_grid)
     EXPECT_EQ(wm::fit_client_size(tall, false, 912), 40 + 22 * 38);
 }
 
+TEST(SizeHints, floor_of_the_window_manager_is_kept_on_the_grid)
+{
+    XSizeHints hints = {};
+    hints.flags = PBaseSize | PResizeInc;
+    hints.base_width = 3;
+    hints.width_inc = 7;
+
+    // the first grid size 3 + n * 7 that is not under 10 is 10
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4, 10), 10);
+    // 11 is not on the grid: 17 is the first one not under it
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4, 11), 17);
+    // sizes over the floor are only snapped down
+    EXPECT_EQ(wm::fit_client_size(hints, true, 30, 10), 3 + 3 * 7);
+}
+
+TEST(SizeHints, floor_without_increment_is_the_minimum)
+{
+    const XSizeHints hints = {};
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4, 10), 10);
+    EXPECT_EQ(wm::fit_client_size(hints, true, 50, 10), 50);
+}
+
+TEST(SizeHints, maximum_of_the_client_wins_over_the_floor)
+{
+    XSizeHints hints = {};
+    hints.flags = PMaxSize;
+    hints.max_width = 6;
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4, 10), 6);
+}
+
+TEST(SizeHints, maximum_on_the_grid_wins_over_the_floor)
+{
+    XSizeHints hints = {};
+    hints.flags = PBaseSize | PResizeInc | PMaxSize;
+    hints.base_width = 3;
+    hints.width_inc = 7;
+    hints.max_width = 12;
+
+    // 10 is the only grid size that fits in 12
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4, 12), 10);
+}
+
 TEST(SizeHints, size_is_limited_by_min_and_max_on_the_grid)
 {
     XSizeHints hints = terminal_hints();
@@ -606,9 +650,23 @@ class SizedWindow : public WmWindow {
   public:
     using WmWindow::WmWindow;
     tiny::Rect restore_size() const { return state; }
+    long hint_flags() const { return hints->flags; }
 };
 
 } // namespace
+
+TEST_F(WmWindowTest, removed_normal_hints_leave_no_limits)
+{
+    client.set_size_hints(PMinSize | PMaxSize, 300, 200, 300, 200);
+    SizedWindow window(client.window, root_window(), 0xFFFF);
+    ASSERT_NE(window.hint_flags() & PMinSize, 0);
+
+    XDeleteProperty(client.display, client.window, XA_WM_NORMAL_HINTS);
+    client.sync();
+    window.update_normal_hints();
+
+    EXPECT_EQ(window.hint_flags(), 0);
+}
 
 TEST_F(WmWindowTest, maximized_window_without_size_gets_two_thirds_of_screen)
 {
