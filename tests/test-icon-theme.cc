@@ -113,17 +113,58 @@ TEST_F(IconThemeTest, scalable_directory_with_png_and_range)
     EXPECT_EQ(theme.find("app", 20), path("icons/hicolor/16x16/apps/app.png"));
 }
 
-TEST_F(IconThemeTest, svg_is_not_used_and_png_beats_xpm)
+TEST_F(IconThemeTest, png_beats_xpm_at_one_size)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/hicolor/16x16/apps/both.xpm");
+    touch("icons/hicolor/16x16/apps/both.png");
+    EXPECT_EQ(make().find("both", 16),
+              path("icons/hicolor/16x16/apps/both.png"));
+}
+
+TEST_F(IconThemeTest, a_bitmap_of_the_right_size_beats_svg)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/hicolor/scalable/apps/app.svg");
+    touch("icons/hicolor/16x16/apps/app.png");
+    touch("icons/hicolor/48x48/apps/app.png");
+    const auto theme = make();
+
+    EXPECT_EQ(theme.find("app", 16), path("icons/hicolor/16x16/apps/app.png"));
+    EXPECT_EQ(theme.find("app", 50), path("icons/hicolor/48x48/apps/app.png"));
+}
+
+TEST_F(IconThemeTest, svg_beats_a_bitmap_of_another_size)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/hicolor/scalable/apps/app.svg");
+    touch("icons/hicolor/16x16/apps/app.png");
+    touch("icons/hicolor/48x48/apps/app.png");
+    const auto theme = make();
+
+    EXPECT_EQ(theme.find("app", 24),
+              path("icons/hicolor/scalable/apps/app.svg"));
+    EXPECT_EQ(theme.find("app", 512),
+              path("icons/hicolor/scalable/apps/app.svg"));
+}
+
+TEST_F(IconThemeTest, svg_alone_serves_every_size)
 {
     index("hicolor", HICOLOR);
     touch("icons/hicolor/scalable/apps/vector.svg");
-    touch("icons/hicolor/16x16/apps/both.xpm");
-    touch("icons/hicolor/16x16/apps/both.png");
     const auto theme = make();
 
-    EXPECT_EQ(theme.find("vector", 16), "");
-    EXPECT_EQ(theme.find("both", 16),
-              path("icons/hicolor/16x16/apps/both.png"));
+    EXPECT_EQ(theme.find("vector", 16),
+              path("icons/hicolor/scalable/apps/vector.svg"));
+    EXPECT_EQ(theme.find("vector.svg", 300),
+              path("icons/hicolor/scalable/apps/vector.svg"));
+}
+
+TEST_F(IconThemeTest, closest_bitmap_when_there_is_no_svg)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/hicolor/16x16/apps/app.png");
+    EXPECT_EQ(make().find("app", 24), path("icons/hicolor/16x16/apps/app.png"));
 }
 
 TEST_F(IconThemeTest, scaled_directories_are_skipped)
@@ -178,11 +219,13 @@ TEST_F(IconThemeTest, pixmaps_are_the_last_resort)
 {
     index("hicolor", HICOLOR);
     touch("pixmaps/old.xpm");
+    touch("pixmaps/vector.svg");
     touch("pixmaps/both.png");
     touch("icons/hicolor/16x16/apps/both.png");
     const auto theme = make();
 
     EXPECT_EQ(theme.find("old", 32), path("pixmaps/old.xpm"));
+    EXPECT_EQ(theme.find("vector", 32), path("pixmaps/vector.svg"));
     EXPECT_EQ(theme.find("both", 32),
               path("icons/hicolor/16x16/apps/both.png"));
 }

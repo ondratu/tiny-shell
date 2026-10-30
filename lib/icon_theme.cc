@@ -14,7 +14,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr std::string_view EXTENSIONS[] = {".png", ".xpm"};
+// the order of preference at one size; a vector file is the last
+constexpr std::string_view EXTENSIONS[] = {".png", ".xpm", ".svg"};
 
 using Section = std::map<std::string, std::string>;
 
@@ -208,16 +209,22 @@ void IconTheme::load(const std::string& name, std::vector<std::string>& parents)
 std::string IconTheme::find_in(const Theme& theme, std::string_view name,
                                int size) const
 {
-    std::string best;
-    int best_distance = 0;
+    // A bitmap of the right size wins, then a vector file (it is drawn in any
+    // size), then the closest bitmap.
+    std::string bitmap;
+    int bitmap_distance = 0;
+    std::string vector;
     for (const auto& dir : theme.dirs) {
         const int distance = dir.distance(size);
-        if (!best.empty() && distance >= best_distance) {
-            continue; // the first of the equally good ones stays
-        }
         // the theme can be in more base directories
         for (const auto& base : bases) {
             for (const auto extension : EXTENSIONS) {
+                const bool is_vector = extension == ".svg";
+                if (is_vector ? !vector.empty()
+                              : (!bitmap.empty() &&
+                                 distance >= bitmap_distance)) {
+                    continue; // the first of the equally good ones stays
+                }
                 std::string file = base;
                 file += "/";
                 file += theme.name;
@@ -226,18 +233,21 @@ std::string IconTheme::find_in(const Theme& theme, std::string_view name,
                 file += "/";
                 file += name;
                 file += extension;
-                if (is_file(file)) {
-                    best = std::move(file);
-                    best_distance = distance;
-                    break;
+                if (!is_file(file)) {
+                    continue;
                 }
-            }
-            if (best_distance == distance && !best.empty()) {
-                break;
+                if (is_vector) {
+                    vector = std::move(file);
+                } else if (distance == 0) {
+                    return file;
+                } else {
+                    bitmap = std::move(file);
+                    bitmap_distance = distance;
+                }
             }
         }
     }
-    return best;
+    return vector.empty() ? bitmap : vector;
 }
 
 std::string IconTheme::find_uncached(std::string_view name, int size) const
