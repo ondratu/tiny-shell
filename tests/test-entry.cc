@@ -345,3 +345,11 @@ TEST(EntryLifeTest, destructor_disconnects_the_handlers)
     EXPECT_FALSE(tiny::handlers.count({FocusIn, window}));
     EXPECT_FALSE(tiny::handlers.count({FocusOut, window}));
 }
+
+TEST(Latin1, ascii_stays_and_high_bytes_become_utf8)
+{
+    EXPECT_EQ(tiny::latin1_to_utf8("abc", 3), "abc");
+    EXPECT_EQ(tiny::latin1_to_utf8("\xE9", 1), "\xC3\xA9");
+    EXPECT_EQ(tiny::latin1_to_utf8("a\xFF", 2), "a\xC3\xBF");
+    EXPECT_EQ(tiny::latin1_to_utf8("", 0), "");
+}

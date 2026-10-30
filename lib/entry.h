@@ -13,6 +13,9 @@ namespace tiny {
  * after every edit, on_activate on Return and on_cancel on Escape. What the
  * text means is up to the owner.
  */
+/// Latin-1 bytes (what `XLookupString` gives without an input method) as UTF-8.
+std::string latin1_to_utf8(const char* bytes, int len);
+
 class Entry : public Widget {
   public:
     Entry(int width, int height);
@@ -45,6 +48,8 @@ class Entry : public Widget {
     void on_focus_out(const XEvent& e, void* data);
 
   private:
+    //! The typed characters in UTF-8; sets the keysym of the key
+    std::string lookup(const XKeyEvent& key, KeySym& keysym);
     void redraw();
     void set_focus_state(bool focus, const XEvent& e);
 
