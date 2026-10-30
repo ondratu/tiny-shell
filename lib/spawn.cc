@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cctype>
 #include <cerrno>
 #include <csignal>
 
@@ -104,7 +105,7 @@ pid_t spawn_command(const std::string& text)
     std::vector<std::string> argv;
     std::string word;
     for (const char c : text + ' ') {
-        if (c == ' ' || c == '\t') {
+        if (std::isspace(static_cast<unsigned char>(c)) != 0) {
             if (!word.empty()) {
                 argv.push_back(std::move(word));
                 word.clear();
