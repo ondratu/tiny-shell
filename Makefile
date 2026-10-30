@@ -146,14 +146,20 @@ $(BUILD)/.gtest_check: Makefile
 $(TESTS) $(TEST_OBJ): | $(BUILD)/.gtest_check
 
 # Coverage is built into COV_DIR so it does not mix with normal objects.
-# Needs gcc with gcov and xvfb-run.
+# Needs xvfb-run and the gcov that matches the compiler: clang writes its own
+# format, so llvm-cov is used for it (override with make coverage GCOV=...).
 COV_DIR = build-cov
+ifneq (,$(findstring clang,$(CXX_VERSION)))
+GCOV ?= tools/run-tool.sh llvm-cov gcov
+else
+GCOV ?= gcov
+endif
 
 coverage:
 	@rm -rf $(COV_DIR)
 	@GTEST_BRIEF=1 $(MAKE) BUILD=$(COV_DIR) check -s \
 	    CXXFLAGS="-g -O0 --coverage" LDFLAGS="--coverage"
-	@gcov -n -o $(COV_DIR)/lib $(LIB_SRC) 2>/dev/null | \
+	@$(GCOV) -n -o $(COV_DIR)/lib $(LIB_SRC) 2>/dev/null | \
 	    awk -F"'" '/^File/{f=$$2} /^Lines executed/{ \
 	        if (f ~ /^lib\/[^\/]*\.cc$$/ && !(f in seen)) { \
 	            seen[f]=1; split($$0, a, /[:% ]+/); \
