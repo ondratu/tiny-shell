@@ -4,6 +4,7 @@
 #include <X11/Xatom.h>
 
 #include "object.h"
+#include "spawn.h"
 #include "wm_manager.h"
 #include "wm_wrapped.h"
 #include "x_util.h"
@@ -22,6 +23,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     running(true)
 {
+    tiny::reap_children();
     //set_supported();
     XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
     XSync(display_arg, True);

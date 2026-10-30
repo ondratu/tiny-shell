@@ -1,0 +1,28 @@
+#pragma once
+
+#include <sys/types.h>
+
+#include <string>
+#include <vector>
+
+namespace tiny {
+
+/**
+ * @short Start the program argv[0] with arguments in a new session.
+ *
+ * No shell is involved: argv[0] is searched in PATH and the arguments are
+ * passed as they are. The program does not die with its parent and does not
+ * share its terminal.
+ *
+ * Returns the pid of the child. When the program can't be started (empty
+ * argv, fork or exec failure) returns -1 and sets errno.
+ */
+pid_t spawn(const std::vector<std::string>& argv);
+
+/// Run a shell command line (pipes, variables, ~) with `/bin/sh -c`.
+pid_t spawn_shell(const std::string& command);
+
+/// Collect finished children (SIGCHLD) so they do not stay as zombies.
+void reap_children();
+
+} // namespace tiny

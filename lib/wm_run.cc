@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <cassert>
 
+#include "spawn.h"
 #include "wm_run.h"
 
 namespace wm {
@@ -69,15 +70,8 @@ void Entry::on_key_release(const XEvent& e, void*)
         // TODO: working with position
         // TODO: suggest like command line
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Return)) {
-        if (!fork()) {
-            std::string cmd = "exec ";
-            cmd += text;
-            const int ret =
-                    execl("/bin/sh", "/bin/sh", "-c", cmd.c_str(), NULL);
-            exit(ret);
-        } else {
-            on_exit(this, e);
-        }
+        tiny::spawn_shell(text);
+        on_exit(this, e);
         return;
     } else if (e.xkey.keycode == XKeysymToKeycode(display, XK_Escape)) {
         on_exit(this, e);
