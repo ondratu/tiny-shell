@@ -205,8 +205,8 @@ TEST(Spawn, child_does_not_inherit_blocked_signals)
     sigaddset(&block, SIGUSR1);
     sigprocmask(SIG_BLOCK, &block, &before);
 
-    const pid_t pid = tiny::spawn_shell("grep SigBlk /proc/self/status > " +
-                                        out.string());
+    // the status of cp itself (a shell would clear the mask on its own)
+    const pid_t pid = tiny::spawn({"cp", "/proc/self/status", out.string()});
     sigprocmask(SIG_SETMASK, &before, nullptr);
 
     ASSERT_GT(pid, 0);
@@ -216,9 +216,8 @@ TEST(Spawn, child_does_not_inherit_blocked_signals)
     }));
     std::ifstream in(out);
     std::string line;
-    std::getline(in, line);
-    EXPECT_EQ(line.substr(line.find(':') + 1).find_first_not_of(" \t0"),
-              std::string::npos)
-            << line;
+    while (std::getline(in, line) && line.rfind("SigBlk:", 0) != 0) {}
+    ASSERT_EQ(line.rfind("SigBlk:", 0), 0u) << "no SigBlk line";
+    EXPECT_EQ(line.find_first_not_of("SigBlk: \t0"), std::string::npos) << line;
     std::filesystem::remove(out);
 }
