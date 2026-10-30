@@ -6,6 +6,7 @@
 #include <clocale>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 
@@ -212,6 +213,11 @@ TEST_F(ApplicationIndexTest, names_are_sorted_by_the_collation_of_the_locale)
     const std::string saved = std::setlocale(LC_COLLATE, nullptr);
     if (std::setlocale(LC_COLLATE, "cs_CZ.UTF-8") == nullptr) {
         GTEST_SKIP() << "cs_CZ.UTF-8 is not installed";
+    }
+    // musl accepts any locale name, but its strcoll compares bytes
+    if (std::strcoll("Čtečka", "Zebra") >= 0) {
+        std::setlocale(LC_COLLATE, saved.c_str());
+        GTEST_SKIP() << "the C library does not collate by locale";
     }
     write("system", "a.desktop", app("Zebra"));
     write("system", "b.desktop", app("Čtečka"));
