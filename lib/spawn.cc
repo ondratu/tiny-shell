@@ -23,6 +23,11 @@ void on_sigchld(int)
 {
     setsid();
 
+    // exec keeps the mask of blocked signals
+    sigset_t none;
+    sigemptyset(&none);
+    sigprocmask(SIG_SETMASK, &none, nullptr);
+
     std::vector<char*> args;
     args.reserve(argv.size() + 1);
     for (const auto& arg : argv) {

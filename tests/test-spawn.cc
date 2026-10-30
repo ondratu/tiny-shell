@@ -195,3 +195,30 @@ TEST(SpawnCommand, shell_syntax_goes_to_the_shell)
     EXPECT_GT(tiny::spawn_command("FOO=1 true"), 0);
     EXPECT_GT(tiny::spawn_command("true \"quoted arg\""), 0);
 }
+
+TEST(Spawn, child_does_not_inherit_blocked_signals)
+{
+    const auto out = temp_file("tiny-spawn-mask-");
+    sigset_t block;
+    sigset_t before;
+    sigemptyset(&block);
+    sigaddset(&block, SIGUSR1);
+    sigprocmask(SIG_BLOCK, &block, &before);
+
+    const pid_t pid = tiny::spawn_shell("grep SigBlk /proc/self/status > " +
+                                        out.string());
+    sigprocmask(SIG_SETMASK, &before, nullptr);
+
+    ASSERT_GT(pid, 0);
+    ASSERT_TRUE(wait_for([&] {
+        return std::filesystem::exists(out) &&
+               std::filesystem::file_size(out) > 0;
+    }));
+    std::ifstream in(out);
+    std::string line;
+    std::getline(in, line);
+    EXPECT_EQ(line.substr(line.find(':') + 1).find_first_not_of(" \t0"),
+              std::string::npos)
+            << line;
+    std::filesystem::remove(out);
+}
