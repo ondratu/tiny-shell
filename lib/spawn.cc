@@ -32,10 +32,8 @@ void on_sigchld(int)
 
     execvp(args[0], args.data());
 
-    const int error = errno;
-    if (write(report, &error, sizeof(error)) < 0) {
-        // nothing more can be done in the child
-    }
+    // nothing more can be done in the child if this write fails
+    static_cast<void>(write(report, &errno, sizeof(errno)));
     _exit(127);
 }
 
@@ -86,7 +84,7 @@ pid_t spawn(const std::vector<std::string>& argv)
 
 pid_t spawn_shell(const std::string& command)
 {
-    return spawn({"/bin/sh", "-c", "exec " + command});
+    return spawn({"/bin/sh", "-c", command});
 }
 
 void reap_children()
