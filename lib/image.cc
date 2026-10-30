@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string_view>
 
@@ -11,11 +13,14 @@
 #include <nanosvg.h>
 #include <nanosvgrast.h>
 
+#include "xpm.h"
+
 namespace tiny {
 
 namespace {
 
 constexpr int MAX_SIZE = 4096;
+constexpr std::streamsize MAX_FILE = 16 << 20; // of a text picture
 
 bool has_extension(const std::string& path, const char* extension)
 {
@@ -61,6 +66,21 @@ std::optional<Image> load_png(const std::string& path)
     return convert(data.get(), width, height);
 }
 
+std::optional<Image> load_xpm(const std::string& path)
+{
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        return std::nullopt;
+    }
+    std::string text(static_cast<size_t>(MAX_FILE), '\0');
+    file.read(text.data(), MAX_FILE);
+    text.resize(static_cast<size_t>(file.gcount()));
+    if (file.gcount() == MAX_FILE && file.peek() != EOF) {
+        return std::nullopt; // too big for an icon
+    }
+    return parse_xpm(text);
+}
+
 std::optional<Image> load_svg(const std::string& path, int size)
 {
     const std::unique_ptr<NSVGimage, decltype(&nsvgDelete)> svg(
@@ -99,6 +119,9 @@ std::optional<Image> load_image(const std::string& path, int size)
     }
     if (has_extension(path, ".png")) {
         return load_png(path);
+    }
+    if (has_extension(path, ".xpm")) {
+        return load_xpm(path);
     }
     if (has_extension(path, ".svg")) {
         return load_svg(path, size);

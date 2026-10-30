@@ -21,9 +21,9 @@ struct Image {
 };
 
 /**
- * @short Load a PNG or an SVG file (by the extension).
+ * @short Load a PNG, an XPM or an SVG file (by the extension).
  *
- * A PNG keeps its own size. An SVG is rasterized so that its longer side is
+ * A PNG and an XPM keep their own size. An SVG is rasterized so that its longer side is
  * `size` pixels (the aspect ratio is kept), up or down: the picture is drawn
  * in the final size, not scaled. Returns nothing for a missing, broken or
  * unsupported file and for a `size` out of 1..4096.
