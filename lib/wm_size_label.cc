@@ -31,7 +31,7 @@ void SizeLabel::set_area(int w, int h, int y)
     center();
 }
 
-void SizeLabel::center()
+bool SizeLabel::center()
 {
     XftFont* font = get_style().get_font();
     XGlyphInfo extents;
@@ -40,18 +40,29 @@ void SizeLabel::center()
                        static_cast<int>(text.size()), &extents);
 
     const int padding = font->height;
-    width = extents.xOff + 2 * padding;
-    height = font->height + padding;
+    const int new_width = extents.xOff + 2 * padding;
+    const int new_height = font->height + padding;
+    const bool resized = new_width != width || new_height != height;
+
+    // width and height are the same until ConfigureNotify, so remember them
+    // here: the next call must not resize the window again
+    width = new_width;
+    height = new_height;
     XMoveResizeWindow(display, window, (area_width - width) / 2,
                       area_y + (area_height - height) / 2, tiny::x_dim(width),
                       tiny::x_dim(height));
+    return resized;
 }
 
 void SizeLabel::set_text(const std::string& text_arg)
 {
+    if (text_arg == text) {
+        return;
+    }
     text = text_arg;
-    center();
-    if (is_maped) {
+    // The server exposes the whole window when it is resized and the Expose
+    // draws the text, so draw here only when the size stays
+    if (!center() && is_maped) {
         on_expose(XEvent(), nullptr);
     }
 }
@@ -74,10 +85,11 @@ void SizeLabel::on_expose(const XEvent&, void*)
                        reinterpret_cast<const FcChar8*>(text.c_str()),
                        static_cast<int>(text.size()), &extents);
 
+    // the baseline does not depend on the glyphs, the text does not jump
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, font, (width - extents.width) / 2,
-                      (height + extents.height) / 2,
+                      (height + font->ascent - font->descent) / 2,
                       reinterpret_cast<const FcChar8*>(text.c_str()),
                       static_cast<int>(text.size()));
 
