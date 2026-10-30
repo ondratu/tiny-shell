@@ -1,5 +1,6 @@
 #include "helpers.h"
 
+#include <sys/resource.h>
 #include <unistd.h>
 
 #include <chrono>
@@ -166,4 +167,46 @@ TEST_F(RunDialogTest, hidden_dialog_forgets_the_typed_text)
     type_key(entry_of(dialog), XK_Return); // nothing is left to run
 
     EXPECT_FALSE(appears(marker));
+}
+
+namespace {
+
+// No new process can be started while the object lives (fork fails).
+class NoNewProcesses {
+  public:
+    NoNewProcesses()
+    {
+        getrlimit(RLIMIT_NPROC, &old);
+        rlimit none = old;
+        none.rlim_cur = 0;
+        setrlimit(RLIMIT_NPROC, &none);
+    }
+
+    ~NoNewProcesses() { setrlimit(RLIMIT_NPROC, &old); }
+
+  private:
+    rlimit old = {};
+};
+
+} // namespace
+
+TEST_F(RunDialogTest, failed_start_keeps_the_dialog_and_the_text)
+{
+    wm::RunDialog dialog;
+    dialog.realize(root_window());
+    dialog.popup();
+    type_text(entry_of(dialog), "true");
+
+    {
+        const NoNewProcesses limit;
+        type_key(entry_of(dialog), XK_Return);
+    }
+
+    if (geteuid() == 0) {
+        GTEST_SKIP() << "the limit of processes does not apply to root";
+    }
+    EXPECT_EQ(attributes_of(dialog).map_state, IsViewable);
+    // the text is still there: the next Return runs it and closes the dialog
+    type_key(entry_of(dialog), XK_Return);
+    EXPECT_EQ(attributes_of(dialog).map_state, IsUnmapped);
 }
