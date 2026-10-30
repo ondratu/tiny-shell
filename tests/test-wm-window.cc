@@ -262,15 +262,16 @@ TEST_F(WmWindowTest, net_wm_name_wins_over_wm_name)
     EXPECT_EQ(manage()->get_wm_name(), "ěšč");
 }
 
-TEST_F(WmWindowTest, normal_hints_without_limits_disable_resizing)
+TEST_F(WmWindowTest, normal_hints_without_limits_keep_resizing)
 {
-    client.set_size_hints(PPosition, 0, 0, 0, 0);
+    // like kitty: only the gravity is set
+    client.set_size_hints(PWinGravity, 0, 0, 0, 0);
 
     auto window =
             manage(MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MAXIMIZE);
 
-    EXPECT_FALSE(window->is_resizable());
-    EXPECT_FALSE(window->is_maximizable());
+    EXPECT_TRUE(window->is_resizable());
+    EXPECT_TRUE(window->is_maximizable());
 }
 
 TEST_F(WmWindowTest, normal_hints_with_equal_limits_disable_resizing)
@@ -293,6 +294,129 @@ TEST_F(WmWindowTest, normal_hints_with_range_keep_resizing)
 
     EXPECT_TRUE(window->is_resizable());
     EXPECT_TRUE(window->is_maximizable());
+}
+
+TEST_F(WmWindowTest, user_time_changes_are_not_reported)
+{
+    auto window = manage();
+    window->set_events();
+
+    ::testing::internal::CaptureStderr();
+    send(client.window, property_event(client.window, dsp()._NET_WM_USER_TIME));
+    const std::string out = ::testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(out.find("Unhandled"), std::string::npos);
+}
+
+// ---- size hints ----
+
+namespace {
+
+// A terminal: cells of 10x20 pixels, 4 and 6 pixels around, at least 2x2 cells
+XSizeHints terminal_hints()
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PBaseSize | PResizeInc;
+    hints.base_width = 4;
+    hints.base_height = 6;
+    hints.min_width = 4 + 2 * 10;
+    hints.min_height = 6 + 2 * 20;
+    hints.width_inc = 10;
+    hints.height_inc = 20;
+    return hints;
+}
+
+} // namespace
+
+TEST(SizeHints, no_hints_leave_the_size_as_it_is)
+{
+    const XSizeHints hints = {};
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 333), 333);
+    EXPECT_EQ(wm::fit_client_size(hints, false, 1), 1);
+    EXPECT_FALSE(wm::has_resize_increment(hints));
+}
+
+TEST(SizeHints, size_snaps_down_to_base_plus_whole_increments)
+{
+    const XSizeHints hints = terminal_hints();
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4 + 79 * 10 + 9), 4 + 79 * 10);
+    EXPECT_EQ(wm::fit_client_size(hints, false, 6 + 22 * 20 + 19), 6 + 22 * 20);
+    EXPECT_EQ(wm::fit_client_size(hints, true, 4 + 5 * 10), 4 + 5 * 10);
+}
+
+TEST(SizeHints, size_snaps_even_when_the_start_is_not_on_the_grid)
+{
+    const XSizeHints hints = terminal_hints();
+
+    // 912 pixels is not 40 + n * 38: the last row would be a gray strip
+    XSizeHints tall = hints;
+    tall.base_height = 40;
+    tall.height_inc = 38;
+    tall.min_height = 78;
+    EXPECT_EQ(wm::fit_client_size(tall, false, 912), 40 + 22 * 38);
+}
+
+TEST(SizeHints, size_is_limited_by_min_and_max_on_the_grid)
+{
+    XSizeHints hints = terminal_hints();
+    hints.flags |= PMaxSize;
+    hints.max_width = 4 + 100 * 10;
+    hints.max_height = 6 + 40 * 20;
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 5000), 4 + 100 * 10);
+    EXPECT_EQ(wm::fit_client_size(hints, true, 0), 4 + 2 * 10);
+    EXPECT_EQ(wm::fit_client_size(hints, false, 5000), 6 + 40 * 20);
+    EXPECT_EQ(wm::fit_client_size(hints, false, 0), 6 + 2 * 20);
+}
+
+TEST(SizeHints, min_size_without_increment_is_exact)
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize;
+    hints.min_width = 120;
+    hints.min_height = 90;
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 100), 120);
+    EXPECT_EQ(wm::fit_client_size(hints, false, 500), 500);
+}
+
+TEST(SizeHints, base_size_stands_for_the_min_size_and_the_other_way)
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PResizeInc; // base is the min size
+    hints.min_width = 50;
+    hints.min_height = 50;
+    hints.width_inc = 10;
+    hints.height_inc = 10;
+
+    EXPECT_EQ(wm::fit_client_size(hints, true, 97), 90);
+    EXPECT_EQ(wm::fit_client_size(hints, true, 10), 50);
+
+    hints.flags = PBaseSize | PResizeInc; // min is the base size
+    hints.base_width = 3;
+    hints.base_height = 3;
+    EXPECT_EQ(wm::fit_client_size(hints, true, 1), 3);
+}
+
+TEST(SizeHints, units_count_the_increments_over_the_base)
+{
+    const XSizeHints hints = terminal_hints();
+
+    EXPECT_EQ(wm::client_size_units(hints, true, 4 + 80 * 10), 80);
+    EXPECT_EQ(wm::client_size_units(hints, false, 6 + 24 * 20), 24);
+    EXPECT_TRUE(wm::has_resize_increment(hints));
+}
+
+TEST(SizeHints, increment_of_one_pixel_is_not_a_unit)
+{
+    XSizeHints hints = {};
+    hints.flags = PResizeInc;
+    hints.width_inc = 1;
+    hints.height_inc = 1;
+
+    EXPECT_FALSE(wm::has_resize_increment(hints));
 }
 
 TEST_F(WmWindowTest, window_manager_protocols_are_read)
@@ -491,7 +615,7 @@ TEST_F(WmWindowTest, maximized_window_without_size_gets_two_thirds_of_screen)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF);
 
     EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
     EXPECT_EQ(window.restore_size().height, screen().height / 3 * 2);
@@ -505,7 +629,7 @@ TEST_F(WmWindowTest, maximized_window_is_not_smaller_than_its_minimum_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF);
 
     EXPECT_EQ(window.restore_size().width, min_w);
     EXPECT_EQ(window.restore_size().height, min_h);
@@ -517,7 +641,7 @@ TEST_F(WmWindowTest, maximized_window_is_not_bigger_than_its_maximum_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF);
 
     EXPECT_EQ(window.restore_size().width, 120);
     EXPECT_EQ(window.restore_size().height, 90);
@@ -529,7 +653,7 @@ TEST_F(WmWindowTest, maximized_window_with_aspect_ratio_still_gets_a_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF);
 
     EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
 }

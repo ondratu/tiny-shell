@@ -1,9 +1,12 @@
 #pragma once
 
+#include <memory>
+
 #include "containers.h"
 #include "wm_header.h"
 #include "wm_buttons.h"
 #include "wm_edge.h"
+#include "wm_size_label.h"
 #include "wm_window.h"
 
 namespace wm {
@@ -48,6 +51,8 @@ class Wrapped : public tiny::Container, public Window {
 
     void on_move_resize_motion(tiny::Object* o, const XEvent& e, void* data);
 
+    void on_move_resize_end(tiny::Object* o, const XEvent& e, void* data);
+
     void on_window_drag_begin(tiny::Object* o, const XEvent& e,
                               void* data) override;
 
@@ -63,6 +68,9 @@ class Wrapped : public tiny::Container, public Window {
 
     void on_property_notify(const XEvent& e, void* data) override;
 
+    //! Show the size of the client in units (e.g. columns and rows)
+    void show_size_units(int client_width, int client_height);
+
     unsigned long decorations = 0;
 
     Header header;
@@ -70,6 +78,7 @@ class Wrapped : public tiny::Container, public Window {
     MinimizeButton min_btn;
     MaximizeButton max_btn;
     BackWindow shadow;
+    std::unique_ptr<SizeLabel> size_label; //!< only while the size is changed
 };
 
 } // namespace wm

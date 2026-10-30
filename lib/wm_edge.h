@@ -46,10 +46,12 @@ class BackWindow : public tiny::Container {
 
     tiny::Signal on_move_resize_begin;
     tiny::Signal on_move_resize_motion;
+    tiny::Signal on_move_resize_end;
 
   protected:
     virtual void on_edge_drag_begin(Object* o, const XEvent& e, void* data);
     virtual void on_edge_drag_motion(Object* o, const XEvent& e, void* data);
+    virtual void on_edge_drag_end(Object* o, const XEvent& e, void* data);
 
     void on_configure_notify(const XEvent& e, void*) override;
 

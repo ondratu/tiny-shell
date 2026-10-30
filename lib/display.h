@@ -43,6 +43,7 @@ class Display {
     const Atom _NET_WM_ICON_NAME;
     const Atom _NET_WM_VISIBLE_ICON_NAME;
     const Atom _NET_WM_DESKTOP;
+    const Atom _NET_WM_USER_TIME;
     const Atom _NET_WM_WINDOW_TYPE;
     const Atom _NET_WM_WINDOW_TYPE_DESKTOP;
     const Atom _NET_WM_WINDOW_TYPE_DOCK;

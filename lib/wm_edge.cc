@@ -156,6 +156,13 @@ void BackWindow::set_events(long mask)
     edge_left.on_drag_motion.connect(this,
                                      static_cast<tiny::object_signal_t>(
                                              &BackWindow::on_edge_drag_motion));
+
+    for (Edge* edge : {&corner_right_top, &corner_right_bottom,
+                       &corner_left_top, &corner_left_bottom, &edge_top,
+                       &edge_right, &edge_bottom, &edge_left}) {
+        edge->on_drag_end.connect(this, static_cast<tiny::object_signal_t>(
+                                                &BackWindow::on_edge_drag_end));
+    }
 }
 
 void BackWindow::realize(Window parent_arg, int x, int y)
@@ -214,6 +221,11 @@ void BackWindow::on_edge_drag_motion(Object* o, const XEvent& e, void*)
             this, e,
             // NOLINTNEXTLINE(performance-no-int-to-ptr): the mask travels as data
             reinterpret_cast<void*>(static_cast<Edge*>(o)->get_mask()));
+}
+
+void BackWindow::on_edge_drag_end(Object*, const XEvent& e, void*)
+{
+    on_move_resize_end(this, e);
 }
 
 void BackWindow::on_configure_notify(const XEvent& e, void* data)

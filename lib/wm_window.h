@@ -4,11 +4,28 @@
 #include <set>
 #include <string>
 
+#include <X11/Xutil.h>
+
 #include "object.h"
 #include "widget.h"
 #include "display.h"
 
 namespace wm {
+
+/**
+ * @short Size of a client window that fits its WM_NORMAL_HINTS.
+ *
+ * The result is min..max (an unset limit does not count) and, when the client
+ * asks for a resize increment, base + n * increment (ICCCM 4.1.2.3). Apply it
+ * to the size of the client, not of its frame.
+ */
+int fit_client_size(const XSizeHints& hints, bool horizontal, int size);
+
+/// Number of increments (e.g. columns or rows of a terminal) in a client size.
+int client_size_units(const XSizeHints& hints, bool horizontal, int size);
+
+/// The client counts its size in units bigger than a pixel (a terminal).
+bool has_resize_increment(const XSizeHints& hints);
 
 struct MotifWMHints {
     unsigned long flags;

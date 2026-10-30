@@ -28,6 +28,7 @@ Display::Display(::Display* display_arg):
     _NET_WM_VISIBLE_ICON_NAME(
             XInternAtom(display_arg, "_NET_WM_VISIBLE_ICON_NAME", 0)),
     _NET_WM_DESKTOP(XInternAtom(display_arg, "_NET_WM_DESKTOP", 0)),
+    _NET_WM_USER_TIME(XInternAtom(display_arg, "_NET_WM_USER_TIME", 0)),
     _NET_WM_WINDOW_TYPE(XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE", 0)),
     _NET_WM_WINDOW_TYPE_DESKTOP(
             XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DESKTOP", 0)),

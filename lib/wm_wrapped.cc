@@ -1,6 +1,8 @@
 #include <X11/cursorfont.h>
 
 #include <algorithm>
+#include <memory>
+#include <string>
 
 #include "object.h"
 #include "theme.h"
@@ -140,6 +142,10 @@ void Wrapped::set_events(long mask)
                 reinterpret_cast<tiny::Object*>(this),
                 reinterpret_cast<tiny::object_signal_t>(
                         &Wrapped::on_move_resize_motion));
+        shadow.on_move_resize_end.connect(
+                reinterpret_cast<tiny::Object*>(this),
+                reinterpret_cast<tiny::object_signal_t>(
+                        &Wrapped::on_move_resize_end));
         max_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
                                  reinterpret_cast<tiny::object_signal_t>(
                                          &Wrapped::on_maximize_click));
@@ -254,86 +260,54 @@ void Wrapped::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
     set_maximized(false);
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);
-    long int size_retun;
-    XGetWMNormalHints(display, child, hints, &size_retun);
-
-    // theoretical, that not change from first check, but...
-    if ((size_retun & PMinSize) != PMinSize) {
-        hints->min_width = start_attrs.width;
-        hints->min_height = start_attrs.height;
+    long int supplied;
+    if (!XGetWMNormalHints(display, child, hints, &supplied)) {
+        hints->flags = 0;
     }
 
-    if ((size_retun & PMaxSize) != PMaxSize) {
-        hints->max_width = start_attrs.width;
-        hints->max_height = start_attrs.height;
+    if (has_resize_increment(*hints)) {
+        size_label = std::make_unique<SizeLabel>(1, 1);
+        size_label->realize(window, 0, 0);
+        size_label->set_events();
+        size_label->map();
+        XRaiseWindow(display, size_label->get_window());
+        show_size_units(start_attrs.width,
+                        start_attrs.height - tiny::theme.wm_win_header);
     }
 }
 
 void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 {
     auto mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
-    int xdiff = 0;
-    int ydiff = 0;
-    int mod;
-
-    if (mask & (tiny::Position::Left | tiny::Position::Right)) {
-        xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-        mod = (hints->width_inc ? xdiff % hints->width_inc : 0);
-        if (mod) {
-            xdiff -= mod;
-        }
-    }
-    if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
-        ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-        mod = (hints->height_inc ? ydiff % hints->height_inc : 0);
-        if (mod) {
-            ydiff -= mod;
-        }
-    }
-
+    const int header_height = tiny::theme.wm_win_header;
     int new_width = start_attrs.width;
     int new_height = start_attrs.height;
 
-    if (mask & tiny::Position::Right) {
-        new_width += xdiff;
-    } else { // ::Position::Left
-        new_width -= xdiff;
-    }
-
-    if (mask & tiny::Position::Bottom) {
-        new_height += ydiff;
-    } else { // ::Position::Top
-        new_height -= ydiff;
-    }
-
     if (mask & (tiny::Position::Left | tiny::Position::Right)) {
-        new_width = std::max({hints->min_width + tiny::theme.wm_win_corner,
-                              tiny::theme.wm_win_min_width, new_width});
-        if ((0 < hints->max_width) && (hints->max_width < new_width)) {
-            new_width = hints->max_width;
-        }
+        const int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
+        const int width_arg =
+                new_width + (mask & tiny::Position::Right ? xdiff : -xdiff);
+        new_width = std::max(fit_client_size(*hints, true, width_arg),
+                             tiny::theme.wm_win_min_width);
+    }
+    if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
+        const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
+        const int height_arg = new_height - header_height +
+                               (mask & tiny::Position::Bottom ? ydiff : -ydiff);
+        new_height = std::max(fit_client_size(*hints, false, height_arg) +
+                                      header_height,
+                              tiny::theme.wm_win_min_height);
     }
 
-    if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
-        // TODO: it exist steps
-        new_height = std::max({hints->min_height + tiny::theme.wm_win_corner +
-                                       tiny::theme.wm_win_header,
-                               tiny::theme.wm_win_min_height, new_height});
-        if ((0 < hints->max_height) && (hints->max_height < new_height)) {
-            new_height = hints->max_height;
-        }
-    }
+    // The edge that is not dragged stays, even when the size is limited
+    const int x = (mask & tiny::Position::Left)
+                          ? start_attrs.x + start_attrs.width - new_width
+                          : start_attrs.x;
+    const int y = (mask & tiny::Position::Top)
+                          ? start_attrs.y + start_attrs.height - new_height
+                          : start_attrs.y;
 
     if (mask & tiny::Position::Top || mask & tiny::Position::Left) {
-        int x = start_attrs.x;
-        int y = start_attrs.y;
-        if (mask & tiny::Position::Left) {
-            x += xdiff;
-        }
-        if (mask & tiny::Position::Top) {
-            y += ydiff;
-        }
-
         XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),
                           tiny::x_dim(new_height));
         shadow.move_resize(x, y, new_width, new_height);
@@ -344,8 +318,26 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
     }
 
     XResizeWindow(display, child, tiny::x_uint(new_width),
-                  tiny::x_dim(new_height - tiny::theme.wm_win_header));
-    header.resize(new_width, tiny::theme.wm_win_header);
+                  tiny::x_dim(new_height - header_height));
+    header.resize(new_width, header_height);
+    if (size_label) {
+        show_size_units(new_width, new_height - header_height);
+    }
+}
+
+void Wrapped::on_move_resize_end(tiny::Object*, const XEvent&, void*)
+{
+    size_label.reset();
+}
+
+void Wrapped::show_size_units(int client_width, int client_height)
+{
+    size_label->set_area(client_width, client_height,
+                         tiny::theme.wm_win_header);
+    size_label->set_text(
+            std::to_string(client_size_units(*hints, true, client_width)) +
+            " × " +
+            std::to_string(client_size_units(*hints, false, client_height)));
 }
 
 void Wrapped::on_window_drag_begin(tiny::Object* o, const XEvent& e, void* data)

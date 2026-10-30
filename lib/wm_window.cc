@@ -17,6 +17,72 @@
 
 namespace wm {
 
+namespace {
+
+// Limits of the hints on one axis; ICCCM lets min and base stand for each other.
+struct Axis {
+    int min;
+    int max; // 0: not limited
+    int base;
+    int inc; // 0: any size
+};
+
+Axis axis_of(const XSizeHints& hints, bool horizontal)
+{
+    const int min = horizontal ? hints.min_width : hints.min_height;
+    const int max = horizontal ? hints.max_width : hints.max_height;
+    const int base = horizontal ? hints.base_width : hints.base_height;
+    const int inc = horizontal ? hints.width_inc : hints.height_inc;
+    const bool has_min = hints.flags & PMinSize;
+    const bool has_base = hints.flags & PBaseSize;
+
+    Axis axis;
+    axis.min = has_min ? min : 0;
+    axis.base = has_base ? base : 0;
+    if (!has_min && has_base) {
+        axis.min = base;
+    }
+    if (!has_base && has_min) {
+        axis.base = min;
+    }
+    axis.max = (hints.flags & PMaxSize) ? max : 0;
+    axis.inc = (hints.flags & PResizeInc) ? std::max(inc, 0) : 0;
+    return axis;
+}
+
+} // namespace
+
+int fit_client_size(const XSizeHints& hints, bool horizontal, int size)
+{
+    const Axis axis = axis_of(hints, horizontal);
+
+    if (axis.max > 0) {
+        size = std::min(size, axis.max);
+    }
+    if (axis.inc > 0) {
+        size = axis.base + (size - axis.base) / axis.inc * axis.inc;
+    }
+    if (size < axis.min) {
+        // the first size of the grid that is not under the minimum
+        size = axis.inc > 0 ? size + (axis.min - size + axis.inc - 1) /
+                                              axis.inc * axis.inc
+                            : axis.min;
+    }
+    return size;
+}
+
+int client_size_units(const XSizeHints& hints, bool horizontal, int size)
+{
+    const Axis axis = axis_of(hints, horizontal);
+    return axis.inc > 0 ? (size - axis.base) / axis.inc : size;
+}
+
+bool has_resize_increment(const XSizeHints& hints)
+{
+    return (hints.flags & PResizeInc) &&
+           (hints.width_inc > 1 || hints.height_inc > 1);
+}
+
 Window::Window(::Window child_arg, ::Window root_arg,
                unsigned long functions_arg):
     child(child_arg),
@@ -322,17 +388,10 @@ void Window::update_normal_hints()
      * USPosition|USSize|PPosition|PSize|PMinSize|PMaxSize|PResizeInc|PAspect
      * PBaseSize|PWinGravity
      */
-    long supplied;
+    long supplied; // fields Xlib understands, the client's are in hints->flags
     XGetWMNormalHints(dsp, child, hints, &supplied);
-    // Min and Max size are not set
-    if (!(supplied & PMinSize) && !(supplied & PMaxSize)) {
-        //? Really
-        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_ALL);
-        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_RESIZE);
-        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_MAXIMIZE);
-    }
-    // Min and Max are set but are same
-    if (supplied & PMinSize && supplied & PMaxSize &&
+    // No limits means no restriction (ICCCM); only equal limits fix the size
+    if (hints->flags & PMinSize && hints->flags & PMaxSize &&
         (hints->min_width == hints->max_width) &&
         (hints->min_height == hints->max_height)) {
         functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_ALL);
@@ -824,6 +883,10 @@ void Window::on_property_notify(const XEvent& e, void*)
     if (e.xproperty.atom == dsp._NET_WM_ICON) {
         update_wm_icon();
         return;
+    }
+
+    if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
+        return; // changes with every key press, the focus policy ignores it
     }
 
     char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
