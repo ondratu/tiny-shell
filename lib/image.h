@@ -7,6 +7,13 @@
 
 namespace tiny {
 
+/// The biggest icon that is asked for: hicolor and flatpak have up to 512 px.
+constexpr int MAX_ICON_SIZE = 512;
+
+/// The biggest bitmap that is read (an icon is sometimes drawn bigger than
+/// it is shown): 1024 x 1024 pixels are 4 MB.
+constexpr int MAX_SOURCE_SIZE = 1024;
+
 /// A decoded picture: premultiplied ARGB, the format of Xrender.
 struct Image {
     int width = 0;
@@ -26,7 +33,8 @@ struct Image {
  * A PNG and an XPM keep their own size. An SVG is rasterized so that its longer side is
  * `size` pixels (the aspect ratio is kept), up or down: the picture is drawn
  * in the final size, not scaled. Returns nothing for a missing, broken or
- * unsupported file and for a `size` out of 1..4096.
+ * unsupported file, for a `size` out of 1..MAX_ICON_SIZE, for a bitmap
+ * bigger than MAX_SOURCE_SIZE and for a text file (SVG, XPM) of megabytes.
  */
 std::optional<Image> load_image(const std::string& path, int size);
 
