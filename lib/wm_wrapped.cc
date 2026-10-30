@@ -287,16 +287,17 @@ void Wrapped::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
         const int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
         const int width_arg =
                 new_width + (mask & tiny::Position::Right ? xdiff : -xdiff);
-        new_width = std::max(fit_client_size(*hints, true, width_arg),
-                             tiny::theme.wm_win_min_width);
+        new_width = fit_client_size(*hints, true, width_arg,
+                                    tiny::theme.wm_win_min_width);
     }
     if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
         const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
         const int height_arg = new_height - header_height +
                                (mask & tiny::Position::Bottom ? ydiff : -ydiff);
-        new_height = std::max(fit_client_size(*hints, false, height_arg) +
-                                      header_height,
-                              tiny::theme.wm_win_min_height);
+        new_height =
+                fit_client_size(*hints, false, height_arg,
+                                tiny::theme.wm_win_min_height - header_height) +
+                header_height;
     }
 
     // The edge that is not dragged stays, even when the size is limited
