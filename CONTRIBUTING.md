@@ -151,6 +151,12 @@ display run against Xvfb through `make check`; `tests/helpers.h` and
 bug fix needs a test. New files are picked up automatically by the Makefile.
 Use `make coverage` to see what is not covered.
 
+Every file in `lib/` is covered by tests at least from 90 %, the ideal is
+100 %; the coverage of a file never goes down. A line that cannot be reached
+in a test (for example code that runs only in a forked child, whose counters
+are lost on `_exit`) is the only acceptable gap, and it is better to keep such
+code small.
+
 ## Commits
 
 - Small, frequent commits are better than big, rare ones.
