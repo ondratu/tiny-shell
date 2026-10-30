@@ -50,8 +50,8 @@ TEST(Spawn, child_leads_its_own_session)
     const auto out = temp_file("tiny-spawn-sid-");
     // ps differs between systems (busybox has no sid); a process group
     // with the id of the shell exists only if the shell leads its session
-    const pid_t pid = tiny::spawn_shell("kill -0 -$$ && echo ok > " +
-                                        out.string());
+    const pid_t pid =
+            tiny::spawn_shell("kill -0 -$$ && echo ok > " + out.string());
     ASSERT_GT(pid, 0);
     ASSERT_TRUE(wait_for([&] { return std::filesystem::exists(out); }));
     EXPECT_NE(getsid(0), pid);

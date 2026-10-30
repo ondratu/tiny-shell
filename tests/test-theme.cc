@@ -127,8 +127,9 @@ namespace {
 // reads its configuration only once) with a configuration that has none.
 [[noreturn]] void init_without_fonts()
 {
-    const auto conf = std::filesystem::temp_directory_path() /
-                      ("tiny-empty-fonts-" + std::to_string(getpid()) + ".conf");
+    const auto conf =
+            std::filesystem::temp_directory_path() /
+            ("tiny-empty-fonts-" + std::to_string(getpid()) + ".conf");
     std::ofstream(conf) << "<?xml version=\"1.0\"?>\n"
                            "<fontconfig></fontconfig>\n";
     setenv("FONTCONFIG_FILE", conf.c_str(), 1);
