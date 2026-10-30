@@ -93,6 +93,7 @@ class Popover : public Box {
 
   private:
     bool has_focus_inside() const;
+    bool is_inside(::Window focus) const;
 
     long int time_from_unmap;
 };

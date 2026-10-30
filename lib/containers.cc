@@ -224,12 +224,27 @@ void Popover::popup(const XButtonEvent& be)
     popup(be.x_root, be.y_root);
 }
 
+static int ignore_x_error(::Display*, XErrorEvent*)
+{
+    return 0;
+}
+
 bool Popover::has_focus_inside() const
 {
     ::Window focus = None;
     int revert;
     XGetInputFocus(display, &focus, &revert);
 
+    // the focus window can be destroyed under our hands (BadWindow)
+    const XErrorHandler old = XSetErrorHandler(ignore_x_error);
+    const bool inside = is_inside(focus);
+    XSync(display, False);
+    XSetErrorHandler(old);
+    return inside;
+}
+
+bool Popover::is_inside(::Window focus) const
+{
     // The focus moves between the popover and its children (e.g. an entry)
     // and, while a shortcut key is held, the pointer window gets FocusOut
     // too. Only a focus outside of the popover closes it.
