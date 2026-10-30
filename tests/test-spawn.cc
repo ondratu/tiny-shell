@@ -221,3 +221,9 @@ TEST(Spawn, child_does_not_inherit_blocked_signals)
     EXPECT_EQ(line.find_first_not_of("SigBlk: \t0"), std::string::npos) << line;
     std::filesystem::remove(out);
 }
+
+TEST(SpawnCommand, any_blank_separates_the_words)
+{
+    EXPECT_GT(tiny::spawn_command("true\r"), 0);
+    EXPECT_GT(tiny::spawn_command("\vtrue\f"), 0);
+}
