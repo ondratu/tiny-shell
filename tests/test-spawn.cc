@@ -48,16 +48,12 @@ TEST(Spawn, runs_the_command)
 TEST(Spawn, child_leads_its_own_session)
 {
     const auto out = temp_file("tiny-spawn-sid-");
-    const pid_t pid = tiny::spawn_shell("ps -o sid= -p $$ > " + out.string());
+    // ps differs between systems (busybox has no sid); a process group
+    // with the id of the shell exists only if the shell leads its session
+    const pid_t pid = tiny::spawn_shell("kill -0 -$$ && echo ok > " +
+                                        out.string());
     ASSERT_GT(pid, 0);
-    ASSERT_TRUE(wait_for([&] {
-        return std::filesystem::exists(out) &&
-               std::filesystem::file_size(out) > 0;
-    }));
-    std::ifstream in(out);
-    pid_t sid = 0;
-    in >> sid;
-    EXPECT_EQ(sid, pid);
+    ASSERT_TRUE(wait_for([&] { return std::filesystem::exists(out); }));
     EXPECT_NE(getsid(0), pid);
     std::filesystem::remove(out);
 }

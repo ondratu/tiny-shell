@@ -1,5 +1,10 @@
 #include <stdexcept>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+#include <unistd.h>
 
 #include <gtest/gtest.h>
 
@@ -116,17 +121,35 @@ TEST_F(StyleTest, init_opens_font)
 }
 
 namespace {
-struct BrokenFontStyle : Style {
-    BrokenFontStyle() { font_style = ":bad=["; }
-};
+// Fontconfig falls back to some font for any pattern it can parse, and
+// what it can parse differs between versions. Without any font there is
+// nothing to fall back to, so run init() in a fresh process (fontconfig
+// reads its configuration only once) with a configuration that has none.
+[[noreturn]] void init_without_fonts()
+{
+    const auto conf = std::filesystem::temp_directory_path() /
+                      ("tiny-empty-fonts-" + std::to_string(getpid()) + ".conf");
+    std::ofstream(conf) << "<?xml version=\"1.0\"?>\n"
+                           "<fontconfig></fontconfig>\n";
+    setenv("FONTCONFIG_FILE", conf.c_str(), 1);
+
+    Style style;
+    int result = 1;
+    try {
+        style.init();
+    } catch (const std::runtime_error&) {
+        result = style.get_font() == nullptr ? 0 : 2;
+    }
+    std::filesystem::remove(conf);
+    std::exit(result);
+}
 } // namespace
 
 TEST(StyleDefaults, init_throws_when_font_cannot_be_opened)
 {
-    BrokenFontStyle style;
+    GTEST_FLAG_SET(death_test_style, "threadsafe");
 
-    EXPECT_THROW(style.init(), std::runtime_error);
-    EXPECT_EQ(style.get_font(), nullptr);
+    EXPECT_EXIT(init_without_fonts(), ::testing::ExitedWithCode(0), "");
 }
 
 TEST(StyleDefaults, delete_through_base_pointer_closes_font)
