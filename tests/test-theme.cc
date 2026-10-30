@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <cstdlib>
 
 #include <gtest/gtest.h>
@@ -112,6 +113,20 @@ TEST_F(StyleTest, init_opens_font)
     style.init();
 
     EXPECT_NE(style.get_font(), nullptr);
+}
+
+namespace {
+struct BrokenFontStyle : Style {
+    BrokenFontStyle() { font_style = ":bad=["; }
+};
+} // namespace
+
+TEST(StyleDefaults, init_throws_when_font_cannot_be_opened)
+{
+    BrokenFontStyle style;
+
+    EXPECT_THROW(style.init(), std::runtime_error);
+    EXPECT_EQ(style.get_font(), nullptr);
 }
 
 TEST(StyleDefaults, delete_through_base_pointer_closes_font)
