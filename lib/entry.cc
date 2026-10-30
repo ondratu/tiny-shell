@@ -35,9 +35,12 @@ void Entry::realize(Window parent_arg, int x, int y)
 {
     Widget::realize(parent_arg, x, y);
 
+    // Without an input method the entry stays without input (xic is null)
     xim = XOpenIM(display, nullptr, nullptr, nullptr);
-    xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                    XNClientWindow, window, XNFocusWindow, window, NULL);
+    if (xim) {
+        xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                        XNClientWindow, window, XNFocusWindow, window, NULL);
+    }
 }
 
 void Entry::set_events(long mask)
@@ -68,16 +71,18 @@ void Entry::clear()
 
 void Entry::on_key_press(const XEvent& e, void*)
 {
-    if (!xic) {
-        return;
-    }
-
     char buf[32] = "\0";
     KeySym keysym = NoSymbol;
     Status state;
+    int len = 0;
 
-    const int len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
-                                      sizeof(buf) - 1, &keysym, &state);
+    if (xic) {
+        len = Xutf8LookupString(xic, const_cast<XKeyEvent*>(&e.xkey), buf,
+                                sizeof(buf) - 1, &keysym, &state);
+    } else { // no input method: Latin-1 only
+        len = XLookupString(const_cast<XKeyEvent*>(&e.xkey), buf,
+                            sizeof(buf) - 1, &keysym, nullptr);
+    }
 
     switch (keysym) {
         case XK_BackSpace:
@@ -101,8 +106,9 @@ void Entry::on_key_press(const XEvent& e, void*)
             // TODO: cursor position and completion
             return;
         default:
-            // control characters (Ctrl+key, Tab, ...) are not text
-            if (len <= 0 || static_cast<unsigned char>(buf[0]) < 0x20) {
+            // control characters (Ctrl+key, DEL, ...) are not text
+            if (len <= 0 || static_cast<unsigned char>(buf[0]) < 0x20 ||
+                buf[0] == 0x7F) {
                 return;
             }
             buf[len] = 0;
