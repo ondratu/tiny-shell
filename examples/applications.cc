@@ -1,5 +1,5 @@
 // Lists the applications of the current user found by tiny::ApplicationIndex
-// and the files of their icons found by tiny::IconTheme.
+// and the icons found by tiny::IconTheme and decoded by tiny::load_image.
 // Usage: applications [--all] [--theme NAME] [--size N]
 //   --all    also prints the id and the file of each entry
 //   --theme  the icon theme (hicolor by default)
@@ -14,6 +14,7 @@
 
 #include "application_index.h"
 #include "icon_theme.h"
+#include "image.h"
 
 int main(int argc, char** argv)
 {
@@ -60,13 +61,26 @@ int main(int argc, char** argv)
             theme_name);
 
     size_t without_icon = 0;
+    size_t broken = 0;
     for (const auto& app : index.applications()) {
         const std::string icon = theme.find(app.entry.icon, size);
         if (icon.empty()) {
             ++without_icon;
         }
+        std::string decoded;
+        if (!icon.empty()) {
+            const auto image = tiny::load_image(icon, size);
+            if (image) {
+                decoded = std::to_string(image->width);
+                decoded += "x";
+                decoded += std::to_string(image->height);
+            } else {
+                decoded = "cannot be decoded";
+                ++broken;
+            }
+        }
         std::cout << app.entry.name << " | icon=" << app.entry.icon << " -> "
-                  << (icon.empty() ? "(not found)" : icon)
+                  << (icon.empty() ? "(not found)" : icon) << ' ' << decoded
                   << " | exec=" << app.entry.exec;
         if (app.entry.terminal) {
             std::cout << " | terminal";
@@ -77,6 +91,7 @@ int main(int argc, char** argv)
         std::cout << '\n';
     }
     std::cout << index.applications().size() << " applications in " << ms
-              << " ms, " << without_icon << " without an icon\n";
+              << " ms, " << without_icon << " without an icon, " << broken
+              << " that cannot be decoded\n";
     return 0;
 }
