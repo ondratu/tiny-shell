@@ -265,7 +265,11 @@ std::string IconTheme::find_uncached(std::string_view name, int size) const
             return file;
         }
     }
-    for (const auto& dir : pixmaps) {
+    // Files right in the icon directories are not in the specification, but
+    // GTK finds them and applications install there (~/.local/share/icons).
+    std::vector<std::string> plain = bases;
+    plain.insert(plain.end(), pixmaps.begin(), pixmaps.end());
+    for (const auto& dir : plain) {
         for (const auto extension : EXTENSIONS) {
             std::string file = dir + "/";
             file += name;

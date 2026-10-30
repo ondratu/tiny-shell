@@ -26,7 +26,8 @@ std::vector<std::string> pixmap_dirs(const char* data_home,
  * entry).
  *
  * Follows the Icon Theme Specification: the theme and the themes it inherits,
- * `hicolor` at the end, then the pixmap directories. In a theme a bitmap
+ * `hicolor` at the end, then the files right in the icon directories (GTK does that too) and the
+ * pixmap directories. In a theme a bitmap
  * (`.png`, `.xpm`) of the wanted size wins, then an `.svg` (it can be drawn
  * in any size), then the bitmap with the closest size. Results are cached, so one object should live as long as
  * the icons are needed; it is not thread safe.

@@ -230,6 +230,29 @@ TEST_F(IconThemeTest, pixmaps_are_the_last_resort)
               path("icons/hicolor/16x16/apps/both.png"));
 }
 
+TEST_F(IconThemeTest, files_right_in_the_icon_directory)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/local.png");
+    touch("icons/themed.png");
+    touch("icons/hicolor/16x16/apps/themed.png");
+    touch("pixmaps/themed.png");
+    const auto theme = make();
+
+    EXPECT_EQ(theme.find("local", 48), path("icons/local.png"));
+    // a theme and then a plain file in the icon directory, then pixmaps
+    EXPECT_EQ(theme.find("themed", 48),
+              path("icons/hicolor/16x16/apps/themed.png"));
+}
+
+TEST_F(IconThemeTest, plain_icon_directory_before_pixmaps)
+{
+    index("hicolor", HICOLOR);
+    touch("icons/both.png");
+    touch("pixmaps/both.png");
+    EXPECT_EQ(make().find("both", 48), path("icons/both.png"));
+}
+
 TEST_F(IconThemeTest, absolute_name_and_extension)
 {
     index("hicolor", HICOLOR);
