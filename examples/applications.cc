@@ -1,18 +1,39 @@
-// Lists the applications of the current user found by tiny::ApplicationIndex.
-// Usage: applications [--all]   (--all also prints the file of each entry)
+// Lists the applications of the current user found by tiny::ApplicationIndex
+// and the files of their icons found by tiny::IconTheme.
+// Usage: applications [--all] [--theme NAME] [--size N]
+//   --all    also prints the id and the file of each entry
+//   --theme  the icon theme (hicolor by default)
+//   --size   the wanted size of the icons (48 by default)
 
 #include <chrono>
 #include <clocale>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
 
 #include "application_index.h"
+#include "icon_theme.h"
 
 int main(int argc, char** argv)
 {
     std::setlocale(LC_COLLATE, "");
-    const bool all = argc > 1 && std::strcmp(argv[1], "--all") == 0;
+    bool all = false;
+    std::string theme_name = "hicolor";
+    int size = 48;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--all") == 0) {
+            all = true;
+        } else if (std::strcmp(argv[i], "--theme") == 0 && i + 1 < argc) {
+            theme_name = argv[++i];
+        } else if (std::strcmp(argv[i], "--size") == 0 && i + 1 < argc) {
+            size = static_cast<int>(std::strtol(argv[++i], nullptr, 10));
+        } else {
+            std::cerr << "usage: applications [--all] [--theme NAME] "
+                         "[--size N]\n";
+            return 1;
+        }
+    }
     const char* path = std::getenv("PATH");
     const char* lang = std::getenv("LANG");
 
@@ -30,8 +51,22 @@ int main(int argc, char** argv)
                             std::chrono::steady_clock::now() - start)
                             .count();
 
+    const char* const home = std::getenv("HOME");
+    const tiny::IconTheme theme(
+            tiny::icon_dirs(std::getenv("XDG_DATA_HOME"),
+                            std::getenv("XDG_DATA_DIRS"), home),
+            tiny::pixmap_dirs(std::getenv("XDG_DATA_HOME"),
+                              std::getenv("XDG_DATA_DIRS"), home),
+            theme_name);
+
+    size_t without_icon = 0;
     for (const auto& app : index.applications()) {
-        std::cout << app.entry.name << " | icon=" << app.entry.icon
+        const std::string icon = theme.find(app.entry.icon, size);
+        if (icon.empty()) {
+            ++without_icon;
+        }
+        std::cout << app.entry.name << " | icon=" << app.entry.icon << " -> "
+                  << (icon.empty() ? "(not found)" : icon)
                   << " | exec=" << app.entry.exec;
         if (app.entry.terminal) {
             std::cout << " | terminal";
@@ -42,6 +77,6 @@ int main(int argc, char** argv)
         std::cout << '\n';
     }
     std::cout << index.applications().size() << " applications in " << ms
-              << " ms\n";
+              << " ms, " << without_icon << " without an icon\n";
     return 0;
 }
