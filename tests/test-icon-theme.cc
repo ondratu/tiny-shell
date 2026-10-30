@@ -205,6 +205,25 @@ TEST_F(IconThemeTest, a_theme_wins_over_a_closer_size_in_a_later_one)
               path("icons/mine/16x16/apps/app.png"));
 }
 
+TEST_F(IconThemeTest, parents_are_searched_depth_first)
+{
+    // a inherits b and c, b inherits d: a, b, d, c
+    const std::string body =
+            "[Icon Theme]\nDirectories=x\n[x]\nSize=16\nType=Fixed\n";
+    index("hicolor", HICOLOR);
+    index("a", "[Icon Theme]\nInherits=b,c\nDirectories=x\n[x]\nSize=16\n");
+    index("b", "[Icon Theme]\nInherits=d\nDirectories=x\n[x]\nSize=16\n");
+    index("c", body);
+    index("d", body);
+    touch("icons/c/x/both.png");
+    touch("icons/d/x/both.png");
+    touch("icons/c/x/only-c.png");
+    const auto theme = make("a");
+
+    EXPECT_EQ(theme.find("both", 16), path("icons/d/x/both.png"));
+    EXPECT_EQ(theme.find("only-c", 16), path("icons/c/x/only-c.png"));
+}
+
 TEST_F(IconThemeTest, a_loop_of_inherits_ends)
 {
     index("hicolor", HICOLOR);
