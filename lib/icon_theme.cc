@@ -144,22 +144,24 @@ IconTheme::IconTheme(std::vector<std::string> bases_,
                      std::vector<std::string> pixmaps_, std::string_view theme):
     bases(std::move(bases_)), pixmaps(std::move(pixmaps_))
 {
-    // the theme, then the inherited ones; every theme is read once
-    std::vector<std::string> pending{std::string(theme)};
-    if (theme != "hicolor") {
-        pending.emplace_back("hicolor"); // the last, whatever the theme says
-    }
+    // the theme, its parents depth first (in the order of the Inherits key),
+    // then hicolor; every theme is read once
+    std::vector<std::string> todo{std::string(theme)};
     std::set<std::string> done;
-    for (size_t i = 0; i < pending.size(); ++i) {
-        const std::string name = pending[i];
+    bool hicolor_added = false;
+    while (!todo.empty() || !hicolor_added) {
+        if (todo.empty()) {
+            todo.emplace_back("hicolor");
+            hicolor_added = true;
+        }
+        const std::string name = std::move(todo.back());
+        todo.pop_back();
         if (name.empty() || !done.insert(name).second) {
             continue;
         }
         std::vector<std::string> parents;
         load(name, parents);
-        // parents go before hicolor, which stays the last one
-        pending.insert(pending.end() - (theme != "hicolor" ? 1 : 0),
-                       parents.begin(), parents.end());
+        todo.insert(todo.end(), parents.rbegin(), parents.rend());
     }
 }
 
