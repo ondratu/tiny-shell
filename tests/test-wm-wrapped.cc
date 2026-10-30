@@ -15,6 +15,7 @@ class Probe : public wm::Wrapped {
     using wm::Wrapped::max_btn;
     using wm::Wrapped::min_btn;
     using wm::Wrapped::shadow;
+    using wm::Wrapped::size_label;
     using wm::Wrapped::Wrapped;
 
     // What Wrapped::create does, without the WM_STATE property.
@@ -483,7 +484,8 @@ TEST_F(WrappedTest, resizing_is_limited_by_the_size_hints)
     win->on_move_resize_motion(nullptr, pointer(5000, 5000, MotionNotify),
                                mask);
     EXPECT_EQ(frame().width, 800);
-    EXPECT_EQ(frame().height, 600);
+    EXPECT_EQ(frame().height,
+              600 + header_height()); // limits are of the client
 
     win->on_move_resize_motion(nullptr, pointer(-5000, -5000, MotionNotify),
                                mask);
@@ -509,6 +511,138 @@ TEST_F(WrappedTest, resizing_snaps_to_the_resize_increment)
     win->on_move_resize_motion(nullptr, pointer(391, 300, MotionNotify), mask);
 
     EXPECT_EQ(frame().width, 290);
+}
+
+TEST_F(WrappedTest, window_without_size_hints_can_be_resized)
+{
+    // like kitty: no limits, the old code held the size of the start
+    client.set_size_hints(PWinGravity, 0, 0, 0, 0);
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(400, 380, MotionNotify), mask);
+    EXPECT_EQ(frame().width, 300);
+    EXPECT_EQ(frame().height, 100 + header_height() + 80);
+
+    win->on_move_resize_motion(nullptr, pointer(250, 250, MotionNotify), mask);
+    EXPECT_EQ(frame().width, 150);
+    EXPECT_EQ(child().height, 50);
+}
+
+TEST_F(WrappedTest, resizing_snaps_to_the_grid_of_the_base_size)
+{
+    // the client is 200x100, not on the grid 3 + n * 16, 5 + n * 30
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PBaseSize | PResizeInc;
+    hints.base_width = 3;
+    hints.base_height = 5;
+    hints.min_width = 3 + 2 * 16;
+    hints.min_height = 5 + 2 * 30;
+    hints.width_inc = 16;
+    hints.height_inc = 30;
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(300, 300, MotionNotify), mask);
+
+    EXPECT_EQ((child().width - 3) % 16, 0);
+    EXPECT_EQ((child().height - 5) % 30, 0);
+    EXPECT_EQ(child().width, 3 + 12 * 16); // 195
+    EXPECT_EQ(child().height, 5 + 3 * 30); // 95
+}
+
+TEST_F(WrappedTest, resizing_the_left_edge_keeps_the_right_edge_on_the_grid)
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PResizeInc;
+    hints.min_width = 40;
+    hints.min_height = 40;
+    hints.width_inc = 30;
+    hints.height_inc = 30;
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(static_cast<size_t>(Position::Left));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(260, 300, MotionNotify), mask);
+
+    // 200 + 40 = 240 pixels, the grid is 40 + n * 30: 220
+    EXPECT_EQ(frame().width, 220);
+    EXPECT_EQ(frame().x + frame().width, 10 + 200);
+}
+
+TEST_F(WrappedTest, resizing_a_terminal_shows_its_size_in_units)
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PBaseSize | PResizeInc;
+    hints.base_width = 0;
+    hints.base_height = 0;
+    hints.min_width = 20;
+    hints.min_height = 20;
+    hints.width_inc = 10;
+    hints.height_inc = 20;
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    ASSERT_NE(win->size_label, nullptr);
+    EXPECT_EQ(win->size_label->get_text(), "20 × 5");
+
+    win->on_move_resize_motion(nullptr, pointer(340, 360, MotionNotify), mask);
+    EXPECT_EQ(win->size_label->get_text(), "24 × 8");
+
+    win->on_move_resize_end(nullptr, pointer(340, 360, ButtonRelease), nullptr);
+    EXPECT_EQ(win->size_label, nullptr);
+}
+
+TEST_F(WrappedTest, resizing_a_window_in_pixels_shows_no_size)
+{
+    resizable();
+    build();
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+
+    EXPECT_EQ(win->size_label, nullptr);
+}
+
+TEST_F(WrappedTest, size_label_is_a_small_box_in_the_center_of_the_client)
+{
+    XSizeHints hints = {};
+    hints.flags = PMinSize | PResizeInc;
+    hints.min_width = 20;
+    hints.min_height = 20;
+    hints.width_inc = 10;
+    hints.height_inc = 10;
+    XSetWMNormalHints(client.display, client.window, &hints);
+    client.sync();
+    build();
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    pump_events();
+    ASSERT_NE(win->size_label, nullptr);
+    const XWindowAttributes label =
+            attributes_of(win->size_label->get_window());
+
+    EXPECT_LT(label.width, 200); // the client stays visible around it
+    EXPECT_LT(label.height, 100);
+    EXPECT_NEAR(label.x + label.width / 2.0, 100, 1);
+    EXPECT_NEAR(label.y + label.height / 2.0, header_height() + 50, 1);
+    EXPECT_EQ(children_of(win->get_window()).back(),
+              win->size_label->get_window()); // above the client
 }
 
 TEST_F(WrappedTest, resizing_unmaximizes_the_window)
