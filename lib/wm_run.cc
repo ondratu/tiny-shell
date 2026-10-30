@@ -1,3 +1,6 @@
+#include <cerrno>
+#include <cstring>
+
 #include "spawn.h"
 #include "theme.h"
 #include "wm_run.h"
@@ -74,8 +77,10 @@ void RunDialog::popover(Object*, const XEvent&, void*)
 
 void RunDialog::run(Object* o, const XEvent& e, void* data)
 {
-    if (!entry.get_text().empty()) {
-        tiny::spawn_shell(entry.get_text());
+    if (!entry.get_text().empty() && tiny::spawn_shell(entry.get_text()) < 0) {
+        // keep the dialog and the text, so the user can try again
+        tiny::error("Can't run the command: %s", strerror(errno));
+        return;
     }
     popover(o, e, data);
 }
