@@ -224,9 +224,15 @@ void Popover::popup(const XButtonEvent& be)
     popup(be.x_root, be.y_root);
 }
 
-static int ignore_x_error(::Display*, XErrorEvent*)
+static XErrorHandler previous_handler = nullptr;
+
+// Only the destroyed window is ignored, other errors go to the old handler.
+static int ignore_bad_window(::Display* display, XErrorEvent* error)
 {
-    return 0;
+    if (error->error_code == BadWindow) {
+        return 0;
+    }
+    return previous_handler != nullptr ? previous_handler(display, error) : 0;
 }
 
 bool Popover::has_focus_inside() const
@@ -236,10 +242,10 @@ bool Popover::has_focus_inside() const
     XGetInputFocus(display, &focus, &revert);
 
     // the focus window can be destroyed under our hands (BadWindow)
-    const XErrorHandler old = XSetErrorHandler(ignore_x_error);
+    previous_handler = XSetErrorHandler(ignore_bad_window);
     const bool inside = is_inside(focus);
     XSync(display, False);
-    XSetErrorHandler(old);
+    XSetErrorHandler(previous_handler);
     return inside;
 }
 
