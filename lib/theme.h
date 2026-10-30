@@ -145,6 +145,23 @@ class WMDockStyle : public Style {
 
 }; // WMDockStyle
 
+// Text entry: a dark gray field that gets a light border while it has focus
+class EntryStyle : public Style {
+  public:
+    EntryStyle()
+    {
+        normal_bg = 0x2E3436;
+        normal_fg = 0xF3F3F3;
+        normal_br = 0x555753;
+
+        disable_fg = 0x8B8E8F;
+
+        focus_br = 0x729FCF;
+
+        padding_width = 6;
+    }
+}; // EntryStyle
+
 class Theme {
   public:
     // Scale factor is read from TINY_SCALE_FACTOR (default 1)
@@ -181,6 +198,7 @@ class Theme {
     WMButtonStyle wm_button;
     WMHeaderStyle wm_header;
     WMDockStyle wm_dock;
+    EntryStyle entry;
 }; // Theme
 
 extern Theme theme;

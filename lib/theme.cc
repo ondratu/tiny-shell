@@ -88,6 +88,7 @@ void Theme::scale(double factor)
     wm_button.scale(factor);
     wm_header.scale(factor);
     wm_dock.scale(factor);
+    entry.scale(factor);
 }
 
 void Theme::init() // TODO: screen, display, config...
@@ -95,6 +96,7 @@ void Theme::init() // TODO: screen, display, config...
     widget.init();
     wm_button.init();
     wm_header.init();
+    entry.init();
 }
 
 Style::~Style()

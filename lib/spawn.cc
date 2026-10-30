@@ -14,8 +14,7 @@ namespace {
 void on_sigchld(int)
 {
     const int saved_errno = errno;
-    while (waitpid(-1, nullptr, WNOHANG) > 0) {
-    }
+    while (waitpid(-1, nullptr, WNOHANG) > 0) {}
     errno = saved_errno;
 }
 

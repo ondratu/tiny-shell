@@ -3,10 +3,13 @@
 // gtest must be included before Xlib: X.h defines the None macro
 #include <gtest/gtest.h>
 
+#include <cctype>
+#include <string>
 #include <vector>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysym.h>
 
 #include "display.h"
 #include "object.h"
@@ -192,17 +195,29 @@ inline int XErrors::count = 0;
 // crashes without one) and restores the original style afterwards.
 class WidgetFont {
   public:
-    WidgetFont(): original(tiny::theme.widget), with_font(original)
+    WidgetFont():
+        original(tiny::theme.widget),
+        with_font(original),
+        original_entry(tiny::theme.entry),
+        entry_with_font(original_entry)
     {
         with_font.init();
         tiny::theme.widget = with_font;
+        entry_with_font.init();
+        tiny::theme.entry = entry_with_font;
     }
 
-    ~WidgetFont() { tiny::theme.widget = original; }
+    ~WidgetFont()
+    {
+        tiny::theme.widget = original;
+        tiny::theme.entry = original_entry;
+    }
 
   private:
     tiny::Style original;
     tiny::Style with_font;
+    tiny::EntryStyle original_entry;
+    tiny::EntryStyle entry_with_font;
 };
 
 // Delivers the pending events of the manager's connection to the registered
@@ -236,3 +251,43 @@ class HeaderFont {
     tiny::WMHeaderStyle original;
     tiny::WMHeaderStyle with_font;
 };
+
+inline XEvent key_event(::Window window, KeySym key, int type = KeyPress,
+                        unsigned int state = 0)
+{
+    XEvent e = make_event(type);
+    e.xkey.display = tiny::get_display();
+    e.xkey.window = window;
+    e.xkey.root = root_window();
+    e.xkey.keycode = XKeysymToKeycode(tiny::get_display(), key);
+    e.xkey.state = state;
+    return e;
+}
+
+inline void type_key(::Window window, KeySym key, unsigned int state = 0)
+{
+    send(window, key_event(window, key, KeyPress, state));
+}
+
+inline void type_key(const tiny::Widget& w, KeySym key, unsigned int state = 0)
+{
+    type_key(w.get_window(), key, state);
+}
+
+// Types ASCII text key by key (letters, digits, space and a few symbols).
+inline void type_text(::Window window, const std::string& text)
+{
+    for (const char c : text) {
+        const bool shifted =
+                std::isupper(static_cast<unsigned char>(c)) || c == '_';
+        const KeySym sym = c == '_' ? static_cast<KeySym>(XK_minus)
+                                    : static_cast<KeySym>(std::tolower(
+                                              static_cast<unsigned char>(c)));
+        type_key(window, sym, shifted ? ShiftMask : 0);
+    }
+}
+
+inline void type_text(const tiny::Widget& w, const std::string& text)
+{
+    type_text(w.get_window(), text);
+}
