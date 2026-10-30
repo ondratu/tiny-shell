@@ -184,6 +184,16 @@ TEST_F(EntryTest, control_characters_are_not_text)
     EXPECT_EQ(changed.calls, 0);
 }
 
+TEST_F(EntryTest, delete_character_is_not_text)
+{
+    focus();
+
+    type_key(entry, XK_KP_Delete); // gives the character 0x7F
+
+    EXPECT_EQ(entry.get_text(), "");
+    EXPECT_EQ(changed.calls, 0);
+}
+
 TEST_F(EntryTest, backspace_removes_the_last_character)
 {
     focus();
@@ -292,6 +302,29 @@ TEST_F(EntryTest, set_focus_gives_the_entry_the_keyboard_focus)
     int revert;
     XGetInputFocus(tiny::get_display(), &focus_window, &revert);
     EXPECT_EQ(focus_window, entry.get_window());
+}
+
+TEST(EntryInputMethodTest, entry_works_without_an_input_method)
+{
+    const WidgetFont font;
+    const char* old = getenv("XMODIFIERS");
+    const std::string saved = old ? old : "";
+    setenv("XMODIFIERS", "@im=tiny-test-missing", 1);
+    tiny::Entry entry(100, 30);
+    entry.realize(root_window(), 0, 0);
+    entry.set_events();
+    entry.map();
+    send(entry, FocusIn);
+    if (old) {
+        setenv("XMODIFIERS", saved.c_str(), 1);
+    } else {
+        unsetenv("XMODIFIERS");
+    }
+
+    type_text(entry, "ab");
+    type_key(entry, XK_BackSpace);
+
+    EXPECT_EQ(entry.get_text(), "a");
 }
 
 TEST(EntryLifeTest, destructor_disconnects_the_handlers)
