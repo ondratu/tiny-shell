@@ -224,8 +224,40 @@ void Popover::popup(const XButtonEvent& be)
     popup(be.x_root, be.y_root);
 }
 
+bool Popover::has_focus_inside() const
+{
+    ::Window focus = None;
+    int revert;
+    XGetInputFocus(display, &focus, &revert);
+
+    // The focus moves between the popover and its children (e.g. an entry)
+    // and, while a shortcut key is held, the pointer window gets FocusOut
+    // too. Only a focus outside of the popover closes it.
+    while (focus > PointerRoot) {
+        if (focus == window) {
+            return true;
+        }
+        ::Window root;
+        ::Window parent;
+        ::Window* children;
+        unsigned int count;
+        if (!XQueryTree(display, focus, &root, &parent, &children, &count)) {
+            return false;
+        }
+        if (children) {
+            XFree(children);
+        }
+        focus = parent;
+    }
+    return false;
+}
+
 void Popover::on_focus_out(const XEvent&, void*)
 {
+    if (has_focus_inside()) {
+        return;
+    }
+
     struct timeval tp;
     gettimeofday(&tp, nullptr);
     time_from_unmap = tp.tv_sec * 1000 + tp.tv_usec / 1000;

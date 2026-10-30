@@ -374,7 +374,15 @@ class PopoverTest : public ::testing::Test {
   protected:
     ::Window root() const { return XDefaultRootWindow(tiny::get_display()); }
 
+    // The focus goes to a window outside of the popover
     void focus_out(tiny::Popover& p)
+    {
+        XSetInputFocus(tiny::get_display(), PointerRoot, RevertToNone,
+                       CurrentTime);
+        send_focus_out(p);
+    }
+
+    void send_focus_out(tiny::Popover& p)
     {
         XEvent e = {};
         e.type = FocusOut;
@@ -443,6 +451,51 @@ TEST_F(PopoverTest, focus_out_unmaps_popover)
     focus_out(p);
 
     EXPECT_FALSE(p.get_maped());
+}
+
+TEST_F(PopoverTest, focus_out_to_a_child_keeps_the_popover)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    tiny::Widget child(50, 20);
+    p.push_start(&child);
+    p.popup(300, 50);
+    XSetInputFocus(tiny::get_display(), child.get_window(), RevertToNone,
+                   CurrentTime);
+
+    send_focus_out(p); // e.g. caused by the grab of the shortcut key
+
+    EXPECT_TRUE(p.get_maped());
+}
+
+TEST_F(PopoverTest, focus_out_to_a_grandchild_keeps_the_popover)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    tiny::Container inner(100, 50);
+    p.push_start(&inner);
+    tiny::Widget child(50, 20);
+    inner.add(&child);
+    p.popup(300, 50);
+    XSetInputFocus(tiny::get_display(), child.get_window(), RevertToNone,
+                   CurrentTime);
+
+    send_focus_out(p);
+
+    EXPECT_TRUE(p.get_maped());
+}
+
+TEST_F(PopoverTest, focus_out_with_the_focus_in_the_popover_keeps_it)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    XSetInputFocus(tiny::get_display(), p.get_window(), RevertToNone,
+                   CurrentTime);
+
+    send_focus_out(p);
+
+    EXPECT_TRUE(p.get_maped());
 }
 
 TEST_F(PopoverTest, popup_right_after_focus_out_is_ignored)
