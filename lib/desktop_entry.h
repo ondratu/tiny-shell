@@ -19,6 +19,7 @@ struct DesktopEntry {
     std::string comment;
     std::string exec;
     std::string try_exec;
+    std::string path; //!< working directory of the program (Path)
     std::string icon;
     std::vector<std::string> categories;
     std::vector<std::string> keywords;
