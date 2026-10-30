@@ -166,3 +166,32 @@ TEST(Spawn, failed_fork_is_reported)
     EXPECT_EQ(pid, -1);
     EXPECT_EQ(errno, EAGAIN);
 }
+
+TEST(SpawnCommand, plain_words_are_started_without_a_shell)
+{
+    const auto marker = temp_file("tiny-spawn-cmd-");
+    EXPECT_GT(tiny::spawn_command("  touch   " + marker.string() + " "), 0);
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    std::filesystem::remove(marker);
+}
+
+TEST(SpawnCommand, missing_program_is_reported)
+{
+    EXPECT_EQ(tiny::spawn_command("tiny-no-such-program --flag"), -1);
+    EXPECT_EQ(errno, ENOENT);
+    EXPECT_EQ(tiny::spawn_command("   "), -1);
+}
+
+TEST(SpawnCommand, shell_syntax_goes_to_the_shell)
+{
+    const auto marker = temp_file("tiny-spawn-cmd-sh-");
+    EXPECT_GT(tiny::spawn_command("echo a | cat > " + marker.string()), 0);
+    EXPECT_TRUE(wait_for([&] {
+        return std::filesystem::exists(marker) &&
+               std::filesystem::file_size(marker) > 0;
+    }));
+    std::filesystem::remove(marker);
+
+    EXPECT_GT(tiny::spawn_command("FOO=1 true"), 0);
+    EXPECT_GT(tiny::spawn_command("true \"quoted arg\""), 0);
+}

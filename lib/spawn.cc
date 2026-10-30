@@ -87,6 +87,30 @@ pid_t spawn_shell(const std::string& command)
     return spawn({"/bin/sh", "-c", command});
 }
 
+pid_t spawn_command(const std::string& text)
+{
+    // everything with a meaning for the shell, besides the blanks
+    const bool plain = text.find_first_of("\"'\\`$&|;<>()[]{}*?!#~=%\n") ==
+                       std::string::npos;
+    if (!plain) {
+        return spawn_shell(text);
+    }
+
+    std::vector<std::string> argv;
+    std::string word;
+    for (const char c : text + ' ') {
+        if (c == ' ' || c == '\t') {
+            if (!word.empty()) {
+                argv.push_back(std::move(word));
+                word.clear();
+            }
+        } else {
+            word += c;
+        }
+    }
+    return spawn(argv);
+}
+
 void reap_children()
 {
     struct sigaction action = {};

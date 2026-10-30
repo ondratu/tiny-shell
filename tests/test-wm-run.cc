@@ -141,6 +141,18 @@ TEST_F(RunDialogTest, return_runs_the_typed_command_and_hides_the_dialog)
     std::filesystem::remove(marker);
 }
 
+TEST_F(RunDialogTest, a_program_that_does_not_exist_keeps_the_dialog)
+{
+    wm::RunDialog dialog;
+    dialog.realize(root_window());
+    dialog.popup();
+
+    type_text(entry_of(dialog), "tiny-no-such-program");
+    type_key(entry_of(dialog), XK_Return);
+
+    EXPECT_NE(attributes_of(dialog).map_state, IsUnmapped);
+}
+
 TEST_F(RunDialogTest, return_in_an_empty_entry_only_hides_the_dialog)
 {
     wm::RunDialog dialog;
