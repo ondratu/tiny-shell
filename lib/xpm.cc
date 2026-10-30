@@ -98,7 +98,11 @@ std::optional<uint32_t> parse_color(const std::string& value)
                 return std::nullopt;
             }
             // to 8 bits
-            channel[i] = n == 1 ? *v * 17 : n == 2 ? *v : *v >> (4 * (n - 2));
+            if (n == 1) {
+                channel[i] = *v * 17;
+            } else {
+                channel[i] = *v >> (4 * (n - 2));
+            }
         }
         return rgb(channel[0], channel[1], channel[2]);
     }

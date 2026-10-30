@@ -296,7 +296,10 @@ std::string IconTheme::find_uncached(std::string_view name, int size) const
             std::string leaf(name);
             leaf += extension;
             if (exists(dir, leaf)) {
-                return dir + "/" + leaf;
+                std::string file = dir;
+                file += "/";
+                file += leaf;
+                return file;
             }
         }
     }
