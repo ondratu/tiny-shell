@@ -107,6 +107,49 @@ TEST_F(EntryTest, losing_the_focus_removes_the_cursor)
     EXPECT_EQ(drawn(), 0u);
 }
 
+static XEvent focus_event(const tiny::Entry& entry, int type, int detail)
+{
+    XEvent e = make_event(type);
+    e.xfocus.window = entry.get_window();
+    e.xfocus.detail = detail;
+    return e;
+}
+
+TEST_F(EntryTest, focus_of_the_pointer_window_is_not_the_focus_of_the_entry)
+{
+    entry.map();
+
+    // the pointer is over the entry while the focus is somewhere else
+    send(entry.get_window(), focus_event(entry, FocusIn, NotifyPointer));
+
+    EXPECT_EQ(drawn(), 0u);
+}
+
+TEST_F(EntryTest, pointer_focus_out_does_not_take_the_focus_from_the_entry)
+{
+    focus();
+    ASSERT_GT(drawn(), 0u);
+
+    send(entry.get_window(), focus_event(entry, FocusOut, NotifyPointer));
+
+    EXPECT_GT(drawn(), 0u);
+}
+
+TEST_F(EntryTest, repeated_focus_in_does_not_redraw_the_entry)
+{
+    focus();
+    // a mark that only a redraw would clear
+    GC gc = XCreateGC(tiny::get_display(), entry.get_window(), 0, nullptr);
+    XSetForeground(tiny::get_display(), gc, 0xFF0000);
+    XFillRectangle(tiny::get_display(), entry.get_window(), gc, 80, 2, 10, 10);
+    ASSERT_EQ(image().at(85, 5), 0xFF0000u);
+
+    send(entry.get_window(), focus_event(entry, FocusIn, NotifyAncestor));
+
+    EXPECT_EQ(image().at(85, 5), 0xFF0000u);
+    XFreeGC(tiny::get_display(), gc);
+}
+
 TEST_F(EntryTest, typed_text_is_stored_drawn_and_reported)
 {
     focus();
