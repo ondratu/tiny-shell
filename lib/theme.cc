@@ -1,6 +1,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <stdexcept>
+#include <string>
 
 #include "display.h"
 #include "theme.h"
@@ -124,8 +126,9 @@ void Style::init()
     char name[128];
     snprintf(name, sizeof(name), "%s-%g%s", font_family, font_size, font_style);
     font = XftFontOpenName(get_display(), screen, name);
-
-    // TODO: check success
+    if (font == nullptr) {
+        throw std::runtime_error(std::string("Failed to load font ") + name);
+    }
 }
 
 uint32_t Style::get_bg(uint8_t state) const {GET_STATE_UINT32_COLOR(state, bg)}

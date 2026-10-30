@@ -3,6 +3,8 @@
 #include "object.h"
 #include "wm_manager.h"
 
+namespace {
+
 bool wm_detected = false;
 
 int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
@@ -13,6 +15,8 @@ int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
     return 0;
 }
 
+} // namespace
+
 int main(int /*argc*/, char** /*argv*/)
 {
     try {
@@ -20,10 +24,8 @@ int main(int /*argc*/, char** /*argv*/)
 
         ::Display* display = tiny::get_display();
 
+        // The theme needs the display (the fonts are opened here)
         tiny::theme.init();
-
-        // TODO: tema musi byt až tady, musím mít display - resp. je potřeba
-        // pro inicializaci stylu -> fontu
 
         const ::Window root = XDefaultRootWindow(display);
         XErrorHandler old = XSetErrorHandler(&on_wm_detected);
@@ -42,7 +44,7 @@ int main(int /*argc*/, char** /*argv*/)
         wm::Manager manager(display, root);
         manager.main_loop();
     } catch (const std::exception& e) {
-        fprintf(stderr, "Failed to initialize window manager.");
+        fprintf(stderr, "Failed to initialize window manager: %s\n", e.what());
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
