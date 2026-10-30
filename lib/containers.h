@@ -92,6 +92,8 @@ class Popover : public Box {
     void on_focus_out(const XEvent& e, void*);
 
   private:
+    bool has_focus_inside() const;
+
     long int time_from_unmap;
 };
 
