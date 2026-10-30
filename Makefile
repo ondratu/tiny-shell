@@ -55,7 +55,9 @@ override CXXFLAGS += -MMD -std=c++17 -I./lib -isystem ./lib/third_party \
 LDLIBS = $(PKG_LIBS)
 
 LIB_SRC = $(wildcard lib/*.cc)
-LIB_OBJ = $(LIB_SRC:%.cc=$(BUILD)/%.o)
+# the vendored libraries are built into the library, but not analyzed
+VENDOR_SRC = $(wildcard lib/third_party/*.cc)
+LIB_OBJ = $(LIB_SRC:%.cc=$(BUILD)/%.o) $(VENDOR_SRC:%.cc=$(BUILD)/%.o)
 LIB = $(BUILD)/lib/libtiny.a
 
 EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc))
@@ -109,10 +111,11 @@ $(BUILD)/.pkg_check: Makefile
 
 # Editor / language server configuration (generated, not in git)
 .syntastic_cpp_config: $(BUILD)/.pkg_check
-	@printf '%s\n' -I./lib $(PKG_CFLAGS) > $@
+	@printf '%s\n' -I./lib -isystem ./lib/third_party $(PKG_CFLAGS) > $@
 
 compile_flags.txt: $(BUILD)/.pkg_check
-	@printf '%s\n' -xc++ -Wall -std=c++17 -I./lib $(PKG_CFLAGS) > $@
+	@printf '%s\n' -xc++ -Wall -std=c++17 -I./lib -isystem ./lib/third_party \
+	    $(PKG_CFLAGS) > $@
 
 # Tests (googletest), run with `make check`; they need an X server.
 # Use XVFB_RUN= to run against the current $DISPLAY instead.
@@ -190,7 +193,7 @@ format:
 # Static analysis with clang-tidy (checks in .clang-tidy); runs in parallel.
 # CLANG_TIDY picks the tool, e.g. make lint CLANG_TIDY=clang-tidy-22.
 CLANG_TIDY ?= tools/run-tool.sh clang-tidy
-LINT_FLAGS = -std=c++17 -I./lib $(SYS_CFLAGS)
+LINT_FLAGS = -std=c++17 -I./lib -isystem ./lib/third_party $(SYS_CFLAGS)
 LINT_SRC = $(LIB_SRC) $(wildcard src/*.cc examples/*.cc)
 
 lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
