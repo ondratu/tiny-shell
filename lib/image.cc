@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
@@ -19,8 +20,22 @@ namespace tiny {
 
 namespace {
 
-constexpr int MAX_SIZE = 4096;
-constexpr std::streamsize MAX_FILE = 16 << 20; // of a text picture
+// the biggest text files: a 512 x 512 XPM with two characters per pixel has
+// 0.5 MB, the SVG of an icon is mostly under 100 kB
+constexpr std::uintmax_t MAX_XPM_FILE = 2 << 20;
+constexpr std::uintmax_t MAX_SVG_FILE = 4 << 20;
+
+// The size of the file when it is a regular file of a sane size.
+std::optional<size_t> file_size_up_to(const std::string& path,
+                                      std::uintmax_t limit)
+{
+    std::error_code error;
+    const auto size = std::filesystem::file_size(path, error);
+    if (error || size > limit) {
+        return std::nullopt;
+    }
+    return static_cast<size_t>(size);
+}
 
 bool has_extension(const std::string& path, const char* extension)
 {
@@ -57,6 +72,11 @@ std::optional<Image> load_png(const std::string& path)
 {
     int width = 0;
     int height = 0;
+    // the header says how much memory the picture needs
+    if (!stbi_info(path.c_str(), &width, &height, nullptr) ||
+        width > MAX_SOURCE_SIZE || height > MAX_SOURCE_SIZE) {
+        return std::nullopt;
+    }
     const std::unique_ptr<unsigned char, decltype(&stbi_image_free)> data(
             stbi_load(path.c_str(), &width, &height, nullptr, 4),
             &stbi_image_free);
@@ -68,21 +88,22 @@ std::optional<Image> load_png(const std::string& path)
 
 std::optional<Image> load_xpm(const std::string& path)
 {
+    const auto size = file_size_up_to(path, MAX_XPM_FILE);
     std::ifstream file(path, std::ios::binary);
-    if (!file) {
+    if (!size || !file) {
         return std::nullopt;
     }
-    std::string text(static_cast<size_t>(MAX_FILE), '\0');
-    file.read(text.data(), MAX_FILE);
+    std::string text(*size, '\0');
+    file.read(text.data(), static_cast<std::streamsize>(text.size()));
     text.resize(static_cast<size_t>(file.gcount()));
-    if (file.gcount() == MAX_FILE && file.peek() != EOF) {
-        return std::nullopt; // too big for an icon
-    }
     return parse_xpm(text);
 }
 
 std::optional<Image> load_svg(const std::string& path, int size)
 {
+    if (!file_size_up_to(path, MAX_SVG_FILE)) {
+        return std::nullopt;
+    }
     const std::unique_ptr<NSVGimage, decltype(&nsvgDelete)> svg(
             nsvgParseFromFile(path.c_str(), "px", 96), &nsvgDelete);
     if (!svg || !(svg->width > 0) || !(svg->height > 0)) {
@@ -114,7 +135,7 @@ std::optional<Image> load_svg(const std::string& path, int size)
 
 std::optional<Image> load_image(const std::string& path, int size)
 {
-    if (size < 1 || size > MAX_SIZE) {
+    if (size < 1 || size > MAX_ICON_SIZE) {
         return std::nullopt;
     }
     if (has_extension(path, ".png")) {

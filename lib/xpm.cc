@@ -12,7 +12,6 @@ namespace tiny {
 
 namespace {
 
-constexpr int MAX_SIZE = 8192;
 constexpr size_t MAX_COLORS = 1 << 18;
 constexpr size_t MAX_CPP = 8;
 
@@ -210,8 +209,8 @@ std::optional<Image> parse_xpm(std::string_view text)
     if (header.size() < 4) {
         return std::nullopt;
     }
-    const auto width = positive(header[0], MAX_SIZE);
-    const auto height = positive(header[1], MAX_SIZE);
+    const auto width = positive(header[0], MAX_SOURCE_SIZE);
+    const auto height = positive(header[1], MAX_SOURCE_SIZE);
     const auto colors = positive(header[2], static_cast<int>(MAX_COLORS));
     const auto cpp = positive(header[3], static_cast<int>(MAX_CPP));
     if (!width || !height || !colors || !cpp) {
@@ -223,7 +222,7 @@ std::optional<Image> parse_xpm(std::string_view text)
         return std::nullopt;
     }
 
-    std::map<std::string, uint32_t> palette;
+    std::map<std::string, uint32_t, std::less<>> palette;
     for (size_t i = 0; i < static_cast<size_t>(*colors); ++i) {
         const std::string& line = lines[1 + i];
         if (line.size() < symbol) {
@@ -243,7 +242,8 @@ std::optional<Image> parse_xpm(std::string_view text)
             return std::nullopt;
         }
         for (size_t x = 0; x < static_cast<size_t>(*width); ++x) {
-            const auto it = palette.find(line.substr(x * symbol, symbol));
+            const auto it = palette.find(
+                    std::string_view(line).substr(x * symbol, symbol));
             if (it == palette.end()) {
                 return std::nullopt;
             }

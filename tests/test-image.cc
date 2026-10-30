@@ -21,6 +21,12 @@ const unsigned char PNG[] = {
         0x00, 0x49, 0x49, 0x09, 0x78, 0x28, 0xa0, 0xdb, 0x77, 0x00, 0x00,
         0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82};
 
+// only the header of a PNG with 2000 x 2000 pixels
+const unsigned char BIG_PNG[] = {
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00,
+        0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x07, 0xd0, 0x00, 0x00,
+        0x07, 0xd0, 0x08, 0x06, 0x00, 0x00, 0x00, 0x9a, 0x38, 0xc4, 0x79};
+
 class ImageTest : public ::testing::Test {
   protected:
     void SetUp() override
@@ -170,6 +176,26 @@ TEST_F(ImageTest, size_out_of_range)
     const auto file = write("a.svg", svg(16, 16));
     EXPECT_FALSE(tiny::load_image(file, 0));
     EXPECT_FALSE(tiny::load_image(file, -1));
-    EXPECT_FALSE(tiny::load_image(file, 4097));
+    EXPECT_FALSE(tiny::load_image(file, tiny::MAX_ICON_SIZE + 1));
+    EXPECT_TRUE(tiny::load_image(file, tiny::MAX_ICON_SIZE));
     EXPECT_TRUE(tiny::load_image(file, 1));
+}
+
+TEST_F(ImageTest, a_picture_that_needs_too_much_memory_is_refused)
+{
+    const auto big_png =
+            write("big.png", std::string(reinterpret_cast<const char*>(BIG_PNG),
+                                         sizeof BIG_PNG));
+    EXPECT_FALSE(tiny::load_image(big_png, 48));
+
+    EXPECT_FALSE(tiny::load_image(
+            write("big.xpm", "/* XPM */\n\"1025 1 1 1\",\"a c red\",\"a\""),
+            48));
+
+    // a valid SVG with a comment of megabytes
+    const std::string comment(5 << 20, 'x');
+    EXPECT_FALSE(tiny::load_image(
+            write("big.svg", "<!--" + comment + "-->" + svg(16, 16)), 48));
+    EXPECT_FALSE(tiny::load_image(
+            write("big2.xpm", "/* XPM */ /*" + comment + "*/"), 48));
 }
