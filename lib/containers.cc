@@ -238,16 +238,16 @@ bool Popover::has_focus_inside() const
             return true;
         }
         ::Window root;
-        ::Window parent;
-        ::Window* children;
+        ::Window up;
+        ::Window* below;
         unsigned int count;
-        if (!XQueryTree(display, focus, &root, &parent, &children, &count)) {
+        if (!XQueryTree(display, focus, &root, &up, &below, &count)) {
             return false;
         }
-        if (children) {
-            XFree(children);
+        if (below) {
+            XFree(below);
         }
-        focus = parent;
+        focus = up;
     }
     return false;
 }
