@@ -8,6 +8,7 @@
 #include <cstring>
 #include <filesystem>
 #include <iterator>
+#include <numeric>
 #include <set>
 
 #include "xdg.h"
@@ -161,13 +162,25 @@ void ApplicationIndex::scan(const std::vector<std::string>& dirs,
         scanner.scan(dir);
     }
 
-    std::stable_sort(apps.begin(), apps.end(),
-                     [](const Application& a, const Application& b) {
-                         const int order =
-                                 std::strcoll(lower(a.entry.name).c_str(),
-                                              lower(b.entry.name).c_str());
-                         return order != 0 ? order < 0 : a.id < b.id;
-                     });
+    // the sort key is made once, not in every comparison
+    std::vector<std::string> keys;
+    keys.reserve(apps.size());
+    for (const auto& app : apps) {
+        keys.push_back(lower(app.entry.name));
+    }
+    std::vector<size_t> order(apps.size());
+    std::iota(order.begin(), order.end(), size_t{0});
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        const int cmp = std::strcoll(keys[a].c_str(), keys[b].c_str());
+        return cmp != 0 ? cmp < 0 : apps[a].id < apps[b].id;
+    });
+
+    std::vector<Application> sorted;
+    sorted.reserve(apps.size());
+    for (const size_t i : order) {
+        sorted.push_back(std::move(apps[i]));
+    }
+    apps = std::move(sorted);
 }
 
 } // namespace tiny
