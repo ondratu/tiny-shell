@@ -20,6 +20,14 @@ struct Image {
     int height = 0;
     std::vector<uint32_t> pixels; //!< row by row, width * height
 
+    /// A size of at least 1x1 and the pixels of exactly that size.
+    bool valid() const
+    {
+        return width >= 1 && height >= 1 &&
+               pixels.size() ==
+                       static_cast<size_t>(width) * static_cast<size_t>(height);
+    }
+
     uint32_t at(int x, int y) const
     {
         return pixels[static_cast<size_t>(y) * static_cast<size_t>(width) +
@@ -37,5 +45,16 @@ struct Image {
  * bigger than MAX_SOURCE_SIZE and for a text file (SVG, XPM) of megabytes.
  */
 std::optional<Image> load_image(const std::string& path, int size);
+
+/**
+ * @short Scale the picture so that its longer side is `size` pixels.
+ *
+ * The aspect ratio is kept (the shorter side is at least 1 pixel), up or down,
+ * Up it uses a bilinear filter, down the average of the covered pixels (a box
+ * filter, so thin lines do not vanish), both of the premultiplied pixels. A picture that already
+ * has the size is copied. Returns nothing for an empty picture or a `size` out
+ * of 1..MAX_ICON_SIZE.
+ */
+std::optional<Image> scale_image(const Image& image, int size);
 
 } // namespace tiny
