@@ -49,7 +49,8 @@ PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
 CXXFLAGS ?= -g
-override CXXFLAGS += -MMD -std=c++17 -I./lib $(SYS_CFLAGS) $(WARNINGS) \
+override CXXFLAGS += -MMD -std=c++17 -I./lib -isystem ./lib/third_party \
+    $(SYS_CFLAGS) $(WARNINGS) \
     $(HARDENING)
 LDLIBS = $(PKG_LIBS)
 
