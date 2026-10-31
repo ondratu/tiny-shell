@@ -49,12 +49,15 @@ void Theme::scale(double factor)
     wm_panel_login_width = scaled(120, factor);
     wm_menu_width = scaled(120, factor);
     wm_menu_item_height = scaled(20, factor);
+    wm_launcher_width = scaled(420, factor);
+    wm_launcher_icon = scaled(32, factor);
 
     widget.scale(factor);
     wm_button.scale(factor);
     wm_header.scale(factor);
     wm_dock.scale(factor);
     entry.scale(factor);
+    list.scale(factor);
 }
 
 void Theme::init() // TODO: screen, display, config...
@@ -63,6 +66,7 @@ void Theme::init() // TODO: screen, display, config...
     wm_button.init();
     wm_header.init();
     entry.init();
+    list.init();
 }
 
 } // namespace tiny

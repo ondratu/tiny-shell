@@ -9,12 +9,14 @@ class EntryTest : public ::testing::Test {
     Recorder changed;
     Recorder activated;
     Recorder cancelled;
+    Recorder keyed;
 
     void SetUp() override
     {
         entry.on_change.connect(&changed, changed.slot());
         entry.on_activate.connect(&activated, activated.slot());
         entry.on_cancel.connect(&cancelled, cancelled.slot());
+        entry.on_key.connect(&keyed, keyed.slot());
         entry.realize(root_window(), 0, 0);
         entry.set_events();
     }
@@ -249,6 +251,21 @@ TEST_F(EntryTest, return_signals_activate_and_keeps_the_text)
     EXPECT_EQ(activated.last_owner, &entry);
     EXPECT_EQ(entry.get_text(), "ls");
     EXPECT_EQ(cancelled.calls, 0);
+}
+
+TEST_F(EntryTest, keys_that_move_in_a_list_are_signaled_not_typed)
+{
+    focus();
+    type_text(entry, "ab");
+
+    for (const int sym : {XK_Up, XK_Down, XK_Page_Up, XK_Page_Down}) {
+        type_key(entry, static_cast<KeySym>(sym));
+    }
+
+    EXPECT_EQ(keyed.calls, 4);
+    EXPECT_EQ(keyed.last_owner, &entry);
+    EXPECT_EQ(entry.get_text(), "ab");
+    EXPECT_EQ(changed.calls, 2); // only the two letters
 }
 
 TEST_F(EntryTest, escape_signals_cancel)
