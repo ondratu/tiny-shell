@@ -54,7 +54,8 @@ override CXXFLAGS += -MMD -std=c++17 -I./lib -isystem ./lib/third_party \
     $(HARDENING)
 LDLIBS = $(PKG_LIBS)
 
-LIB_SRC = $(wildcard lib/*.cc)
+# the library has a directory for each part: lib/wm/, lib/xdg/, lib/image/
+LIB_SRC = $(filter-out lib/third_party/%,$(wildcard lib/*.cc lib/*/*.cc))
 # the vendored libraries are built into the library, but not analyzed
 VENDOR_SRC = $(wildcard lib/third_party/*.cc)
 LIB_OBJ = $(LIB_SRC:%.cc=$(BUILD)/%.o) $(VENDOR_SRC:%.cc=$(BUILD)/%.o)
@@ -114,7 +115,7 @@ $(BUILD)/.pkg_check: Makefile
 	@printf '%s\n' -I./lib -isystem ./lib/third_party $(PKG_CFLAGS) > $@
 
 compile_flags.txt: $(BUILD)/.pkg_check
-	@printf '%s\n' -xc++ -Wall -std=c++17 -I./lib -isystem ./lib/third_party \
+	@printf '%s\n' -xc++ -Wall -std=c++17 -I./lib -I./tests -isystem ./lib/third_party \
 	    $(PKG_CFLAGS) > $@
 
 # Tests (googletest), run with `make check`; they need an X server.
@@ -125,16 +126,17 @@ XVFB_RUN ?= xvfb-run -a
 # in /usr/pkg/include and the like, where the compiler does not know that)
 GTEST_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags gtest))
 
-TEST_SRC = $(wildcard tests/test-*.cc)
+# tests/ mirrors lib/: tests/wm/test_dock.cc covers lib/wm/dock.cc
+TEST_SRC = $(wildcard tests/test_*.cc tests/*/test_*.cc)
 TESTS = $(TEST_SRC:%.cc=$(BUILD)/%)
 TEST_OBJ = $(TEST_SRC:%.cc=$(BUILD)/%.o) $(BUILD)/tests/main.o
 DEP += $(TEST_OBJ:.o=.d)
 
 -include $(TEST_OBJ:.o=.d)
 
-$(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS)
+$(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS) -I./tests
 
-$(BUILD)/tests/test-%: $(BUILD)/tests/test-%.o $(BUILD)/tests/main.o $(LIB)
+$(TESTS): %: %.o $(BUILD)/tests/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
 
 check: $(BUILD)/.gtest_check $(TESTS)
@@ -163,19 +165,19 @@ coverage:
 	@rm -rf $(COV_DIR)
 	@GTEST_BRIEF=1 $(MAKE) BUILD=$(COV_DIR) check -s \
 	    CXXFLAGS="-g -O0 --coverage" LDFLAGS="--coverage"
-	@$(GCOV) -n -o $(COV_DIR)/lib $(LIB_SRC) 2>/dev/null | \
+	@for f in $(LIB_SRC); do $(GCOV) -n -o $(COV_DIR)/$$(dirname $$f) $$f; done 2>/dev/null | \
 	    awk -F"'" '/^File/{f=$$2} /^Lines executed/{ \
-	        if (f ~ /^lib\/[^\/]*\.cc$$/ && !(f in seen)) { \
+	        if (f ~ /^lib\/([^\/]+\/)?[^\/]+\.cc$$/ && !(f in seen)) { \
 	            seen[f]=1; split($$0, a, /[:% ]+/); \
 	            n=a[5]; m=n-int(n*a[3]/100+0.5); \
 	            names[++c]=f; stmts[c]=n; miss[c]=m; ts+=n; tm+=m}} \
 	        END { \
 	            line="--------------------------------------------------"; \
-	            printf "\n%-24s %6s %6s %7s\n%s\n", "Name", "Stmts", "Miss", "Cover", line; \
+	            printf "\n%-32s %6s %6s %7s\n%s\n", "Name", "Stmts", "Miss", "Cover", line; \
 	            for (i=1; i<=c; i++) \
-	                printf "%-24s %6d %6d %6.0f%%\n", names[i], stmts[i], miss[i], \
+	                printf "%-32s %6d %6d %6.0f%%\n", names[i], stmts[i], miss[i], \
 	                    stmts[i] ? 100*(stmts[i]-miss[i])/stmts[i] : 100; \
-	            printf "%s\n%-24s %6d %6d %6.0f%%\n", line, "TOTAL", ts, tm, \
+	            printf "%s\n%-32s %6d %6d %6.0f%%\n", line, "TOTAL", ts, tm, \
 	                ts ? 100*(ts-tm)/ts : 100}'
 
 clean:
@@ -185,7 +187,9 @@ clean:
 # Format the sources with clang-format (style in .clang-format).
 # CLANG_FORMAT picks the tool, e.g. make format CLANG_FORMAT=clang-format-21.
 CLANG_FORMAT ?= tools/run-tool.sh clang-format
-FORMAT_FILES = $(wildcard lib/*.cc lib/*.h src/*.cc examples/*.cc tests/*.cc tests/*.h)
+FORMAT_FILES = $(filter-out lib/third_party/%,$(wildcard lib/*.cc lib/*.h \
+    lib/*/*.cc lib/*/*.h)) $(wildcard src/*.cc examples/*.cc tests/*.cc \
+    tests/*.h tests/*/*.cc)
 
 format:
 	$(CLANG_FORMAT) -i $(FORMAT_FILES)
@@ -200,7 +204,7 @@ lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	@printf '%s\n' $(LINT_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
-	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS)
+	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS) -I./tests
 
 # A second opinion next to clang-tidy. It only reports: the findings are not
 # triaged yet, so it is not a part of CI or the git hooks. The tests are left

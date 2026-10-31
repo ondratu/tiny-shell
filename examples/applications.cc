@@ -1,5 +1,5 @@
-// Lists the applications of the current user found by tiny::ApplicationIndex
-// and the icons found by tiny::IconTheme and decoded by tiny::load_image.
+// Lists the applications of the current user found by tiny::xdg::ApplicationIndex
+// and the icons found by tiny::xdg::IconTheme and decoded by tiny::image::load_image.
 // Usage: applications [--all] [--theme NAME] [--size N]
 //   --all    also prints the id and the file of each entry
 //   --theme  the icon theme (hicolor by default)
@@ -12,9 +12,9 @@
 #include <iostream>
 #include <string>
 
-#include "application_index.h"
-#include "icon_theme.h"
-#include "image.h"
+#include "xdg/application_index.h"
+#include "xdg/icon_theme.h"
+#include "image/image.h"
 
 int main(int argc, char** argv)
 {
@@ -38,26 +38,26 @@ int main(int argc, char** argv)
     const char* path = std::getenv("PATH");
     const char* lang = std::getenv("LANG");
 
-    const auto dirs = tiny::application_dirs(std::getenv("XDG_DATA_HOME"),
-                                             std::getenv("XDG_DATA_DIRS"),
-                                             std::getenv("HOME"));
+    const auto dirs = tiny::xdg::application_dirs(std::getenv("XDG_DATA_HOME"),
+                                                  std::getenv("XDG_DATA_DIRS"),
+                                                  std::getenv("HOME"));
     for (const auto& dir : dirs) {
         std::cout << "dir: " << dir << '\n';
     }
 
     const auto start = std::chrono::steady_clock::now();
-    tiny::ApplicationIndex index;
+    tiny::xdg::ApplicationIndex index;
     index.scan(dirs, lang != nullptr ? lang : "", path != nullptr ? path : "");
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - start)
                             .count();
 
     const char* const home = std::getenv("HOME");
-    const tiny::IconTheme theme(
-            tiny::icon_dirs(std::getenv("XDG_DATA_HOME"),
-                            std::getenv("XDG_DATA_DIRS"), home),
-            tiny::pixmap_dirs(std::getenv("XDG_DATA_HOME"),
-                              std::getenv("XDG_DATA_DIRS"), home),
+    const tiny::xdg::IconTheme theme(
+            tiny::xdg::icon_dirs(std::getenv("XDG_DATA_HOME"),
+                                 std::getenv("XDG_DATA_DIRS"), home),
+            tiny::xdg::pixmap_dirs(std::getenv("XDG_DATA_HOME"),
+                                   std::getenv("XDG_DATA_DIRS"), home),
             theme_name);
 
     size_t without_icon = 0;
@@ -69,7 +69,7 @@ int main(int argc, char** argv)
         }
         std::string decoded;
         if (!icon.empty()) {
-            const auto image = tiny::load_image(icon, size);
+            const auto image = tiny::image::load_image(icon, size);
             if (image) {
                 decoded = std::to_string(image->width);
                 decoded += "x";

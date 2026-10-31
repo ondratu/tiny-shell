@@ -49,7 +49,7 @@ Checks: >
 #  cert-dcl50-cpp, modernize-avoid-variadic-functions
 #                                         (printf-style log(); checked with the
 #                                          format attribute)
-#  misc-multiple-inheritance              (Wrapped, see the TODO)
+#  misc-multiple-inheritance              (Client, see the TODO)
 #  bugprone-throwing-static-initialization, cert-err58-cpp
 #                                         (the global theme, see the TODO)
 #  misc-use-internal-linkage, misc-use-anonymous-namespace

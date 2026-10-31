@@ -1,9 +1,9 @@
 #include "X11/Xatom.h"
 
-#include "containers.h"
-#include "buttons.h"
-#include "wm_header.h"
-#include "wm_buttons.h"
+#include "container.h"
+#include "button.h"
+#include "wm/header.h"
+#include "wm/window_button.h"
 #include "x_util.h"
 
 namespace tiny {
@@ -97,16 +97,16 @@ class Demo : public tiny::Container {
                 tiny::handlers.call_hanlder(signal_id, event);
                 continue;
             }
-            printf("Unhalded event: %s\n", event_to_string(event));
+            printf("Unhalded event: %s\n", tiny::event_to_string(event));
         }
     }
 
   private:
     tiny::Box vbox;
-    wm::Header header;
-    wm::CloseButton x_btn;
-    wm::MinimizeButton __btn;
-    wm::MaximizeButton o_btn;
+    tiny::wm::Header header;
+    tiny::wm::CloseButton x_btn;
+    tiny::wm::MinimizeButton __btn;
+    tiny::wm::MaximizeButton o_btn;
     tiny::Box buttons;
 
     tiny::LabelButton close_btn;

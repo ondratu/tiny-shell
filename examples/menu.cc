@@ -1,5 +1,5 @@
-#include "containers.h"
-#include "buttons.h"
+#include "container.h"
+#include "button.h"
 #include "x_util.h"
 
 namespace tiny {
@@ -70,7 +70,7 @@ class Demo : public tiny::Box {
                 tiny::handlers.call_hanlder(signal_id, event);
                 continue;
             }
-            printf("Unhalded event: %s\n", event_to_string(event));
+            printf("Unhalded event: %s\n", tiny::event_to_string(event));
         }
     }
 

@@ -4,6 +4,6 @@
 # process ends (Xft never calls FcFini). It is not ours to free.
 leak:libfontconfig.so
 
-# The test client of tests/client.h whose connection was killed on purpose
+# The test client of tests/fake_client.h whose connection was killed on purpose
 # (close_kills_a_client_without_delete_protocol) cannot be closed cleanly.
-leak:Client::Client
+leak:FakeClient::FakeClient
