@@ -6,6 +6,7 @@
 #include "object.h"
 #include "wm/window.h"
 #include "wm/panel.h"
+#include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/dock.h"
 
@@ -21,6 +22,9 @@ class Manager : public tiny::Object {
 
   private:
     void set_events();
+
+    //! Grab (or release) the Super keys that open the launcher
+    void grab_super(bool grab);
 
     void set_supported();
 
@@ -51,6 +55,7 @@ class Manager : public tiny::Object {
 
     Panel wm_panel;
     RunDialog wm_run;
+    Launcher wm_launcher;
     Dock wm_dock;
 
     Window* active = nullptr;
