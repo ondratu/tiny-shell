@@ -133,6 +133,8 @@ void Entry::on_key_press(const XEvent& e, void*)
             return on_activate(this, e);
         case XK_Escape:
             return on_cancel(this, e);
+        case XK_Left:
+        case XK_Right:
         case XK_Up:
         case XK_Down:
         case XK_Page_Up:

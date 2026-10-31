@@ -253,16 +253,17 @@ TEST_F(EntryTest, return_signals_activate_and_keeps_the_text)
     EXPECT_EQ(cancelled.calls, 0);
 }
 
-TEST_F(EntryTest, keys_that_move_in_a_list_are_signaled_not_typed)
+TEST_F(EntryTest, keys_that_move_in_a_list_or_a_grid_are_signaled_not_typed)
 {
     focus();
     type_text(entry, "ab");
 
-    for (const int sym : {XK_Up, XK_Down, XK_Page_Up, XK_Page_Down}) {
+    for (const int sym :
+         {XK_Left, XK_Right, XK_Up, XK_Down, XK_Page_Up, XK_Page_Down}) {
         type_key(entry, static_cast<KeySym>(sym));
     }
 
-    EXPECT_EQ(keyed.calls, 4);
+    EXPECT_EQ(keyed.calls, 6);
     EXPECT_EQ(keyed.last_owner, &entry);
     EXPECT_EQ(entry.get_text(), "ab");
     EXPECT_EQ(changed.calls, 2); // only the two letters
