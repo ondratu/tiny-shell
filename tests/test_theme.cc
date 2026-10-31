@@ -241,9 +241,12 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
     EXPECT_EQ(t.entry.padding_width, 12u);
     EXPECT_EQ(t.entry.border_width, 2u);
     EXPECT_EQ(t.list.padding_width, 12);
-    EXPECT_EQ(t.wm_launcher_width, 840);
-    EXPECT_EQ(t.wm_launcher_icon, 64);
-    EXPECT_EQ(t.wm_launcher_rows, 8);
+    EXPECT_EQ(t.wm_launcher_cell_width, 192);
+    EXPECT_EQ(t.wm_launcher_cell_height, 176);
+    EXPECT_EQ(t.wm_launcher_icon, 96);
+    EXPECT_EQ(t.wm_launcher_dot, 16);
+    EXPECT_EQ(t.wm_launcher_columns, 8); // a count is not scaled
+    EXPECT_EQ(t.wm_launcher_rows, 4);
 }
 
 TEST(ThemeScaleTest, scale_is_relative_to_defaults_not_cumulative)

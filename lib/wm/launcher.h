@@ -7,7 +7,7 @@
 
 #include "container.h"
 #include "entry.h"
-#include "list_box.h"
+#include "icon_grid.h"
 #include "xdg/application_index.h"
 #include "xdg/icon_theme.h"
 
@@ -17,10 +17,11 @@ namespace tiny::wm {
  * @short Super: a field for a search and the installed applications below it.
  *
  * Every typed letter searches the applications (see
- * `xdg::search_applications`). Up and Down move in the found ones, Return or
- * a click starts the selected one, Escape closes the launcher. The
- * applications are read when the launcher opens for the first time, the icons
- * when a row is shown for the first time.
+ * `xdg::search_applications`); the found ones are a grid of icons in pages.
+ * The arrows move in the grid, Page Up and Page Down turn the pages (so does
+ * the wheel), Return or a click starts the selected one, Escape closes the
+ * launcher. The applications are read when the launcher opens for the first
+ * time, the icons when a cell is shown for the first time.
  */
 class Launcher : public tiny::Popover {
   public:
@@ -54,13 +55,13 @@ class Launcher : public tiny::Popover {
     void place();
     void load();
     void find();
-    tiny::ListBox::Item item_of(size_t row);
+    tiny::IconGrid::Item item_of(size_t row);
     const Icon& icon_of(const xdg::Application& app);
     Icon load_icon(const std::string& name) const;
     void remember(const std::string& id);
 
     tiny::Entry entry;
-    tiny::ListBox list;
+    tiny::IconGrid grid;
 
     ::Window root_window = None;
     bool loaded = false;
