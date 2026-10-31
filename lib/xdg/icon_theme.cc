@@ -207,6 +207,61 @@ void IconTheme::load(const std::string& name, std::vector<std::string>& parents)
         }
         return; // the first index.theme describes the theme
     }
+    if (name == "hicolor") {
+        guess_hicolor();
+    }
+}
+
+void IconTheme::guess_hicolor()
+{
+    // Icons installed by hand (~/.local/share/icons/hicolor) come without an
+    // index.theme, and the system one can be in a directory that is not
+    // searched (pkgsrc uses /usr/pkg/share). The directories of hicolor are
+    // named by the convention: NxN/apps and scalable/apps.
+    std::map<int, SubDir> sizes;
+    bool scalable = false;
+    for (const auto& base : bases) {
+        std::error_code error;
+        fs::directory_iterator dirs(fs::path(base) / "hicolor", error);
+        for (const fs::directory_iterator end; !error && dirs != end;
+             dirs.increment(error)) {
+            const std::string dir = dirs->path().filename().string();
+            const char* const last = dir.data() + dir.size();
+            int width = 0;
+            int height = 0;
+            const auto first = std::from_chars(dir.data(), last, width);
+            if (dir == "scalable") {
+                scalable = true;
+            } else if (first.ec == std::errc() && first.ptr != last &&
+                       *first.ptr == 'x' && width > 0 &&
+                       std::from_chars(first.ptr + 1, last, height).ec ==
+                               std::errc() &&
+                       height == width) {
+                SubDir sub;
+                sub.name = dir + "/apps";
+                sub.size = sub.min_size = sub.max_size = width;
+                sub.type = SubDir::FIXED;
+                sizes.emplace(width, std::move(sub));
+            }
+        }
+    }
+
+    Theme theme{"hicolor", {}};
+    for (auto& [size, sub] : sizes) {
+        theme.dirs.push_back(std::move(sub));
+    }
+    if (scalable) {
+        SubDir sub;
+        sub.name = "scalable/apps";
+        sub.size = 128;
+        sub.min_size = 1;
+        sub.max_size = 512;
+        sub.type = SubDir::SCALABLE;
+        theme.dirs.push_back(std::move(sub));
+    }
+    if (!theme.dirs.empty()) {
+        themes.push_back(std::move(theme));
+    }
 }
 
 bool IconTheme::exists(const std::string& dir, const std::string& file) const

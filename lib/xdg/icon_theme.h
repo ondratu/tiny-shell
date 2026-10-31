@@ -27,11 +27,14 @@ std::vector<std::string> pixmap_dirs(const char* data_home,
  * entry).
  *
  * Follows the Icon Theme Specification: the theme and the themes it inherits,
- * `hicolor` at the end, then the files right in the icon directories (GTK does that too) and the
- * pixmap directories. In a theme a bitmap
- * (`.png`, `.xpm`) of the wanted size wins, then an `.svg` (it can be drawn
- * in any size), then the bitmap with the closest size. Results are cached, and so are the listings of the directories (an icon installed
- * later is not seen), so one object should live as long as
+ * `hicolor` at the end, then the files right in the icon directories (GTK
+ * does that too) and the pixmap directories. In a theme a bitmap (`.png`,
+ * `.xpm`) of the wanted size wins, then an `.svg` (it can be drawn in any
+ * size), then the bitmap with the closest size. When no directory has an
+ * index.theme of `hicolor` (icons installed by hand, a system that keeps
+ * the themes elsewhere) its `NxN/apps` and `scalable/apps` directories are
+ * used. Results are cached, and so are the listings of the directories (an
+ * icon installed later is not seen), so one object should live as long as
  * the icons are needed; it is not thread safe.
  */
 class IconTheme {
@@ -68,6 +71,8 @@ class IconTheme {
     std::string find_in(const Theme& theme, std::string_view name,
                         int size) const;
     void load(const std::string& name, std::vector<std::string>& parents);
+    //! hicolor with no index.theme: the directories are guessed from names
+    void guess_hicolor();
 
     std::vector<std::string> bases;
     std::vector<std::string> pixmaps;
