@@ -133,6 +133,11 @@ void Entry::on_key_press(const XEvent& e, void*)
             return on_activate(this, e);
         case XK_Escape:
             return on_cancel(this, e);
+        case XK_Up:
+        case XK_Down:
+        case XK_Page_Up:
+        case XK_Page_Down:
+            return on_key(this, e);
         case XK_Tab:
         case XK_Delete:
             // TODO: cursor position and completion

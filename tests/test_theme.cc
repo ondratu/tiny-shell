@@ -173,6 +173,7 @@ TEST(ThemeTest, init_opens_fonts_of_all_styles)
     EXPECT_NE(theme.wm_button.get_font(), nullptr);
     EXPECT_NE(theme.wm_header.get_font(), nullptr);
     EXPECT_NE(theme.entry.get_font(), nullptr);
+    EXPECT_NE(theme.list.get_font(), nullptr);
 }
 
 TEST(ThemeTest, default_window_metrics)
@@ -212,6 +213,18 @@ TEST(ThemeTest, entry_style_is_dark_gray_with_a_highlighted_focus)
     EXPECT_EQ(entry.border_width, 1u);
 }
 
+TEST(ThemeTest, list_style_has_no_border_and_a_lighter_selected_row)
+{
+    const auto normal = static_cast<uint8_t>(Style::State::Normal);
+    const auto selected = static_cast<uint8_t>(
+            normal | static_cast<uint8_t>(Style::State::Selected));
+    const tiny::ListStyle& list = tiny::theme.list;
+
+    EXPECT_EQ(list.border_width, 0);
+    EXPECT_NE(list.get_bg(selected), list.get_bg(normal));
+    EXPECT_NE(list.get_fg(selected), list.get_fg(normal));
+}
+
 TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
 {
     tiny::Theme t;
@@ -227,6 +240,10 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
     EXPECT_EQ(t.wm_dock.padding_width, 10u);
     EXPECT_EQ(t.entry.padding_width, 12u);
     EXPECT_EQ(t.entry.border_width, 2u);
+    EXPECT_EQ(t.list.padding_width, 12);
+    EXPECT_EQ(t.wm_launcher_width, 840);
+    EXPECT_EQ(t.wm_launcher_icon, 64);
+    EXPECT_EQ(t.wm_launcher_rows, 8);
 }
 
 TEST(ThemeScaleTest, scale_is_relative_to_defaults_not_cumulative)

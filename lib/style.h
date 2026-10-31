@@ -123,4 +123,17 @@ class EntryStyle : public Style {
     }
 }; // EntryStyle
 
+// List of rows: no border, the selected row is lighter than the others
+class ListStyle : public Style {
+  public:
+    ListStyle()
+    {
+        selected_bg = 0x3E4446;
+        selected_fg = 0xF3F3F3;
+
+        border_width = 0;
+        padding_width = 6;
+    }
+}; // ListStyle
+
 } // namespace tiny

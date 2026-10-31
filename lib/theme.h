@@ -36,6 +36,9 @@ class Theme {
     int wm_panel_login_width = 120;
     int wm_menu_width = 120;
     int wm_menu_item_height = 20;
+    int wm_launcher_width = 420;
+    int wm_launcher_icon = 32;
+    int wm_launcher_rows = 8;
 
     double scale_factor = 1;
 
@@ -44,6 +47,7 @@ class Theme {
     wm::HeaderStyle wm_header;
     wm::DockStyle wm_dock;
     EntryStyle entry;
+    ListStyle list;
 }; // Theme
 
 extern Theme theme;

@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <cctype>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -199,18 +200,23 @@ class WidgetFont {
         original(tiny::theme.widget),
         with_font(original),
         original_entry(tiny::theme.entry),
-        entry_with_font(original_entry)
+        entry_with_font(original_entry),
+        original_list(tiny::theme.list),
+        list_with_font(original_list)
     {
         with_font.init();
         tiny::theme.widget = with_font;
         entry_with_font.init();
         tiny::theme.entry = entry_with_font;
+        list_with_font.init();
+        tiny::theme.list = list_with_font;
     }
 
     ~WidgetFont()
     {
         tiny::theme.widget = original;
         tiny::theme.entry = original_entry;
+        tiny::theme.list = original_list;
     }
 
   private:
@@ -218,6 +224,39 @@ class WidgetFont {
     tiny::Style with_font;
     tiny::EntryStyle original_entry;
     tiny::EntryStyle entry_with_font;
+    tiny::ListStyle original_list;
+    tiny::ListStyle list_with_font;
+};
+
+// Sets an environment variable for the lifetime of the object.
+class EnvVar {
+  public:
+    EnvVar(const char* name_arg, const std::string& value): name(name_arg)
+    {
+        const char* old = getenv(name);
+        had = old != nullptr;
+        if (had) {
+            original = old;
+        }
+        setenv(name, value.c_str(), 1);
+    }
+
+    ~EnvVar()
+    {
+        if (had) {
+            setenv(name, original.c_str(), 1);
+        } else {
+            unsetenv(name);
+        }
+    }
+
+    EnvVar(const EnvVar&) = delete;
+    EnvVar& operator=(const EnvVar&) = delete;
+
+  private:
+    const char* name;
+    bool had;
+    std::string original;
 };
 
 // Delivers the pending events of the manager's connection to the registered
