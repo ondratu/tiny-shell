@@ -178,8 +178,11 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
             index.applications()[found[list.get_selected()]];
     if (xdg::launch(app) < 0) {
         // keep the launcher and the text, so the user can try again
-        tiny::error("Can't start %s: %s", app.entry.name.c_str(),
-                    strerror(errno));
+        const int error = errno;
+        const auto argv = xdg::expand_exec(app, {});
+        tiny::error("Can't start %s (%s): %s", app.entry.name.c_str(),
+                    argv.empty() ? "no command" : argv[0].c_str(),
+                    strerror(error));
         return;
     }
     remember(app.id);
