@@ -4,6 +4,8 @@
 #include <X11/X.h>
 #include <X11/Xlib.h>
 
+namespace tiny {
+
 inline const char* event_to_string(const XEvent e)
 {
     switch (e.type) {
@@ -82,8 +84,6 @@ inline const char* event_to_string(const XEvent e)
     }
 }
 
-namespace tiny {
-
 /**
  * @short Return right event window, instead of XEvent.any.window.
  */
@@ -119,10 +119,5 @@ void x_grab_key(::Display* display, int keycode, unsigned int modifiers,
 
 void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
                   ::Window window);
-
-Pixmap resize_pixmap(::Display* display, ::Window root, Pixmap origin,
-                     unsigned int o_width, unsigned int o_height,
-                     unsigned int t_width, unsigned int t_height,
-                     unsigned int depth);
 
 } // namespace tiny

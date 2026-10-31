@@ -36,8 +36,13 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
 - **Code style:** 4 spaces, braces on the same line, `CamelCase` types,
   `snake_case` functions and members, `#pragma once`, one class per header
   where it is practical. Match the surrounding code, including the density of
-  comments. Namespaces: `tiny` for the toolkit (`lib/`), `wm` for the window
-  manager and the shell.
+  comments. Files are `snake_case`, named after their main class in the
+  singular (`container.h`, `run_dialog.h`).
+- **Namespaces follow the directories of `lib/`:** `tiny` for the toolkit
+  (`lib/`), `tiny::wm` for the window manager and the shell (`lib/wm/`),
+  `tiny::xdg` for the freedesktop.org files, applications and icon themes
+  (`lib/xdg/`) and `tiny::image` for decoding, scaling and uploading pictures
+  (`lib/image/`). Includes are written from `lib/`: `#include "wm/dock.h"`.
 - **Layout:** `lib/` is the library `libtiny.a` (toolkit and window manager),
   `src/main.cc` is the window manager itself, `tests/` are the unit tests,
   `examples/` are small toolkit programs (`make examples`) and a default
@@ -150,9 +155,11 @@ change should pass all of them; the NetBSD job is best effort.
 
 ## Tests
 
-Tests live in `tests/test-<name>.cc` and use googletest. Tests that need a
+Tests live in `tests/`, which mirrors `lib/`: the tests of `lib/wm/dock.cc`
+are in `tests/wm/test_dock.cc`. They use googletest, a test suite is named
+`<Subject>Test` (`DockTest`, `DockLifeTest`). Tests that need a
 display run against Xvfb through `make check`; `tests/helpers.h` and
-`tests/client.h` have helpers for fake clients. Every new behavior and every
+`tests/fake_client.h` have helpers for fake clients. Every new behavior and every
 bug fix needs a test. New files are picked up automatically by the Makefile.
 Use `make coverage` to see what is not covered.
 

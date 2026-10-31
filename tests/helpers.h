@@ -248,8 +248,8 @@ class HeaderFont {
     ~HeaderFont() { tiny::theme.wm_header = original; }
 
   private:
-    tiny::WMHeaderStyle original;
-    tiny::WMHeaderStyle with_font;
+    tiny::wm::HeaderStyle original;
+    tiny::wm::HeaderStyle with_font;
 };
 
 inline XEvent key_event(::Window window, KeySym key, int type = KeyPress,

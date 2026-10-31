@@ -1,7 +1,7 @@
 #include <stdexcept>
 
 #include "object.h"
-#include "wm_manager.h"
+#include "wm/manager.h"
 
 namespace {
 
@@ -41,7 +41,7 @@ int main(int /*argc*/, char** /*argv*/)
             throw std::runtime_error("Detected another window manager.");
         }
 
-        wm::Manager manager(display, root);
+        tiny::wm::Manager manager(display, root);
         manager.main_loop();
     } catch (const std::exception& e) {
         fprintf(stderr, "Failed to initialize window manager: %s\n", e.what());

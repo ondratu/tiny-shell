@@ -1,0 +1,408 @@
+#include <vector>
+
+#include <X11/cursorfont.h>
+#include <X11/Xatom.h>
+
+#include "object.h"
+#include "spawn.h"
+#include "wm/manager.h"
+#include "wm/client.h"
+#include "x_util.h"
+
+namespace tiny {
+extern Handlers handlers;
+extern std::shared_ptr<Display> display;
+} // namespace tiny
+
+namespace tiny::wm {
+
+Manager::Manager(::Display* display_arg, ::Window root_arg):
+
+    display(display_arg),
+    root(root_arg),
+
+    running(true)
+{
+    tiny::reap_children();
+    //set_supported();
+    XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
+    XSync(display_arg, True);
+
+    XDefineCursor(display_arg, root_arg,
+                  XCreateFontCursor(display_arg, XC_arrow));
+
+    ::Window rv_root;
+    ::Window rv_parent;
+    ::Window* rv_child;
+    uint32_t rv_ccount;
+
+    /*
+    XChangeProperty(display_arg, root_arg, display_arg._NET_SUPPORTED, XA_ATOM,
+                    32, PropModeReplace,
+                    reinterpret_cast<unsigned char*>(display_arg.EWMH), 1);
+    */
+
+    // Realized (but not mapped, so they are not taken as client windows)
+    // before the existing windows are added to the dock.
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display_arg, root_arg, &attrs);
+
+    wm_panel.realize(root_arg, 0, 0);
+    wm_panel.set_events();
+
+    wm_dock.realize(root_arg, attrs.width / 2,
+                    attrs.height - wm_dock.get_height() -
+                            tiny::theme.wm_dock_border);
+    wm_dock.set_events();
+
+    wm_run.realize(root_arg, 0, 0);
+    wm_run.set_events();
+
+    XGrabServer(display_arg); // lock the X server for new events
+    XQueryTree(display_arg, root_arg, &rv_root, &rv_parent, &rv_child,
+               &rv_ccount);
+    if (rv_ccount) {
+        rv_ccount -= 1;
+        XWindowAttributes child_attrs;
+
+        for (uint32_t i = 0; i <= rv_ccount; ++i) {
+            XGetWindowAttributes(display_arg, rv_child[i], &child_attrs);
+            if (child_attrs.map_state == IsUnmapped) {
+                continue; // will be mapped later
+            }
+            if (child_attrs.override_redirect) {
+                continue; // menu, special tools (idesk) and so on
+            }
+
+            std::set<Atom> properties;
+            Window::get_properties(rv_child[i], properties);
+
+            if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
+                const Window::WMType wm_type =
+                        Window::get_net_wm_type(rv_child[i]);
+                switch (wm_type) {
+                    case Window::WMType::DESKTOP:
+                    case Window::WMType::DOCK:
+                    case Window::WMType::SPLASH:
+                        continue; // do not manage this window type
+                    default:
+                        break;
+                }
+            }
+
+            Window* window = nullptr;
+            unsigned long functions;
+            unsigned long decorations;
+            if (Window::get_motif_hints(rv_child[i], functions, decorations) &&
+                !decorations) {
+                window = Window::create(root_arg, rv_child[i], child_attrs,
+                                        functions);
+            } else {
+                window = Client::create(root_arg, rv_child[i], child_attrs,
+                                        functions, decorations);
+            }
+
+            wm_windows[rv_child[i]] = window;
+            wm_tops.push_back(window);
+            if (!window->skip_taskbar()) {
+                wm_dock.add(window);
+            }
+            window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
+                                                   &Manager::on_window_focus));
+        }
+        XFree(rv_child);
+    }
+
+    if (!wm_tops.empty()) {
+        wm_tops.back()->set_focus(); // the topmost one
+    }
+
+    wm_panel.map_all();
+    wm_dock.map_all();
+
+    wm_panel.menu_user.logout.on_click.connect(
+            this, static_cast<tiny::object_signal_t>(&Manager::on_logout));
+
+    XClearWindow(display_arg, root_arg);
+    set_events();
+    XSetErrorHandler(&Manager::on_error);
+    XUngrabServer(display_arg); // unlock the X server
+}
+
+Manager::~Manager()
+{
+    // Alt + Tab
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab), Mod1Mask,
+                       root);
+    // Shift + Alt + Tab
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
+                       ShiftMask | Mod1Mask, root);
+    // Alt + F2
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
+                       root);
+
+    if (old_error_handler) {
+        XSetErrorHandler(old_error_handler);
+    }
+    // the display belongs to the caller, only stop managing the root window
+    XSelectInput(display, root, 0);
+}
+
+void Manager::set_events()
+{
+    XSelectInput(display, root,
+                 SubstructureNotifyMask | SubstructureRedirectMask);
+
+    // Alt + Tab
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab), Mod1Mask,
+                     root);
+    // Shift + Alt + Tab
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
+                     ShiftMask | Mod1Mask, root);
+    // Alt + F2
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
+}
+
+void Manager::set_supported()
+{
+    Atom supported[] = {tiny::display->_NET_SUPPORTED,
+                        tiny::display->_NET_WM_NAME,
+                        tiny::display->_NET_WM_VISIBLE_NAME,
+                        tiny::display->_NET_WM_WINDOW_TYPE};
+
+    XChangeProperty(display, root, tiny::display->_NET_SUPPORTED, XA_ATOM, 32,
+                    PropModeReplace,
+                    reinterpret_cast<unsigned char*>(supported),
+                    sizeof(supported) / sizeof(Atom));
+}
+
+void Manager::main_loop()
+{
+    XEvent event;
+
+    while (running) {
+        XNextEvent(display, &event);
+        const ::Window window = tiny::window_of_event(event);
+
+        auto signal_id = std::make_pair(event.type, window);
+
+        // call manager handlers first
+        if (tiny::handlers.count(signal_id)) {
+            tiny::handlers.call_hanlder(signal_id, event);
+            continue;
+        }
+
+        switch (event.type) {
+            case KeyPress: // shortcuts
+                on_key_press(event.xkey);
+                break;
+            case KeyRelease: // shortcuts
+                on_key_release(event.xkey);
+                break;
+            case UnmapNotify: // need for delete windows frames (wm_windows)
+                on_unmap_notify(event.xunmap);
+                break;
+            case MapRequest: // need to create windows frames for new windows
+                on_map_request(event.xmaprequest);
+                break;
+            case ConfigureRequest: // need for resize requests from app windows
+                on_configure_request(event.xconfigurerequest);
+                break;
+            default:
+#ifdef DEBUG
+                fprintf(stderr, "Unhandled event: %s (%lx)\n",
+                        tiny::event_to_string(event), window);
+#endif
+                break;
+        }
+    }
+}
+
+void Manager::activate_next_window()
+{
+    if (wm_windows.empty()) {
+        return; // no window to activate
+    }
+
+    Window* next = *wm_tops.cbegin();
+    for (auto it = wm_tops.cbegin(); it != wm_tops.cend(); ++it) {
+        if (active == *it) {
+            if (++it == wm_tops.cend()) {
+                it = wm_tops.cbegin();
+            }
+            next = *it;
+            break;
+        }
+    }
+
+    if (next->get_minimized()) {
+        next->restore();
+    }
+    next->set_focus();
+}
+
+void Manager::activate_prev_window()
+{
+    if (wm_tops.empty()) {
+        return; // no window to activate
+    }
+
+    Window* prev = *wm_tops.crbegin();
+    for (auto it = wm_tops.crbegin(); it != wm_tops.crend(); ++it) {
+        if (active == *it) {
+            if (++it == wm_tops.crend()) {
+                it = wm_tops.crbegin();
+            }
+            prev = *it;
+            break;
+        }
+    }
+    if (prev->get_minimized()) {
+        prev->restore();
+    }
+    prev->set_focus();
+}
+
+void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
+{
+    if (active) {
+        active->return_focus();
+        wm_dock.redraw(active, e);
+    }
+    active = reinterpret_cast<Window*>(o);
+    wm_dock.redraw(active, e);
+}
+
+void Manager::on_logout(tiny::Object*, const XEvent&, void*)
+{
+    running = false;
+}
+
+void Manager::on_key_press(const XKeyEvent& xkey)
+{
+    /* Alt F2 */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_F2)) {
+        wm_run.popup();
+        key_done = true;
+        return;
+    }
+    key_done = false;
+}
+
+void Manager::on_key_release(const XKeyEvent& xkey)
+{
+    if (key_done) {
+        return; // key is handled in on_key_press
+    }
+
+    /* Alt + Tab or Alt + Shift + Tab */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
+        xkey.state & Mod1Mask) {
+        if (xkey.state & ShiftMask) {
+            activate_prev_window();
+        } else {
+            activate_next_window();
+        }
+        return;
+    }
+
+    fprintf(stderr, "%lu Manager::on_key_release Unhalded key event: %x\n",
+            xkey.time, xkey.keycode);
+}
+
+void Manager::on_unmap_notify(const XUnmapEvent& e)
+{
+    // TODO: could be append to signal handlers on wm_window.window
+    if (wm_windows.count(e.window)) {
+        Window* window = wm_windows[e.window];
+        if (window->get_minimized()) {
+            return;
+        }
+        if (active == window) {
+            activate_prev_window();
+        }
+        if (active == window) {
+            active = nullptr;
+        }
+        wm_tops.remove(window);
+        wm_dock.remove(window);
+        delete window;
+        wm_windows.erase(e.window);
+    }
+}
+
+void Manager::on_map_request(const XMapRequestEvent& e)
+{
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, e.window, &attrs);
+    if (attrs.map_state == IsViewable) {
+        return;
+    }
+    if (attrs.override_redirect) {
+        return; // menu, special tools (idesk) and so on
+    }
+
+    std::set<Atom> properties;
+    Window::get_properties(e.window, properties);
+
+    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
+        const Window::WMType wm_type = Window::get_net_wm_type(e.window);
+        switch (wm_type) {
+            case Window::WMType::DESKTOP:
+            case Window::WMType::DOCK:
+            case Window::WMType::SPLASH:
+                XMapWindow(display, e.window);
+                return; // do not manage this window type
+            default:
+                break;
+        }
+    }
+
+    Window* window = nullptr;
+    unsigned long functions;
+    unsigned long decorations;
+
+    if (Window::get_motif_hints(e.window, functions, decorations) &&
+        !decorations) {
+        window = Window::create(root, e.window, attrs, functions);
+    } else {
+        window = Client::create(root, e.window, attrs, functions, decorations);
+    }
+
+    wm_windows[e.window] = window;
+    wm_tops.push_back(window);
+    if (!window->skip_taskbar()) {
+        wm_dock.add(window);
+    }
+    XMapWindow(display, e.window);
+    window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
+                                           &Manager::on_window_focus));
+    window->set_focus();
+}
+
+void Manager::on_configure_request(const XConfigureRequestEvent& e)
+{
+    XWindowChanges ch;
+    ch.x = e.x;
+    ch.y = e.y;
+    ch.width = e.width;
+    ch.height = e.height;
+    ch.border_width = e.border_width;
+    ch.sibling = e.above;
+    ch.stack_mode = e.detail;
+
+    XConfigureWindow(display, e.window, static_cast<unsigned int>(e.value_mask),
+                     &ch);
+}
+
+int Manager::on_error(::Display* display, XErrorEvent* error)
+{
+    char buffer[255];
+    XGetErrorText(display, error->error_code, buffer, 255);
+    tiny::error("XError %s (%d) opcode %d/%d on res %lx", buffer,
+                error->error_code, error->request_code, error->minor_code,
+                error->resourceid);
+    return 0;
+}
+
+} // namespace tiny::wm

@@ -1,4 +1,4 @@
-#include "wm_edge.h"
+#include "wm/edge.h"
 #include "x_util.h"
 
 namespace tiny {
@@ -7,9 +7,9 @@ extern Handlers handlers;
 
 bool keep_running;
 
-class Demo : public wm::BackWindow {
+class Demo : public tiny::wm::BackWindow {
   public:
-    Demo(): wm::BackWindow(300, 200)
+    Demo(): tiny::wm::BackWindow(300, 200)
     {
         realize(XDefaultRootWindow(display), 0, 0);
         // XSetWindowBackground(display, window, 0x000055);
@@ -21,7 +21,7 @@ class Demo : public wm::BackWindow {
 
     void set_events(long mask = 0) override
     {
-        wm::BackWindow::set_events(mask);
+        tiny::wm::BackWindow::set_events(mask);
 
         Atom wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
         XSetWMProtocols(display, window, &wm_delete_window, 1);
