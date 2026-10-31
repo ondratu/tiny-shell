@@ -287,6 +287,48 @@ TEST_F(IconThemeTest, absolute_name_and_extension)
     EXPECT_EQ(theme.find("", 16), "");
 }
 
+TEST_F(IconThemeTest, hicolor_without_index_is_read_by_the_names_of_directories)
+{
+    touch("icons/hicolor/16x16/apps/app.png");
+    touch("icons/hicolor/48x48/apps/app.png");
+    touch("icons/hicolor/scalable/apps/vec.svg");
+    touch("icons/hicolor/48x48/apps/vec.png");
+    touch("icons/hicolor/32x64/apps/odd.png");    // not square
+    touch("icons/hicolor/48x48/mimetypes/m.png"); // not an application icon
+    touch("icons/hicolor/big/apps/odd.png");
+    const auto theme = make();
+
+    EXPECT_EQ(theme.find("app", 16), path("icons/hicolor/16x16/apps/app.png"));
+    EXPECT_EQ(theme.find("app", 40), path("icons/hicolor/48x48/apps/app.png"));
+    EXPECT_EQ(theme.find("vec", 48), path("icons/hicolor/48x48/apps/vec.png"));
+    EXPECT_EQ(theme.find("vec", 300),
+              path("icons/hicolor/scalable/apps/vec.svg"));
+    EXPECT_EQ(theme.find("odd", 32), "");
+    EXPECT_EQ(theme.find("m", 48), "");
+}
+
+TEST_F(IconThemeTest, hicolor_index_of_another_directory_describes_the_theme)
+{
+    touch("system/icons/hicolor/index.theme");
+    std::ofstream(root / "system/icons/hicolor/index.theme")
+            << "[Icon Theme]\nDirectories=22x22/apps\n"
+               "[22x22/apps]\nSize=22\nType=Fixed\n";
+    touch("icons/hicolor/22x22/apps/app.png"); // installed by hand
+    touch("icons/hicolor/48x48/apps/app.png"); // not in the index
+    const tiny::xdg::IconTheme theme({path("icons"), path("system/icons")},
+                                     {path("pixmaps")});
+
+    EXPECT_EQ(theme.find("app", 48), path("icons/hicolor/22x22/apps/app.png"));
+}
+
+TEST_F(IconThemeTest, another_theme_without_index_is_not_guessed)
+{
+    touch("icons/other/48x48/apps/app.png");
+    const auto theme = make("other");
+
+    EXPECT_EQ(theme.find("app", 48), "");
+}
+
 TEST_F(IconThemeTest, missing_theme_and_missing_icon)
 {
     touch("pixmaps/only.png");
