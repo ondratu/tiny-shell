@@ -218,9 +218,13 @@ TEST_F(LauncherTest, an_application_that_does_not_start_keeps_the_launcher)
                "Exec=/nonexistent/program\n";
     launcher.popup();
 
+    testing::internal::CaptureStderr();
     type_key(entry(), XK_Return);
+    const std::string report = testing::internal::GetCapturedStderr();
 
     EXPECT_TRUE(shown());
+    EXPECT_NE(report.find("Alpha (/nonexistent/program)"), std::string::npos);
+    EXPECT_NE(report.find("No such file"), std::string::npos);
 }
 
 TEST_F(LauncherTest, escape_closes_the_launcher_and_forgets_the_search)
