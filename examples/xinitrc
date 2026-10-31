@@ -3,6 +3,20 @@
 # run; change the copy as you like.
 export GDK_BACKEND=x11
 
+# Programs the user installed (a session is not a login shell, so the profile
+# may not have added this directory) are found by the launcher
+export PATH="$HOME/.local/bin:$PATH"
+
+# Applications and icons of the packages. The specification names only
+# /usr/local/share and /usr/share; other systems install elsewhere (pkgsrc
+# uses /usr/pkg/share).
+if [ -z "$XDG_DATA_DIRS" ]; then
+    for dir in /usr/local/share /usr/pkg/share /usr/share; do
+        [ -d "$dir" ] && XDG_DATA_DIRS="${XDG_DATA_DIRS:+$XDG_DATA_DIRS:}$dir"
+    done
+    export XDG_DATA_DIRS
+fi
+
 # Applications started with the session
 xterm &
 #xclock &
