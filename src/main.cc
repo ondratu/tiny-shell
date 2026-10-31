@@ -1,3 +1,4 @@
+#include <clocale>
 #include <stdexcept>
 
 #include "object.h"
@@ -19,6 +20,9 @@ int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
 
 int main(int /*argc*/, char** /*argv*/)
 {
+    // The names of the applications are sorted by the language of the user
+    setlocale(LC_COLLATE, "");
+
     try {
         tiny::Display::init();
 

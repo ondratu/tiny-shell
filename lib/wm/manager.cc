@@ -58,6 +58,9 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
 
+    wm_launcher.realize(root_arg, 0, 0);
+    wm_launcher.set_events();
+
     XGrabServer(display_arg); // lock the X server for new events
     XQueryTree(display_arg, root_arg, &rv_root, &rv_parent, &rv_child,
                &rv_ccount);
@@ -140,6 +143,7 @@ Manager::~Manager()
     // Alt + F2
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
+    grab_super(false);
 
     if (old_error_handler) {
         XSetErrorHandler(old_error_handler);
@@ -161,6 +165,22 @@ void Manager::set_events()
                      ShiftMask | Mod1Mask, root);
     // Alt + F2
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
+    grab_super(true);
+}
+
+void Manager::grab_super(bool grab)
+{
+    // Super alone opens the launcher, so a shortcut with Super is not passed
+    // to an application
+    const KeySym supers[] = {XK_Super_L, XK_Super_R};
+    for (const KeySym super : supers) {
+        const KeyCode keycode = XKeysymToKeycode(display, super);
+        if (keycode == 0) { // the keyboard has no such key
+            continue;
+        }
+        grab ? tiny::x_grab_key(display, keycode, 0, root)
+             : tiny::x_ungrab_key(display, keycode, 0, root);
+    }
 }
 
 void Manager::set_supported()
@@ -283,6 +303,13 @@ void Manager::on_key_press(const XKeyEvent& xkey)
     /* Alt F2 */
     if (xkey.keycode == XKeysymToKeycode(display, XK_F2)) {
         wm_run.popup();
+        key_done = true;
+        return;
+    }
+    /* Super */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_Super_L) ||
+        xkey.keycode == XKeysymToKeycode(display, XK_Super_R)) {
+        wm_launcher.toggle();
         key_done = true;
         return;
     }

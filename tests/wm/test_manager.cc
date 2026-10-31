@@ -163,6 +163,7 @@ TEST_F(ManagerTest, shows_the_panel_the_dock_and_keeps_the_run_dialog_hidden)
     EXPECT_EQ(attributes_of(manager->wm_panel).map_state, IsViewable);
     EXPECT_EQ(attributes_of(manager->wm_dock).map_state, IsViewable);
     EXPECT_EQ(attributes_of(manager->wm_run).map_state, IsUnmapped);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
 }
 
 TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
@@ -317,6 +318,22 @@ TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)
         XGrabKey(other.display,
                  XKeysymToKeycode(other.display, static_cast<KeySym>(sym)),
                  Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
+    }
+    other.sync();
+
+    EXPECT_EQ(errors.errors(), 2); // BadAccess: already grabbed
+}
+
+TEST_F(ManagerTest, grabs_the_super_keys_for_the_launcher)
+{
+    start();
+
+    const XErrors errors;
+    const FakeClient other;
+    for (const int sym : {XK_Super_L, XK_Super_R}) {
+        XGrabKey(other.display,
+                 XKeysymToKeycode(other.display, static_cast<KeySym>(sym)), 0,
+                 root_window(), True, GrabModeAsync, GrabModeAsync);
     }
     other.sync();
 
@@ -591,6 +608,23 @@ TEST_F(ManagerTest, alt_f2_opens_the_run_dialog)
 
     EXPECT_EQ(attributes_of(manager->wm_run).map_state, IsViewable);
     EXPECT_TRUE(manager->key_done);
+}
+
+TEST_F(ManagerTest, super_opens_the_launcher)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    start();
+    ASSERT_NE(XKeysymToKeycode(dsp(), XK_Super_L), 0);
+
+    manager->on_key_press(key(XK_Super_L));
+    XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsViewable);
+    EXPECT_TRUE(manager->key_done);
+
+    manager->on_key_press(key(XK_Super_R)); // the second Super closes it
+    XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
 }
 
 TEST_F(ManagerTest, other_keys_are_not_handled_on_press)
