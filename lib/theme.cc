@@ -49,8 +49,10 @@ void Theme::scale(double factor)
     wm_panel_login_width = scaled(120, factor);
     wm_menu_width = scaled(120, factor);
     wm_menu_item_height = scaled(20, factor);
-    wm_launcher_width = scaled(420, factor);
-    wm_launcher_icon = scaled(32, factor);
+    wm_launcher_cell_width = scaled(96, factor);
+    wm_launcher_cell_height = scaled(88, factor);
+    wm_launcher_icon = scaled(48, factor);
+    wm_launcher_dot = scaled(8, factor);
 
     widget.scale(factor);
     wm_button.scale(factor);

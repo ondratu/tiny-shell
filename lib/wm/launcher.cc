@@ -30,25 +30,51 @@ int entry_height()
     return tiny::theme.wm_win_header;
 }
 
-int row_height()
+// The grid is smaller than the theme says when the screen is small
+int screen_size(bool horizontal)
 {
-    return tiny::theme.wm_launcher_icon + 2 * tiny::theme.list.padding_width;
+    const int screen = XDefaultScreen(tiny::get_display());
+    return horizontal ? XDisplayWidth(tiny::get_display(), screen)
+                      : XDisplayHeight(tiny::get_display(), screen);
 }
 
-int list_height()
+int columns()
 {
-    return tiny::theme.wm_launcher_rows * row_height();
+    const int fit = (screen_size(true) - 2 * spacing()) /
+                    tiny::theme.wm_launcher_cell_width;
+    return std::max(1, std::min(tiny::theme.wm_launcher_columns, fit));
 }
 
-int inner_width()
+int rows()
 {
-    return tiny::theme.wm_launcher_width - 2 * spacing();
+    // the launcher takes at most the three quarters of the screen
+    const int free = screen_size(false) * 3 / 4 - 2 * spacing() -
+                     entry_height() - 3 * tiny::theme.wm_launcher_dot;
+    return std::max(1, std::min(tiny::theme.wm_launcher_rows,
+                                free / tiny::theme.wm_launcher_cell_height));
+}
+
+int grid_width()
+{
+    return columns() * tiny::theme.wm_launcher_cell_width;
+}
+
+int grid_height()
+{
+    return tiny::IconGrid::height_of(rows(),
+                                     tiny::theme.wm_launcher_cell_height,
+                                     tiny::theme.wm_launcher_dot);
+}
+
+int dialog_width()
+{
+    return grid_width() + 2 * spacing();
 }
 
 int dialog_height()
 {
     return spacing() + entry_height() + 2 * tiny::theme.entry.border_width +
-           spacing() / 2 + list_height() + spacing();
+           spacing() / 2 + grid_height() + spacing();
 }
 
 // The language of the names in the desktop files
@@ -66,10 +92,11 @@ std::string message_locale()
 } // namespace
 
 Launcher::Launcher():
-    tiny::Popover(tiny::theme.wm_launcher_width, dialog_height()),
-    entry(inner_width() - 2 * tiny::theme.entry.border_width, entry_height()),
-    list(inner_width(), list_height(), row_height(),
-         tiny::theme.wm_launcher_icon)
+    tiny::Popover(dialog_width(), dialog_height()),
+    entry(grid_width() - 2 * tiny::theme.entry.border_width, entry_height()),
+    grid(columns(), rows(), tiny::theme.wm_launcher_cell_width,
+         tiny::theme.wm_launcher_cell_height, tiny::theme.wm_launcher_icon,
+         tiny::theme.wm_launcher_dot)
 {
     name = "launcher";
     entry.on_change.connect(
@@ -80,7 +107,7 @@ Launcher::Launcher():
             this, static_cast<tiny::object_signal_t>(&Launcher::close));
     entry.on_key.connect(this,
                          static_cast<tiny::object_signal_t>(&Launcher::move));
-    list.on_activate.connect(
+    grid.on_activate.connect(
             this, static_cast<tiny::object_signal_t>(&Launcher::run));
 }
 
@@ -106,7 +133,7 @@ void Launcher::realize(::Window root, int, int)
                            std::max(0, (attrs.height - height) / 4));
 
     push_start(&entry, spacing(), spacing());
-    push_start(&list, spacing(), spacing() / 2);
+    push_start(&grid, spacing(), spacing() / 2);
 }
 
 void Launcher::place()
@@ -152,17 +179,23 @@ void Launcher::search(Object*, const XEvent&, void*)
 void Launcher::move(Object*, const XEvent& e, void*)
 {
     switch (XLookupKeysym(const_cast<XKeyEvent*>(&e.xkey), 0)) {
+        case XK_Left:
+            grid.select_prev();
+            break;
+        case XK_Right:
+            grid.select_next();
+            break;
         case XK_Up:
-            list.select_prev();
+            grid.select_up();
             break;
         case XK_Down:
-            list.select_next();
+            grid.select_down();
             break;
         case XK_Page_Up:
-            list.select_page(false);
+            grid.select_page(false);
             break;
         case XK_Page_Down:
-            list.select_page(true);
+            grid.select_page(true);
             break;
         default:
             break;
@@ -175,7 +208,7 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
         return;
     }
     const xdg::Application& app =
-            index.applications()[found[list.get_selected()]];
+            index.applications()[found[grid.get_selected()]];
     if (xdg::launch(app) < 0) {
         // keep the launcher and the text, so the user can try again
         const int error = errno;
@@ -210,15 +243,15 @@ void Launcher::find()
 {
     found = xdg::search_applications(index.applications(), entry.get_text(),
                                      recent);
-    list.set_items(found.size(), [this](size_t row) { return item_of(row); });
+    grid.set_items(found.size(), [this](size_t row) { return item_of(row); });
 }
 
-tiny::ListBox::Item Launcher::item_of(size_t row)
+tiny::IconGrid::Item Launcher::item_of(size_t row)
 {
     const xdg::Application& app = index.applications()[found[row]];
     const Icon& icon = icon_of(app);
 
-    tiny::ListBox::Item item;
+    tiny::IconGrid::Item item;
     item.text = app.entry.name;
     item.icon = icon.picture;
     item.icon_width = icon.width;

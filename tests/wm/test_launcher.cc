@@ -55,7 +55,7 @@ class LauncherTest : public ::testing::Test {
 
     ::Window entry() const { return children_of(launcher.get_window()).at(0); }
 
-    ::Window list() const { return children_of(launcher.get_window()).at(1); }
+    ::Window grid() const { return children_of(launcher.get_window()).at(1); }
 
     bool shown() const
     {
@@ -75,7 +75,8 @@ TEST_F(LauncherTest, realize_centers_the_launcher_horizontally)
     const XWindowAttributes root_attrs = attributes_of(root_window());
     const XWindowAttributes attrs = attributes_of(launcher);
 
-    EXPECT_EQ(attrs.width, tiny::theme.wm_launcher_width);
+    EXPECT_EQ(attrs.width,
+              attributes_of(grid()).width + 2 * tiny::theme.wm_win_border);
     EXPECT_EQ(attrs.x, root_attrs.width / 2 - attrs.width / 2);
     EXPECT_GE(attrs.y, 0);
     EXPECT_FALSE(shown());
@@ -92,10 +93,10 @@ TEST_F(LauncherTest, popup_centers_the_launcher_again)
     EXPECT_EQ(attrs.x, root_attrs.width / 2 - attrs.width / 2);
 }
 
-TEST_F(LauncherTest, holds_an_entry_above_a_list)
+TEST_F(LauncherTest, holds_an_entry_above_a_grid)
 {
     ASSERT_EQ(children_of(launcher.get_window()).size(), 2u);
-    EXPECT_LT(attributes_of(entry()).y, attributes_of(list()).y);
+    EXPECT_LT(attributes_of(entry()).y, attributes_of(grid()).y);
 }
 
 TEST_F(LauncherTest, popup_shows_the_launcher_and_focuses_the_entry)
@@ -161,22 +162,35 @@ TEST_F(LauncherTest, keywords_are_searched)
     EXPECT_TRUE(appears(root / "alpha"));
 }
 
-TEST_F(LauncherTest, down_selects_the_next_application)
+TEST_F(LauncherTest, right_selects_the_next_application)
 {
     launcher.popup();
 
-    type_key(entry(), XK_Down);
+    type_key(entry(), XK_Right);
     type_key(entry(), XK_Return);
 
     EXPECT_TRUE(appears(root / "beta"));
     EXPECT_FALSE(fs::exists(root / "alpha"));
 }
 
-TEST_F(LauncherTest, up_and_the_pages_do_not_leave_the_list)
+TEST_F(LauncherTest, left_goes_back_to_the_previous_application)
 {
     launcher.popup();
 
+    type_key(entry(), XK_Right);
+    type_key(entry(), XK_Left);
+    type_key(entry(), XK_Return);
+
+    EXPECT_TRUE(appears(root / "alpha"));
+}
+
+TEST_F(LauncherTest, the_keys_do_not_leave_the_grid)
+{
+    launcher.popup();
+
+    type_key(entry(), XK_Left);
     type_key(entry(), XK_Up);
+    type_key(entry(), XK_Down);
     type_key(entry(), XK_Page_Down);
     type_key(entry(), XK_Page_Up);
     type_key(entry(), XK_Return);
@@ -184,18 +198,18 @@ TEST_F(LauncherTest, up_and_the_pages_do_not_leave_the_list)
     EXPECT_TRUE(appears(root / "alpha"));
 }
 
-TEST_F(LauncherTest, click_on_a_row_starts_the_application)
+TEST_F(LauncherTest, click_on_a_cell_starts_the_application)
 {
     launcher.popup();
     XEvent press = make_event(ButtonPress);
     press.xbutton.button = Button1;
-    press.xbutton.y = tiny::theme.wm_launcher_icon +
-                      2 * tiny::theme.list.padding_width; // the second row
+    press.xbutton.x = tiny::theme.wm_launcher_cell_width + 5; // the second cell
+    press.xbutton.y = 5;
     XEvent release = press;
     release.type = ButtonRelease;
 
-    send(list(), press);
-    send(list(), release);
+    send(grid(), press);
+    send(grid(), release);
 
     EXPECT_TRUE(appears(root / "beta"));
     EXPECT_FALSE(shown());
@@ -243,7 +257,7 @@ TEST_F(LauncherTest, escape_closes_the_launcher_and_forgets_the_search)
 TEST_F(LauncherTest, the_started_application_comes_first_next_time)
 {
     launcher.popup();
-    type_key(entry(), XK_Down);
+    type_key(entry(), XK_Right);
     type_key(entry(), XK_Return);
     ASSERT_TRUE(appears(root / "beta"));
     fs::remove(root / "beta");
@@ -277,10 +291,25 @@ TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
     const EnvVar dirs("XDG_DATA_DIRS", root.string());
 
     launcher.popup();
-    send(list(), make_event(Expose));
+    send(grid(), make_event(Expose));
 
+    // the icon is above the text, both in the middle of the cell
     const int size = tiny::theme.wm_launcher_icon;
-    const int padding = tiny::theme.list.padding_width;
-    const Image image(list(), attributes_of(list()).width, 2 * size);
-    EXPECT_EQ(image.at(padding + size / 2, padding + size / 2), 0xFF0000u);
+    const XftFont* font = tiny::theme.list.get_font();
+    const int content = size + tiny::theme.list.padding_width / 2 +
+                        font->ascent + font->descent;
+    const int top = (tiny::theme.wm_launcher_cell_height - content) / 2;
+    const Image image(grid(), attributes_of(grid()).width,
+                      tiny::theme.wm_launcher_cell_height);
+    EXPECT_EQ(image.at(tiny::theme.wm_launcher_cell_width / 2, top + size / 2),
+              0xFF0000u);
+}
+
+TEST_F(LauncherTest, the_launcher_is_not_bigger_than_the_theme_says)
+{
+    EXPECT_LE(attributes_of(launcher).width,
+              tiny::theme.wm_launcher_columns *
+                              tiny::theme.wm_launcher_cell_width +
+                      2 * tiny::theme.wm_win_border);
+    EXPECT_GE(attributes_of(grid()).width, tiny::theme.wm_launcher_cell_width);
 }

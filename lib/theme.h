@@ -36,9 +36,12 @@ class Theme {
     int wm_panel_login_width = 120;
     int wm_menu_width = 120;
     int wm_menu_item_height = 20;
-    int wm_launcher_width = 420;
-    int wm_launcher_icon = 32;
-    int wm_launcher_rows = 8;
+    int wm_launcher_columns = 8;
+    int wm_launcher_rows = 4;
+    int wm_launcher_cell_width = 96;
+    int wm_launcher_cell_height = 88;
+    int wm_launcher_icon = 48;
+    int wm_launcher_dot = 8;
 
     double scale_factor = 1;
 

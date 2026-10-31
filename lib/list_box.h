@@ -26,7 +26,7 @@ class ListBox : public Widget {
     struct Item {
         std::string text;
         Picture icon = None; //!< not owned; None draws no icon
-        int icon_width = 0;  //!< 0 is the icon size of the list
+        int icon_width = 0;  //!< 0 is the icon size of the widget
         int icon_height = 0;
     };
 
