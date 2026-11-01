@@ -280,9 +280,6 @@ std::string_view get_wm_icon()
 
 void Window::set_focus()
 {
-    TINY_LOG("set_focus 0x%lx \"%s\"%s%s", child, wm_name.c_str(),
-             get_minimized() ? ", minimized" : "",
-             protocols.count(dsp.WM_TAKE_FOCUS) ? ", WM_TAKE_FOCUS" : "");
     if (get_minimized()) {
         restore();
     }
@@ -921,21 +918,13 @@ bool Window::is_focus_change(const XEvent& e)
 
 void Window::on_focus_in(const XEvent& e, void*)
 {
-    TINY_LOG("FocusIn 0x%lx \"%s\" mode %d detail %d%s", child, wm_name.c_str(),
-             e.xfocus.mode, e.xfocus.detail,
-             is_focus_change(e) ? "" : ", not a focus change");
     if (!is_focus_change(e)) {
         return;
     }
     on_focus(this, e, nullptr);
 }
 
-void Window::on_focus_out(const XEvent& e, void*)
-{
-    TINY_LOG("FocusOut 0x%lx \"%s\" mode %d detail %d%s", child,
-             wm_name.c_str(), e.xfocus.mode, e.xfocus.detail,
-             is_focus_change(e) ? "" : ", not a focus change");
-}
+void Window::on_focus_out(const XEvent&, void*) {}
 
 void Window::on_property_notify(const XEvent& e, void*)
 {
