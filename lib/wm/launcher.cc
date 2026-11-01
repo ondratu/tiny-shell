@@ -247,8 +247,14 @@ void Launcher::load()
     loaded = true;
 
     const char* data_home = getenv("XDG_DATA_HOME");
-    const char* data_dirs = getenv("XDG_DATA_DIRS");
+    const char* data_dirs_env = getenv("XDG_DATA_DIRS");
     const char* home = getenv("HOME");
+    // the default of the variable has it, a set variable may not
+    const std::string with_local =
+            (data_dirs_env != nullptr && *data_dirs_env != '\0')
+                    ? std::string(data_dirs_env) + ":" + local_share
+                    : std::string();
+    const char* data_dirs = with_local.empty() ? nullptr : with_local.c_str();
     index.scan(xdg::application_dirs(data_home, data_dirs, home),
                message_locale());
     icon_theme = std::make_unique<xdg::IconTheme>(

@@ -43,6 +43,10 @@ class Launcher : public tiny::Popover {
     /// Keep a window (the panel, the dock) above the launcher.
     void keep_above(tiny::Widget* widget) { above.push_back(widget); }
 
+    /// The directory that is searched after $XDG_DATA_DIRS, even when the
+    /// variable does not list it (e.g. "/usr/pkg/share:/usr/share" on NetBSD).
+    void set_local_share(std::string dir) { local_share = std::move(dir); }
+
     void toggle();
 
     /// Close the launcher and forget the search.
@@ -85,6 +89,7 @@ class Launcher : public tiny::Popover {
 
     ::Window root_window = None;
     bool loaded = false;
+    std::string local_share = "/usr/local/share";
     xdg::ApplicationIndex index;
     std::unique_ptr<xdg::IconTheme> icon_theme;
     std::map<std::string, Icon> icons; //!< by the id of the application

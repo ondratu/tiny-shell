@@ -40,6 +40,7 @@ class LauncherTest : public ::testing::Test {
         write("beta", "Beta", "Type=Application\n");
         write("hidden", "Hidden", "Type=Application\nNoDisplay=true\n");
         data_home.emplace("XDG_DATA_HOME", root.string());
+        launcher.set_local_share("/nonexistent"); // not the apps of the host
         launcher.realize(root_window());
     }
 
@@ -366,6 +367,22 @@ TEST_F(LauncherTest, applications_are_read_when_the_launcher_opens_first)
     type_key(entry(), XK_Return);
 
     EXPECT_TRUE(appears(root / "beta"));
+}
+
+TEST_F(LauncherTest, the_local_share_is_searched_when_the_variable_omits_it)
+{
+    const fs::path local = root / "local";
+    fs::create_directories(local / "applications");
+    std::ofstream(local / "applications" / "gamma.desktop")
+            << "[Desktop Entry]\nName=Gamma\nType=Application\nExec=touch "
+            << (root / "gamma").string() << "\n";
+    launcher.set_local_share(local.string());
+
+    launcher.popup();
+    type_text(entry(), "gamma");
+    type_key(entry(), XK_Return);
+
+    EXPECT_TRUE(appears(root / "gamma"));
 }
 
 TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
