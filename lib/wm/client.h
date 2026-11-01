@@ -38,6 +38,8 @@ class Client : public tiny::Container, public Window {
 
     void maximize() override;
 
+    void fullscreen(bool on) override;
+
     /* signal handlers */
     void on_close_click(tiny::Object* o, const XEvent& e, void* data);
 

@@ -206,6 +206,17 @@ void Window::set_maximized(bool maximized)
     publish_wm_states();
 }
 
+void Window::set_fullscreen(bool fullscreen_arg)
+{
+    if (fullscreen_arg) {
+        wm_states |= WMState::FULLSCREEN;
+    } else {
+        wm_states &= static_cast<unsigned long>(~WMState::FULLSCREEN);
+    }
+
+    publish_wm_states();
+}
+
 void Window::publish_wm_states()
 {
     std::vector<Atom> atoms;
@@ -340,10 +351,33 @@ void Window::maximize()
     state.height = attrs.height;
 
     XGetWindowAttributes(dsp, root, &attrs); //!< TODO: get screen size instead
-                                             // TODO: move under the panel
-    XMoveResizeWindow(dsp, child, 0, 0, tiny::x_uint(attrs.width),
-                      tiny::x_uint(attrs.height));
+    // below the panel, over the dock
+    XMoveResizeWindow(dsp, child, 0, tiny::theme.wm_panel,
+                      tiny::x_uint(attrs.width),
+                      tiny::x_uint(attrs.height - tiny::theme.wm_panel));
     set_maximized(true);
+}
+
+void Window::fullscreen(bool on)
+{
+    if (on == is_fullscreen()) {
+        return;
+    }
+
+    if (on) {
+        XWindowAttributes attrs;
+        XGetWindowAttributes(dsp, child, &attrs);
+        before_fullscreen = {attrs.x, attrs.y, attrs.width, attrs.height};
+        XGetWindowAttributes(dsp, root, &attrs);
+        XMoveResizeWindow(dsp, child, 0, 0, tiny::x_uint(attrs.width),
+                          tiny::x_uint(attrs.height));
+        XRaiseWindow(dsp, child);
+    } else {
+        XMoveResizeWindow(dsp, child, before_fullscreen.x, before_fullscreen.y,
+                          tiny::x_uint(before_fullscreen.width),
+                          tiny::x_uint(before_fullscreen.height));
+    }
+    set_fullscreen(on);
 }
 
 void Window::restore(int x, int y)
@@ -790,6 +824,17 @@ void Window::on_client_message(const XEvent& e, void*)
 {
     if (e.xclient.message_type == dsp._NET_WM_STATE) {
         // client want be maximized
+        const auto action = e.xclient.data.l[0];
+        if (static_cast<Atom>(e.xclient.data.l[1]) ==
+            dsp._NET_WM_STATE_FULLSCREEN) {
+            if (action == tiny::Display::_NET_WM_STATE_TOGGLE) {
+                fullscreen(!is_fullscreen());
+            } else {
+                fullscreen(action == tiny::Display::_NET_WM_STATE_ADD);
+            }
+            return;
+        }
+
         if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_ADD) {
             if (static_cast<Atom>(e.xclient.data.l[1]) ==
                         dsp._NET_WM_STATE_MAXIMIZED_VERT &&

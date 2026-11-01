@@ -138,6 +138,7 @@ class Window : public tiny::Object {
                 wm_states & WMState::MAXIMIZED_HORZ);
     }
     void set_maximized(bool maximized);
+    void set_fullscreen(bool fullscreen);
 
     virtual bool is_fullscreen() const
     {
@@ -171,6 +172,9 @@ class Window : public tiny::Object {
     virtual void maximize();
 
     virtual void restore(int x = 0, int y = 0);
+
+    //! Cover the whole screen (the panel too) without decorations, or go back
+    virtual void fullscreen(bool on);
 
     void update_protocols();    //!< Update WMProtocols
     void update_properties();   //!< Update WMProperties
@@ -228,6 +232,7 @@ class Window : public tiny::Object {
 
     XSizeHints* hints;
     tiny::Rect state = {0, 0, 0, 0};
+    tiny::Rect before_fullscreen = {0, 0, 0, 0};
 
     unsigned long functions = 0;
     unsigned long wm_states = 0;
