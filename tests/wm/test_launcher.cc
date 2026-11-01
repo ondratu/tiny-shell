@@ -81,12 +81,19 @@ class LauncherTest : public ::testing::Test {
                static_cast<size_t>(layout().rows);
     }
 
+    static std::string app_id(size_t index)
+    {
+        const std::string number = std::to_string(index);
+        return "app" +
+               std::string(3 - std::min<size_t>(3, number.size()), '0') +
+               number;
+    }
+
     // More applications than a page, "App000" is the first
     void write_pages(size_t count)
     {
         for (size_t i = 0; i < count; ++i) {
-            char id[16];
-            snprintf(id, sizeof(id), "app%03zu", i);
+            const std::string id = app_id(i);
             write(id, id, "Type=Application\n");
         }
     }
@@ -377,9 +384,9 @@ TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
 
     // the icon is above the text, both in the middle of the cell
     const int size = layout().icon;
-    const XftFont* font = tiny::theme.list.get_font();
+    const XftFont* text_font = tiny::theme.list.get_font();
     const int content = size + tiny::theme.list.padding_width / 2 +
-                        font->ascent + font->descent;
+                        text_font->ascent + text_font->descent;
     const int top = (layout().cell_height - content) / 2;
     const Image image(grid(), attributes_of(grid()).width,
                       layout().cell_height);
@@ -442,9 +449,7 @@ TEST_F(LauncherTest, the_button_turns_to_the_next_page)
     click(next_page());
     type_key(entry(), XK_Return);
 
-    char id[16];
-    snprintf(id, sizeof(id), "app%03zu", page);
-    EXPECT_TRUE(appears(root / id));
+    EXPECT_TRUE(appears(root / app_id(page)));
     EXPECT_FALSE(fs::exists(root / "app000"));
 }
 
