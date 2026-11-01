@@ -35,6 +35,7 @@ class Manager : public tiny::Object {
     /* signal event handlers */
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
+    void on_launcher(tiny::Object* o, const XEvent& e, void* data);
 
     /* direct event handlers */
     void on_key_press(const XKeyEvent& xkey);

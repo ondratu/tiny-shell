@@ -627,6 +627,22 @@ TEST_F(ManagerTest, super_opens_the_launcher)
     EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
 }
 
+TEST_F(ManagerTest, the_dots_in_the_dock_toggle_the_launcher)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    start();
+    const tiny::wm::DockButton& dots = manager->wm_dock.get_menu_button();
+
+    send(dots, ButtonRelease);
+    XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsViewable);
+
+    send(dots, ButtonRelease); // the second click closes it
+    XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+}
+
 TEST_F(ManagerTest, other_keys_are_not_handled_on_press)
 {
     start();
