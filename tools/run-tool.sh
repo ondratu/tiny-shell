@@ -16,8 +16,8 @@ if [ -z "$tool" ]; then
     if command -v "$name" >/dev/null 2>&1; then
         tool=$name
     else
-        tool=$(find /usr/bin /usr/local/bin -name "$name-[0-9]*" 2>/dev/null |
-            sort -V | tail -n 1)
+        tool=$("$(dirname "$0")/newest.sh" /usr/bin/"$name"-[0-9]* \
+            /usr/local/bin/"$name"-[0-9]*)
     fi
 fi
 

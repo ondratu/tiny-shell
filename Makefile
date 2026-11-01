@@ -13,7 +13,7 @@ BUILD ?= build
 # Set CXX to choose another one.
 ifeq ($(origin CXX),default)
 CLANGXX := $(firstword $(shell command -v clang++ 2>/dev/null) \
-    $(shell ls /usr/bin/clang++-[0-9]* 2>/dev/null | sort -V | tail -n 1))
+    $(shell tools/newest.sh /usr/bin/clang++-[0-9]*))
 ifneq (,$(CLANGXX))
 CXX := $(CLANGXX)
 endif
@@ -222,7 +222,7 @@ ASAN_DIR = build-asan
 SANITIZE = -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer
 
 SYMBOLIZER := $(firstword $(shell command -v llvm-symbolizer 2>/dev/null) \
-    $(shell ls /usr/bin/llvm-symbolizer-[0-9]* 2>/dev/null | sort -V | tail -n 1))
+    $(shell tools/newest.sh /usr/bin/llvm-symbolizer-[0-9]*))
 
 asan:
 	@ASAN_SYMBOLIZER_PATH=$(SYMBOLIZER) UBSAN_OPTIONS=print_stacktrace=1 \
