@@ -60,6 +60,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_launcher.realize(root_arg, 0, 0);
     wm_launcher.set_events();
+    wm_launcher.keep_above(&wm_panel);
+    wm_launcher.keep_above(&wm_dock);
 
     XGrabServer(display_arg); // lock the X server for new events
     XQueryTree(display_arg, root_arg, &rv_root, &rv_parent, &rv_child,
