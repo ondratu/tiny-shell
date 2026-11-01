@@ -56,14 +56,24 @@ Client::~Client()
     disconnect(FocusOut);
 }
 
+//! A new window is not placed over the panel, unless it would not fit then
+static int below_panel(const XWindowAttributes& attrs)
+{
+    const int top = tiny::theme.wm_panel;
+    const int frame_height = attrs.height + tiny::theme.wm_win_header;
+    if (attrs.y >= top || top + frame_height > attrs.screen->height) {
+        return attrs.y;
+    }
+    return top;
+}
+
 Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
                        unsigned long decorations)
 {
     auto* win = new Client(child, root, attrs.width, attrs.height, functions,
                            decorations);
-    // TODO: move down under panel
-    win->realize(root, attrs.x, attrs.y);
+    win->realize(root, attrs.x, below_panel(attrs));
     win->on_focus_out(XEvent(), nullptr); // disable and GrabButton
     win->map_all();
 
