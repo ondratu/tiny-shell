@@ -172,6 +172,25 @@ TEST_F(WindowTest, plain_window_has_no_special_state)
     EXPECT_EQ(window->get_icon(), 0u);
 }
 
+TEST_F(WindowTest, wm_class_is_read)
+{
+    client.set_class("reto", "Reto");
+
+    auto window = manage();
+
+    EXPECT_EQ(window->get_wm_class_instance(), "reto");
+    EXPECT_EQ(window->get_wm_class(), "Reto");
+}
+
+TEST_F(WindowTest, window_without_wm_class_has_empty_names)
+{
+    auto window = manage();
+
+    EXPECT_EQ(window->get_wm_class_instance(), "");
+    EXPECT_EQ(window->get_wm_class(), "");
+    EXPECT_EQ(window->get_app_icon().picture, None);
+}
+
 TEST_F(WindowTest, resize_and_maximize_depend_on_functions)
 {
     auto window = manage(MotifWMHints::FUNC_RESIZE);

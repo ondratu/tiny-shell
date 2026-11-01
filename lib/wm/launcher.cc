@@ -68,6 +68,7 @@ Launcher::Launcher():
 Launcher::~Launcher()
 {
     free_icons();
+    free_icons(display, window_icons);
 }
 
 void Launcher::realize(::Window root, int, int)
@@ -144,15 +145,21 @@ void Launcher::update_buttons()
 
 void Launcher::free_icons()
 {
-    for (auto& [id, icon] : icons) {
+    free_icons(display, icons);
+}
+
+void Launcher::free_icons(::Display* x_display,
+                          std::map<std::string, Icon>& list)
+{
+    for (auto& [id, icon] : list) {
         if (icon.picture != None) {
-            XRenderFreePicture(display, icon.picture);
+            XRenderFreePicture(x_display, icon.picture);
         }
         if (icon.pixmap != None) {
-            XFreePixmap(display, icon.pixmap);
+            XFreePixmap(x_display, icon.pixmap);
         }
     }
-    icons.clear();
+    list.clear();
 }
 
 void Launcher::popup()
@@ -287,15 +294,36 @@ const Launcher::Icon& Launcher::icon_of(const xdg::Application& app)
 {
     auto it = icons.find(app.id);
     if (it == icons.end()) { // also an application with no icon, only once
-        it = icons.emplace(app.id, load_icon(app.entry.icon)).first;
+        it = icons.emplace(app.id, load_icon(app.entry.icon, layout.icon))
+                     .first;
     }
     return it->second;
 }
 
-Launcher::Icon Launcher::load_icon(const std::string& icon_name) const
+const Launcher::Icon& Launcher::application_icon(std::string_view instance,
+                                                 std::string_view class_name)
+{
+    static const Icon no_icon;
+    load();
+    const auto& apps = index.applications();
+    const size_t app =
+            xdg::find_application_of_window(apps, instance, class_name);
+    if (app == apps.size()) {
+        return no_icon;
+    }
+    auto it = window_icons.find(apps[app].id);
+    if (it == window_icons.end()) {
+        it = window_icons
+                     .emplace(apps[app].id, load_icon(apps[app].entry.icon,
+                                                      tiny::theme.wm_icon))
+                     .first;
+    }
+    return it->second;
+}
+
+Launcher::Icon Launcher::load_icon(const std::string& icon_name, int size) const
 {
     Icon icon;
-    const int size = layout.icon;
     if (icon_name.empty() || !icon_theme) {
         return icon;
     }

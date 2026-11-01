@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "button.h"
@@ -61,7 +62,7 @@ class Launcher : public tiny::Popover {
     /// A click on one of the buttons of the pages.
     void turn(Object* o, const XEvent& e, void* data);
 
-  private:
+    //! A loaded icon; the launcher owns the X resources
     struct Icon {
         Pixmap pixmap = None;
         Picture picture = None;
@@ -69,6 +70,18 @@ class Launcher : public tiny::Popover {
         int height = 0;
     };
 
+    /**
+     * @short The icon of the application a window belongs to.
+     *
+     * The window is matched by its `WM_CLASS` (see
+     * `xdg::find_application_of_window`), the size is `theme.wm_icon`. The
+     * icon has no picture when no application or no icon is found. It lives
+     * as long as the launcher.
+     */
+    const Icon& application_icon(std::string_view instance,
+                                 std::string_view class_name);
+
+  private:
     void relayout();
     void arrange(const LauncherLayout& next);
     void update_buttons();
@@ -77,7 +90,9 @@ class Launcher : public tiny::Popover {
     void find();
     tiny::IconGrid::Item item_of(size_t row);
     const Icon& icon_of(const xdg::Application& app);
-    Icon load_icon(const std::string& name) const;
+    Icon load_icon(const std::string& name, int size) const;
+    static void free_icons(::Display* x_display,
+                           std::map<std::string, Icon>& list);
     void remember(const std::string& id);
 
     tiny::Entry entry;
@@ -92,9 +107,10 @@ class Launcher : public tiny::Popover {
     std::string local_share = "/usr/local/share";
     xdg::ApplicationIndex index;
     std::unique_ptr<xdg::IconTheme> icon_theme;
-    std::map<std::string, Icon> icons; //!< by the id of the application
-    std::vector<size_t> found;         //!< indexes into the applications
-    std::vector<std::string> recent;   //!< ids, the latest first
+    std::map<std::string, Icon> icons;        //!< by the id of the application
+    std::map<std::string, Icon> window_icons; //!< the same for the windows
+    std::vector<size_t> found;                //!< indexes into the applications
+    std::vector<std::string> recent;          //!< ids, the latest first
 };
 
 } // namespace tiny::wm

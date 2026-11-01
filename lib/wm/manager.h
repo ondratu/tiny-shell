@@ -37,6 +37,9 @@ class Manager : public tiny::Object {
 
     void activate_prev_window();
 
+    //! The icon of the desktop entry of the window, for the dock
+    void set_application_icon(Window* window);
+
     void connect_window(Window* window);
 
     /* signal event handlers */

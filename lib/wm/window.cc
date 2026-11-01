@@ -137,6 +137,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
     }
 
     update_wm_name();
+    update_wm_class();
 
     if (properties.count(dsp._NET_WM_ICON)) {
         update_wm_icon();
@@ -611,6 +612,18 @@ void Window::update_wm_states()
         XFree(atom_name);
     }
     XFree(data);
+}
+
+void Window::update_wm_class()
+{
+    XClassHint class_hint = {};
+    if (!XGetClassHint(dsp, child, &class_hint)) {
+        return;
+    }
+    wm_class[0] = class_hint.res_name != nullptr ? class_hint.res_name : "";
+    wm_class[1] = class_hint.res_class != nullptr ? class_hint.res_class : "";
+    XFree(class_hint.res_name);
+    XFree(class_hint.res_class);
 }
 
 void Window::update_wm_name()

@@ -44,4 +44,16 @@ search_applications(const std::vector<Application>& apps,
                     std::string_view query,
                     const std::vector<std::string>& recent = {});
 
+/**
+ * @short Find the application of a window by its `WM_CLASS`.
+ *
+ * `instance` and `class_name` are the two strings of the property. The first
+ * match wins, the case does not matter: `StartupWMClass`; the id without
+ * ".desktop" or its last part ("cz.zeropage.Reto" -> "Reto"); the program
+ * name of `Exec`. Returns an index into `apps` or `apps.size()`.
+ */
+size_t find_application_of_window(const std::vector<Application>& apps,
+                                  std::string_view instance,
+                                  std::string_view class_name);
+
 } // namespace tiny::xdg

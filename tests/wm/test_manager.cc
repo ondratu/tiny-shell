@@ -3,6 +3,8 @@
 
 #include <X11/keysym.h>
 
+#include <filesystem>
+#include <fstream>
 #include <list>
 #include <map>
 #include <memory>
@@ -673,6 +675,36 @@ TEST_F(ManagerTest, the_dots_in_the_dock_toggle_the_launcher)
     send(dots, ButtonRelease); // the second click closes it
     XSync(dsp(), False);
     EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, a_window_gets_the_icon_of_its_desktop_entry)
+{
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() /
+                          ("tiny-manager-icon-" + std::to_string(getpid()));
+    fs::remove_all(root);
+    fs::create_directories(root / "applications");
+    fs::create_directories(root / "pixmaps");
+    std::ofstream(root / "pixmaps" / "epsilon.xpm")
+            << "/* XPM */\nstatic char * epsilon_xpm[] = {\n"
+               "\"2 2 1 1\",\n\"a c #FF0000\",\n\"aa\",\n\"aa\"};\n";
+    std::ofstream(root / "applications" / "epsilon.desktop")
+            << "[Desktop Entry]\nName=Epsilon\nType=Application\n"
+               "Icon=epsilon\nExec=true\n";
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", root.string());
+    FakeClient& known = add_client();
+    known.set_class("epsilon", "Epsilon");
+    FakeClient& unknown = add_client();
+    unknown.set_class("zeta", "Zeta");
+
+    start();
+
+    EXPECT_NE(manager->wm_windows.at(known.window)->get_app_icon().picture,
+              None);
+    EXPECT_EQ(manager->wm_windows.at(unknown.window)->get_app_icon().picture,
+              None);
+    fs::remove_all(root);
 }
 
 TEST_F(ManagerTest, other_keys_are_not_handled_on_press)
