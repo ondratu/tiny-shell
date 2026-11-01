@@ -141,6 +141,19 @@ TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
     EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
 }
 
+TEST_F(ClientTest, create_places_a_window_under_the_panel)
+{
+    XMoveWindow(dsp(), client.window, 10, 0);
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF));
+
+    const XWindowAttributes f = attributes_of(
+            static_cast<tiny::wm::Client*>(w.get())->get_window());
+    EXPECT_EQ(f.x, 10);
+    EXPECT_EQ(f.y, tiny::theme.wm_panel);
+}
+
 TEST_F(ClientTest, create_sets_wm_state_to_normal)
 {
     const XWindowAttributes a = client.attrs();
