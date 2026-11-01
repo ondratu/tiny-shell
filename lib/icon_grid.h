@@ -42,6 +42,9 @@ class IconGrid : public Widget {
 
     const Style& get_style() const override { return theme.list; }
 
+    /// Change the size of the widget and of its cells; the cells stay.
+    void set_geometry(int cols, int rows_arg, int cell_w, int cell_h, int icon);
+
     /// Replace the cells; the selection goes to the first one.
     void set_items(size_t count, ItemFn item_of);
 

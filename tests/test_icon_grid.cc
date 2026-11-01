@@ -491,3 +491,34 @@ TEST_F(IconGridTest, release_after_a_press_on_a_dot_does_not_activate)
 
     EXPECT_EQ(activated.calls, 1);
 }
+
+TEST_F(IconGridTest, set_geometry_changes_the_size_and_the_page)
+{
+    grid.set_items(20, numbered());
+
+    grid.set_geometry(5, 3, 30, 20, 10);
+
+    EXPECT_EQ(grid.per_page(), 15u);
+    EXPECT_EQ(grid.page_count(), 2u);
+    EXPECT_EQ(attributes_of(grid).width, 5 * 30);
+    EXPECT_EQ(attributes_of(grid).height, 3 * 20 + 3 * dot);
+    EXPECT_EQ(grid.cell_at(32, 0), 1u);
+}
+
+TEST_F(IconGridTest, set_geometry_keeps_the_selection_in_the_cells)
+{
+    grid.set_items(3, numbered());
+    grid.select(2);
+
+    grid.set_geometry(1, 1, 30, 20, 10);
+
+    EXPECT_EQ(grid.get_selected(), 2u);
+    EXPECT_EQ(grid.get_page(), 2u);
+}
+
+TEST_F(IconGridTest, set_geometry_is_at_least_one_cell)
+{
+    grid.set_geometry(0, -1, 0, 0, 0);
+
+    EXPECT_EQ(grid.per_page(), 1u);
+}
