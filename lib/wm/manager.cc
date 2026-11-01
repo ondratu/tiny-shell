@@ -79,41 +79,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
                 continue; // menu, special tools (idesk) and so on
             }
 
-            std::set<Atom> properties;
-            Window::get_properties(rv_child[i], properties);
-
-            if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
-                const Window::WMType wm_type =
-                        Window::get_net_wm_type(rv_child[i]);
-                switch (wm_type) {
-                    case Window::WMType::DESKTOP:
-                    case Window::WMType::DOCK:
-                    case Window::WMType::SPLASH:
-                        continue; // do not manage this window type
-                    default:
-                        break;
-                }
-            }
-
-            Window* window = nullptr;
-            unsigned long functions;
-            unsigned long decorations;
-            if (Window::get_motif_hints(rv_child[i], functions, decorations) &&
-                !decorations) {
-                window = Window::create(root_arg, rv_child[i], child_attrs,
-                                        functions);
-            } else {
-                window = Client::create(root_arg, rv_child[i], child_attrs,
-                                        functions, decorations);
-            }
-
-            wm_windows[rv_child[i]] = window;
-            wm_tops.push_back(window);
-            set_application_icon(window);
-            if (!window->skip_taskbar()) {
-                wm_dock.add(window);
-            }
-            connect_window(window);
+            manage(rv_child[i], child_attrs);
         }
         XFree(rv_child);
     }
@@ -390,6 +356,42 @@ void Manager::on_key_release(const XKeyEvent& xkey)
             xkey.time, xkey.keycode);
 }
 
+Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
+{
+    std::set<Atom> properties;
+    Window::get_properties(child, properties);
+
+    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
+        switch (Window::get_net_wm_type(child)) {
+            case Window::WMType::DESKTOP:
+            case Window::WMType::DOCK:
+            case Window::WMType::SPLASH:
+                return nullptr; // do not manage this window type
+            default:
+                break;
+        }
+    }
+
+    Window* window = nullptr;
+    unsigned long functions;
+    unsigned long decorations;
+    if (Window::get_motif_hints(child, functions, decorations) &&
+        !decorations) {
+        window = Window::create(root, child, attrs, functions);
+    } else {
+        window = Client::create(root, child, attrs, functions, decorations);
+    }
+
+    wm_windows[child] = window;
+    wm_tops.push_back(window);
+    set_application_icon(window);
+    if (!window->skip_taskbar()) {
+        wm_dock.add(window);
+    }
+    connect_window(window);
+    return window;
+}
+
 void Manager::on_unmap_notify(const XUnmapEvent& e)
 {
     // TODO: could be append to signal handlers on wm_window.window
@@ -422,42 +424,11 @@ void Manager::on_map_request(const XMapRequestEvent& e)
         return; // menu, special tools (idesk) and so on
     }
 
-    std::set<Atom> properties;
-    Window::get_properties(e.window, properties);
-
-    if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
-        const Window::WMType wm_type = Window::get_net_wm_type(e.window);
-        switch (wm_type) {
-            case Window::WMType::DESKTOP:
-            case Window::WMType::DOCK:
-            case Window::WMType::SPLASH:
-                XMapWindow(display, e.window);
-                return; // do not manage this window type
-            default:
-                break;
-        }
-    }
-
-    Window* window = nullptr;
-    unsigned long functions;
-    unsigned long decorations;
-
-    if (Window::get_motif_hints(e.window, functions, decorations) &&
-        !decorations) {
-        window = Window::create(root, e.window, attrs, functions);
-    } else {
-        window = Client::create(root, e.window, attrs, functions, decorations);
-    }
-
-    wm_windows[e.window] = window;
-    wm_tops.push_back(window);
-    set_application_icon(window);
-    if (!window->skip_taskbar()) {
-        wm_dock.add(window);
-    }
+    Window* window = manage(e.window, attrs);
     XMapWindow(display, e.window);
-    connect_window(window);
-    window->set_focus();
+    if (window) { // else the type of the window is not managed
+        window->set_focus();
+    }
 }
 
 void Manager::on_configure_request(const XConfigureRequestEvent& e)

@@ -42,6 +42,9 @@ class Manager : public tiny::Object {
 
     void connect_window(Window* window);
 
+    //! Frame (or not) and register a client; null for a type that is not managed
+    Window* manage(::Window child, const XWindowAttributes& attrs);
+
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
