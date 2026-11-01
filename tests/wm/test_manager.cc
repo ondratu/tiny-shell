@@ -680,7 +680,7 @@ TEST_F(ManagerTest, other_keys_are_not_handled_on_press)
     start();
     manager->key_done = true;
 
-    manager->on_key_press(key(XK_Tab));
+    manager->on_key_press(key(XK_a, 0));
 
     EXPECT_FALSE(manager->key_done);
 }
@@ -701,25 +701,41 @@ TEST_F(ManagerTest, release_of_a_handled_key_is_ignored)
 TEST_F(ManagerTest, alt_tab_focuses_the_next_window)
 {
     manage_three();
-    manager->key_done = false;
     auto* second = *std::next(manager->wm_tops.begin());
 
-    XKeyEvent e = key(XK_Tab);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab);
+    manager->on_key_press(e);
 
     EXPECT_TRUE(second->is_focused());
+}
+
+TEST_F(ManagerTest, alt_tab_pressed_again_does_not_wait_for_the_focus_event)
+{
+    manage_three();
+    manager->active = nullptr;
+    auto it = manager->wm_tops.begin();
+    const WmWindow* first = *it;
+    const WmWindow* second = *++it;
+    const WmWindow* third = *++it;
+
+    manager->on_key_press(key(XK_Tab)); // no event is processed between them
+    EXPECT_EQ(manager->active, first);
+    manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, second);
+    manager->on_key_press(key(XK_Tab));
+
+    EXPECT_EQ(manager->active, third);
+    EXPECT_TRUE(third->is_focused());
+    EXPECT_FALSE(second->is_focused());
 }
 
 TEST_F(ManagerTest, alt_tab_wraps_around)
 {
     manage_three();
-    manager->key_done = false;
     manager->active = manager->wm_tops.back();
 
-    XKeyEvent e = key(XK_Tab);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab);
+    manager->on_key_press(e);
 
     EXPECT_TRUE(manager->wm_tops.front()->is_focused());
 }
@@ -727,13 +743,11 @@ TEST_F(ManagerTest, alt_tab_wraps_around)
 TEST_F(ManagerTest, alt_shift_tab_focuses_the_previous_window)
 {
     manage_three();
-    manager->key_done = false;
     manager->active = manager->wm_tops.back();
     auto* previous = *std::next(manager->wm_tops.rbegin());
 
-    XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
+    manager->on_key_press(e);
 
     EXPECT_TRUE(previous->is_focused());
 }
@@ -741,11 +755,9 @@ TEST_F(ManagerTest, alt_shift_tab_focuses_the_previous_window)
 TEST_F(ManagerTest, alt_shift_tab_wraps_around)
 {
     manage_three();
-    manager->key_done = false;
 
-    XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
+    manager->on_key_press(e);
 
     EXPECT_TRUE(manager->wm_tops.back()->is_focused());
 }
@@ -753,14 +765,12 @@ TEST_F(ManagerTest, alt_shift_tab_wraps_around)
 TEST_F(ManagerTest, alt_tab_restores_a_minimized_window)
 {
     manage_three();
-    manager->key_done = false;
     auto* second = *std::next(manager->wm_tops.begin());
     second->minimize();
     ASSERT_TRUE(second->get_minimized());
 
-    XKeyEvent e = key(XK_Tab);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab);
+    manager->on_key_press(e);
 
     EXPECT_FALSE(second->get_minimized());
     EXPECT_TRUE(second->is_focused());
@@ -769,13 +779,11 @@ TEST_F(ManagerTest, alt_tab_restores_a_minimized_window)
 TEST_F(ManagerTest, alt_shift_tab_restores_a_minimized_window)
 {
     manage_three();
-    manager->key_done = false;
     auto* last = manager->wm_tops.back();
     last->minimize();
 
-    XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
+    manager->on_key_press(e);
 
     EXPECT_FALSE(last->get_minimized());
 }
@@ -783,12 +791,10 @@ TEST_F(ManagerTest, alt_shift_tab_restores_a_minimized_window)
 TEST_F(ManagerTest, alt_tab_without_an_active_window_starts_with_the_first)
 {
     manage_three();
-    manager->key_done = false;
     manager->active = nullptr;
 
-    XKeyEvent e = key(XK_Tab);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    const XKeyEvent e = key(XK_Tab);
+    manager->on_key_press(e);
 
     EXPECT_TRUE(manager->wm_tops.front()->is_focused());
 }
@@ -796,13 +802,25 @@ TEST_F(ManagerTest, alt_tab_without_an_active_window_starts_with_the_first)
 TEST_F(ManagerTest, alt_tab_without_windows_does_nothing)
 {
     start();
-    manager->key_done = false;
 
     XKeyEvent e = key(XK_Tab);
-    e.type = KeyRelease;
-    manager->on_key_release(e);
+    manager->on_key_press(e);
     e.state = Mod1Mask | ShiftMask;
-    manager->on_key_release(e);
+    manager->on_key_press(e);
+}
+
+TEST_F(ManagerTest, alt_tab_switches_even_when_alt_is_released_first)
+{
+    manage_three();
+    auto* second = *std::next(manager->wm_tops.begin());
+
+    manager->on_key_press(key(XK_Tab));
+    XKeyEvent release = key(XK_Tab, 0); // a quick tap: Alt is already up
+    release.type = KeyRelease;
+    manager->on_key_release(release);
+
+    EXPECT_TRUE(second->is_focused());
+    EXPECT_TRUE(manager->key_done);
 }
 
 TEST_F(ManagerTest, unknown_key_release_is_survived)
