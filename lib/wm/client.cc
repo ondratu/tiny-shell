@@ -198,17 +198,60 @@ void Client::maximize()
     XGetWindowAttributes(display, root, &attrs);
     XSetWindowBorderWidth(display, window, 0);
 
-    XMoveResizeWindow(display, window, 0, 0, tiny::x_uint(attrs.width),
-                      tiny::x_uint(attrs.height));
+    // below the panel, over the dock
+    const int top = tiny::theme.wm_panel;
+    const int area_height = attrs.height - top;
+    XMoveResizeWindow(display, window, 0, top, tiny::x_uint(attrs.width),
+                      tiny::x_uint(area_height));
     XResizeWindow(display, child, tiny::x_uint(attrs.width),
-                  tiny::x_uint(attrs.height - tiny::theme.wm_win_header));
+                  tiny::x_uint(area_height - tiny::theme.wm_win_header));
 
     if (is_resizable()) {
-        shadow.move_resize(0, 0, attrs.width, attrs.height);
+        shadow.move_resize(0, top, attrs.width, area_height);
     }
     header.resize(attrs.width, tiny::theme.wm_win_header);
     max_btn.set_restore(true);
     set_maximized(true);
+}
+
+void Client::fullscreen(bool on)
+{
+    if (on == is_fullscreen()) {
+        return;
+    }
+
+    if (on) {
+        XWindowAttributes attrs;
+        XGetWindowAttributes(display, window, &attrs);
+        before_fullscreen = {attrs.x, attrs.y, attrs.width, attrs.height};
+        XGetWindowAttributes(display, root, &attrs);
+
+        // the client covers the frame with its header, so nothing is seen
+        XSetWindowBorderWidth(display, window, 0);
+        XMoveResizeWindow(display, window, 0, 0, tiny::x_uint(attrs.width),
+                          tiny::x_uint(attrs.height));
+        XMoveResizeWindow(display, child, 0, 0, tiny::x_uint(attrs.width),
+                          tiny::x_uint(attrs.height));
+        if (is_resizable()) {
+            shadow.unmap();
+        }
+        XRaiseWindow(display, window);
+    } else {
+        const tiny::Rect& r = before_fullscreen;
+        XSetWindowBorderWidth(display, window, get_maximized() ? 0 : 1);
+        XMoveResizeWindow(display, window, r.x, r.y, tiny::x_uint(r.width),
+                          tiny::x_uint(r.height));
+        XMoveResizeWindow(display, child, 0, tiny::theme.wm_win_header,
+                          tiny::x_uint(r.width),
+                          tiny::x_uint(r.height - tiny::theme.wm_win_header));
+        if (is_resizable()) {
+            shadow.move_resize(r.x, r.y, r.width, r.height);
+            shadow.map();
+            XRaiseWindow(display, shadow.get_window()); // shadow is lower
+            XRaiseWindow(display, window);
+        }
+    }
+    set_fullscreen(on);
 }
 
 void Client::restore(int x, int y)
@@ -394,7 +437,7 @@ void Client::on_property_notify(const XEvent& e, void* data)
         }
 
         // when window is moved
-        if (x != 0 || y != tiny::theme.wm_win_header) {
+        if (!is_fullscreen() && (x != 0 || y != tiny::theme.wm_win_header)) {
             XWindowChanges ch;
             ch.x = 0;
             ch.y = tiny::theme.wm_win_header;

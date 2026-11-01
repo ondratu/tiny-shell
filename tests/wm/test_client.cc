@@ -208,7 +208,7 @@ TEST_F(ClientTest, restore_shows_a_minimized_window)
     EXPECT_EQ(frame().map_state, IsViewable);
 }
 
-TEST_F(ClientTest, maximize_button_fills_the_screen)
+TEST_F(ClientTest, maximize_button_fills_the_screen_under_the_panel)
 {
     build();
 
@@ -217,12 +217,74 @@ TEST_F(ClientTest, maximize_button_fills_the_screen)
     auto s = screen();
     auto f = frame();
     EXPECT_TRUE(win->get_maximized());
+    const int panel = tiny::theme.wm_panel;
+    EXPECT_EQ(f.x, 0);
+    EXPECT_EQ(f.y, panel);
+    EXPECT_EQ(f.width, s.width);
+    EXPECT_EQ(f.height, s.height - panel);
+    EXPECT_EQ(child().width, s.width);
+    EXPECT_EQ(child().height, s.height - panel - header_height());
+}
+
+TEST_F(ClientTest, fullscreen_covers_the_screen_and_the_header)
+{
+    build();
+
+    win->fullscreen(true);
+
+    auto s = screen();
+    auto f = frame();
+    EXPECT_TRUE(win->is_fullscreen());
     EXPECT_EQ(f.x, 0);
     EXPECT_EQ(f.y, 0);
     EXPECT_EQ(f.width, s.width);
     EXPECT_EQ(f.height, s.height);
+    EXPECT_EQ(child().y, 0);
     EXPECT_EQ(child().width, s.width);
-    EXPECT_EQ(child().height, s.height - header_height());
+    EXPECT_EQ(child().height, s.height);
+}
+
+TEST_F(ClientTest, leaving_fullscreen_returns_the_frame)
+{
+    build();
+    win->fullscreen(true);
+
+    win->fullscreen(false);
+
+    auto f = frame();
+    EXPECT_FALSE(win->is_fullscreen());
+    EXPECT_EQ(f.x, 10);
+    EXPECT_EQ(f.y, 20);
+    EXPECT_EQ(f.width, 200);
+    EXPECT_EQ(f.height, 100 + header_height());
+    EXPECT_EQ(child().y, header_height());
+    EXPECT_EQ(child().height, 100);
+}
+
+TEST_F(ClientTest, fullscreen_of_a_maximized_window_returns_to_maximized)
+{
+    build();
+    win->maximize();
+    const auto maximized = frame();
+
+    win->fullscreen(true);
+    win->fullscreen(false);
+
+    EXPECT_TRUE(win->get_maximized());
+    EXPECT_EQ(frame().y, maximized.y);
+    EXPECT_EQ(frame().height, maximized.height);
+}
+
+TEST_F(ClientTest, fullscreen_twice_changes_nothing)
+{
+    build();
+    win->fullscreen(true);
+    win->fullscreen(true);
+    win->fullscreen(false);
+    win->fullscreen(false);
+
+    EXPECT_EQ(frame().x, 10);
+    EXPECT_EQ(frame().width, 200);
 }
 
 TEST_F(ClientTest, maximize_button_restores_a_maximized_window)

@@ -807,9 +807,9 @@ TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 
     const XWindowAttributes max = client.attrs();
     EXPECT_EQ(max.x, 0);
-    EXPECT_EQ(max.y, 0);
+    EXPECT_EQ(max.y, tiny::theme.wm_panel);
     EXPECT_EQ(max.width, screen().width);
-    EXPECT_EQ(max.height, screen().height);
+    EXPECT_EQ(max.height, screen().height - tiny::theme.wm_panel);
     EXPECT_TRUE(window->get_maximized());
 
     window->restore();
@@ -820,6 +820,29 @@ TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
     EXPECT_EQ(restored.width, 200);
     EXPECT_EQ(restored.height, 100);
     EXPECT_FALSE(window->get_maximized());
+}
+
+TEST_F(WindowTest, fullscreen_covers_the_whole_screen_and_back)
+{
+    client.map();
+    auto window = manage();
+
+    window->fullscreen(true);
+    const XWindowAttributes full = client.attrs();
+    EXPECT_TRUE(window->is_fullscreen());
+    EXPECT_EQ(full.x, 0);
+    EXPECT_EQ(full.y, 0);
+    EXPECT_EQ(full.width, screen().width);
+    EXPECT_EQ(full.height, screen().height);
+
+    window->fullscreen(true); // nothing changes
+    window->fullscreen(false);
+    const XWindowAttributes back = client.attrs();
+    EXPECT_FALSE(window->is_fullscreen());
+    EXPECT_EQ(back.x, 10);
+    EXPECT_EQ(back.y, 20);
+    EXPECT_EQ(back.width, 200);
+    EXPECT_EQ(back.height, 100);
 }
 
 TEST_F(WindowTest, maximize_twice_keeps_the_original_size)
@@ -1019,6 +1042,27 @@ TEST_F(WindowTest, client_message_maximizes_and_restores)
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
                         static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
     EXPECT_FALSE(window->get_maximized());
+}
+
+TEST_F(WindowTest, client_message_toggles_fullscreen)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    const auto fullscreen = [&](long action) {
+        send(client.window,
+             client_message(client.window, dsp()._NET_WM_STATE, action,
+                            static_cast<long>(dsp()._NET_WM_STATE_FULLSCREEN)));
+    };
+
+    fullscreen(tiny::Display::_NET_WM_STATE_ADD);
+    EXPECT_TRUE(window->is_fullscreen());
+    fullscreen(tiny::Display::_NET_WM_STATE_REMOVE);
+    EXPECT_FALSE(window->is_fullscreen());
+    fullscreen(tiny::Display::_NET_WM_STATE_TOGGLE);
+    EXPECT_TRUE(window->is_fullscreen());
+    fullscreen(tiny::Display::_NET_WM_STATE_TOGGLE);
+    EXPECT_FALSE(window->is_fullscreen());
 }
 
 TEST_F(WindowTest, client_message_with_other_state_changes_is_ignored)
