@@ -1047,9 +1047,9 @@ TEST_F(WindowTest, focus_in_of_a_grab_or_of_the_pointer_is_not_a_focus_change)
     XEvent ungrab = make_event(FocusIn);
     ungrab.xfocus.mode = NotifyUngrab;
     send(client.window, ungrab);
-    XEvent pointer = make_event(FocusIn);
-    pointer.xfocus.detail = NotifyPointer;
-    send(client.window, pointer);
+    XEvent under_pointer = make_event(FocusIn);
+    under_pointer.xfocus.detail = NotifyPointer;
+    send(client.window, under_pointer);
     XEvent inferior = make_event(FocusIn);
     inferior.xfocus.detail = NotifyInferior;
     send(client.window, inferior);
