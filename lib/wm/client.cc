@@ -186,11 +186,25 @@ void Client::map_all()
 
 void Client::set_focus()
 {
+    raise();
+    Window::set_focus();
+}
+
+void Client::raise()
+{
     if (is_resizable()) {
-        XRaiseWindow(display, shadow.get_window());
+        XRaiseWindow(display, shadow.get_window()); // shadow is lower
     }
     XRaiseWindow(display, window);
-    Window::set_focus();
+}
+
+void Client::move_to(int x, int y)
+{
+    if (is_resizable()) {
+        shadow.move(x, y);
+    }
+    XMoveWindow(display, window, x, y);
+    send_configure_notify();
 }
 
 void Client::minimize()

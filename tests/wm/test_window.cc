@@ -1106,6 +1106,60 @@ TEST_F(WindowTest, client_message_maximizes_and_restores)
     EXPECT_FALSE(window->get_maximized());
 }
 
+TEST_F(WindowTest, client_message_maximizes_by_one_atom_or_by_toggle)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    const auto state = [&](long action, Atom first, Atom second = None) {
+        send(client.window, client_message(client.window, dsp()._NET_WM_STATE,
+                                           action, static_cast<long>(first),
+                                           static_cast<long>(second)));
+    };
+
+    state(tiny::Display::_NET_WM_STATE_ADD, dsp()._NET_WM_STATE_MAXIMIZED_HORZ);
+    EXPECT_TRUE(window->get_maximized());
+    state(tiny::Display::_NET_WM_STATE_TOGGLE,
+          dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+          dsp()._NET_WM_STATE_MAXIMIZED_HORZ);
+    EXPECT_FALSE(window->get_maximized());
+    state(tiny::Display::_NET_WM_STATE_TOGGLE,
+          dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+          dsp()._NET_WM_STATE_MAXIMIZED_HORZ);
+    EXPECT_TRUE(window->get_maximized());
+}
+
+TEST_F(WindowTest, client_message_changes_both_atoms_of_a_request)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_ADD),
+                        static_cast<long>(dsp()._NET_WM_STATE_STICKY),
+                        static_cast<long>(dsp()._NET_WM_STATE_FULLSCREEN)));
+
+    EXPECT_TRUE(window->is_fullscreen());
+}
+
+TEST_F(WindowTest, removing_the_maximized_state_of_a_normal_window_does_nothing)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    window->minimize();
+
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE,
+                        static_cast<long>(tiny::Display::_NET_WM_STATE_REMOVE),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_VERT),
+                        static_cast<long>(dsp()._NET_WM_STATE_MAXIMIZED_HORZ)));
+
+    EXPECT_TRUE(window->get_minimized());
+}
+
 TEST_F(WindowTest, client_message_toggles_fullscreen)
 {
     client.map();

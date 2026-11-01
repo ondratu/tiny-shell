@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cerrno>
 #include <csignal>
 #include <cstring>
+#include <iterator>
 #include <vector>
 
 #include <fcntl.h>
@@ -459,8 +461,42 @@ void Manager::connect_window(Window* window)
 {
     window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
                                            &Manager::on_window_focus));
+    window->on_minimize.connect(this, static_cast<tiny::object_signal_t>(
+                                              &Manager::on_window_minimize));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
+}
+
+Window* Manager::parent_of(const Window* window) const
+{
+    const auto it = wm_windows.find(window->get_transient_for());
+    return it == wm_windows.end() || it->second == window ? nullptr
+                                                          : it->second;
+}
+
+std::vector<Window*> Manager::transients_of(const Window* window) const
+{
+    std::vector<Window*> found;
+    std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
+                 [&](const Window* other) {
+                     return other != window && parent_of(other) == window;
+                 });
+    return found;
+}
+
+void Manager::center_over(Window* dialog, const Window* parent)
+{
+    XWindowAttributes outer;
+    XWindowAttributes inner;
+    if (!XGetWindowAttributes(display, parent->frame(), &outer) ||
+        !XGetWindowAttributes(display, dialog->frame(), &inner)) {
+        return;
+    }
+    const int x = std::min(outer.x + (outer.width - inner.width) / 2,
+                           work_area.x + work_area.width - inner.width);
+    const int y = std::min(outer.y + (outer.height - inner.height) / 2,
+                           work_area.y + work_area.height - inner.height);
+    dialog->move_to(std::max(x, work_area.x), std::max(y, work_area.y));
 }
 
 void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
@@ -478,6 +514,27 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
     active = window;
     wm_dock.redraw(active, e);
     publish_clients();
+    for (Window* dialog : transients_of(window)) {
+        if (dialog->get_minimized()) {
+            dialog->restore(); // it has no dock icon to be found by
+        }
+        dialog->raise(); // the dialogs stay above their parent
+    }
+}
+
+void Manager::on_window_minimize(tiny::Object* o, const XEvent&, void*)
+{
+    auto* window = reinterpret_cast<Window*>(o);
+    for (Window* dialog : transients_of(window)) {
+        if (dialog->get_minimized() == window->get_minimized()) {
+            continue;
+        }
+        if (window->get_minimized()) {
+            dialog->minimize();
+        } else {
+            dialog->restore();
+        }
+    }
 }
 
 void Manager::on_logout(tiny::Object*, const XEvent&, void*)
@@ -598,7 +655,14 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     wm_tops.push_back(window);
     publish_clients();
     set_application_icon(window);
-    if (!window->skip_taskbar()) {
+    const Window* parent = parent_of(window);
+    if (parent) { // a dialog has no place of its own in the dock
+        const Window::WMType type = Window::get_net_wm_type(child);
+        if (type == Window::WMType::DIALOG || type == Window::WMType::NORMAL) {
+            center_over(window, parent); // a toolbar or a menu knows its place
+        }
+        window->raise();
+    } else if (!window->skip_taskbar()) {
         wm_dock.add(window);
     }
     connect_window(window);
@@ -613,7 +677,12 @@ void Manager::unmanage(::Window child, bool alive)
     }
     Window* window = it->second;
 
-    if (active == window && wm_tops.size() > 1) {
+    Window* parent = parent_of(window);
+    if (active == window && parent && !parent->get_minimized()) {
+        wm_tops.remove(window);
+        wm_windows.erase(it);
+        focus_window(parent); // back to the window the dialog belonged to
+    } else if (active == window && wm_tops.size() > 1) {
         activate_prev_window(); // while the window is still in the list
     }
     if (active == window) {
@@ -626,7 +695,7 @@ void Manager::unmanage(::Window child, bool alive)
         XRemoveFromSaveSet(display, child);
     }
     delete window;
-    wm_windows.erase(it);
+    wm_windows.erase(child);
     publish_clients();
 }
 
