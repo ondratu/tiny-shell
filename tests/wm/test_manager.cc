@@ -632,6 +632,21 @@ TEST_F(ManagerTest, super_opens_the_launcher_when_it_is_released)
     EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
 }
 
+TEST_F(ManagerTest, super_used_to_move_a_window_does_not_open_the_launcher)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    manage_three();
+    auto* window = manager->wm_tops.front();
+
+    manager->on_key_press(key(XK_Super_L));
+    window->on_modifier_drag(window, XEvent());
+    manager->on_key_release(key(XK_Super_L));
+    XSync(dsp(), False);
+
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+}
+
 TEST_F(ManagerTest, a_release_of_super_without_a_press_does_nothing)
 {
     const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");

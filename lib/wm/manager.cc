@@ -112,8 +112,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
             if (!window->skip_taskbar()) {
                 wm_dock.add(window);
             }
-            window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
-                                                   &Manager::on_window_focus));
+            connect_window(window);
         }
         XFree(rv_child);
     }
@@ -287,6 +286,19 @@ void Manager::activate_prev_window()
     prev->set_focus();
 }
 
+void Manager::connect_window(Window* window)
+{
+    window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
+                                           &Manager::on_window_focus));
+    window->on_modifier_drag.connect(
+            this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
+}
+
+void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
+{
+    super_down = false; // Super was used to move a window, not to open
+}
+
 void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 {
     if (active) {
@@ -423,8 +435,7 @@ void Manager::on_map_request(const XMapRequestEvent& e)
         wm_dock.add(window);
     }
     XMapWindow(display, e.window);
-    window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
-                                           &Manager::on_window_focus));
+    connect_window(window);
     window->set_focus();
 }
 

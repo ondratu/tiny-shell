@@ -1227,6 +1227,33 @@ TEST_F(WindowTest, alt_click_starts_dragging_and_motion_moves_the_window)
     send(client.window, make_event(ButtonRelease)); // ungrabs the pointer
 }
 
+TEST_F(WindowTest, super_click_moves_the_window_like_alt_click)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    Recorder dragged;
+    window->on_modifier_drag.connect(&dragged, dragged.slot());
+    XEvent press = make_event(ButtonPress);
+    press.xbutton.state = Mod4Mask;
+    press.xbutton.x_root = 100;
+    press.xbutton.y_root = 100;
+    press.xbutton.time = CurrentTime;
+
+    send(client.window, press);
+
+    XEvent motion = make_event(MotionNotify);
+    motion.xbutton.x_root = 130;
+    motion.xbutton.y_root = 150;
+    send(client.window, motion);
+    const XWindowAttributes attrs = client.attrs();
+    EXPECT_EQ(dragged.calls, 1);
+    EXPECT_EQ(attrs.x, 10 + 30);
+    EXPECT_EQ(attrs.y, 20 + 50);
+
+    send(client.window, make_event(ButtonRelease));
+}
+
 TEST_F(WindowTest, dragging_a_maximized_window_restores_it_first)
 {
     client.map();

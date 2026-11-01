@@ -34,7 +34,10 @@ class Manager : public tiny::Object {
 
     void activate_prev_window();
 
+    void connect_window(Window* window);
+
     /* signal event handlers */
+    void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
     void on_launcher(tiny::Object* o, const XEvent& e, void* data);
