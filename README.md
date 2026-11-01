@@ -150,6 +150,24 @@ To use tiny-shell as your real window manager, run `exec build/tiny-shell` at th
 end of your `~/.xinitrc`. Set `TINY_SCALE_FACTOR` (for example `1.5` or `2`)
 to scale the theme on a high-DPI screen.
 
+### Where the launcher looks for applications
+
+The launcher reads the `.desktop` files from the `applications` directory of
+each of these, the first one wins when an application is in more of them:
+
+1. `$XDG_DATA_HOME` (`~/.local/share` when it is not set)
+2. the directories of `$XDG_DATA_DIRS`, in their order
+   (`/usr/local/share:/usr/share` when it is not set)
+3. `/usr/local/share`, if the list above does not have it
+
+The last step is the only thing added on top of the XDG specification, the
+same way as GNOME does it; you can move `/usr/local/share` to any place by
+listing it in `XDG_DATA_DIRS`. Other prefixes (for example `/usr/pkg/share` on
+NetBSD) belong to the session, so set them in `~/.xinitrc`.
+
+The launcher starts a program with the `PATH` of tiny-shell, so put
+`~/.local/bin` and the like to `PATH` in the session too.
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md), which lists the core
