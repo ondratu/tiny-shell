@@ -146,19 +146,124 @@ TEST_F(ClientTest, create_places_a_window_under_the_panel)
     XMoveWindow(dsp(), client.window, 10, 0);
     const XWindowAttributes a = client.attrs();
     const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
-            root_window(), client.window, a, 0xFFFF, 0xFFFF));
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
 
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
     EXPECT_EQ(f.x, 10);
-    EXPECT_EQ(f.y, tiny::theme.wm_panel);
+    EXPECT_EQ(f.y, tiny::theme.wm_panel + f.border_width);
+}
+
+TEST_F(ClientTest, create_makes_a_big_window_fit_the_work_area)
+{
+    XResizeWindow(dsp(), client.window, 3000, 2000);
+    XMoveWindow(dsp(), client.window, 500, 500);
+    client.sync();
+    const XWindowAttributes a = client.attrs();
+    const tiny::Rect area = screen_area();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, area));
+
+    const XWindowAttributes f = attributes_of(
+            static_cast<tiny::wm::Client*>(w.get())->get_window());
+    EXPECT_GE(f.x - f.border_width, area.x);
+    EXPECT_GE(f.y - f.border_width, area.y);
+    EXPECT_LE(f.x + f.width + f.border_width, area.x + area.width);
+    EXPECT_LE(f.y + f.height + f.border_width, area.y + area.height);
+    const XWindowAttributes c = client.attrs();
+    EXPECT_EQ(c.width, f.width);
+    EXPECT_EQ(c.height, f.height - header_height());
+}
+
+TEST_F(ClientTest, create_keeps_a_small_window_in_its_size)
+{
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
+
+    const XWindowAttributes c = client.attrs();
+    EXPECT_EQ(c.width, a.width);
+    EXPECT_EQ(c.height, a.height);
+}
+
+TEST_F(ClientTest, maximize_covers_the_work_area_only)
+{
+    build();
+    const tiny::Rect area = {40, 60, 800, 500};
+    win->set_work_area(area);
+
+    win->maximize();
+
+    const XWindowAttributes f = frame();
+    EXPECT_EQ(f.x, area.x);
+    EXPECT_EQ(f.y, area.y);
+    EXPECT_EQ(f.width, area.width);
+    EXPECT_EQ(f.height, area.height);
+}
+
+TEST_F(ClientTest, a_maximized_window_follows_a_changed_work_area)
+{
+    build();
+    win->maximize();
+
+    win->set_work_area({0, 30, 900, 600});
+
+    const XWindowAttributes f = frame();
+    EXPECT_EQ(f.width, 900);
+    EXPECT_EQ(f.height, 600);
+    EXPECT_EQ(child().width, 900);
+    EXPECT_EQ(child().height, 600 - header_height());
+}
+
+TEST_F(ClientTest, leaving_fullscreen_of_a_maximized_window_uses_the_new_area)
+{
+    build();
+    win->maximize();
+    win->fullscreen(true);
+    win->set_work_area({60, 30, 900, 600}); // a dock came meanwhile
+
+    win->fullscreen(false);
+
+    const XWindowAttributes f = frame();
+    EXPECT_EQ(f.x, 60);
+    EXPECT_EQ(f.width, 900);
+    EXPECT_TRUE(win->get_maximized());
+    EXPECT_FALSE(win->is_fullscreen());
+}
+
+TEST_F(ClientTest, a_move_request_stays_out_of_the_docks)
+{
+    build();
+    win->set_work_area({50, 40, 900, 600});
+    XConfigureRequestEvent e = {};
+    e.type = ConfigureRequest;
+    e.window = client.window;
+    e.value_mask = CWX | CWY;
+    e.x = 0;
+    e.y = 0;
+
+    win->configure_request(e);
+
+    EXPECT_EQ(frame().x - frame().border_width, 50);
+    EXPECT_EQ(frame().y - frame().border_width, 40);
+}
+
+TEST_F(ClientTest, a_normal_window_does_not_move_with_the_work_area)
+{
+    build();
+    const XWindowAttributes before = frame();
+
+    win->set_work_area({0, 100, 300, 300});
+
+    EXPECT_EQ(frame().x, before.x);
+    EXPECT_EQ(frame().width, before.width);
 }
 
 TEST_F(ClientTest, create_sets_wm_state_of_the_client_to_normal)
 {
     const XWindowAttributes a = client.attrs();
     const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
-            root_window(), client.window, a, 0xFFFF, 0xFFFF));
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
 
     EXPECT_EQ(client.wm_state(), NormalState);
 }
@@ -913,7 +1018,7 @@ TEST_F(ClientTest, configure_request_keeps_the_header_under_the_panel)
 
     win->configure_request(configure_request(client.window, CWY, 0, 0, 0, 0));
 
-    EXPECT_EQ(frame().y, tiny::theme.wm_panel);
+    EXPECT_EQ(frame().y, tiny::theme.wm_panel + frame().border_width);
 }
 
 TEST_F(ClientTest, configure_request_keeps_what_it_does_not_ask_for)

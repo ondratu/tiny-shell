@@ -13,6 +13,7 @@
 
 #include "object.h"
 #include "wm/window.h"
+#include "wm/work_area.h"
 #include "image/pixmap.h"
 #include "x_util.h"
 
@@ -104,6 +105,12 @@ Window::Window(::Window child_arg, ::Window root_arg,
         throw std::bad_alloc();
     }
 
+    // the whole screen below the panel, until the manager gives the real one
+    XWindowAttributes screen;
+    XGetWindowAttributes(dsp, root_arg, &screen);
+    work_area = {0, tiny::theme.wm_panel, screen.width,
+                 screen.height - tiny::theme.wm_panel};
+
     update_protocols();
     update_properties();
 
@@ -168,12 +175,21 @@ Window::~Window()
     }
 }
 
-Window* Window::create(::Window root, ::Window child, const XWindowAttributes&,
-                       unsigned long functions)
+Window* Window::create(::Window root, ::Window child,
+                       const XWindowAttributes& attrs, unsigned long functions,
+                       const tiny::Rect& area)
 {
     const tiny::Display& display = tiny::get_display();
     auto* win = new Window(child, root, functions);
+    win->work_area = area;
 
+    // inside of the work area, the border is outside of the window
+    const tiny::Rect place =
+            fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height},
+                        {area.x + 1, area.y + 1, std::max(area.width - 2, 1),
+                         std::max(area.height - 2, 1)});
+    XMoveResizeWindow(display, child, place.x, place.y,
+                      tiny::x_dim(place.width), tiny::x_dim(place.height));
     XMapWindow(display, child);
     XSetWindowBorderWidth(display, child, 1);
     XRaiseWindow(display, child);
@@ -419,12 +435,23 @@ void Window::maximize()
     state.width = attrs.width;
     state.height = attrs.height;
 
-    XGetWindowAttributes(dsp, root, &attrs); //!< TODO: get screen size instead
-    // below the panel, over the dock
-    XMoveResizeWindow(dsp, child, 0, tiny::theme.wm_panel,
-                      tiny::x_uint(attrs.width),
-                      tiny::x_uint(attrs.height - tiny::theme.wm_panel));
+    place_maximized();
     set_maximized(true);
+}
+
+void Window::place_maximized()
+{
+    XMoveResizeWindow(dsp, child, work_area.x, work_area.y,
+                      tiny::x_uint(work_area.width),
+                      tiny::x_uint(work_area.height));
+}
+
+void Window::set_work_area(const tiny::Rect& area)
+{
+    work_area = area;
+    if (get_maximized() && !is_fullscreen()) {
+        place_maximized();
+    }
 }
 
 void Window::fullscreen(bool on)
@@ -441,6 +468,10 @@ void Window::fullscreen(bool on)
         XMoveResizeWindow(dsp, child, 0, 0, tiny::x_uint(attrs.width),
                           tiny::x_uint(attrs.height));
         XRaiseWindow(dsp, child);
+    } else if (get_maximized()) {
+        set_fullscreen(false);
+        place_maximized(); // the work area can have changed meanwhile
+        return;
     } else {
         XMoveResizeWindow(dsp, child, before_fullscreen.x, before_fullscreen.y,
                           tiny::x_uint(before_fullscreen.width),

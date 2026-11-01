@@ -8,6 +8,7 @@
 #include "theme.h"
 #include "wm/window.h"
 #include "wm/client.h"
+#include "wm/work_area.h"
 #include "x_util.h"
 
 namespace tiny {
@@ -56,24 +57,34 @@ Client::~Client()
     disconnect(FocusOut);
 }
 
-//! A new window is not placed over the panel, unless it would not fit then
-static int below_panel(const XWindowAttributes& attrs)
+//! A new window is moved into the work area, a big one is made smaller
+static tiny::Rect first_place(const XWindowAttributes& attrs,
+                              const tiny::Rect& area)
 {
-    const int top = tiny::theme.wm_panel;
-    const int frame_height = attrs.height + tiny::theme.wm_win_header;
-    if (attrs.y >= top || top + frame_height > attrs.screen->height) {
-        return attrs.y;
-    }
-    return top;
+    const int border = 1; // of the frame, it is on both sides
+    const int header = tiny::theme.wm_win_header;
+    // the border is drawn outside of the window, so it is not over the panel
+    const tiny::Rect inner = {area.x + border, area.y + border,
+                              std::max(area.width - 2 * border, 1),
+                              std::max(area.height - 2 * border, 1)};
+    return fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height + header},
+                       inner);
 }
 
 Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
-                       unsigned long decorations)
+                       unsigned long decorations, const tiny::Rect& area)
 {
-    auto* win = new Client(child, root, attrs.width, attrs.height, functions,
+    const tiny::Rect place = first_place(attrs, area);
+    const int client_height = place.height - tiny::theme.wm_win_header;
+    auto* win = new Client(child, root, place.width, client_height, functions,
                            decorations);
-    win->realize(root, attrs.x, below_panel(attrs));
+    win->work_area = area;
+    if (place.width != attrs.width || client_height != attrs.height) {
+        XResizeWindow(win->dsp, child, tiny::x_dim(place.width),
+                      tiny::x_dim(client_height));
+    }
+    win->realize(root, place.x, place.y);
     win->on_focus_out(XEvent(), nullptr); // disable and GrabButton
     win->map_all();
 
@@ -203,23 +214,26 @@ void Client::maximize()
     state.width = width;
     state.height = height;
 
-    XGetWindowAttributes(display, root, &attrs);
-    XSetWindowBorderWidth(display, window, 0);
-
-    // below the panel, over the dock
-    const int top = tiny::theme.wm_panel;
-    const int area_height = attrs.height - top;
-    XMoveResizeWindow(display, window, 0, top, tiny::x_uint(attrs.width),
-                      tiny::x_uint(area_height));
-    XResizeWindow(display, child, tiny::x_uint(attrs.width),
-                  tiny::x_uint(area_height - tiny::theme.wm_win_header));
-
-    if (is_resizable()) {
-        shadow.move_resize(0, top, attrs.width, area_height);
-    }
-    header.resize(attrs.width, tiny::theme.wm_win_header);
+    place_maximized();
     max_btn.set_restore(true);
     set_maximized(true);
+}
+
+void Client::place_maximized()
+{
+    XSetWindowBorderWidth(display, window, 0);
+
+    // in the work area: below the panel and the docks, over our own dock
+    const tiny::Rect& area = work_area;
+    XMoveResizeWindow(display, window, area.x, area.y, tiny::x_uint(area.width),
+                      tiny::x_uint(area.height));
+    XResizeWindow(display, child, tiny::x_uint(area.width),
+                  tiny::x_uint(area.height - tiny::theme.wm_win_header));
+
+    if (is_resizable()) {
+        shadow.move_resize(area.x, area.y, area.width, area.height);
+    }
+    header.resize(area.width, tiny::theme.wm_win_header);
     send_configure_notify();
 }
 
@@ -245,9 +259,19 @@ void Client::fullscreen(bool on)
             shadow.unmap();
         }
         XRaiseWindow(display, window);
+    } else if (get_maximized()) {
+        // the work area can have changed meanwhile
+        set_fullscreen(false);
+        if (is_resizable()) {
+            shadow.map();
+            XRaiseWindow(display, shadow.get_window()); // shadow is lower
+            XRaiseWindow(display, window);
+        }
+        place_maximized();
+        return;
     } else {
         const tiny::Rect& r = before_fullscreen;
-        XSetWindowBorderWidth(display, window, get_maximized() ? 0 : 1);
+        XSetWindowBorderWidth(display, window, 1);
         XMoveResizeWindow(display, window, r.x, r.y, tiny::x_uint(r.width),
                           tiny::x_uint(r.height));
         XMoveResizeWindow(display, child, 0, tiny::theme.wm_win_header,
@@ -277,10 +301,13 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     // The client asks for the place of its own area (the position it gets in
     // ConfigureNotify), the frame is around it. The header stays below the
     // panel.
-    const int x = (e.value_mask & CWX) ? e.x - frame.border_width : frame.x;
+    const int x = (e.value_mask & CWX)
+                          ? std::max(e.x - frame.border_width,
+                                     work_area.x + frame.border_width)
+                          : frame.x;
     const int y = (e.value_mask & CWY)
                           ? std::max(e.y - header_height - frame.border_width,
-                                     tiny::theme.wm_panel)
+                                     work_area.y + frame.border_width)
                           : frame.y;
     const int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
     const int new_height =

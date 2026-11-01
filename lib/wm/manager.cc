@@ -63,6 +63,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_launcher.keep_above(&wm_panel);
     wm_launcher.keep_above(&wm_dock);
 
+    update_work_area(); // before the first window is placed
+
     XGrabServer(display_arg); // lock the X server for new events
     XQueryTree(display_arg, root_arg, &rv_root, &rv_parent, &rv_child,
                &rv_ccount);
@@ -194,6 +196,9 @@ void Manager::main_loop()
                 break;
             case DestroyNotify: // the client is gone, also when minimized
                 on_destroy_notify(event.xdestroywindow);
+                break;
+            case PropertyNotify: // the struts of a dock
+                on_property_notify(event.xproperty);
                 break;
             case MapRequest: // need to create windows frames for new windows
                 on_map_request(event.xmaprequest);
@@ -366,8 +371,10 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
 
     if (properties.count(tiny::display->_NET_WM_WINDOW_TYPE)) {
         switch (Window::get_net_wm_type(child)) {
-            case Window::WMType::DESKTOP:
             case Window::WMType::DOCK:
+                track_dock(child);
+                return nullptr;
+            case Window::WMType::DESKTOP:
             case Window::WMType::SPLASH:
                 return nullptr; // do not manage this window type
             default:
@@ -380,9 +387,10 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     unsigned long decorations;
     if (Window::get_motif_hints(child, functions, decorations) &&
         !decorations) {
-        window = Window::create(root, child, attrs, functions);
+        window = Window::create(root, child, attrs, functions, work_area);
     } else {
-        window = Client::create(root, child, attrs, functions, decorations);
+        window = Client::create(root, child, attrs, functions, decorations,
+                                work_area);
     }
 
     // the client survives a crash of the manager
@@ -422,8 +430,61 @@ void Manager::unmanage(::Window child, bool alive)
     wm_windows.erase(it);
 }
 
+void Manager::track_dock(::Window dock)
+{
+    XSelectInput(display, dock, PropertyChangeMask);
+    wm_docks[dock] = read_struts(dock);
+    update_work_area();
+}
+
+void Manager::untrack_dock(::Window dock)
+{
+    if (wm_docks.erase(dock)) {
+        update_work_area();
+    }
+}
+
+void Manager::update_work_area()
+{
+    XWindowAttributes screen;
+    XGetWindowAttributes(display, root, &screen);
+    std::vector<Struts> docks;
+    docks.reserve(wm_docks.size());
+    for (const auto& dock : wm_docks) {
+        docks.push_back(dock.second);
+    }
+    const tiny::Rect area = compute_work_area(screen.width, screen.height,
+                                              tiny::theme.wm_panel, docks);
+    if (area.x == work_area.x && area.y == work_area.y &&
+        area.width == work_area.width && area.height == work_area.height) {
+        return;
+    }
+    work_area = area;
+
+    const long data[4] = {area.x, area.y, area.width, area.height};
+    XChangeProperty(display, root, tiny::get_display()._NET_WORKAREA,
+                    XA_CARDINAL, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(data), 4);
+    for (const auto& window : wm_windows) {
+        window.second->set_work_area(area);
+    }
+}
+
+void Manager::on_property_notify(const XPropertyEvent& e)
+{
+    const tiny::Display& dsp = tiny::get_display();
+    const auto dock = wm_docks.find(e.window);
+    if (dock == wm_docks.end() ||
+        (e.atom != dsp._NET_WM_STRUT && e.atom != dsp._NET_WM_STRUT_PARTIAL)) {
+        return;
+    }
+    dock->second = read_struts(e.window);
+    update_work_area();
+}
+
 void Manager::on_unmap_notify(const XUnmapEvent& e)
 {
+    untrack_dock(e.window); // a hidden dock reserves nothing
     // TODO: could be append to signal handlers on wm_window.window
     const auto it = wm_windows.find(e.window);
     if (it == wm_windows.end() || it->second->get_minimized()) {
@@ -434,6 +495,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
 
 void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
 {
+    untrack_dock(e.window);
     unmanage(e.window, false);
 }
 

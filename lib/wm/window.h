@@ -108,7 +108,10 @@ class Window : public tiny::Object {
 
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
-                          unsigned long functions);
+                          unsigned long functions, const tiny::Rect& area);
+
+    //! Where maximized windows lie; a maximized window moves there at once
+    void set_work_area(const tiny::Rect& area);
 
     ::Window get_child() const { return child; }
 
@@ -265,6 +268,9 @@ class Window : public tiny::Object {
 
     virtual void on_focus_out(const XEvent& e, void* data);
 
+    //! Cover the work area (a maximized window)
+    virtual void place_maximized();
+
     ::Window child;
     ::Window root;
     tiny::Display& dsp;
@@ -272,6 +278,7 @@ class Window : public tiny::Object {
     XSizeHints* hints;
     tiny::Rect state = {0, 0, 0, 0};
     tiny::Rect before_fullscreen = {0, 0, 0, 0};
+    tiny::Rect work_area = {0, 0, 0, 0};
 
     unsigned long functions = 0;
     unsigned long wm_states = 0;

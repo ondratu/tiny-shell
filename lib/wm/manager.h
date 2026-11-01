@@ -9,6 +9,7 @@
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/dock.h"
+#include "wm/work_area.h"
 
 namespace tiny::wm {
 
@@ -48,6 +49,15 @@ class Manager : public tiny::Object {
     //! Forget a client; `alive` is false when it is gone already
     void unmanage(::Window child, bool alive);
 
+    //! Remember the struts of a dock (a window that is not framed)
+    void track_dock(::Window dock);
+
+    //! Forget a dock that is gone or hidden
+    void untrack_dock(::Window dock);
+
+    //! Compute the work area again; windows and _NET_WORKAREA follow it
+    void update_work_area();
+
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
@@ -62,6 +72,8 @@ class Manager : public tiny::Object {
     void on_unmap_notify(const XUnmapEvent& e);
 
     void on_destroy_notify(const XDestroyWindowEvent& e);
+
+    void on_property_notify(const XPropertyEvent& e);
 
     void on_map_request(const XMapRequestEvent& e);
 
@@ -79,6 +91,8 @@ class Manager : public tiny::Object {
     Dock wm_dock;
 
     Window* active = nullptr;
+    std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients
+    tiny::Rect work_area = {0, 0, 0, 0};
 
     std::map<::Window, Window*> wm_windows;
     std::list<Window*> wm_tops;
