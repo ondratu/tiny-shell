@@ -38,8 +38,8 @@ class Theme {
     int wm_menu_item_height = 20;
     int wm_launcher_columns = 8;
     int wm_launcher_rows = 4;
-    int wm_launcher_cell_width = 96;
-    int wm_launcher_cell_height = 88;
+    int wm_launcher_cell_width = 64; // the narrowest cell
+    int wm_launcher_label = 40;      // under an icon, for its text
     int wm_launcher_icon = 48;
     int wm_launcher_dot = 8;
 

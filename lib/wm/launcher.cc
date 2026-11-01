@@ -19,62 +19,12 @@ namespace {
 
 constexpr size_t recent_count = 16;
 
-int spacing()
+void fit(tiny::Widget& widget, const tiny::Rect& r)
 {
-    return tiny::theme.wm_win_border;
-}
-
-// The border of the entry is outside of its size
-int entry_height()
-{
-    return tiny::theme.wm_win_header;
-}
-
-// The grid is smaller than the theme says when the screen is small
-int screen_size(bool horizontal)
-{
-    const int screen = XDefaultScreen(tiny::get_display());
-    return horizontal ? XDisplayWidth(tiny::get_display(), screen)
-                      : XDisplayHeight(tiny::get_display(), screen);
-}
-
-int columns()
-{
-    const int fit = (screen_size(true) - 2 * spacing()) /
-                    tiny::theme.wm_launcher_cell_width;
-    return std::max(1, std::min(tiny::theme.wm_launcher_columns, fit));
-}
-
-int rows()
-{
-    // the launcher takes at most the three quarters of the screen
-    const int free = screen_size(false) * 3 / 4 - 2 * spacing() -
-                     entry_height() - 3 * tiny::theme.wm_launcher_dot;
-    return std::max(1, std::min(tiny::theme.wm_launcher_rows,
-                                free / tiny::theme.wm_launcher_cell_height));
-}
-
-int grid_width()
-{
-    return columns() * tiny::theme.wm_launcher_cell_width;
-}
-
-int grid_height()
-{
-    return tiny::IconGrid::height_of(rows(),
-                                     tiny::theme.wm_launcher_cell_height,
-                                     tiny::theme.wm_launcher_dot);
-}
-
-int dialog_width()
-{
-    return grid_width() + 2 * spacing();
-}
-
-int dialog_height()
-{
-    return spacing() + entry_height() + 2 * tiny::theme.entry.border_width +
-           spacing() / 2 + grid_height() + spacing();
+    widget.resize(r.width, r.height);
+    if (widget.get_realized()) {
+        XMoveWindow(tiny::get_display(), widget.get_window(), r.x, r.y);
+    }
 }
 
 // The language of the names in the desktop files
@@ -92,11 +42,11 @@ std::string message_locale()
 } // namespace
 
 Launcher::Launcher():
-    tiny::Popover(dialog_width(), dialog_height()),
-    entry(grid_width() - 2 * tiny::theme.entry.border_width, entry_height()),
-    grid(columns(), rows(), tiny::theme.wm_launcher_cell_width,
-         tiny::theme.wm_launcher_cell_height, tiny::theme.wm_launcher_icon,
-         tiny::theme.wm_launcher_dot)
+    tiny::Popover(1, 1),
+    entry(1, tiny::theme.wm_win_header),
+    grid(1, 1, 1, 1, 1, tiny::theme.wm_launcher_dot),
+    prev_page(1, 1, "<"),
+    next_page(1, 1, ">")
 {
     name = "launcher";
     entry.on_change.connect(
@@ -109,9 +59,90 @@ Launcher::Launcher():
                          static_cast<tiny::object_signal_t>(&Launcher::move));
     grid.on_activate.connect(
             this, static_cast<tiny::object_signal_t>(&Launcher::run));
+    prev_page.on_click.connect(
+            this, static_cast<tiny::object_signal_t>(&Launcher::turn));
+    next_page.on_click.connect(
+            this, static_cast<tiny::object_signal_t>(&Launcher::turn));
 }
 
 Launcher::~Launcher()
+{
+    free_icons();
+}
+
+void Launcher::realize(::Window root, int, int)
+{
+    root_window = root;
+    relayout(); // the sizes are known before the windows are created
+
+    tiny::Popover::realize(root, 0, 0);
+    XSetWindowBorderWidth(display, window, 0);
+
+    add(&entry, layout.entry.x, layout.entry.y);
+    add(&grid, layout.grid.x, layout.grid.y);
+    add(&prev_page, layout.prev.x, layout.prev.y);
+    add(&next_page, layout.next.x, layout.next.y);
+}
+
+// The screen can change its size while the launcher is hidden
+void Launcher::relayout()
+{
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(display, root_window, &attrs) == 0) {
+        return;
+    }
+    const LauncherLayout next =
+            LauncherLayout::compute(attrs.width, attrs.height, tiny::theme);
+    if (next.icon != layout.icon) {
+        free_icons(); // loaded in the other size
+    }
+    arrange(next);
+}
+
+void Launcher::arrange(const LauncherLayout& next)
+{
+    layout = next;
+    width = layout.screen.width;
+    height = layout.screen.height;
+    if (is_realized) {
+        XMoveResizeWindow(display, window, 0, 0, tiny::x_dim(width),
+                          tiny::x_dim(height));
+    }
+    fit(entry, layout.entry);
+    if (grid.get_realized()) {
+        XMoveWindow(display, grid.get_window(), layout.grid.x, layout.grid.y);
+    }
+    // the size and the redraw, after the grid is in its place
+    grid.set_geometry(layout.columns, layout.rows, layout.cell_width,
+                      layout.cell_height, layout.icon);
+    fit(prev_page, layout.prev);
+    fit(next_page, layout.next);
+}
+
+// The buttons of the pages are mapped only when there are pages
+void Launcher::map_all()
+{
+    map();
+    entry.map_all();
+    grid.map_all();
+    update_buttons();
+}
+
+void Launcher::update_buttons()
+{
+    if (!is_maped) {
+        return;
+    }
+    if (grid.page_count() > 1) {
+        prev_page.map();
+        next_page.map();
+    } else {
+        prev_page.unmap();
+        next_page.unmap();
+    }
+}
+
+void Launcher::free_icons()
 {
     for (auto& [id, icon] : icons) {
         if (icon.picture != None) {
@@ -121,38 +152,19 @@ Launcher::~Launcher()
             XFreePixmap(display, icon.pixmap);
         }
     }
-}
-
-void Launcher::realize(::Window root, int, int)
-{
-    XWindowAttributes attrs;
-    XGetWindowAttributes(display, root, &attrs);
-    root_window = root;
-
-    tiny::Popover::realize(root, attrs.width / 2 - width / 2,
-                           std::max(0, (attrs.height - height) / 4));
-
-    push_start(&entry, spacing(), spacing());
-    push_start(&grid, spacing(), spacing() / 2);
-}
-
-void Launcher::place()
-{
-    // the screen can change its size while the launcher is hidden
-    XWindowAttributes attrs;
-    if (XGetWindowAttributes(display, root_window, &attrs) != 0) {
-        XMoveWindow(display, window, attrs.width / 2 - width / 2,
-                    std::max(0, (attrs.height - height) / 4));
-    }
+    icons.clear();
 }
 
 void Launcher::popup()
 {
-    place();
+    relayout();
     load();
     find();
     map_all();
     XRaiseWindow(display, window);
+    for (const tiny::Widget* widget : above) {
+        XRaiseWindow(display, widget->get_window());
+    }
     entry.set_focus();
 }
 
@@ -222,6 +234,11 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
     close(o, e, data);
 }
 
+void Launcher::turn(Object* o, const XEvent&, void*)
+{
+    grid.select_page(o == &next_page);
+}
+
 void Launcher::load()
 {
     if (loaded) {
@@ -244,6 +261,7 @@ void Launcher::find()
     found = xdg::search_applications(index.applications(), entry.get_text(),
                                      recent);
     grid.set_items(found.size(), [this](size_t row) { return item_of(row); });
+    update_buttons();
 }
 
 tiny::IconGrid::Item Launcher::item_of(size_t row)
@@ -271,7 +289,7 @@ const Launcher::Icon& Launcher::icon_of(const xdg::Application& app)
 Launcher::Icon Launcher::load_icon(const std::string& icon_name) const
 {
     Icon icon;
-    const int size = tiny::theme.wm_launcher_icon;
+    const int size = layout.icon;
     if (icon_name.empty() || !icon_theme) {
         return icon;
     }

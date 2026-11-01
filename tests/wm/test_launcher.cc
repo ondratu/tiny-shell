@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "wm/launcher.h"
+#include "wm/launcher_layout.h"
 
 namespace fs = std::filesystem;
 
@@ -57,6 +58,46 @@ class LauncherTest : public ::testing::Test {
 
     ::Window grid() const { return children_of(launcher.get_window()).at(1); }
 
+    ::Window prev_page() const
+    {
+        return children_of(launcher.get_window()).at(2);
+    }
+
+    ::Window next_page() const
+    {
+        return children_of(launcher.get_window()).at(3);
+    }
+
+    tiny::wm::LauncherLayout layout() const
+    {
+        const XWindowAttributes root_attrs = attributes_of(root_window());
+        return tiny::wm::LauncherLayout::compute(
+                root_attrs.width, root_attrs.height, tiny::theme);
+    }
+
+    size_t per_page() const
+    {
+        return static_cast<size_t>(layout().columns) *
+               static_cast<size_t>(layout().rows);
+    }
+
+    // More applications than a page, "App000" is the first
+    void write_pages(size_t count)
+    {
+        for (size_t i = 0; i < count; ++i) {
+            char id[16];
+            snprintf(id, sizeof(id), "app%03zu", i);
+            write(id, id, "Type=Application\n");
+        }
+    }
+
+    // A click on a button, the pointer enters it first
+    void click(::Window button)
+    {
+        send(button, make_event(EnterNotify));
+        send(button, make_event(ButtonRelease));
+    }
+
     bool shown() const
     {
         return attributes_of(launcher).map_state == IsViewable;
@@ -70,32 +111,73 @@ class LauncherTest : public ::testing::Test {
     tiny::wm::Launcher launcher;
 };
 
-TEST_F(LauncherTest, realize_centers_the_launcher_horizontally)
+TEST_F(LauncherTest, realize_covers_the_whole_screen)
 {
     const XWindowAttributes root_attrs = attributes_of(root_window());
     const XWindowAttributes attrs = attributes_of(launcher);
 
-    EXPECT_EQ(attrs.width,
-              attributes_of(grid()).width + 2 * tiny::theme.wm_win_border);
-    EXPECT_EQ(attrs.x, root_attrs.width / 2 - attrs.width / 2);
-    EXPECT_GE(attrs.y, 0);
+    EXPECT_EQ(attrs.x, 0);
+    EXPECT_EQ(attrs.y, 0);
+    EXPECT_EQ(attrs.border_width, 0);
+    EXPECT_EQ(attrs.width, root_attrs.width);
+    EXPECT_EQ(attrs.height, root_attrs.height);
     EXPECT_FALSE(shown());
 }
 
-TEST_F(LauncherTest, popup_centers_the_launcher_again)
+TEST_F(LauncherTest, the_cells_are_centered_on_the_screen)
 {
-    XMoveWindow(tiny::get_display(), launcher.get_window(), 0, 0);
+    const XWindowAttributes root_attrs = attributes_of(root_window());
+    const XWindowAttributes attrs = attributes_of(grid());
+
+    EXPECT_EQ(attrs.x * 2 + attrs.width, root_attrs.width);
+    EXPECT_EQ(attrs.y * 2 + layout().rows * layout().cell_height,
+              root_attrs.height);
+}
+
+TEST_F(LauncherTest, the_entry_is_centered_between_the_panel_and_the_cells)
+{
+    const XWindowAttributes root_attrs = attributes_of(root_window());
+    const XWindowAttributes attrs = attributes_of(entry());
+    const int border = tiny::theme.entry.border_width;
+
+    EXPECT_EQ(attrs.x * 2 + attrs.width + 2 * border, root_attrs.width);
+    EXPECT_GT(attrs.y, tiny::theme.wm_panel);
+    EXPECT_LT(attrs.y + attrs.height, attributes_of(grid()).y);
+}
+
+TEST_F(LauncherTest, popup_arranges_the_launcher_again)
+{
+    XMoveResizeWindow(tiny::get_display(), launcher.get_window(), 10, 10, 100,
+                      100);
 
     launcher.popup();
 
     const XWindowAttributes root_attrs = attributes_of(root_window());
     const XWindowAttributes attrs = attributes_of(launcher);
-    EXPECT_EQ(attrs.x, root_attrs.width / 2 - attrs.width / 2);
+    EXPECT_EQ(attrs.x, 0);
+    EXPECT_EQ(attrs.y, 0);
+    EXPECT_EQ(attrs.width, root_attrs.width);
+    EXPECT_EQ(attrs.height, root_attrs.height);
 }
 
-TEST_F(LauncherTest, holds_an_entry_above_a_grid)
+TEST_F(LauncherTest, popup_keeps_the_given_windows_above_the_launcher)
 {
-    ASSERT_EQ(children_of(launcher.get_window()).size(), 2u);
+    tiny::Widget panel(100, 30);
+    panel.realize(root_window(), 0, 0);
+    launcher.keep_above(&panel);
+
+    launcher.popup();
+
+    const auto windows = children_of(root_window());
+    const auto at = [&](::Window w) {
+        return std::find(windows.begin(), windows.end(), w) - windows.begin();
+    };
+    EXPECT_GT(at(panel.get_window()), at(launcher.get_window()));
+}
+
+TEST_F(LauncherTest, holds_an_entry_above_a_grid_and_two_buttons)
+{
+    ASSERT_EQ(children_of(launcher.get_window()).size(), 4u);
     EXPECT_LT(attributes_of(entry()).y, attributes_of(grid()).y);
 }
 
@@ -203,7 +285,7 @@ TEST_F(LauncherTest, click_on_a_cell_starts_the_application)
     launcher.popup();
     XEvent press = make_event(ButtonPress);
     press.xbutton.button = Button1;
-    press.xbutton.x = tiny::theme.wm_launcher_cell_width + 5; // the second cell
+    press.xbutton.x = layout().cell_width + 5; // the second cell
     press.xbutton.y = 5;
     XEvent release = press;
     release.type = ButtonRelease;
@@ -294,22 +376,87 @@ TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
     send(grid(), make_event(Expose));
 
     // the icon is above the text, both in the middle of the cell
-    const int size = tiny::theme.wm_launcher_icon;
+    const int size = layout().icon;
     const XftFont* font = tiny::theme.list.get_font();
     const int content = size + tiny::theme.list.padding_width / 2 +
                         font->ascent + font->descent;
-    const int top = (tiny::theme.wm_launcher_cell_height - content) / 2;
+    const int top = (layout().cell_height - content) / 2;
     const Image image(grid(), attributes_of(grid()).width,
-                      tiny::theme.wm_launcher_cell_height);
-    EXPECT_EQ(image.at(tiny::theme.wm_launcher_cell_width / 2, top + size / 2),
-              0xFF0000u);
+                      layout().cell_height);
+    EXPECT_EQ(image.at(layout().cell_width / 2, top + size / 2), 0xFF0000u);
 }
 
-TEST_F(LauncherTest, the_launcher_is_not_bigger_than_the_theme_says)
+TEST_F(LauncherTest, the_cells_take_at_most_the_three_quarters_of_the_screen)
 {
-    EXPECT_LE(attributes_of(launcher).width,
-              tiny::theme.wm_launcher_columns *
-                              tiny::theme.wm_launcher_cell_width +
-                      2 * tiny::theme.wm_win_border);
-    EXPECT_GE(attributes_of(grid()).width, tiny::theme.wm_launcher_cell_width);
+    const XWindowAttributes root_attrs = attributes_of(root_window());
+
+    EXPECT_LE(attributes_of(grid()).width, root_attrs.width * 3 / 4);
+    EXPECT_LE(attributes_of(grid()).width,
+              tiny::theme.wm_launcher_columns * layout().cell_width);
+}
+
+TEST_F(LauncherTest, the_buttons_of_the_pages_are_hidden_for_one_page)
+{
+    launcher.popup();
+
+    EXPECT_EQ(attributes_of(prev_page()).map_state, IsUnmapped);
+    EXPECT_EQ(attributes_of(next_page()).map_state, IsUnmapped);
+}
+
+TEST_F(LauncherTest, the_buttons_of_the_pages_are_shown_for_more_pages)
+{
+    write_pages(per_page());
+
+    launcher.popup();
+
+    EXPECT_EQ(attributes_of(prev_page()).map_state, IsViewable);
+    EXPECT_EQ(attributes_of(next_page()).map_state, IsViewable);
+}
+
+TEST_F(LauncherTest, the_buttons_follow_the_number_of_found_applications)
+{
+    write_pages(per_page());
+    launcher.popup();
+
+    type_text(entry(), "app000");
+
+    EXPECT_EQ(attributes_of(next_page()).map_state, IsUnmapped);
+}
+
+TEST_F(LauncherTest, the_buttons_are_beside_the_cells)
+{
+    const XWindowAttributes cells = attributes_of(grid());
+
+    EXPECT_LT(attributes_of(prev_page()).x + attributes_of(prev_page()).width,
+              cells.x);
+    EXPECT_GT(attributes_of(next_page()).x, cells.x + cells.width);
+}
+
+TEST_F(LauncherTest, the_button_turns_to_the_next_page)
+{
+    const size_t page = per_page();
+    write_pages(2 * page);
+    launcher.popup();
+    type_text(entry(), "app");
+
+    click(next_page());
+    type_key(entry(), XK_Return);
+
+    char id[16];
+    snprintf(id, sizeof(id), "app%03zu", page);
+    EXPECT_TRUE(appears(root / id));
+    EXPECT_FALSE(fs::exists(root / "app000"));
+}
+
+TEST_F(LauncherTest, the_button_turns_back_to_the_previous_page)
+{
+    write_pages(2 * per_page());
+    launcher.popup();
+    type_text(entry(), "app");
+
+    click(next_page());
+    click(prev_page());
+    type_key(entry(), XK_Return);
+
+    EXPECT_TRUE(appears(root / "app000"));
 }
