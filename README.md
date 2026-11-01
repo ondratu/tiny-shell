@@ -11,9 +11,9 @@ proof of concept: a way to learn Xlib properly and to squeeze out of it as
 much as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
-> minimizes, maximizes and closes windows, and has a panel, a dock and a run
-> dialog. Large parts of EWMH, the task bar with a clock, `.desktop` files
-> and the launcher are still missing, see below.
+> minimizes, maximizes and closes windows, and has a panel, a dock, a run
+> dialog and an application launcher. Large parts of EWMH and the task bar
+> with a clock are still missing, see below.
 
 ## What it is
 
@@ -52,12 +52,23 @@ Done:
       fallback)
 - [x] Window titles from `_NET_WM_NAME` and `WM_NAME`, icons from
       `_NET_WM_ICON` and `WM_HINTS`
-- [x] Minimize, maximize and restore, with `_NET_WM_STATE` kept up to date
+- [x] Minimize, maximize, fullscreen (F11) and restore, with `_NET_WM_STATE`
+      kept up to date
 - [x] Existing windows are adopted when the manager starts
 - [x] `DESKTOP`, `DOCK` and `SPLASH` windows are left unmanaged
+- [x] Window life cycle: destroyed and minimized windows, `WM_STATE`, the save
+      set (clients survive a crash of the manager)
+- [x] `ConfigureRequest` of framed windows with the synthetic
+      `ConfigureNotify`
+- [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
+      `_NET_WORKAREA`; maximized and new windows stay inside it
 - [x] Top panel with an application menu and a user menu (logout)
 - [x] Dock with the icons of the running windows
 - [x] Run dialog (Alt+F2) and window switching (Alt+Tab, Alt+Shift+Tab)
+- [x] Desktop Entry files, icon theme lookup (PNG, SVG, XPM) and a full
+      screen launcher with search (Super); the dock shows the icons of the
+      applications
+- [x] Super + mouse moves a window (like Alt)
 - [x] Scaling of the whole theme for high-DPI screens
       (`TINY_SCALE_FACTOR`)
 - [x] Unit tests of the toolkit and of the window manager against Xvfb
@@ -67,15 +78,12 @@ Planned, grouped by importance:
 ### Must: a window manager other programs can rely on
 
 - [ ] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
-      `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`, `_NET_WORKAREA`) and the
-      client messages for state, activation and closing
-- [ ] Correct window life cycle (destroyed windows, minimized windows, unmap
-      caused by the manager)
-- [ ] Correct `ConfigureRequest` handling for framed windows, with the
-      synthetic `ConfigureNotify`
-- [ ] Panel struts and the work area: maximized windows do not cover the
-      panel
-- [ ] `WM_TRANSIENT_FOR`, modal dialogs and fullscreen
+      `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the client messages for
+      state, activation and closing
+- [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
+      the client
+- [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
+- [ ] `WM_TRANSIENT_FOR` and modal dialogs
 - [ ] An event loop that can wait for timers and child processes as well as
       for X events, without zombie processes
 
@@ -84,9 +92,7 @@ Planned, grouped by importance:
 - [ ] Clock (date and time) in the panel
 - [ ] Task bar in the panel (the "old style" task list), as an alternative to
       the dock
-- [ ] Desktop Entry files (`.desktop`), application menu grouped by category
-- [ ] Launcher with a list of all applications and search
-- [ ] Icon theme lookup (hicolor and pixmaps) and PNG icons
+- [ ] Application menu grouped by category
 - [ ] Most recently used order for Alt+Tab
 - [ ] Configuration file: key bindings, panel layout, fonts
 - [ ] No flicker: double buffered drawing of the panel and the dock
