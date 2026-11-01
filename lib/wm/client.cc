@@ -77,16 +77,7 @@ Window* Client::create(::Window root, ::Window child,
     win->on_focus_out(XEvent(), nullptr); // disable and GrabButton
     win->map_all();
 
-    unsigned long data[2]; /* "suggested" by ICCCM version 1 */
-
-    data[0] = static_cast<unsigned long>(NormalState);
-    data[1] = static_cast<unsigned long>(None);
-
-    XChangeProperty(tiny::get_display(), win->get_window(),
-                    tiny::get_display().WM_STATE, tiny::get_display().WM_STATE,
-                    32, PropModeReplace, reinterpret_cast<unsigned char*>(data),
-                    2);
-
+    win->set_wm_state(NormalState);
     return win;
 }
 
@@ -117,8 +108,10 @@ void Client::realize(::Window parent_arg, int x, int y)
 void Client::set_events(long mask)
 {
     // SubstructureNotifyMask so, tiny::wm::Manager can catch UnmapNotify
+    // SubstructureRedirectMask so the requests of the client to move or
+    // resize itself come to configure_request()
     tiny::Container::set_events(mask | SubstructureNotifyMask |
-                                FocusChangeMask);
+                                SubstructureRedirectMask | FocusChangeMask);
     Window::set_events();
 
     /*
@@ -134,6 +127,11 @@ void Client::set_events(long mask)
             reinterpret_cast<tiny::Object*>(this),
             reinterpret_cast<tiny::object_signal_t>(
                     &Client::on_window_drag_motion));
+
+    header.get_title_box()->on_drag_end.connect(
+            reinterpret_cast<tiny::Object*>(this),
+            reinterpret_cast<tiny::object_signal_t>(
+                    &Client::on_window_drag_end));
 
     min_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
                              reinterpret_cast<tiny::object_signal_t>(
@@ -222,6 +220,7 @@ void Client::maximize()
     header.resize(attrs.width, tiny::theme.wm_win_header);
     max_btn.set_restore(true);
     set_maximized(true);
+    send_configure_notify();
 }
 
 void Client::fullscreen(bool on)
@@ -262,6 +261,46 @@ void Client::fullscreen(bool on)
         }
     }
     set_fullscreen(on);
+    send_configure_notify();
+}
+
+void Client::configure_request(const XConfigureRequestEvent& e)
+{
+    if (get_maximized() || is_fullscreen()) {
+        send_configure_notify(); // the frame keeps its place
+        return;
+    }
+
+    const int header_height = tiny::theme.wm_win_header;
+    XWindowAttributes frame;
+    XGetWindowAttributes(display, window, &frame);
+    // The client asks for the place of its own area (the position it gets in
+    // ConfigureNotify), the frame is around it. The header stays below the
+    // panel.
+    const int x = (e.value_mask & CWX) ? e.x - frame.border_width : frame.x;
+    const int y = (e.value_mask & CWY)
+                          ? std::max(e.y - header_height - frame.border_width,
+                                     tiny::theme.wm_panel)
+                          : frame.y;
+    const int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
+    const int new_height =
+            (e.value_mask & CWHeight) ? e.height + header_height : frame.height;
+
+    XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),
+                      tiny::x_dim(new_height));
+    XResizeWindow(display, child, tiny::x_dim(new_width),
+                  tiny::x_dim(new_height - header_height));
+    if (is_resizable()) {
+        shadow.move_resize(x, y, new_width, new_height);
+    }
+    header.resize(new_width, header_height);
+    if ((e.value_mask & CWStackMode) && e.detail == Above) {
+        if (is_resizable()) {
+            XRaiseWindow(display, shadow.get_window());
+        }
+        XRaiseWindow(display, window); // the frame, not the client
+    }
+    send_configure_notify();
 }
 
 void Client::restore(int x, int y)
@@ -283,6 +322,7 @@ void Client::restore(int x, int y)
 
         max_btn.set_restore(false);
         set_maximized(false);
+        send_configure_notify();
     } else {
         map();
         set_minimized(false);
@@ -382,6 +422,7 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 void Client::on_move_resize_end(tiny::Object*, const XEvent&, void*)
 {
     size_label.reset();
+    send_configure_notify();
 }
 
 void Client::show_size_units(int client_width, int client_height)
@@ -411,6 +452,11 @@ void Client::on_window_drag_motion(tiny::Object*, const XEvent& e, void*)
     XMoveWindow(display, window, start_attrs.x + xdiff, start_attrs.y + ydiff);
 }
 
+void Client::on_window_drag_end(tiny::Object*, const XEvent&, void*)
+{
+    send_configure_notify();
+}
+
 void Client::on_focus_in(const XEvent& e, void* data)
 {
     if (!is_focus_change(e)) {
@@ -436,29 +482,6 @@ void Client::on_property_notify(const XEvent& e, void* data)
     if (e.xproperty.atom == display.WM_NAME ||
         e.xproperty.atom == display._NET_WM_NAME) {
         header.set_title(wm_name);
-    }
-    if (e.xproperty.atom == display.WM_NORMAL_HINTS) {
-        // SDL on resize moved window relative to root
-        ::Window geo_root;
-        int x;
-        int y;
-        unsigned int geo_width;
-        unsigned int geo_height;
-        unsigned int border;
-        unsigned int depth;
-        if (!XGetGeometry(dsp, child, &geo_root, &x, &y, &geo_width,
-                          &geo_height, &border, &depth)) {
-            TINY_LOG("Can't get window geometry");
-            return;
-        }
-
-        // when window is moved
-        if (!is_fullscreen() && (x != 0 || y != tiny::theme.wm_win_header)) {
-            XWindowChanges ch;
-            ch.x = 0;
-            ch.y = tiny::theme.wm_win_header;
-            XConfigureWindow(dsp, child, CWX | CWY, &ch);
-        }
     }
 }
 

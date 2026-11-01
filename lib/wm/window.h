@@ -189,6 +189,18 @@ class Window : public tiny::Object {
     //! Cover the whole screen (the panel too) without decorations, or go back
     virtual void fullscreen(bool on);
 
+    //! Write WM_STATE (NormalState, IconicState, WithdrawnState) of the client
+    void set_wm_state(long wm_state);
+
+    //! The client leaves the manager: WithdrawnState and no _NET_WM_STATE
+    void withdraw();
+
+    //! The client asks for another position or size (ConfigureRequest)
+    virtual void configure_request(const XConfigureRequestEvent& e);
+
+    //! Tell the client where it is, in the root coordinates (ICCCM 4.1.5)
+    void send_configure_notify();
+
     void update_protocols();    //!< Update WMProtocols
     void update_properties();   //!< Update WMProperties
     void update_normal_hints(); //!< Update XSizeHints;

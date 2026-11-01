@@ -199,6 +199,63 @@ class FakeClient {
         return std::find(states.begin(), states.end(), atom) != states.end();
     }
 
+    // WM_STATE of the window, -1 when there is none
+    long wm_state()
+    {
+        sync();
+        Atom type;
+        int format;
+        unsigned long count;
+        unsigned long left;
+        unsigned char* data = nullptr;
+        long rv = -1;
+        XGetWindowProperty(display, window, dsp().WM_STATE, 0, 2, False,
+                           dsp().WM_STATE, &type, &format, &count, &left,
+                           &data);
+        if (data) {
+            rv = count == 2 ? reinterpret_cast<long*>(data)[0] : -1;
+            XFree(data);
+        }
+        return rv;
+    }
+
+    bool has_property(Atom property)
+    {
+        sync();
+        int count = 0;
+        Atom* atoms = XListProperties(display, window, &count);
+        const bool found = atoms && std::find(atoms, atoms + count, property) !=
+                                            atoms + count;
+        if (atoms) {
+            XFree(atoms);
+        }
+        return found;
+    }
+
+    // Listens to ConfigureNotify of the window.
+    void watch_structure()
+    {
+        XSelectInput(display, window, StructureNotifyMask);
+        sync();
+    }
+
+    // The last ConfigureNotify that the window manager sent by itself (ICCCM
+    // 4.1.5), not the one of the server.
+    bool synthetic_configure(XConfigureEvent& out)
+    {
+        XSync(dsp(), False);
+        sync();
+        bool found = false;
+        XEvent e;
+        while (XCheckTypedWindowEvent(display, window, ConfigureNotify, &e)) {
+            if (e.xconfigure.send_event) {
+                out = e.xconfigure;
+                found = true;
+            }
+        }
+        return found;
+    }
+
     XWindowAttributes attrs()
     {
         sync();

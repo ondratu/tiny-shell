@@ -192,6 +192,9 @@ void Manager::main_loop()
             case UnmapNotify: // need for delete windows frames (wm_windows)
                 on_unmap_notify(event.xunmap);
                 break;
+            case DestroyNotify: // the client is gone, also when minimized
+                on_destroy_notify(event.xdestroywindow);
+                break;
             case MapRequest: // need to create windows frames for new windows
                 on_map_request(event.xmaprequest);
                 break;
@@ -382,6 +385,9 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
         window = Client::create(root, child, attrs, functions, decorations);
     }
 
+    // the client survives a crash of the manager
+    XAddToSaveSet(display, child);
+
     wm_windows[child] = window;
     wm_tops.push_back(window);
     set_application_icon(window);
@@ -392,25 +398,43 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     return window;
 }
 
+void Manager::unmanage(::Window child, bool alive)
+{
+    const auto it = wm_windows.find(child);
+    if (it == wm_windows.end()) {
+        return;
+    }
+    Window* window = it->second;
+
+    if (active == window && wm_tops.size() > 1) {
+        activate_prev_window(); // while the window is still in the list
+    }
+    if (active == window) {
+        active = nullptr;
+    }
+    wm_tops.remove(window);
+    wm_dock.remove(window);
+    if (alive) {
+        window->withdraw();
+        XRemoveFromSaveSet(display, child);
+    }
+    delete window;
+    wm_windows.erase(it);
+}
+
 void Manager::on_unmap_notify(const XUnmapEvent& e)
 {
     // TODO: could be append to signal handlers on wm_window.window
-    if (wm_windows.count(e.window)) {
-        Window* window = wm_windows[e.window];
-        if (window->get_minimized()) {
-            return;
-        }
-        if (active == window) {
-            activate_prev_window();
-        }
-        if (active == window) {
-            active = nullptr;
-        }
-        wm_tops.remove(window);
-        wm_dock.remove(window);
-        delete window;
-        wm_windows.erase(e.window);
+    const auto it = wm_windows.find(e.window);
+    if (it == wm_windows.end() || it->second->get_minimized()) {
+        return; // unknown, or hidden by the manager itself
     }
+    unmanage(e.window, true);
+}
+
+void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
+{
+    unmanage(e.window, false);
 }
 
 void Manager::on_map_request(const XMapRequestEvent& e)
@@ -424,6 +448,12 @@ void Manager::on_map_request(const XMapRequestEvent& e)
         return; // menu, special tools (idesk) and so on
     }
 
+    const auto known = wm_windows.find(e.window);
+    if (known != wm_windows.end()) { // a minimized client shows itself
+        focus_window(known->second);
+        return;
+    }
+
     Window* window = manage(e.window, attrs);
     XMapWindow(display, e.window);
     if (window) { // else the type of the window is not managed
@@ -433,6 +463,12 @@ void Manager::on_map_request(const XMapRequestEvent& e)
 
 void Manager::on_configure_request(const XConfigureRequestEvent& e)
 {
+    const auto it = wm_windows.find(e.window);
+    if (it != wm_windows.end()) {
+        it->second->configure_request(e); // the frame moves with the client
+        return;
+    }
+
     XWindowChanges ch;
     ch.x = e.x;
     ch.y = e.y;
@@ -448,6 +484,11 @@ void Manager::on_configure_request(const XConfigureRequestEvent& e)
 
 int Manager::on_error(::Display* display, XErrorEvent* error)
 {
+    // A client can be gone while the manager reads its properties or moves
+    // it: that is a race, not a fault.
+    if (error->error_code == BadWindow || error->error_code == BadDrawable) {
+        return 0;
+    }
     char buffer[255];
     XGetErrorText(display, error->error_code, buffer, 255);
     tiny::error("XError %s (%d) opcode %d/%d on res %lx", buffer,

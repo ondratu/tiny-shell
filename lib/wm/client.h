@@ -40,6 +40,9 @@ class Client : public tiny::Container, public Window {
 
     void fullscreen(bool on) override;
 
+    //! Move and resize the frame, so the client gets the asked place
+    void configure_request(const XConfigureRequestEvent& e) override;
+
     /* signal handlers */
     void on_close_click(tiny::Object* o, const XEvent& e, void* data);
 
@@ -60,6 +63,8 @@ class Client : public tiny::Container, public Window {
 
     void on_window_drag_motion(tiny::Object* o, const XEvent& e,
                                void* data) override;
+
+    void on_window_drag_end(tiny::Object* o, const XEvent& e, void* data);
 
   protected:
     /* event handlers */

@@ -327,6 +327,18 @@ TEST_F(WindowTest, user_time_changes_are_not_reported)
     EXPECT_EQ(out.find("Unhandled"), std::string::npos);
 }
 
+TEST_F(WindowTest, wm_state_changes_are_not_reported)
+{
+    auto window = manage();
+    window->set_events();
+
+    ::testing::internal::CaptureStderr();
+    send(client.window, property_event(client.window, dsp().WM_STATE));
+    const std::string out = ::testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(out.find("Unhandled"), std::string::npos);
+}
+
 // ---- size hints ----
 
 namespace {
@@ -1379,4 +1391,99 @@ TEST_F(WindowTest, icon_update_without_mask_causes_no_x_error)
         window->update_wm_hints();
     }
     EXPECT_EQ(errors.errors(), 0);
+}
+
+// ---- WM_STATE, withdraw and configure ----
+
+TEST_F(WindowTest, create_sets_wm_state_to_normal)
+{
+    const XWindowAttributes attrs = client.attrs();
+    const std::unique_ptr<WmWindow> window(
+            WmWindow::create(root_window(), client.window, attrs, 0xFFFF));
+
+    EXPECT_EQ(client.wm_state(), NormalState);
+}
+
+TEST_F(WindowTest, hiding_and_showing_changes_wm_state)
+{
+    auto window = manage();
+
+    window->set_minimized(true);
+    EXPECT_EQ(client.wm_state(), IconicState);
+
+    window->set_minimized(false);
+    EXPECT_EQ(client.wm_state(), NormalState);
+}
+
+TEST_F(WindowTest, withdraw_sets_wm_state_and_removes_the_state_atoms)
+{
+    auto window = manage();
+    window->set_maximized(true); // publishes _NET_WM_STATE
+    ASSERT_TRUE(client.has_property(dsp()._NET_WM_STATE));
+
+    window->withdraw();
+
+    EXPECT_EQ(client.wm_state(), WithdrawnState);
+    EXPECT_FALSE(client.has_property(dsp()._NET_WM_STATE));
+}
+
+TEST_F(WindowTest, configure_request_moves_the_client_and_tells_it_the_place)
+{
+    auto window = manage();
+    client.watch_structure();
+    XConfigureRequestEvent e = {};
+    e.type = ConfigureRequest;
+    e.window = client.window;
+    e.value_mask = CWX | CWY | CWWidth | CWHeight;
+    e.x = 50;
+    e.y = 60;
+    e.width = 300;
+    e.height = 150;
+
+    window->configure_request(e);
+
+    const XWindowAttributes attrs = client.attrs();
+    EXPECT_EQ(attrs.x, 50);
+    EXPECT_EQ(attrs.y, 60);
+    EXPECT_EQ(attrs.width, 300);
+    EXPECT_EQ(attrs.height, 150);
+    XConfigureEvent notify = {};
+    ASSERT_TRUE(client.synthetic_configure(notify));
+    EXPECT_EQ(notify.x, 50);
+    EXPECT_EQ(notify.y, 60);
+}
+
+TEST_F(WindowTest, the_notify_counts_the_border_in_the_position)
+{
+    auto window = manage();
+    XSetWindowBorderWidth(dsp(), client.window, 1);
+    XMoveWindow(client.display, client.window, 50, 60);
+    client.sync();
+    client.watch_structure();
+
+    window->send_configure_notify();
+
+    XConfigureEvent notify = {};
+    ASSERT_TRUE(client.synthetic_configure(notify));
+    EXPECT_EQ(notify.x, 50);
+    EXPECT_EQ(notify.y, 60);
+    EXPECT_EQ(notify.border_width, 1);
+}
+
+TEST_F(WindowTest, configure_request_of_a_maximized_window_changes_nothing)
+{
+    auto window = manage();
+    window->maximize();
+    const XWindowAttributes before = client.attrs();
+    XConfigureRequestEvent e = {};
+    e.type = ConfigureRequest;
+    e.window = client.window;
+    e.value_mask = CWX | CWWidth;
+    e.x = 5;
+    e.width = 100;
+
+    window->configure_request(e);
+
+    EXPECT_EQ(client.attrs().x, before.x);
+    EXPECT_EQ(client.attrs().width, before.width);
 }
