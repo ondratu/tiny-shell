@@ -84,6 +84,27 @@ void IconGrid::set_events(long mask)
             static_cast<event_signal_t>(&IconGrid::on_button_release));
 }
 
+void IconGrid::set_geometry(int cols, int rows_arg, int cell_w, int cell_h,
+                            int icon)
+{
+    columns = static_cast<size_t>(std::max(1, cols));
+    rows = static_cast<size_t>(std::max(1, rows_arg));
+    cell_width = std::max(1, cell_w);
+    cell_height = std::max(1, cell_h);
+    icon_size = std::max(1, icon);
+    if (count > 0) {
+        selected = std::min(selected, count - 1);
+    }
+
+    // the new size is known at once, the server tells it later
+    width = static_cast<int>(columns) * cell_width;
+    height = height_of(static_cast<int>(rows), cell_height, dot_size);
+    if (is_realized) {
+        XResizeWindow(display, window, x_dim(width), x_dim(height));
+    }
+    redraw();
+}
+
 void IconGrid::set_items(size_t count_arg, ItemFn item_of_arg)
 {
     count = count_arg;
