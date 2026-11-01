@@ -1,4 +1,11 @@
+#include <cerrno>
+#include <csignal>
+#include <cstring>
 #include <vector>
+
+#include <fcntl.h>
+#include <poll.h>
+#include <unistd.h>
 
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
@@ -14,6 +21,28 @@ extern Handlers handlers;
 extern std::shared_ptr<Display> display;
 } // namespace tiny
 
+namespace {
+
+//! The self-pipe: a signal handler may only write to it, the loop reads it
+int quit_pipe[2] = {-1, -1};
+
+void on_quit_signal(int /*signal*/)
+{
+    const int saved_errno = errno;
+    const char byte = 1;
+    if (write(quit_pipe[1], &byte, 1) < 0) {
+        // the pipe is full, so the loop is going to wake up anyway
+    }
+    errno = saved_errno;
+}
+
+const int quit_signals[] = {SIGTERM, SIGHUP, SIGINT};
+
+//! What the signals did before, to give it back (nohup ignores SIGHUP)
+struct sigaction old_actions[sizeof(quit_signals) / sizeof(int)];
+
+} // namespace
+
 namespace tiny::wm {
 
 Manager::Manager(::Display* display_arg, ::Window root_arg):
@@ -24,6 +53,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     running(true)
 {
     tiny::reap_children();
+    catch_quit_signals();
     //set_supported();
     XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
     XSync(display_arg, True);
@@ -95,6 +125,10 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_dock.get_menu_button().on_click.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_launcher));
+    wm_panel.menu_user.restart.on_click.connect(
+            this, static_cast<tiny::object_signal_t>(&Manager::on_restart));
+    wm_panel.menu_user.shutdown.on_click.connect(
+            this, static_cast<tiny::object_signal_t>(&Manager::on_shutdown));
     wm_panel.menu_user.logout.on_click.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_logout));
 
@@ -116,6 +150,7 @@ Manager::~Manager()
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
     grab_super(false);
+    release_quit_signals();
 
     if (old_error_handler) {
         XSetErrorHandler(old_error_handler);
@@ -168,11 +203,68 @@ void Manager::set_supported()
                     sizeof(supported) / sizeof(Atom));
 }
 
+void Manager::catch_quit_signals()
+{
+    if (pipe(quit_pipe) != 0) {
+        tiny::error("Can't create the pipe for signals, SIGTERM is not caught");
+        quit_pipe[0] = quit_pipe[1] = -1;
+        return;
+    }
+    for (const int fd : quit_pipe) {
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+    }
+    struct sigaction action = {};
+    action.sa_handler = on_quit_signal;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_RESTART;
+    for (size_t i = 0; i < sizeof(quit_signals) / sizeof(int); ++i) {
+        sigaction(quit_signals[i], &action, &old_actions[i]);
+    }
+}
+
+void Manager::release_quit_signals()
+{
+    for (size_t i = 0; i < sizeof(quit_signals) / sizeof(int); ++i) {
+        sigaction(quit_signals[i], &old_actions[i], nullptr);
+    }
+    for (int& fd : quit_pipe) {
+        if (fd >= 0) {
+            close(fd);
+            fd = -1;
+        }
+    }
+}
+
+bool Manager::wait_for_event()
+{
+    // A client that floods the queue must not delay the signal.
+    for (bool wait = XPending(display) == 0;; wait = true) {
+        struct pollfd fds[2] = {{ConnectionNumber(display), POLLIN, 0},
+                                {quit_pipe[0], POLLIN, 0}};
+        if (poll(fds, 2, wait ? -1 : 0) < 0 && errno != EINTR) {
+            return false;
+        }
+        if (fds[1].revents & POLLIN) {
+            char drain[16];
+            while (read(quit_pipe[0], drain, sizeof(drain)) > 0) {}
+            return false;
+        }
+        if (XPending(display) > 0) {
+            return true;
+        }
+    }
+}
+
 void Manager::main_loop()
 {
     XEvent event;
 
     while (running) {
+        if (!wait_for_event()) {
+            running = false; // SIGTERM, SIGHUP or SIGINT
+            break;
+        }
         XNextEvent(display, &event);
         const ::Window window = tiny::window_of_event(event);
 
@@ -305,6 +397,26 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 void Manager::on_logout(tiny::Object*, const XEvent&, void*)
 {
     running = false;
+}
+
+void Manager::on_restart(tiny::Object*, const XEvent&, void*)
+{
+    run_system_command(restart_command);
+}
+
+void Manager::on_shutdown(tiny::Object*, const XEvent&, void*)
+{
+    run_system_command(shutdown_command);
+}
+
+void Manager::run_system_command(const std::string& command)
+{
+    if (command.empty()) {
+        return;
+    }
+    if (tiny::spawn_command(command) < 0) {
+        tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
+    }
 }
 
 void Manager::on_launcher(tiny::Object*, const XEvent&, void*)

@@ -2,6 +2,7 @@
 
 #include <map>
 #include <list>
+#include <string>
 
 #include "object.h"
 #include "wm/window.h"
@@ -24,6 +25,14 @@ class Manager : public tiny::Object {
   private:
     void set_events();
 
+    //! SIGTERM, SIGHUP and SIGINT end the main loop like the logout does
+    void catch_quit_signals();
+
+    void release_quit_signals();
+
+    //! Block until an event is queued; false when a signal asks to quit
+    bool wait_for_event();
+
     //! Grab (or release) the Super keys that open the launcher
     void grab_super(bool grab);
 
@@ -40,6 +49,9 @@ class Manager : public tiny::Object {
 
     //! The icon of the desktop entry of the window, for the dock
     void set_application_icon(Window* window);
+
+    //! Start a command of the user menu; an empty one does nothing
+    void run_system_command(const std::string& command);
 
     void connect_window(Window* window);
 
@@ -62,6 +74,8 @@ class Manager : public tiny::Object {
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
+    void on_restart(tiny::Object* o, const XEvent& e, void* data);
+    void on_shutdown(tiny::Object* o, const XEvent& e, void* data);
     void on_launcher(tiny::Object* o, const XEvent& e, void* data);
 
     /* direct event handlers */
@@ -100,6 +114,10 @@ class Manager : public tiny::Object {
     bool key_done;
     bool super_down = false; //!< Super is held and nothing cancelled it
     bool running;
+
+    // until there is a configuration the commands are the systemd ones
+    std::string restart_command = "systemctl reboot";
+    std::string shutdown_command = "systemctl poweroff";
 };
 
 } // namespace tiny::wm

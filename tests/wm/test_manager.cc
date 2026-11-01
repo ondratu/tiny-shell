@@ -5,6 +5,10 @@
 
 #include <filesystem>
 #include <fstream>
+#include <csignal>
+#include <chrono>
+#include <thread>
+#include <unistd.h>
 #include <list>
 #include <map>
 #include <memory>
@@ -187,6 +191,96 @@ TEST_F(ManagerTest, connects_logout_of_the_user_menu)
     logout.on_click(&logout, make_event(ButtonRelease));
 
     EXPECT_FALSE(manager->running);
+}
+
+namespace {
+
+template <class Done>
+bool wait_for(Done done)
+{
+    for (int i = 0; i < 300; ++i) {
+        if (done()) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return false;
+}
+
+std::filesystem::path marker_file(const char* name)
+{
+    auto path = std::filesystem::temp_directory_path() /
+                (std::string(name) + std::to_string(getpid()));
+    std::filesystem::remove(path);
+    return path;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, restart_of_the_user_menu_runs_its_command)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-restart-");
+    manager->restart_command = "touch " + marker.string();
+
+    auto& restart = manager->wm_panel.menu_user.restart;
+    restart.on_click(&restart, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->running); // only the command is started
+    std::filesystem::remove(marker);
+}
+
+TEST_F(ManagerTest, shutdown_of_the_user_menu_runs_its_command)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-shutdown-");
+    manager->shutdown_command = "touch " + marker.string();
+
+    auto& shutdown = manager->wm_panel.menu_user.shutdown;
+    shutdown.on_click(&shutdown, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    std::filesystem::remove(marker);
+}
+
+TEST_F(ManagerTest, an_empty_command_of_the_user_menu_does_nothing)
+{
+    start();
+    manager->shutdown_command.clear();
+
+    auto& shutdown = manager->wm_panel.menu_user.shutdown;
+    shutdown.on_click(&shutdown, make_event(ButtonRelease));
+
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, a_missing_command_of_the_user_menu_is_reported)
+{
+    start();
+    manager->restart_command = "tiny-no-such-program";
+
+    ::testing::internal::CaptureStderr();
+    auto& restart = manager->wm_panel.menu_user.restart;
+    restart.on_click(&restart, make_event(ButtonRelease));
+
+    EXPECT_NE(::testing::internal::GetCapturedStderr().find(
+                      "tiny-no-such-program"),
+              std::string::npos);
+}
+
+TEST_F(ManagerTest, signals_end_the_main_loop)
+{
+    for (const int number : {SIGTERM, SIGHUP, SIGINT}) {
+        start();
+        ASSERT_TRUE(manager->running);
+
+        raise(number);
+        manager->main_loop();
+
+        EXPECT_FALSE(manager->running) << "signal " << number;
+        manager.reset();
+    }
 }
 
 TEST_F(ManagerTest, adopts_the_mapped_windows)
