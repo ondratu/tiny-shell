@@ -54,7 +54,6 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 {
     tiny::reap_children();
     catch_quit_signals();
-    //set_supported();
     XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
     XSync(display_arg, True);
 
@@ -65,12 +64,6 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     ::Window rv_parent;
     ::Window* rv_child;
     uint32_t rv_ccount;
-
-    /*
-    XChangeProperty(display_arg, root_arg, display_arg._NET_SUPPORTED, XA_ATOM,
-                    32, PropModeReplace,
-                    reinterpret_cast<unsigned char*>(display_arg.EWMH), 1);
-    */
 
     // Realized (but not mapped, so they are not taken as client windows)
     // before the existing windows are added to the dock.
@@ -120,6 +113,9 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         wm_tops.back()->set_focus(); // the topmost one
     }
 
+    set_supported();
+    publish_clients();
+
     wm_panel.map_all();
     wm_dock.map_all();
 
@@ -150,6 +146,7 @@ Manager::~Manager()
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
     grab_super(false);
+    clear_published();
     release_quit_signals();
 
     if (old_error_handler) {
@@ -192,15 +189,99 @@ void Manager::grab_super(bool grab)
 
 void Manager::set_supported()
 {
-    Atom supported[] = {tiny::display->_NET_SUPPORTED,
-                        tiny::display->_NET_WM_NAME,
-                        tiny::display->_NET_WM_VISIBLE_NAME,
-                        tiny::display->_NET_WM_WINDOW_TYPE};
+    const tiny::Display& dsp = tiny::get_display();
 
-    XChangeProperty(display, root, tiny::display->_NET_SUPPORTED, XA_ATOM, 32,
+    // only what is really handled, applications trust this list
+    const Atom supported[] = {dsp._NET_SUPPORTED,
+                              dsp._NET_SUPPORTING_WM_CHECK,
+                              dsp._NET_CLIENT_LIST,
+                              dsp._NET_ACTIVE_WINDOW,
+                              dsp._NET_CLOSE_WINDOW,
+                              dsp._NET_WORKAREA,
+                              dsp._NET_WM_NAME,
+                              dsp._NET_WM_WINDOW_TYPE,
+                              dsp._NET_WM_STATE,
+                              dsp._NET_WM_STATE_MAXIMIZED_VERT,
+                              dsp._NET_WM_STATE_MAXIMIZED_HORZ,
+                              dsp._NET_WM_STATE_FULLSCREEN,
+                              dsp._NET_WM_STATE_HIDDEN,
+                              dsp._NET_WM_STATE_FOCUSED,
+                              dsp._NET_WM_STATE_SKIP_TASKBAR,
+                              dsp._NET_WM_STRUT,
+                              dsp._NET_WM_STRUT_PARTIAL};
+    XChangeProperty(display, root, dsp._NET_SUPPORTED, XA_ATOM, 32,
                     PropModeReplace,
-                    reinterpret_cast<unsigned char*>(supported),
+                    reinterpret_cast<const unsigned char*>(supported),
                     sizeof(supported) / sizeof(Atom));
+
+    if (check_window == None) {
+        check_window =
+                XCreateSimpleWindow(display, root, -1, -1, 1, 1, 0, 0, 0);
+    }
+    static const char name[] = "tiny-shell";
+    XChangeProperty(display, check_window, dsp._NET_WM_NAME, dsp.UTF8_STRING, 8,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(name),
+                    sizeof(name) - 1);
+    for (const ::Window w : {root, check_window}) {
+        XChangeProperty(display, w, dsp._NET_SUPPORTING_WM_CHECK, XA_WINDOW, 32,
+                        PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&check_window),
+                        1);
+    }
+}
+
+void Manager::clear_published()
+{
+    const tiny::Display& dsp = tiny::get_display();
+    for (const Atom property :
+         {dsp._NET_SUPPORTED, dsp._NET_SUPPORTING_WM_CHECK,
+          dsp._NET_CLIENT_LIST, dsp._NET_ACTIVE_WINDOW}) {
+        XDeleteProperty(display, root, property);
+    }
+    if (check_window != None) {
+        XDestroyWindow(display, check_window);
+        check_window = None;
+    }
+}
+
+void Manager::publish_clients()
+{
+    const tiny::Display& dsp = tiny::get_display();
+
+    std::vector<::Window> clients;
+    clients.reserve(wm_tops.size());
+    for (const Window* window : wm_tops) {
+        clients.push_back(window->get_child());
+    }
+    XChangeProperty(display, root, dsp._NET_CLIENT_LIST, XA_WINDOW, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(clients.data()),
+                    static_cast<int>(clients.size()));
+
+    const ::Window current = active ? active->get_child() : None;
+    XChangeProperty(display, root, dsp._NET_ACTIVE_WINDOW, XA_WINDOW, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&current), 1);
+}
+
+bool Manager::on_root_message(const XClientMessageEvent& e)
+{
+    const tiny::Display& dsp = tiny::get_display();
+    if (e.message_type != dsp._NET_ACTIVE_WINDOW &&
+        e.message_type != dsp._NET_CLOSE_WINDOW) {
+        return false; // the window knows the rest
+    }
+    const auto it = wm_windows.find(e.window);
+    if (it == wm_windows.end()) {
+        return true; // unknown window, nothing to do
+    }
+    if (e.message_type == dsp._NET_ACTIVE_WINDOW) {
+        focus_window(it->second);
+    } else {
+        it->second->close();
+    }
+    return true;
 }
 
 void Manager::catch_quit_signals()
@@ -267,6 +348,10 @@ void Manager::main_loop()
         }
         XNextEvent(display, &event);
         const ::Window window = tiny::window_of_event(event);
+
+        if (event.type == ClientMessage && on_root_message(event.xclient)) {
+            continue;
+        }
 
         auto signal_id = std::make_pair(event.type, window);
 
@@ -392,6 +477,7 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
     }
     active = window;
     wm_dock.redraw(active, e);
+    publish_clients();
 }
 
 void Manager::on_logout(tiny::Object*, const XEvent&, void*)
@@ -510,6 +596,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
 
     wm_windows[child] = window;
     wm_tops.push_back(window);
+    publish_clients();
     set_application_icon(window);
     if (!window->skip_taskbar()) {
         wm_dock.add(window);
@@ -540,6 +627,7 @@ void Manager::unmanage(::Window child, bool alive)
     }
     delete window;
     wm_windows.erase(it);
+    publish_clients();
 }
 
 void Manager::track_dock(::Window dock)

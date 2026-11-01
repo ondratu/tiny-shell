@@ -3,6 +3,7 @@
 
 #include <X11/keysym.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <csignal>
@@ -436,26 +437,224 @@ TEST_F(ManagerTest, grabs_the_super_keys_for_the_launcher)
     EXPECT_EQ(errors.errors(), 2); // BadAccess: already grabbed
 }
 
-TEST_F(ManagerTest, set_supported_publishes_the_supported_properties)
+// ---- EWMH ----
+
+namespace {
+
+// The values of a property of the root window.
+template <typename T>
+std::vector<T> root_property(Atom property, Atom type)
+{
+    XSync(dsp(), False);
+    Atom actual;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    std::vector<T> values;
+    if (XGetWindowProperty(dsp(), root_window(), property, 0, 1024, False, type,
+                           &actual, &format, &count, &left, &data) == Success &&
+        data) {
+        const auto* first = reinterpret_cast<const T*>(data);
+        values.assign(first, first + count);
+        XFree(data);
+    }
+    return values;
+}
+
+// A request of a client to the window manager, sent to the root window.
+void request(::Window window, Atom message, long data0 = 0)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = message;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = data0;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_supported_properties_are_published_on_the_root)
 {
     start();
 
-    manager->set_supported();
-    XSync(dsp(), False);
+    const auto atoms = root_property<Atom>(dsp()._NET_SUPPORTED, XA_ATOM);
 
+    EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_ACTIVE_WINDOW),
+              0);
+    EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_CLIENT_LIST),
+              0);
+    EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_CLOSE_WINDOW),
+              0);
+    EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_STATE), 0);
+}
+
+TEST_F(ManagerTest, a_check_window_with_the_name_proves_the_manager_runs)
+{
+    start();
+
+    const auto on_root =
+            root_property<::Window>(dsp()._NET_SUPPORTING_WM_CHECK, XA_WINDOW);
+    ASSERT_EQ(on_root.size(), 1u);
+    XSync(dsp(), False);
     Atom type;
     int format;
     unsigned long count;
     unsigned long left;
     unsigned char* data = nullptr;
-    ASSERT_EQ(XGetWindowProperty(dsp(), root_window(), dsp()._NET_SUPPORTED, 0,
-                                 64, False, XA_ATOM, &type, &format, &count,
-                                 &left, &data),
+    ASSERT_EQ(XGetWindowProperty(dsp(), on_root[0], dsp()._NET_WM_NAME, 0, 64,
+                                 False, dsp().UTF8_STRING, &type, &format,
+                                 &count, &left, &data),
               Success);
-    ASSERT_EQ(count, 4u);
-    EXPECT_EQ((reinterpret_cast<Atom*>(data))[0], dsp()._NET_SUPPORTED);
-    EXPECT_EQ((reinterpret_cast<Atom*>(data))[3], dsp()._NET_WM_WINDOW_TYPE);
+    ASSERT_NE(data, nullptr);
+    EXPECT_STREQ(reinterpret_cast<const char*>(data), "tiny-shell");
     XFree(data);
+
+    // the window points to itself
+    ASSERT_EQ(XGetWindowProperty(
+                      dsp(), on_root[0], dsp()._NET_SUPPORTING_WM_CHECK, 0, 1,
+                      False, XA_WINDOW, &type, &format, &count, &left, &data),
+              Success);
+    ASSERT_NE(data, nullptr);
+    EXPECT_EQ(*reinterpret_cast<::Window*>(data), on_root[0]);
+    XFree(data);
+}
+
+TEST_F(ManagerTest, the_client_list_follows_the_managed_windows)
+{
+    start();
+    EXPECT_TRUE(
+            root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW).empty());
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW)),
+              (std::vector<::Window>{first.window, second.window}));
+
+    XUnmapWindow(first.display, first.window);
+    first.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW)),
+              (std::vector<::Window>{second.window}));
+}
+
+TEST_F(ManagerTest, the_active_window_follows_the_focus)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_ACTIVE_WINDOW, XA_WINDOW)),
+              (std::vector<::Window>{c.window}));
+}
+
+TEST_F(ManagerTest, no_active_window_is_published_when_the_last_one_is_gone)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    XUnmapWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_ACTIVE_WINDOW, XA_WINDOW)),
+              (std::vector<::Window>{None}));
+}
+
+TEST_F(ManagerTest, active_window_request_focuses_the_window)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+    ASSERT_EQ(manager->active, manager->wm_windows[second.window]);
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_ACTIVE_WINDOW, XA_WINDOW)),
+              (std::vector<::Window>{first.window}));
+}
+
+TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->minimize();
+    ASSERT_TRUE(manager->wm_windows[c.window]->get_minimized());
+
+    request(c.window, dsp()._NET_ACTIVE_WINDOW);
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, close_window_request_asks_the_client_to_close)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(c.display, c.window, NoEventMask);
+    run_loop();
+    pump_events();
+
+    request(c.window, dsp()._NET_CLOSE_WINDOW);
+    run_loop();
+
+    XEvent e;
+    c.sync(); // the manager sends the message over its own connection
+    ASSERT_TRUE(XCheckTypedEvent(c.display, ClientMessage, &e));
+    EXPECT_EQ(static_cast<Atom>(e.xclient.data.l[0]), dsp().WM_DELETE_WINDOW);
+}
+
+TEST_F(ManagerTest, requests_of_an_unknown_window_are_ignored)
+{
+    start();
+    const FakeClient& c = add_client(false); // never mapped, never managed
+
+    request(c.window, dsp()._NET_ACTIVE_WINDOW);
+    request(c.window, dsp()._NET_CLOSE_WINDOW);
+    run_loop();
+
+    EXPECT_TRUE(manager->wm_windows.empty());
+}
+
+TEST_F(ManagerTest, destructor_removes_what_it_published)
+{
+    start();
+    const auto check =
+            root_property<::Window>(dsp()._NET_SUPPORTING_WM_CHECK, XA_WINDOW);
+    ASSERT_EQ(check.size(), 1u);
+
+    manager.reset();
+
+    EXPECT_TRUE(root_property<Atom>(dsp()._NET_SUPPORTED, XA_ATOM).empty());
+    EXPECT_TRUE(
+            root_property<::Window>(dsp()._NET_SUPPORTING_WM_CHECK, XA_WINDOW)
+                    .empty());
+    EXPECT_TRUE(
+            root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW).empty());
+    XWindowAttributes attrs;
+    const XErrors errors;
+    EXPECT_EQ(XGetWindowAttributes(dsp(), check[0], &attrs), 0); // destroyed
 }
 
 // ---- destruction ----
