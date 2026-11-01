@@ -610,7 +610,7 @@ TEST_F(ManagerTest, alt_f2_opens_the_run_dialog)
     EXPECT_TRUE(manager->key_done);
 }
 
-TEST_F(ManagerTest, super_opens_the_launcher)
+TEST_F(ManagerTest, super_opens_the_launcher_when_it_is_released)
 {
     const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
     const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
@@ -619,11 +619,28 @@ TEST_F(ManagerTest, super_opens_the_launcher)
 
     manager->on_key_press(key(XK_Super_L));
     XSync(dsp(), False);
-    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsViewable);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
     EXPECT_TRUE(manager->key_done);
 
-    manager->on_key_press(key(XK_Super_R)); // the second Super closes it
+    manager->on_key_release(key(XK_Super_L));
     XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsViewable);
+
+    manager->on_key_press(key(XK_Super_R)); // the second Super closes it
+    manager->on_key_release(key(XK_Super_R));
+    XSync(dsp(), False);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, a_release_of_super_without_a_press_does_nothing)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    start();
+
+    manager->on_key_release(key(XK_Super_L));
+    XSync(dsp(), False);
+
     EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
 }
 
