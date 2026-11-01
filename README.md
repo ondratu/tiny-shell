@@ -60,6 +60,9 @@ Done:
       set (clients survive a crash of the manager)
 - [x] `ConfigureRequest` of framed windows with the synthetic
       `ConfigureNotify`
+- [x] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
+      `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the requests to activate
+      and close a window
 - [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
       `_NET_WORKAREA`; maximized and new windows stay inside it
 - [x] Top panel with an application menu and a user menu (logout)
@@ -77,9 +80,9 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
-      `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the client messages for
-      state, activation and closing
+- [ ] The rest of EWMH: `_NET_CLIENT_LIST_STACKING`, `_NET_FRAME_EXTENTS`, a
+      policy against stealing the focus, and the `_NET_WM_STATE` requests
+      other than maximize and fullscreen
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
 - [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
