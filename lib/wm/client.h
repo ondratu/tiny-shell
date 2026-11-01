@@ -32,6 +32,12 @@ class Client : public tiny::Container, public Window {
 
     void set_focus() override;
 
+    ::Window frame() const override { return window; }
+
+    void raise() override;
+
+    void move_to(int x, int y) override;
+
     //! Minimize (Iconify) window
     void minimize() override;
 

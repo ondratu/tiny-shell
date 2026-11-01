@@ -3,6 +3,7 @@
 #include <map>
 #include <list>
 #include <string>
+#include <vector>
 
 #include "object.h"
 #include "wm/window.h"
@@ -65,6 +66,15 @@ class Manager : public tiny::Object {
 
     void connect_window(Window* window);
 
+    //! The managed window that `window` is a dialog of, null if it is none
+    Window* parent_of(const Window* window) const;
+
+    //! Windows that are dialogs of `window`
+    std::vector<Window*> transients_of(const Window* window) const;
+
+    //! Put a dialog in the middle of its parent, inside the work area
+    void center_over(Window* dialog, const Window* parent);
+
     //! Frame (or not) and register a client; null for a type that is not managed
     Window* manage(::Window child, const XWindowAttributes& attrs);
 
@@ -83,6 +93,7 @@ class Manager : public tiny::Object {
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
     void on_restart(tiny::Object* o, const XEvent& e, void* data);
     void on_shutdown(tiny::Object* o, const XEvent& e, void* data);

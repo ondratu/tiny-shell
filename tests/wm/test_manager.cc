@@ -1489,4 +1489,118 @@ TEST_F(ManagerTest, x_errors_are_logged_and_ignored)
     EXPECT_EQ(tiny::wm::Manager::on_error(dsp(), &error), 0);
 }
 
+// ---- transient windows (dialogs) ----
+
+TEST_F(ManagerTest, a_dialog_is_centered_over_its_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+
+    const XWindowAttributes p = attributes_of(parent_of(parent.window));
+    const XWindowAttributes d = attributes_of(parent_of(dialog.window));
+    EXPECT_EQ(d.x + d.width / 2, p.x + p.width / 2);
+    EXPECT_EQ(d.y + d.height / 2, p.y + p.height / 2);
+}
+
+TEST_F(ManagerTest, a_dialog_has_no_icon_in_the_dock)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    const auto before = children_of(manager->wm_dock.get_window()).size();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+
+    EXPECT_TRUE(is_managed(dialog));
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
+}
+
+TEST_F(ManagerTest, a_dialog_of_an_unknown_window_is_a_normal_window)
+{
+    start();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(root_window());
+    dialog.map();
+    run_loop();
+
+    EXPECT_TRUE(is_managed(dialog));
+    EXPECT_EQ(manager->parent_of(manager->wm_windows[dialog.window]), nullptr);
+}
+
+TEST_F(ManagerTest, focusing_the_parent_raises_its_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    manager->wm_windows[other.window]->raise();
+
+    manager->focus_window(manager->wm_windows[parent.window]);
+    XSync(dsp(), False);
+
+    ::Window root;
+    ::Window top_parent;
+    ::Window* kids = nullptr;
+    unsigned int count;
+    XQueryTree(dsp(), root_window(), &root, &top_parent, &kids, &count);
+    const auto position = [&](const FakeClient& c) {
+        return std::find(kids, kids + count, parent_of(c.window)) - kids;
+    };
+    EXPECT_GT(position(dialog), position(parent));
+    XFree(kids);
+}
+
+TEST_F(ManagerTest, minimizing_the_parent_minimizes_and_restores_its_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    auto* parent_window = manager->wm_windows[parent.window];
+    auto* dialog_window = manager->wm_windows[dialog.window];
+
+    parent_window->minimize();
+    EXPECT_TRUE(dialog_window->get_minimized());
+
+    parent_window->restore();
+    EXPECT_FALSE(dialog_window->get_minimized());
+}
+
+TEST_F(ManagerTest, closing_a_dialog_gives_the_focus_back_to_its_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    manager->focus_window(manager->wm_windows[dialog.window]);
+    ASSERT_EQ(manager->active, manager->wm_windows[dialog.window]);
+
+    XDestroyWindow(dialog.display, dialog.window);
+    dialog.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[parent.window]);
+    EXPECT_NE(manager->active, manager->wm_windows[other.window]);
+}
+
 } // namespace

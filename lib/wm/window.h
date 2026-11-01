@@ -181,6 +181,18 @@ class Window : public tiny::Object {
     virtual void set_focus();
     virtual void return_focus();
 
+    //! The window the client is a dialog of (`WM_TRANSIENT_FOR`), or None
+    ::Window get_transient_for() const { return transient_for; }
+
+    //! The top level window the manager shows: the frame, or the client
+    virtual ::Window frame() const { return child; }
+
+    //! Put the frame above its siblings
+    virtual void raise();
+
+    //! Move the frame, the root coordinates of its top left corner
+    virtual void move_to(int x, int y);
+
     //! Send WM_DELETE_WINDOW to window or xkill that
     virtual void close();
 
@@ -213,6 +225,7 @@ class Window : public tiny::Object {
     void update_wm_class();     //!< Update wm_class
     void update_wm_icon_name(); //!< Update wm_icon_name
     void update_wm_icon();
+    void update_transient_for(); //!< Update transient_for
     void set_events();
 
     //! Get and fill window properties
@@ -232,6 +245,8 @@ class Window : public tiny::Object {
                                        void* data);
 
     tiny::Signal on_focus;
+    //! The window is minimized or restored, see `get_minimized()`
+    tiny::Signal on_minimize;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held
@@ -240,6 +255,9 @@ class Window : public tiny::Object {
   protected:
     /* event handlers */
     virtual void on_client_message(const XEvent& e, void* data);
+
+    //! A `_NET_WM_STATE` request: each of the two atoms on its own
+    void on_net_wm_state(const XClientMessageEvent& e);
 
     virtual void on_property_notify(const XEvent& e, void* data);
 
@@ -282,6 +300,7 @@ class Window : public tiny::Object {
 
     unsigned long functions = 0;
     unsigned long wm_states = 0;
+    ::Window transient_for = None;
     std::string wm_name;
     bool is_net_wm_name = true;
     std::string wm_icon_name;

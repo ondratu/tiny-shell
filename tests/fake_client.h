@@ -88,6 +88,12 @@ class FakeClient {
         set_atoms(dsp()._NET_WM_STATE, atoms);
     }
 
+    void set_transient_for(::Window parent)
+    {
+        XSetTransientForHint(display, window, parent);
+        sync();
+    }
+
     void set_protocols(const std::vector<Atom>& atoms)
     {
         XSetWMProtocols(display, window, const_cast<Atom*>(atoms.data()),

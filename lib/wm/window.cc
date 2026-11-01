@@ -113,6 +113,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
 
     update_protocols();
     update_properties();
+    update_transient_for();
 
     if (properties.count(dsp._NET_WM_STATE)) {
         update_wm_states();
@@ -276,6 +277,7 @@ void Window::set_minimized(bool minimized)
 
     set_wm_state(minimized ? IconicState : NormalState);
     publish_wm_states();
+    on_minimize(this, XEvent());
 }
 
 void Window::set_maximized(bool maximized)
@@ -387,6 +389,17 @@ void Window::set_focus()
     wm_states |= WMState::FOCUSED;
 
     publish_wm_states();
+}
+
+void Window::raise()
+{
+    XRaiseWindow(dsp, child);
+}
+
+void Window::move_to(int x, int y)
+{
+    XMoveWindow(dsp, child, x, y);
+    send_configure_notify();
 }
 
 void Window::return_focus()
@@ -523,6 +536,13 @@ void Window::update_properties()
         properties.insert(props[i]);
     }
     XFree(props);
+}
+
+void Window::update_transient_for()
+{
+    if (!XGetTransientForHint(dsp, child, &transient_for)) {
+        transient_for = None;
+    }
 }
 
 void Window::update_normal_hints()
@@ -932,57 +952,51 @@ void Window::on_button_release(const XEvent&, void*)
     XUngrabPointer(dsp, CurrentTime);
 }
 
+void Window::on_net_wm_state(const XClientMessageEvent& e)
+{
+    const long action = e.data.l[0];
+    if (action != tiny::Display::_NET_WM_STATE_REMOVE &&
+        action != tiny::Display::_NET_WM_STATE_ADD &&
+        action != tiny::Display::_NET_WM_STATE_TOGGLE) {
+        return; // not a request
+    }
+    bool resize_maximized = false;
+    // the two atoms of a request are independent (EWMH 1.5)
+    for (const int i : {1, 2}) {
+        const auto atom = static_cast<Atom>(e.data.l[i]);
+        if (atom == None) {
+            continue;
+        }
+        if (atom == dsp._NET_WM_STATE_FULLSCREEN) {
+            fullscreen(action == tiny::Display::_NET_WM_STATE_TOGGLE
+                               ? !is_fullscreen()
+                               : action == tiny::Display::_NET_WM_STATE_ADD);
+        } else if (atom == dsp._NET_WM_STATE_MAXIMIZED_VERT ||
+                   atom == dsp._NET_WM_STATE_MAXIMIZED_HORZ) {
+            resize_maximized = true; // only both directions at once
+        } else {
+            char* atom_name = XGetAtomName(dsp, atom);
+            TINY_LOG("Unhandled _NET_WM_STATE request %s", atom_name);
+            XFree(atom_name);
+        }
+    }
+    if (!resize_maximized) {
+        return;
+    }
+    const bool on = action == tiny::Display::_NET_WM_STATE_TOGGLE
+                            ? !get_maximized()
+                            : action == tiny::Display::_NET_WM_STATE_ADD;
+    if (on) {
+        maximize();
+    } else if (get_maximized()) {
+        restore();
+    }
+}
+
 void Window::on_client_message(const XEvent& e, void*)
 {
     if (e.xclient.message_type == dsp._NET_WM_STATE) {
-        // client want be maximized
-        const auto action = e.xclient.data.l[0];
-        if (static_cast<Atom>(e.xclient.data.l[1]) ==
-            dsp._NET_WM_STATE_FULLSCREEN) {
-            if (action == tiny::Display::_NET_WM_STATE_TOGGLE) {
-                fullscreen(!is_fullscreen());
-            } else {
-                fullscreen(action == tiny::Display::_NET_WM_STATE_ADD);
-            }
-            return;
-        }
-
-        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_ADD) {
-            if (static_cast<Atom>(e.xclient.data.l[1]) ==
-                        dsp._NET_WM_STATE_MAXIMIZED_VERT &&
-                static_cast<Atom>(e.xclient.data.l[2]) ==
-                        dsp._NET_WM_STATE_MAXIMIZED_HORZ) {
-                maximize();
-                return;
-            }
-
-            char* atom_name =
-                    XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
-            TINY_LOG("Unhandled WM_STATE_ADD request %s", atom_name);
-            XFree(atom_name);
-        }
-
-        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_REMOVE) {
-            if (static_cast<Atom>(e.xclient.data.l[1]) ==
-                        dsp._NET_WM_STATE_MAXIMIZED_VERT &&
-                static_cast<Atom>(e.xclient.data.l[2]) ==
-                        dsp._NET_WM_STATE_MAXIMIZED_HORZ) {
-                restore();
-                return;
-            }
-
-            char* atom_name =
-                    XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
-            TINY_LOG("Unhandled WM_STATE_REMOVE request %s", atom_name);
-            XFree(atom_name);
-        }
-
-        if (e.xclient.data.l[0] == tiny::Display::_NET_WM_STATE_TOGGLE) {
-            char* atom_name =
-                    XGetAtomName(dsp, static_cast<Atom>(e.xclient.data.l[1]));
-            TINY_LOG("Unhandled WM_STATE_TOGLE request %s", atom_name);
-            XFree(atom_name);
-        }
+        on_net_wm_state(e.xclient);
         return;
     }
 
@@ -1039,6 +1053,10 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
     if (e.xproperty.atom == dsp.WM_NORMAL_HINTS) {
         update_normal_hints();
+        return;
+    }
+    if (e.xproperty.atom == XA_WM_TRANSIENT_FOR) {
+        update_transient_for();
         return;
     }
     if (e.xproperty.atom == dsp.WM_NAME && !is_net_wm_name) {
