@@ -201,6 +201,8 @@ class Window : public tiny::Object {
     tiny::Signal on_focus;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
+    //! The window is dragged by its body with Alt or Super held
+    tiny::Signal on_modifier_drag;
 
   protected:
     /* event handlers */

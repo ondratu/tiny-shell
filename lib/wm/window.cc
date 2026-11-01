@@ -764,7 +764,8 @@ void Window::on_button_press(const XEvent& e, void*)
 {
     set_focus(); // set_focus is not important :-)
 
-    if (e.xbutton.state & Mod1Mask) {
+    if (e.xbutton.state & (Mod1Mask | Mod4Mask)) { // Alt or Super
+        on_modifier_drag(this, e);
         // unblock the pointer, but not send to child
         XAllowEvents(dsp, AsyncPointer, e.xbutton.time);
         XGrabPointer(dsp, child, false,
