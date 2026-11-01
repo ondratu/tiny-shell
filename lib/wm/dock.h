@@ -57,6 +57,9 @@ class Dock : public tiny::Box {
         return tiny::theme.wm_dock;
     }
 
+    /// The button with the dots at the end of the dock (the launcher).
+    DockButton& get_menu_button() { return icon; }
+
   private:
     void resize_to_children();
 
