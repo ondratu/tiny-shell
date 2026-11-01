@@ -30,6 +30,9 @@ class Manager : public tiny::Object {
 
     bool is_super(unsigned int keycode) const;
 
+    //! Restore, focus and remember as active at once
+    void focus_window(Window* window);
+
     void activate_next_window();
 
     void activate_prev_window();

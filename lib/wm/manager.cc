@@ -241,6 +241,16 @@ void Manager::main_loop()
     }
 }
 
+void Manager::focus_window(Window* window)
+{
+    if (window->get_minimized()) {
+        window->restore();
+    }
+    window->set_focus();
+    // do not wait for FocusIn, the next Alt + Tab can come before it
+    on_window_focus(window, XEvent(), nullptr);
+}
+
 void Manager::activate_next_window()
 {
     if (wm_windows.empty()) {
@@ -258,10 +268,7 @@ void Manager::activate_next_window()
         }
     }
 
-    if (next->get_minimized()) {
-        next->restore();
-    }
-    next->set_focus();
+    focus_window(next);
 }
 
 void Manager::activate_prev_window()
@@ -280,10 +287,7 @@ void Manager::activate_prev_window()
             break;
         }
     }
-    if (prev->get_minimized()) {
-        prev->restore();
-    }
-    prev->set_focus();
+    focus_window(prev);
 }
 
 void Manager::connect_window(Window* window)
@@ -301,11 +305,12 @@ void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
 
 void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 {
-    if (active) {
+    auto* window = reinterpret_cast<Window*>(o);
+    if (active && active != window) {
         active->return_focus();
         wm_dock.redraw(active, e);
     }
-    active = reinterpret_cast<Window*>(o);
+    active = window;
     wm_dock.redraw(active, e);
 }
 
@@ -339,6 +344,18 @@ void Manager::on_key_press(const XKeyEvent& xkey)
         key_done = true;
         return;
     }
+    /* Alt + Tab or Alt + Shift + Tab; on press, because Alt can be released
+     * before Tab and the release would not have the modifier any more */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
+        xkey.state & Mod1Mask) {
+        if (xkey.state & ShiftMask) {
+            activate_prev_window();
+        } else {
+            activate_next_window();
+        }
+        key_done = true;
+        return;
+    }
     key_done = false;
 }
 
@@ -353,17 +370,6 @@ void Manager::on_key_release(const XKeyEvent& xkey)
     }
     if (key_done) {
         return; // key is handled in on_key_press
-    }
-
-    /* Alt + Tab or Alt + Shift + Tab */
-    if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
-        xkey.state & Mod1Mask) {
-        if (xkey.state & ShiftMask) {
-            activate_prev_window();
-        } else {
-            activate_next_window();
-        }
-        return;
     }
 
     fprintf(stderr, "%lu Manager::on_key_release Unhalded key event: %x\n",
