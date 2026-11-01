@@ -28,6 +28,8 @@ class Manager : public tiny::Object {
 
     void set_supported();
 
+    bool is_super(unsigned int keycode) const;
+
     void activate_next_window();
 
     void activate_prev_window();
@@ -65,6 +67,7 @@ class Manager : public tiny::Object {
     std::list<Window*> wm_tops;
     std::list<Window*> wm_pager;
     bool key_done;
+    bool super_down = false; //!< Super is held and nothing cancelled it
     bool running;
 };
 

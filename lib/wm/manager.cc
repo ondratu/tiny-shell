@@ -307,6 +307,12 @@ void Manager::on_launcher(tiny::Object*, const XEvent&, void*)
     wm_launcher.toggle();
 }
 
+bool Manager::is_super(unsigned int keycode) const
+{
+    return keycode == XKeysymToKeycode(display, XK_Super_L) ||
+           keycode == XKeysymToKeycode(display, XK_Super_R);
+}
+
 void Manager::on_key_press(const XKeyEvent& xkey)
 {
     /* Alt F2 */
@@ -315,10 +321,9 @@ void Manager::on_key_press(const XKeyEvent& xkey)
         key_done = true;
         return;
     }
-    /* Super */
-    if (xkey.keycode == XKeysymToKeycode(display, XK_Super_L) ||
-        xkey.keycode == XKeysymToKeycode(display, XK_Super_R)) {
-        wm_launcher.toggle();
+    /* Super, the launcher opens when the key is released */
+    if (is_super(xkey.keycode)) {
+        super_down = true;
         key_done = true;
         return;
     }
@@ -327,6 +332,13 @@ void Manager::on_key_press(const XKeyEvent& xkey)
 
 void Manager::on_key_release(const XKeyEvent& xkey)
 {
+    if (is_super(xkey.keycode)) {
+        if (super_down) {
+            wm_launcher.toggle();
+        }
+        super_down = false;
+        return;
+    }
     if (key_done) {
         return; // key is handled in on_key_press
     }
