@@ -25,6 +25,7 @@ TEST(DesktopEntryParseTest, reads_the_basic_keys)
                                                "TryExec=firefox\n"
                                                "Icon=firefox\n"
                                                "Path=/opt/firefox\n"
+                                               "StartupWMClass=Navigator\n"
                                                "Terminal=false\n");
 
     EXPECT_EQ(e.type, "Application");
@@ -35,6 +36,7 @@ TEST(DesktopEntryParseTest, reads_the_basic_keys)
     EXPECT_EQ(e.try_exec, "firefox");
     EXPECT_EQ(e.icon, "firefox");
     EXPECT_EQ(e.path, "/opt/firefox");
+    EXPECT_EQ(e.startup_wm_class, "Navigator");
     EXPECT_FALSE(e.terminal);
 }
 

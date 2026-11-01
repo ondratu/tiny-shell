@@ -239,4 +239,39 @@ std::vector<size_t> search_applications(const std::vector<Application>& apps,
     return result;
 }
 
+size_t find_application_of_window(const std::vector<Application>& apps,
+                                  std::string_view instance,
+                                  std::string_view class_name)
+{
+    const std::string names[] = {fold_text(instance), fold_text(class_name)};
+    const auto is_name = [&names](const std::string& text) {
+        const std::string folded = fold_text(text);
+        return !folded.empty() && (folded == names[0] || folded == names[1]);
+    };
+    const auto find = [&apps](const auto& matches) {
+        const auto it = std::find_if(apps.begin(), apps.end(), matches);
+        return static_cast<size_t>(it - apps.begin());
+    };
+
+    size_t found = find([&](const Application& app) {
+        return is_name(app.entry.startup_wm_class);
+    });
+    if (found == apps.size()) {
+        found = find([&](const Application& app) {
+            std::string id = app.id;
+            const size_t suffix = id.rfind(".desktop");
+            if (suffix != std::string::npos) {
+                id.resize(suffix);
+            }
+            return is_name(id) || is_name(id.substr(id.rfind('.') + 1));
+        });
+    }
+    if (found == apps.size()) {
+        found = find([&](const Application& app) {
+            return is_name(program_name(app.entry.exec));
+        });
+    }
+    return found;
+}
+
 } // namespace tiny::xdg

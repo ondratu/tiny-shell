@@ -21,6 +21,7 @@ struct DesktopEntry {
     std::string try_exec;
     std::string path; //!< working directory of the program (Path)
     std::string icon;
+    std::string startup_wm_class; //!< WM_CLASS of the windows (StartupWMClass)
     std::vector<std::string> categories;
     std::vector<std::string> keywords;
     bool terminal = false;

@@ -132,6 +132,14 @@ class FakeClient {
         return p;
     }
 
+    void set_class(const char* instance, const char* class_name)
+    {
+        XClassHint class_hint = {const_cast<char*>(instance),
+                                 const_cast<char*>(class_name)};
+        XSetClassHint(display, window, &class_hint);
+        sync();
+    }
+
     void set_icon_pixmap(int size, bool with_mask)
     {
         XWMHints hints = {};

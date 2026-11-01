@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "image/pixmap.h"
 #include "wm/dock.h"
 
 using WmWindow = tiny::wm::Window;
@@ -186,6 +187,38 @@ TEST_F(DockIconTest, draws_the_icon_of_the_task)
     const Image img(icon->get_window(), icon_size(), icon_size());
     EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), 0xFF0000u);
     EXPECT_EQ(img.at(0, 0), 0xFF0000u);
+}
+
+TEST_F(DockIconTest, the_icon_of_the_application_is_preferred)
+{
+    icon.reset();
+    task.reset();
+    client.set_icon_pixmap(icon_size(), false); // red
+    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
+    tiny::image::Image image;
+    image.width = icon_size();
+    image.height = icon_size();
+    const auto side = static_cast<size_t>(icon_size());
+    image.pixels.assign(side * side, 0xFF00FF00U); // green, opaque
+    ::Display* x_display = tiny::get_display();
+    const Pixmap pixmap =
+            tiny::image::create_pixmap(x_display, root_window(), image);
+    if (pixmap == None) {
+        GTEST_SKIP() << "no ARGB32 format";
+    }
+    const Picture picture = tiny::image::create_argb_picture(x_display, pixmap);
+    task->set_app_icon({picture, icon_size(), icon_size()});
+    icon = std::make_unique<tiny::wm::DockIcon>(task.get());
+    icon->realize(root_window(), 0, 0);
+    icon->map_all();
+
+    send(*icon, Expose);
+
+    const Image img(icon->get_window(), icon_size(), icon_size());
+    EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), 0x00FF00u);
+    EXPECT_EQ(img.at(0, 0), 0x00FF00u);
+    XRenderFreePicture(x_display, picture);
+    XFreePixmap(x_display, pixmap);
 }
 
 TEST_F(DockIconTest, focused_task_is_drawn_selected)

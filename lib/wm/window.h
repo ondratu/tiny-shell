@@ -160,6 +160,19 @@ class Window : public tiny::Object {
          * zero is returned.
          * */
     Pixmap get_icon() const { return icon; }
+
+    //! The icon of the application (not owned), preferred to `get_icon()`
+    struct AppIcon {
+        Picture picture = None;
+        int width = 0;
+        int height = 0;
+    };
+    const AppIcon& get_app_icon() const { return app_icon; }
+    void set_app_icon(const AppIcon& value) { app_icon = value; }
+
+    //! WM_CLASS of the client, empty when it has none
+    const std::string& get_wm_class_instance() const { return wm_class[0]; }
+    const std::string& get_wm_class() const { return wm_class[1]; }
     Pixmap get_icon_mask() const { return icon_mask; }
 
     virtual void set_focus();
@@ -182,6 +195,7 @@ class Window : public tiny::Object {
     void update_wm_hints();     //!< Update XWMHints;
     void update_wm_states();    //!< Update WMStates
     void update_wm_name();      //!< Update wm_name
+    void update_wm_class();     //!< Update wm_class
     void update_wm_icon_name(); //!< Update wm_icon_name
     void update_wm_icon();
     void set_events();
@@ -241,6 +255,8 @@ class Window : public tiny::Object {
     std::string wm_icon_name;
 
     Pixmap icon = 0;
+    AppIcon app_icon;
+    std::string wm_class[2]; //!< instance, class
     Pixmap icon_mask = 0;
 
     XEvent start_event; // state before moving/resizing

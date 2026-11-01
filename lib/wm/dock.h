@@ -35,7 +35,10 @@ class DockIcon : public DockButton {
     void on_button_release(const XEvent& e, void* data) override;
     void on_expose(const XEvent& e, void* data) override;
 
+    void draw_app_icon(const Window::AppIcon& app_icon);
+
     Window* task;
+    Picture target = None; //!< of the window, for the icon of the application
 };
 
 class Dock : public tiny::Box {

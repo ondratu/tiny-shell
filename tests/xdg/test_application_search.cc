@@ -212,3 +212,45 @@ TEST(SearchApplicationsTest,
     EXPECT_TRUE(tiny::xdg::search_applications(apps, "unclosed").empty());
     EXPECT_EQ(tiny::xdg::search_applications(apps, ""), (Indexes{0, 1, 2}));
 }
+
+// ---- the application of a window ----
+
+TEST(ApplicationOfWindowTest, startup_wm_class_wins)
+{
+    auto other = app("reto.desktop", "Reto", "reto");
+    auto fox = app("browser.desktop", "Browser", "browser");
+    fox.entry.startup_wm_class = "Navigator";
+    const std::vector<tiny::xdg::Application> apps{other, fox};
+
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "navigator", "Reto"),
+              1u);
+}
+
+TEST(ApplicationOfWindowTest, id_or_its_last_part_matches_the_class)
+{
+    const std::vector<tiny::xdg::Application> apps{
+            app("xterm.desktop", "XTerm", "xterm"),
+            app("cz.zeropage.Reto.desktop", "Reto", "env LANG=C reto %U")};
+
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "reto", "Reto"), 1u);
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "x", "XTERM"), 0u);
+}
+
+TEST(ApplicationOfWindowTest, program_of_exec_is_the_last_resort)
+{
+    const std::vector<tiny::xdg::Application> apps{
+            app("a.desktop", "A", "/usr/bin/gimp-2.10 %U"),
+            app("b.desktop", "B", "/opt/bin/viewer %f")};
+
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "viewer", "Other"),
+              1u);
+}
+
+TEST(ApplicationOfWindowTest, no_match_or_empty_names_give_the_size)
+{
+    const std::vector<tiny::xdg::Application> apps{app("a.desktop", "A", "%U"),
+                                                   app("b.desktop", "B")};
+
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "zzz", "Zzz"), 2u);
+    EXPECT_EQ(tiny::xdg::find_application_of_window(apps, "", ""), 2u);
+}

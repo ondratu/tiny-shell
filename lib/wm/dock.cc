@@ -6,6 +6,7 @@
 #include "object.h"
 #include "wm/window.h"
 #include <X11/Xlib.h>
+#include <X11/extensions/Xrender.h>
 
 namespace tiny::wm {
 
@@ -88,12 +89,34 @@ void DockButton::on_expose(const XEvent&, void*)
 
 DockIcon::DockIcon(Window* task_arg): task(task_arg) {}
 
-DockIcon::~DockIcon() = default;
+DockIcon::~DockIcon()
+{
+    if (target != None) {
+        XRenderFreePicture(display, target);
+    }
+}
 
 void DockIcon::on_button_release(const XEvent& e, void* data)
 {
     task->set_focus();
     DockButton::on_button_release(e, data);
+}
+
+// The icon of the application is ARGB, so it is composited over the button
+void DockIcon::draw_app_icon(const Window::AppIcon& app_icon)
+{
+    if (target == None) { // the window has the default visual, made only once
+        const XRenderPictFormat* format = XRenderFindVisualFormat(
+                display, XDefaultVisual(display, XDefaultScreen(display)));
+        if (format == nullptr) {
+            return;
+        }
+        target = XRenderCreatePicture(display, window, format, 0, nullptr);
+    }
+    XRenderComposite(
+            display, PictOpOver, app_icon.picture, None, target, 0, 0, 0, 0,
+            (width - app_icon.width) / 2, (height - app_icon.height) / 2,
+            tiny::x_uint(app_icon.width), tiny::x_uint(app_icon.height));
 }
 
 void DockIcon::on_expose(const XEvent&, void*)
@@ -107,7 +130,10 @@ void DockIcon::on_expose(const XEvent&, void*)
 
     const Pixmap icon = task->get_icon();
     const Pixmap icon_mask = task->get_icon_mask();
-    if (icon) {
+    const Window::AppIcon& app_icon = task->get_app_icon();
+    if (app_icon.picture != None) {
+        draw_app_icon(app_icon);
+    } else if (icon) {
         if (icon_mask) {
             XGCValues gc_vals;
             gc_vals.clip_mask = icon_mask;

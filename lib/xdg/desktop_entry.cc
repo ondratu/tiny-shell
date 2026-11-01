@@ -220,6 +220,7 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.try_exec = unescape(get("TryExec"));
     entry.path = unescape(get("Path"));
     entry.icon = unescape(get("Icon"));
+    entry.startup_wm_class = unescape(get("StartupWMClass"));
     entry.categories = split_list(get("Categories"));
     entry.keywords = split_list(get("Keywords"));
     entry.terminal = get("Terminal") == "true";

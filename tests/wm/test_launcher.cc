@@ -385,6 +385,26 @@ TEST_F(LauncherTest, the_local_share_is_searched_when_the_variable_omits_it)
     EXPECT_TRUE(appears(root / "gamma"));
 }
 
+TEST_F(LauncherTest, the_application_of_a_window_gives_its_icon)
+{
+    fs::create_directories(root / "pixmaps");
+    std::ofstream(root / "pixmaps" / "delta.xpm")
+            << "/* XPM */\nstatic char * delta_xpm[] = {\n"
+               "\"2 2 1 1\",\n\"a c #FF0000\",\n\"aa\",\n\"aa\"};\n";
+    std::ofstream(root / "applications" / "cz.example.Delta.desktop")
+            << "[Desktop Entry]\nName=Delta\nType=Application\nIcon=delta\n"
+               "Exec=true\n";
+    const EnvVar dirs("XDG_DATA_DIRS", root.string());
+
+    const auto& icon = launcher.application_icon("delta", "Delta");
+    EXPECT_NE(icon.picture, None);
+    EXPECT_EQ(icon.width, tiny::theme.wm_icon);
+    EXPECT_EQ(&launcher.application_icon("delta", "Delta"), &icon); // cached
+
+    EXPECT_EQ(launcher.application_icon("nothing", "Nothing").picture, None);
+    EXPECT_EQ(launcher.application_icon("alpha", "Alpha").picture, None);
+}
+
 TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
 {
     fs::create_directories(root / "pixmaps");

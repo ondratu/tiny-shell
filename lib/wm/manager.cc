@@ -109,6 +109,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
             wm_windows[rv_child[i]] = window;
             wm_tops.push_back(window);
+            set_application_icon(window);
             if (!window->skip_taskbar()) {
                 wm_dock.add(window);
             }
@@ -290,6 +291,19 @@ void Manager::activate_prev_window()
     focus_window(prev);
 }
 
+void Manager::set_application_icon(Window* window)
+{
+    if (window->get_wm_class().empty() &&
+        window->get_wm_class_instance().empty()) {
+        return;
+    }
+    const Launcher::Icon& icon = wm_launcher.application_icon(
+            window->get_wm_class_instance(), window->get_wm_class());
+    if (icon.picture != None) {
+        window->set_app_icon({icon.picture, icon.width, icon.height});
+    }
+}
+
 void Manager::connect_window(Window* window)
 {
     window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
@@ -437,6 +451,7 @@ void Manager::on_map_request(const XMapRequestEvent& e)
 
     wm_windows[e.window] = window;
     wm_tops.push_back(window);
+    set_application_icon(window);
     if (!window->skip_taskbar()) {
         wm_dock.add(window);
     }
