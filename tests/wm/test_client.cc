@@ -414,6 +414,24 @@ TEST_F(ClientTest, focus_events_enable_and_disable_the_header)
     EXPECT_TRUE(header_image() == disabled);
 }
 
+TEST_F(ClientTest, a_grab_does_not_change_the_look_of_the_header)
+{
+    build();
+    send(client.window, make_event(FocusIn));
+    send(win->header, Expose);
+    const Image focused(win->header.get_window(), win->header.get_width(),
+                        win->header.get_height());
+
+    XEvent out = make_event(FocusOut);
+    out.xfocus.mode = NotifyGrab;
+    send(client.window, out);
+    send(win->header, Expose);
+
+    EXPECT_TRUE(focused == Image(win->header.get_window(),
+                                 win->header.get_width(),
+                                 win->header.get_height()));
+}
+
 TEST_F(ClientTest, focus_in_signals_on_focus)
 {
     build();

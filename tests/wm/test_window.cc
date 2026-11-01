@@ -1032,6 +1032,37 @@ TEST_F(WindowTest, focus_in_signals_on_focus)
     EXPECT_EQ(recorder.last_owner, window.get());
 }
 
+TEST_F(WindowTest, focus_in_of_a_grab_or_of_the_pointer_is_not_a_focus_change)
+{
+    auto window = manage();
+    window->set_events();
+    Recorder recorder;
+    window->on_focus.connect(&recorder, recorder.slot());
+
+    // what the Alt + Tab grab of the window manager makes the server report
+    XEvent grab = make_event(FocusIn);
+    grab.xfocus.mode = NotifyGrab;
+    grab.xfocus.detail = NotifyPointer;
+    send(client.window, grab);
+    XEvent ungrab = make_event(FocusIn);
+    ungrab.xfocus.mode = NotifyUngrab;
+    send(client.window, ungrab);
+    XEvent pointer = make_event(FocusIn);
+    pointer.xfocus.detail = NotifyPointer;
+    send(client.window, pointer);
+    XEvent inferior = make_event(FocusIn);
+    inferior.xfocus.detail = NotifyInferior;
+    send(client.window, inferior);
+    EXPECT_EQ(recorder.calls, 0);
+
+    // a change while the keyboard is grabbed is a real one
+    XEvent while_grabbed = make_event(FocusIn);
+    while_grabbed.xfocus.mode = NotifyWhileGrabbed;
+    while_grabbed.xfocus.detail = NotifyNonlinear;
+    send(client.window, while_grabbed);
+    EXPECT_EQ(recorder.calls, 1);
+}
+
 TEST_F(WindowTest, focus_out_is_ignored)
 {
     auto window = manage();

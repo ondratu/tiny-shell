@@ -242,19 +242,43 @@ void Manager::main_loop()
     }
 }
 
+// "0x200003 "title"" or "none", for the log
+static std::string describe(const Window* window)
+{
+    if (window == nullptr) {
+        return "none";
+    }
+    char id[32];
+    snprintf(id, sizeof(id), "0x%lx", window->get_child());
+    return std::string(id) + " \"" + window->get_wm_name() + "\"";
+}
+
 void Manager::focus_window(Window* window)
 {
-    if (window->get_minimized()) {
+    const bool minimized = window->get_minimized();
+    TINY_LOG("focus %s, active was %s%s", describe(window).c_str(),
+             describe(active).c_str(), minimized ? ", restored" : "");
+    if (minimized) {
         window->restore();
     }
     window->set_focus();
     // do not wait for FocusIn, the next Alt + Tab can come before it
     on_window_focus(window, XEvent(), nullptr);
+
+    // the log shows if the server did what was asked
+    ::Window focused = None;
+    int revert;
+    XSync(display, False);
+    XGetInputFocus(display, &focused, &revert);
+    if (focused != window->get_child()) {
+        TINY_LOG("X focus is 0x%lx, not %s", focused, describe(window).c_str());
+    }
 }
 
 void Manager::activate_next_window()
 {
     if (wm_windows.empty()) {
+        TINY_LOG("next window: no window to activate");
         return; // no window to activate
     }
 
@@ -275,6 +299,7 @@ void Manager::activate_next_window()
 void Manager::activate_prev_window()
 {
     if (wm_tops.empty()) {
+        TINY_LOG("previous window: no window to activate");
         return; // no window to activate
     }
 
@@ -320,6 +345,8 @@ void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
 void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
+    TINY_LOG("active %s -> %s", describe(active).c_str(),
+             describe(window).c_str());
     if (active && active != window) {
         active->return_focus();
         wm_dock.redraw(active, e);
@@ -362,6 +389,9 @@ void Manager::on_key_press(const XKeyEvent& xkey)
      * before Tab and the release would not have the modifier any more */
     if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
         xkey.state & Mod1Mask) {
+        TINY_LOG("%s: %zu windows, active %s, state 0x%x",
+                 xkey.state & ShiftMask ? "Alt+Shift+Tab" : "Alt+Tab",
+                 wm_tops.size(), describe(active).c_str(), xkey.state);
         if (xkey.state & ShiftMask) {
             activate_prev_window();
         } else {
@@ -398,6 +428,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
         if (window->get_minimized()) {
             return;
         }
+        TINY_LOG("unmanage %s", describe(window).c_str());
         if (active == window) {
             activate_prev_window();
         }
