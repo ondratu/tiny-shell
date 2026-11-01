@@ -1042,8 +1042,8 @@ TEST_F(ManagerTest, errors_of_a_vanished_window_are_ignored_quietly)
     XErrorEvent error = {};
     error.display = dsp();
 
-    for (const unsigned char code : {BadWindow, BadDrawable}) {
-        error.error_code = code;
+    for (const int code : {BadWindow, BadDrawable}) {
+        error.error_code = static_cast<unsigned char>(code);
         ::testing::internal::CaptureStderr();
         EXPECT_EQ(tiny::wm::Manager::on_error(dsp(), &error), 0);
         EXPECT_EQ(::testing::internal::GetCapturedStderr(), "");
