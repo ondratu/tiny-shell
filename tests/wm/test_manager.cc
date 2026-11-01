@@ -511,6 +511,53 @@ TEST_F(ManagerTest, configure_request_of_an_unmanaged_window_is_executed)
     EXPECT_EQ(attrs.height, 150);
 }
 
+TEST_F(ManagerTest, configure_request_of_a_framed_window_moves_the_frame)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    ASSERT_TRUE(is_framed(c));
+    const ::Window frame = parent_of(c.window);
+    c.watch_structure();
+
+    XMoveResizeWindow(c.display, c.window, 70, 120, 320, 210);
+    c.sync();
+    run_loop();
+
+    const auto f = attributes_of(frame);
+    EXPECT_EQ(f.x, 70 - f.border_width);
+    EXPECT_EQ(f.y, 120 - tiny::theme.wm_win_header - f.border_width);
+    EXPECT_EQ(f.width, 320);
+    EXPECT_EQ(f.height, 210 + tiny::theme.wm_win_header);
+    EXPECT_EQ(parent_of(c.window), frame);
+    const auto a = c.attrs();
+    EXPECT_EQ(a.x, 0);
+    EXPECT_EQ(a.y, tiny::theme.wm_win_header);
+    EXPECT_EQ(a.width, 320);
+    EXPECT_EQ(a.height, 210);
+    XConfigureEvent notify = {};
+    ASSERT_TRUE(c.synthetic_configure(notify));
+    EXPECT_EQ(notify.x, 70);
+}
+
+TEST_F(ManagerTest, map_request_of_a_minimized_window_shows_it_again)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    WmWindow* window = manager->wm_windows[c.window];
+    window->minimize();
+    XMapRequestEvent e = {};
+    e.type = MapRequest;
+    e.window = c.window;
+
+    manager->on_map_request(e);
+
+    EXPECT_FALSE(window->get_minimized());
+    EXPECT_EQ(manager->wm_windows.size(), 1u);
+    EXPECT_EQ(manager->wm_tops.size(), 1u);
+}
+
 TEST_F(ManagerTest, unmapped_window_is_forgotten)
 {
     start();
@@ -582,6 +629,128 @@ TEST_F(ManagerTest, unmap_of_a_minimized_window_keeps_it)
     manager->on_unmap_notify(e);
 
     EXPECT_TRUE(is_managed(c));
+}
+
+TEST_F(ManagerTest, destroyed_window_is_forgotten)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    ASSERT_TRUE(is_managed(c));
+    const XErrors errors;
+
+    XDestroyWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(is_managed(c));
+    EXPECT_EQ(manager->wm_tops.size(), 0u);
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(manager->active, nullptr);
+}
+
+TEST_F(ManagerTest, destroyed_minimized_window_leaves_the_dock)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    WmWindow* window = manager->wm_windows[c.window];
+    window->minimize();
+    ASSERT_TRUE(is_managed(c));
+    const XErrors errors;
+
+    XDestroyWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(is_managed(c));
+    EXPECT_EQ(manager->wm_tops.size(), 0u);
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(manager->active, nullptr);
+}
+
+TEST_F(ManagerTest, destroyed_active_window_passes_the_focus_on)
+{
+    manage_three();
+    auto it = manager->wm_tops.begin();
+    const WmWindow* first = *it++;
+    WmWindow* second = *it;
+    manager->active = second;
+    const XErrors errors;
+    ::Window gone = 0;
+    for (const auto& item : manager->wm_windows) {
+        if (item.second == second) {
+            gone = item.first;
+        }
+    }
+    ASSERT_NE(gone, 0u);
+
+    XDestroyWindowEvent e = {};
+    e.type = DestroyNotify;
+    e.window = gone;
+    manager->on_destroy_notify(e);
+
+    EXPECT_EQ(manager->active, first);
+    EXPECT_EQ(manager->wm_windows.count(gone), 0u);
+}
+
+TEST_F(ManagerTest, destroy_of_an_unknown_window_is_ignored)
+{
+    start();
+    XDestroyWindowEvent e = {};
+    e.type = DestroyNotify;
+    e.window = 12345;
+
+    manager->on_destroy_notify(e);
+
+    EXPECT_EQ(manager->wm_windows.size(), 0u);
+}
+
+TEST_F(ManagerTest, managed_window_gets_wm_state_normal)
+{
+    start();
+    FakeClient& c = add_client();
+
+    run_loop();
+
+    EXPECT_EQ(c.wm_state(), NormalState);
+}
+
+TEST_F(ManagerTest, window_hidden_by_the_client_is_withdrawn)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    c.set_state({dsp()._NET_WM_STATE_ABOVE});
+    ASSERT_TRUE(c.has_property(dsp()._NET_WM_STATE));
+
+    XUnmapWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+
+    EXPECT_FALSE(is_managed(c));
+    EXPECT_EQ(c.wm_state(), WithdrawnState);
+    EXPECT_FALSE(c.has_property(dsp()._NET_WM_STATE));
+}
+
+TEST_F(ManagerTest, the_state_of_a_window_does_not_survive_a_withdraw)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    manager->wm_windows[c.window]->maximize();
+    XUnmapWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    ASSERT_FALSE(is_managed(c));
+
+    c.map();
+    run_loop();
+
+    ASSERT_TRUE(is_managed(c));
+    EXPECT_FALSE(manager->wm_windows[c.window]->get_maximized());
 }
 
 TEST_F(ManagerTest, focus_moves_the_active_window)
@@ -866,6 +1035,32 @@ TEST_F(ManagerTest, unknown_key_release_is_survived)
 }
 
 // ---- errors ----
+
+TEST_F(ManagerTest, errors_of_a_vanished_window_are_ignored_quietly)
+{
+    start();
+    XErrorEvent error = {};
+    error.display = dsp();
+
+    for (const unsigned char code : {BadWindow, BadDrawable}) {
+        error.error_code = code;
+        ::testing::internal::CaptureStderr();
+        EXPECT_EQ(tiny::wm::Manager::on_error(dsp(), &error), 0);
+        EXPECT_EQ(::testing::internal::GetCapturedStderr(), "");
+    }
+}
+
+TEST_F(ManagerTest, other_x_errors_are_logged)
+{
+    start();
+    XErrorEvent error = {};
+    error.display = dsp();
+    error.error_code = BadMatch;
+
+    ::testing::internal::CaptureStderr();
+    EXPECT_EQ(tiny::wm::Manager::on_error(dsp(), &error), 0);
+    EXPECT_NE(::testing::internal::GetCapturedStderr(), "");
+}
 
 TEST_F(ManagerTest, x_errors_are_logged_and_ignored)
 {

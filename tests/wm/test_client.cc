@@ -154,27 +154,24 @@ TEST_F(ClientTest, create_places_a_window_under_the_panel)
     EXPECT_EQ(f.y, tiny::theme.wm_panel);
 }
 
-TEST_F(ClientTest, create_sets_wm_state_to_normal)
+TEST_F(ClientTest, create_sets_wm_state_of_the_client_to_normal)
 {
     const XWindowAttributes a = client.attrs();
     const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
             root_window(), client.window, a, 0xFFFF, 0xFFFF));
-    const ::Window frame =
-            static_cast<tiny::wm::Client*>(w.get())->get_window();
-    XSync(dsp(), False);
 
-    Atom type;
-    int format;
-    unsigned long count;
-    unsigned long left;
-    unsigned char* data = nullptr;
-    ASSERT_EQ(XGetWindowProperty(dsp(), frame, dsp().WM_STATE, 0, 2, False,
-                                 dsp().WM_STATE, &type, &format, &count, &left,
-                                 &data),
-              Success);
-    ASSERT_EQ(count, 2u);
-    EXPECT_EQ((reinterpret_cast<long*>(data))[0], NormalState);
-    XFree(data);
+    EXPECT_EQ(client.wm_state(), NormalState);
+}
+
+TEST_F(ClientTest, minimize_sets_wm_state_to_iconic_and_restore_to_normal)
+{
+    build();
+
+    win->minimize();
+    EXPECT_EQ(client.wm_state(), IconicState);
+
+    win->restore();
+    EXPECT_EQ(client.wm_state(), NormalState);
 }
 
 TEST_F(ClientTest, resizable_window_has_a_shadow_below_the_frame)
@@ -469,16 +466,12 @@ TEST_F(ClientTest, title_follows_net_wm_name)
     EXPECT_EQ(win->header.get_title(), "utf8 title");
 }
 
-TEST_F(ClientTest, normal_hints_change_puts_a_moved_client_back)
+TEST_F(ClientTest, the_client_cannot_move_itself_inside_the_frame)
 {
     build();
+
     XMoveWindow(client.display, client.window, 30, 40);
     client.sync();
-    ASSERT_EQ(child().x, 30);
-    XEvent e = make_event(PropertyNotify);
-    e.xproperty.atom = dsp().WM_NORMAL_HINTS;
-
-    send(client.window, e);
 
     EXPECT_EQ(child().x, 0);
     EXPECT_EQ(child().y, header_height());
@@ -858,6 +851,155 @@ TEST_F(ClientTest, destructor_survives_a_client_that_is_gone)
     win.reset();
 
     EXPECT_EQ(errors.errors(), 0);
+}
+
+// ---- configure request ----
+
+XConfigureRequestEvent configure_request(::Window window, unsigned long mask,
+                                         int x, int y, int width, int height)
+{
+    XConfigureRequestEvent e = {};
+    e.type = ConfigureRequest;
+    e.window = window;
+    e.value_mask = mask;
+    e.x = x;
+    e.y = y;
+    e.width = width;
+    e.height = height;
+    return e;
+}
+
+TEST_F(ClientTest, configure_request_moves_and_resizes_the_frame)
+{
+    build();
+
+    win->configure_request(configure_request(
+            client.window, CWX | CWY | CWWidth | CWHeight, 30, 100, 320, 210));
+
+    EXPECT_EQ(frame().x, 30 - frame().border_width);
+    EXPECT_EQ(frame().y, 100 - header_height() - frame().border_width);
+    EXPECT_EQ(frame().width, 320);
+    EXPECT_EQ(frame().height, 210 + header_height());
+    EXPECT_EQ(child().width, 320);
+    EXPECT_EQ(child().height, 210);
+    EXPECT_EQ(child().x, 0);
+    EXPECT_EQ(child().y, header_height());
+    EXPECT_EQ(attributes_of(win->header).width, 320);
+    EXPECT_EQ(attributes_of(win->shadow).x,
+              frame().x - tiny::theme.wm_win_border);
+    EXPECT_EQ(attributes_of(win->shadow).height,
+              210 + header_height() + 2 * tiny::theme.wm_win_border);
+}
+
+TEST_F(ClientTest, configure_request_to_raise_raises_the_frame)
+{
+    build();
+    FakeClient other;
+    other.map();
+    XRaiseWindow(dsp(), other.window);
+    XConfigureRequestEvent e =
+            configure_request(client.window, CWStackMode, 0, 0, 0, 0);
+    e.detail = Above;
+
+    win->configure_request(e);
+
+    const auto stack = children_of(root_window());
+    EXPECT_EQ(stack.back(), win->get_window());
+}
+
+TEST_F(ClientTest, configure_request_keeps_the_header_under_the_panel)
+{
+    build();
+
+    win->configure_request(configure_request(client.window, CWY, 0, 0, 0, 0));
+
+    EXPECT_EQ(frame().y, tiny::theme.wm_panel);
+}
+
+TEST_F(ClientTest, configure_request_keeps_what_it_does_not_ask_for)
+{
+    build();
+    const XWindowAttributes before = frame();
+
+    win->configure_request(
+            configure_request(client.window, CWWidth, 0, 0, 333, 0));
+
+    EXPECT_EQ(frame().x, before.x);
+    EXPECT_EQ(frame().y, before.y);
+    EXPECT_EQ(frame().width, 333);
+    EXPECT_EQ(frame().height, before.height);
+}
+
+TEST_F(ClientTest, configure_request_tells_the_client_where_it_is)
+{
+    build();
+    client.watch_structure();
+
+    win->configure_request(
+            configure_request(client.window, CWX | CWY, 30, 100, 0, 0));
+
+    XConfigureEvent notify = {};
+    ASSERT_TRUE(client.synthetic_configure(notify));
+    EXPECT_EQ(notify.x, 30); // where the client asked for its area
+    EXPECT_EQ(notify.y, 100);
+    EXPECT_EQ(notify.width, child().width);
+    EXPECT_EQ(notify.height, child().height);
+}
+
+TEST_F(ClientTest, configure_request_of_a_maximized_window_keeps_its_place)
+{
+    build();
+    win->maximize();
+    const XWindowAttributes before = frame();
+
+    win->configure_request(configure_request(
+            client.window, CWX | CWY | CWWidth | CWHeight, 30, 40, 320, 210));
+
+    EXPECT_EQ(frame().x, before.x);
+    EXPECT_EQ(frame().y, before.y);
+    EXPECT_EQ(frame().width, before.width);
+    EXPECT_EQ(frame().height, before.height);
+}
+
+TEST_F(ClientTest, configure_request_of_a_fullscreen_window_keeps_its_place)
+{
+    build();
+    win->fullscreen(true);
+
+    win->configure_request(configure_request(
+            client.window, CWX | CWY | CWWidth | CWHeight, 30, 40, 320, 210));
+
+    EXPECT_EQ(frame().width, screen().width);
+    EXPECT_EQ(frame().height, screen().height);
+}
+
+TEST_F(ClientTest, the_client_is_told_its_place_after_maximize_and_restore)
+{
+    build();
+    client.watch_structure();
+    XConfigureEvent notify = {};
+
+    win->maximize();
+    ASSERT_TRUE(client.synthetic_configure(notify));
+    EXPECT_EQ(notify.y,
+              tiny::theme.wm_panel + header_height() + frame().border_width);
+
+    win->restore();
+    ASSERT_TRUE(client.synthetic_configure(notify));
+    EXPECT_EQ(notify.x, frame().x + frame().border_width);
+}
+
+TEST_F(ClientTest, the_client_is_told_its_place_after_moving_and_resizing)
+{
+    build();
+    client.watch_structure();
+    XConfigureEvent notify = {};
+
+    win->on_window_drag_end(nullptr, make_event(ButtonRelease), nullptr);
+    EXPECT_TRUE(client.synthetic_configure(notify));
+
+    win->on_move_resize_end(nullptr, make_event(ButtonRelease), nullptr);
+    EXPECT_TRUE(client.synthetic_configure(notify));
 }
 
 } // namespace

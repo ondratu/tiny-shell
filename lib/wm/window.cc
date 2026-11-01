@@ -178,9 +178,76 @@ Window* Window::create(::Window root, ::Window child, const XWindowAttributes&,
     XSetWindowBorderWidth(display, child, 1);
     XRaiseWindow(display, child);
 
+    win->set_wm_state(NormalState);
     win->set_events();
     // TODO: move down under panel
     return win;
+}
+
+void Window::set_wm_state(long wm_state)
+{
+    const unsigned long data[2] = {static_cast<unsigned long>(wm_state),
+                                   static_cast<unsigned long>(None)};
+    XChangeProperty(dsp, child, dsp.WM_STATE, dsp.WM_STATE, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(data), 2);
+}
+
+void Window::withdraw()
+{
+    set_wm_state(WithdrawnState);
+    XDeleteProperty(dsp, child, dsp._NET_WM_STATE);
+}
+
+void Window::configure_request(const XConfigureRequestEvent& e)
+{
+    if (get_maximized() || is_fullscreen()) {
+        send_configure_notify(); // the window keeps its place
+        return;
+    }
+
+    XWindowChanges ch;
+    ch.x = e.x;
+    ch.y = e.y;
+    ch.width = e.width;
+    ch.height = e.height;
+    ch.border_width = e.border_width;
+    ch.sibling = e.above;
+    ch.stack_mode = e.detail;
+
+    XConfigureWindow(dsp, child, static_cast<unsigned int>(e.value_mask), &ch);
+    send_configure_notify();
+}
+
+void Window::send_configure_notify()
+{
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(dsp, child, &attrs)) {
+        return;
+    }
+    int x = 0;
+    int y = 0;
+    ::Window unused;
+    if (!XTranslateCoordinates(dsp, child, root, 0, 0, &x, &y, &unused)) {
+        return;
+    }
+    // the position of the outer corner, the border is a part of the window
+    x -= attrs.border_width;
+    y -= attrs.border_width;
+
+    XConfigureEvent msg = {};
+    msg.type = ConfigureNotify;
+    msg.display = dsp;
+    msg.event = child;
+    msg.window = child;
+    msg.x = x;
+    msg.y = y;
+    msg.width = attrs.width;
+    msg.height = attrs.height;
+    msg.border_width = attrs.border_width;
+    msg.above = None;
+    msg.override_redirect = False;
+    XSendEvent(dsp, child, False, StructureNotifyMask,
+               reinterpret_cast<XEvent*>(&msg));
 }
 
 void Window::set_minimized(bool minimized)
@@ -191,6 +258,7 @@ void Window::set_minimized(bool minimized)
         wm_states &= static_cast<unsigned long>(~WMState::HIDDEN);
     }
 
+    set_wm_state(minimized ? IconicState : NormalState);
     publish_wm_states();
 }
 
@@ -969,6 +1037,10 @@ void Window::on_property_notify(const XEvent& e, void*)
     if (e.xproperty.atom == dsp._NET_WM_ICON) {
         update_wm_icon();
         return;
+    }
+
+    if (e.xproperty.atom == dsp.WM_STATE) {
+        return; // written by the window manager itself
     }
 
     if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
