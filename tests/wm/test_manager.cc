@@ -448,6 +448,129 @@ TEST_F(ManagerTest, the_window_of_a_dock_type_is_mapped_but_not_managed)
     EXPECT_FALSE(is_framed(c));
 }
 
+// A dock of a client that reserves 50 px on the left and runs the loop
+TEST_F(ManagerTest, a_dock_with_a_strut_shrinks_the_work_area)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+    dock.map();
+
+    run_loop();
+
+    EXPECT_EQ(manager->work_area.x, 50);
+    EXPECT_EQ(manager->work_area.width, screen_area().width - 50);
+}
+
+TEST_F(ManagerTest, the_work_area_is_published_on_the_root)
+{
+    start();
+
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(dsp(), root_window(), dsp()._NET_WORKAREA, 0,
+                                 4, False, XA_CARDINAL, &type, &format, &count,
+                                 &left, &data),
+              Success);
+    ASSERT_NE(data, nullptr);
+    const auto* v = reinterpret_cast<const long*>(data);
+    EXPECT_EQ(count, 4u);
+    EXPECT_EQ(v[1], tiny::theme.wm_panel);
+    EXPECT_EQ(v[2], screen_area().width);
+    XFree(data);
+}
+
+TEST_F(ManagerTest, a_changed_strut_moves_the_work_area)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+    dock.map();
+    run_loop();
+
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {0, 0, 0, 80});
+    run_loop();
+
+    EXPECT_EQ(manager->work_area.x, 0);
+    EXPECT_EQ(manager->work_area.height, screen_area().height - 80);
+}
+
+TEST_F(ManagerTest, a_destroyed_dock_gives_the_space_back)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+    dock.map();
+    run_loop();
+    ASSERT_EQ(manager->work_area.x, 50);
+
+    XDestroyWindow(dock.display, dock.window);
+    dock.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->work_area.x, 0);
+    EXPECT_EQ(manager->wm_docks.size(), 0u);
+}
+
+TEST_F(ManagerTest, a_hidden_dock_reserves_nothing)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+    dock.map();
+    run_loop();
+
+    XUnmapWindow(dock.display, dock.window);
+    dock.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->work_area.x, 0);
+}
+
+TEST_F(ManagerTest, maximized_windows_follow_a_dock)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    manager->wm_windows[c.window]->maximize();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+
+    dock.map();
+    run_loop();
+
+    const XWindowAttributes f = attributes_of(parent_of(c.window));
+    EXPECT_EQ(f.x, 50);
+    EXPECT_EQ(f.width, screen_area().width - 50);
+}
+
+TEST_F(ManagerTest, a_new_window_is_placed_in_the_work_area)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.set_cardinals(dsp()._NET_WM_STRUT, {50, 0, 0, 0});
+    dock.map();
+    run_loop();
+    FakeClient& c = add_client(false);
+    XMoveWindow(c.display, c.window, 0, 0);
+    c.map();
+
+    run_loop();
+
+    const XWindowAttributes f = attributes_of(parent_of(c.window));
+    EXPECT_GE(f.x, 50);
+    EXPECT_GE(f.y, tiny::theme.wm_panel);
+}
+
 TEST_F(ManagerTest, window_without_decorations_is_managed_on_map_request)
 {
     start();

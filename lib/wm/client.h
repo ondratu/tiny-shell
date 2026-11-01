@@ -21,7 +21,8 @@ class Client : public tiny::Container, public Window {
 
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
-                          unsigned long functions, unsigned long decorations);
+                          unsigned long functions, unsigned long decorations,
+                          const tiny::Rect& area);
 
     void realize(::Window parent, int x, int y) override;
 
@@ -74,6 +75,8 @@ class Client : public tiny::Container, public Window {
     void on_focus_out(const XEvent& e, void* data) override;
 
     void on_property_notify(const XEvent& e, void* data) override;
+
+    void place_maximized() override;
 
     //! Show the size of the client in units (e.g. columns and rows)
     void show_size_units(int client_width, int client_height);

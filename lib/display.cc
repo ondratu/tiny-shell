@@ -66,6 +66,9 @@ Display::Display(::Display* display_arg):
     _NET_WM_STATE_DEMANDS_ATTENTION(
             XInternAtom(display_arg, "_NET_WM_STATE_DEMANDS_ATTENTION", 0)),
     _NET_WM_STATE_FOCUSED(XInternAtom(display_arg, "_NET_WM_STATE_FOCUSED", 0)),
+    _NET_WM_STRUT(XInternAtom(display_arg, "_NET_WM_STRUT", 0)),
+    _NET_WM_STRUT_PARTIAL(XInternAtom(display_arg, "_NET_WM_STRUT_PARTIAL", 0)),
+    _NET_WORKAREA(XInternAtom(display_arg, "_NET_WORKAREA", 0)),
     display(display_arg)
 {}
 

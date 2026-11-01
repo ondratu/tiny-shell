@@ -755,8 +755,8 @@ TEST_F(WindowTest, create_maps_and_prepares_the_client)
 {
     XWindowAttributes attrs = client.attrs();
 
-    const std::unique_ptr<WmWindow> window(
-            WmWindow::create(root_window(), client.window, attrs, 0xFFFF));
+    const std::unique_ptr<WmWindow> window(WmWindow::create(
+            root_window(), client.window, attrs, 0xFFFF, screen_area()));
 
     attrs = client.attrs();
     EXPECT_EQ(attrs.map_state, IsViewable);
@@ -1398,8 +1398,8 @@ TEST_F(WindowTest, icon_update_without_mask_causes_no_x_error)
 TEST_F(WindowTest, create_sets_wm_state_to_normal)
 {
     const XWindowAttributes attrs = client.attrs();
-    const std::unique_ptr<WmWindow> window(
-            WmWindow::create(root_window(), client.window, attrs, 0xFFFF));
+    const std::unique_ptr<WmWindow> window(WmWindow::create(
+            root_window(), client.window, attrs, 0xFFFF, screen_area()));
 
     EXPECT_EQ(client.wm_state(), NormalState);
 }

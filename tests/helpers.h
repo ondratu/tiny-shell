@@ -33,6 +33,14 @@ inline ::Window root_window()
     return XDefaultRootWindow(tiny::get_display());
 }
 
+// The screen below the panel, the work area without any dock.
+inline tiny::Rect screen_area()
+{
+    XWindowAttributes a;
+    XGetWindowAttributes(tiny::get_display(), root_window(), &a);
+    return {0, tiny::theme.wm_panel, a.width, a.height - tiny::theme.wm_panel};
+}
+
 // Calls the handler registered for `type` on `window`, like the main loop.
 inline void send(::Window window, const XEvent& e)
 {

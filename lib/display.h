@@ -67,6 +67,9 @@ class Display {
     const Atom _NET_WM_STATE_BELOW;
     const Atom _NET_WM_STATE_DEMANDS_ATTENTION;
     const Atom _NET_WM_STATE_FOCUSED;
+    const Atom _NET_WM_STRUT;
+    const Atom _NET_WM_STRUT_PARTIAL;
+    const Atom _NET_WORKAREA;
 
   private:
     ::Display* display;
