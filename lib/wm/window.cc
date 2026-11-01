@@ -280,6 +280,9 @@ std::string_view get_wm_icon()
 
 void Window::set_focus()
 {
+    TINY_LOG("set_focus 0x%lx \"%s\"%s%s", child, wm_name.c_str(),
+             get_minimized() ? ", minimized" : "",
+             protocols.count(dsp.WM_TAKE_FOCUS) ? ", WM_TAKE_FOCUS" : "");
     if (get_minimized()) {
         restore();
     }
@@ -905,12 +908,34 @@ void Window::on_motion_notify(const XEvent& e, void*)
     on_drag_motion(this, e);
 }
 
+bool Window::is_focus_change(const XEvent& e)
+{
+    if (e.xfocus.mode == NotifyGrab || e.xfocus.mode == NotifyUngrab) {
+        return false;
+    }
+    return e.xfocus.detail != NotifyInferior &&
+           e.xfocus.detail != NotifyPointer &&
+           e.xfocus.detail != NotifyPointerRoot &&
+           e.xfocus.detail != NotifyDetailNone;
+}
+
 void Window::on_focus_in(const XEvent& e, void*)
 {
+    TINY_LOG("FocusIn 0x%lx \"%s\" mode %d detail %d%s", child, wm_name.c_str(),
+             e.xfocus.mode, e.xfocus.detail,
+             is_focus_change(e) ? "" : ", not a focus change");
+    if (!is_focus_change(e)) {
+        return;
+    }
     on_focus(this, e, nullptr);
 }
 
-void Window::on_focus_out(const XEvent&, void*) {}
+void Window::on_focus_out(const XEvent& e, void*)
+{
+    TINY_LOG("FocusOut 0x%lx \"%s\" mode %d detail %d%s", child,
+             wm_name.c_str(), e.xfocus.mode, e.xfocus.detail,
+             is_focus_change(e) ? "" : ", not a focus change");
+}
 
 void Window::on_property_notify(const XEvent& e, void*)
 {

@@ -236,6 +236,19 @@ class Window : public tiny::Object {
 
     void on_motion_notify(const XEvent& e, void* data);
 
+    /**
+     * @short Is the FocusIn/FocusOut event a change of the keyboard focus?
+     *
+     * Not when it only reports a grab of the keyboard (`NotifyGrab`,
+     * `NotifyUngrab`, e.g. the Alt + Tab grab of the window manager) or the
+     * window under the pointer (`NotifyPointer`, `NotifyPointerRoot`,
+     * `NotifyDetailNone`, `NotifyInferior`): the window under the pointer
+     * would be taken as the focused one. A subclass that reacts to the focus
+     * (the header of `Client`) checks it before its own change; the base
+     * class checks it again before it emits `on_focus`.
+     */
+    static bool is_focus_change(const XEvent& e);
+
     virtual void on_focus_in(const XEvent& e, void* data);
 
     virtual void on_focus_out(const XEvent& e, void* data);

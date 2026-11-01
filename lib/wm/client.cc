@@ -413,12 +413,18 @@ void Client::on_window_drag_motion(tiny::Object*, const XEvent& e, void*)
 
 void Client::on_focus_in(const XEvent& e, void* data)
 {
+    if (!is_focus_change(e)) {
+        return;
+    }
     header.set_disable(false);
     Window::on_focus_in(e, data);
 }
 
 void Client::on_focus_out(const XEvent& e, void* data)
 {
+    if (!is_focus_change(e)) {
+        return;
+    }
     header.set_disable(true);
     Window::on_focus_out(e, data);
 }
