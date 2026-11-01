@@ -37,6 +37,10 @@ class Display {
     // EWMH
     const Atom _MOTIF_WM_HINTS;
     const Atom _NET_SUPPORTED;
+    const Atom _NET_SUPPORTING_WM_CHECK;
+    const Atom _NET_CLIENT_LIST;
+    const Atom _NET_ACTIVE_WINDOW;
+    const Atom _NET_CLOSE_WINDOW;
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_VISIBLE_NAME;
     const Atom _NET_WM_ICON;

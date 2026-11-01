@@ -36,7 +36,17 @@ class Manager : public tiny::Object {
     //! Grab (or release) the Super keys that open the launcher
     void grab_super(bool grab);
 
+    //! Publish `_NET_SUPPORTED` and the window that proves the manager runs
     void set_supported();
+
+    //! Remove what `set_supported` and `publish_clients` put on the root
+    void clear_published();
+
+    //! Publish `_NET_CLIENT_LIST` and `_NET_ACTIVE_WINDOW`
+    void publish_clients();
+
+    //! Requests of the clients to the root window (`_NET_ACTIVE_WINDOW`...)
+    bool on_root_message(const XClientMessageEvent& e);
 
     bool is_super(unsigned int keycode) const;
 
@@ -98,6 +108,7 @@ class Manager : public tiny::Object {
     ::Display* display;
     ::Window root;
     XErrorHandler old_error_handler = nullptr;
+    ::Window check_window = None; //!< `_NET_SUPPORTING_WM_CHECK`
 
     Panel wm_panel;
     RunDialog wm_run;
