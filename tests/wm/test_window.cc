@@ -624,6 +624,94 @@ TEST_F(WindowTest, window_manager_protocols_are_read)
     EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
+// ---- _NET_WM_PING ----
+
+TEST_F(WindowTest, closing_pings_a_client_that_answers_pings)
+{
+    client.set_protocols({dsp().WM_DELETE_WINDOW, dsp()._NET_WM_PING});
+    auto window = manage();
+
+    window->close();
+
+    XEvent e;
+    ASSERT_TRUE(client.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
+    ASSERT_TRUE(client.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp()._NET_WM_PING));
+    EXPECT_EQ(e.xclient.data.l[2], static_cast<long>(client.window));
+    EXPECT_TRUE(window->has_pending_ping());
+}
+
+TEST_F(WindowTest, a_client_without_the_ping_protocol_is_not_pinged)
+{
+    client.set_protocols({dsp().WM_DELETE_WINDOW});
+    auto window = manage();
+
+    window->close();
+
+    EXPECT_FALSE(window->has_pending_ping());
+}
+
+TEST_F(WindowTest, a_ping_is_sent_once_until_it_is_answered)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+
+    window->ping(now);
+    window->ping(now + std::chrono::seconds(1));
+
+    EXPECT_EQ(window->get_ping_deadline(), now + WmWindow::ping_timeout);
+}
+
+TEST_F(WindowTest, a_window_that_does_not_answer_is_not_responding)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+
+    EXPECT_FALSE(window->expire_ping(now + WmWindow::ping_timeout / 2));
+    EXPECT_TRUE(window->is_responding());
+    EXPECT_TRUE(window->expire_ping(now + WmWindow::ping_timeout));
+    EXPECT_FALSE(window->is_responding());
+    EXPECT_FALSE(window->has_pending_ping());
+    EXPECT_FALSE(window->expire_ping(now + WmWindow::ping_timeout));
+}
+
+TEST_F(WindowTest, the_answer_to_a_ping_makes_the_window_respond_again)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+
+    window->pong();
+
+    EXPECT_TRUE(window->is_responding());
+    EXPECT_FALSE(window->has_pending_ping());
+}
+
+TEST_F(WindowTest, closing_a_window_that_does_not_respond_kills_the_client)
+{
+    client.set_protocols({dsp().WM_DELETE_WINDOW, dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+    XEvent e;
+    ASSERT_TRUE(client.message(e)); // the ping
+
+    window->close();
+
+    client.abandon(); // the server closes the connection of the client
+    XErrors errors;
+    XSync(dsp(), False);
+    XWindowAttributes attrs;
+    EXPECT_EQ(XGetWindowAttributes(dsp(), client.window, &attrs), 0);
+}
+
 // ---- icons ----
 
 TEST_F(WindowTest, wm_hints_icon_of_the_theme_size_is_copied)

@@ -32,6 +32,7 @@ Display::Display(::Display* display_arg):
     _NET_REQUEST_FRAME_EXTENTS(
             XInternAtom(display_arg, "_NET_REQUEST_FRAME_EXTENTS", 0)),
     _NET_WM_NAME(XInternAtom(display_arg, "_NET_WM_NAME", 0)),
+    _NET_WM_PING(XInternAtom(display_arg, "_NET_WM_PING", 0)),
     _NET_WM_VISIBLE_NAME(XInternAtom(display_arg, "_NET_WM_VISIBLE_NAME", 0)),
     _NET_WM_ICON(XInternAtom(display_arg, "_NET_WM_ICON", 0)),
     _NET_WM_ICON_NAME(XInternAtom(display_arg, "_NET_WM_ICON_NAME", 0)),

@@ -15,6 +15,7 @@ class Probe : public tiny::wm::Client {
     using tiny::wm::Client::header;
     using tiny::wm::Client::max_btn;
     using tiny::wm::Client::min_btn;
+    using tiny::wm::Client::on_responding_changed;
     using tiny::wm::Client::shadow;
     using tiny::wm::Client::size_label;
 
@@ -1546,3 +1547,18 @@ TEST_F(ClientTest, the_client_is_told_its_place_after_moving_and_resizing)
 }
 
 } // namespace
+
+TEST_F(ClientTest, the_title_says_when_the_window_does_not_respond)
+{
+    client.set_title("Editor");
+    client.set_protocols({dsp()._NET_WM_PING});
+    Probe* win = build();
+    const auto now = Probe::Clock::now();
+    win->ping(now);
+
+    win->expire_ping(now + Probe::ping_timeout);
+
+    EXPECT_EQ(win->header.get_title(), "Editor (not responding)");
+    win->pong();
+    EXPECT_EQ(win->header.get_title(), "Editor");
+}

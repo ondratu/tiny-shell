@@ -130,7 +130,7 @@ void Client::realize(::Window parent_arg, int x, int y)
 
     XSetWindowBorderWidth(display, child, 0);
     XReparentWindow(display, child, window, 0, header_height());
-    header.set_title(wm_name);
+    header.set_title(title_text());
 }
 
 void Client::set_events(long mask)
@@ -702,6 +702,16 @@ void Client::on_window_drag_end(tiny::Object*, const XEvent&, void*)
     send_configure_notify();
 }
 
+std::string Client::title_text() const
+{
+    return responding ? wm_name : wm_name + " (not responding)";
+}
+
+void Client::on_responding_changed()
+{
+    header.set_title(title_text());
+}
+
 void Client::on_focus_in(const XEvent& e, void* data)
 {
     if (!is_focus_change(e)) {
@@ -726,7 +736,7 @@ void Client::on_property_notify(const XEvent& e, void* data)
 
     if (e.xproperty.atom == display.WM_NAME ||
         e.xproperty.atom == display._NET_WM_NAME) {
-        header.set_title(wm_name);
+        header.set_title(title_text());
     }
 }
 

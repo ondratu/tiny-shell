@@ -45,6 +45,7 @@ class Display {
     const Atom _NET_FRAME_EXTENTS;
     const Atom _NET_REQUEST_FRAME_EXTENTS;
     const Atom _NET_WM_NAME;
+    const Atom _NET_WM_PING;
     const Atom _NET_WM_VISIBLE_NAME;
     const Atom _NET_WM_ICON;
     const Atom _NET_WM_ICON_NAME;
