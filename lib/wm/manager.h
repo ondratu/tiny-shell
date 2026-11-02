@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <list>
 #include <string>
 #include <vector>
@@ -160,6 +161,7 @@ class Manager : public tiny::Object {
 
     Window* active = nullptr;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients
+    std::set<::Window> wm_desktops;      //!< windows of the DESKTOP type
     tiny::Rect work_area = {0, 0, 0, 0};
 
     std::map<::Window, Window*> wm_windows;

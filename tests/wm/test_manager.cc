@@ -2268,6 +2268,27 @@ TEST_F(ManagerTest, a_window_below_stays_under_the_others)
               (std::vector<::Window>{first.window, second.window}));
 }
 
+TEST_F(ManagerTest, a_desktop_window_stays_under_a_window_below)
+{
+    start();
+    FakeClient& desktop = add_client(false);
+    set_window_type(desktop, dsp()._NET_WM_WINDOW_TYPE_DESKTOP);
+    desktop.map();
+    const FakeClient& c = add_client();
+    run_loop();
+
+    manager->wm_windows[c.window]->set_below(true);
+
+    const auto stack = children_of(root_window());
+    const auto desktop_at =
+            std::find(stack.begin(), stack.end(), desktop.window);
+    const auto frame_at = std::find(stack.begin(), stack.end(),
+                                    manager->wm_windows[c.window]->frame());
+    ASSERT_NE(desktop_at, stack.end());
+    ASSERT_NE(frame_at, stack.end());
+    EXPECT_LT(desktop_at, frame_at);
+}
+
 TEST_F(ManagerTest, a_window_that_starts_above_is_on_top)
 {
     FakeClient& first = add_client(false);
