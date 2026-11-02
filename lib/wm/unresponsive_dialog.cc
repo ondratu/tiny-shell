@@ -86,9 +86,9 @@ void UnresponsiveDialog::realize(::Window root, int, int)
     add(&quit, 2 * spacing() + button_width(), buttons_y);
 }
 
-void UnresponsiveDialog::popup(const std::string& name, unsigned others)
+void UnresponsiveDialog::popup(const std::string& app, unsigned others)
 {
-    title.set_text("\"" + shorten(name) + "\" is not responding");
+    title.set_text("\"" + shorten(app) + "\" is not responding");
     detail.set_text(others == 0 ? "You may wait, or force it to quit."
                                 : "Quitting closes " + std::to_string(others) +
                                           " more window" +
