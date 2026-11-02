@@ -496,7 +496,7 @@ void Window::configure_request(const XConfigureRequestEvent& e)
     ch.border_width = e.border_width;
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
-    unsigned int mask = static_cast<unsigned int>(e.value_mask);
+    auto mask = static_cast<unsigned int>(e.value_mask);
 
     XWindowAttributes now;
     if ((mask & (CWWidth | CWHeight)) &&

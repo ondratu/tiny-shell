@@ -1704,7 +1704,7 @@ TEST_F(ClientTest, the_client_is_told_its_place_after_moving_and_resizing)
 
 TEST_F(ClientTest, a_window_with_a_title_bar_can_be_rolled_up)
 {
-    Probe* win = build();
+    const Probe* win = build();
 
     const auto actions = win->get_allowed_actions();
 
@@ -1715,7 +1715,7 @@ TEST_F(ClientTest, a_window_with_a_title_bar_can_be_rolled_up)
 
 TEST_F(ClientTest, a_window_without_a_title_bar_cannot_be_rolled_up)
 {
-    Probe* win = build(0xFFFF, tiny::wm::MotifWMHints::DECOR_BORDER);
+    const Probe* win = build(0xFFFF, tiny::wm::MotifWMHints::DECOR_BORDER);
 
     const auto actions = win->get_allowed_actions();
 

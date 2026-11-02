@@ -539,18 +539,23 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     const auto shift =
             gravity_shift(window_gravity(*hints), new_width - frame.width,
                           new_height - frame.height);
-    const int x = (e.value_mask & CWX)
-                          ? std::max(e.x - frame.border_width,
-                                     work_area.x + frame.border_width)
-                  : shift.first < 0 ? std::max(frame.x + shift.first,
-                                               work_area.x + frame.border_width)
-                                    : frame.x + shift.first;
-    const int y =
-            (e.value_mask & CWY) ? std::max(e.y - title - frame.border_width,
-                                            work_area.y + frame.border_width)
-            : shift.second < 0   ? std::max(frame.y + shift.second,
-                                            work_area.y + frame.border_width)
-                                 : frame.y + shift.second;
+    // a window that grows to the west or north stays inside the work area
+    int x = frame.x + shift.first;
+    if (shift.first < 0) {
+        x = std::max(x, work_area.x + frame.border_width);
+    }
+    int y = frame.y + shift.second;
+    if (shift.second < 0) {
+        y = std::max(y, work_area.y + frame.border_width);
+    }
+    if (e.value_mask & CWX) {
+        x = std::max(e.x - frame.border_width,
+                     work_area.x + frame.border_width);
+    }
+    if (e.value_mask & CWY) {
+        y = std::max(e.y - title - frame.border_width,
+                     work_area.y + frame.border_width);
+    }
 
     XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),
                       tiny::x_dim(new_height));
@@ -742,9 +747,10 @@ void Client::drag_to(int x_root, int y_root)
 {
     const XEvent e = make_pointer_event(x_root, y_root);
     if (drag_edges) {
-        on_move_resize_motion(nullptr, e,
-                              reinterpret_cast<void*>(static_cast<size_t>(
-                                      static_cast<uint16_t>(drag_edges))));
+        // NOLINTNEXTLINE(performance-no-int-to-ptr): the mask travels as data
+        void* mask = reinterpret_cast<void*>(
+                static_cast<size_t>(static_cast<uint16_t>(drag_edges)));
+        on_move_resize_motion(nullptr, e, mask);
     } else {
         on_window_drag_motion(nullptr, e, nullptr);
     }

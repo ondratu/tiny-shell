@@ -1250,7 +1250,7 @@ TEST_F(WindowTest, closing_a_window_that_does_not_respond_kills_the_client)
     window->close();
 
     client.abandon(); // the server closes the connection of the client
-    XErrors errors;
+    const XErrors errors;
     XSync(dsp(), False);
     XWindowAttributes attrs;
     EXPECT_EQ(XGetWindowAttributes(dsp(), client.window, &attrs), 0);
