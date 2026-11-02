@@ -116,6 +116,9 @@ class Manager : public tiny::Object {
     //! Compute the work area again; windows and _NET_WORKAREA follow it
     void update_work_area();
 
+    //! Add or remove the dock icon of the window, as its state wants
+    void update_dock_entry(Window* window);
+
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);

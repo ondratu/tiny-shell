@@ -2295,3 +2295,31 @@ TEST_F(ManagerTest, a_minimized_window_keeps_its_icon_when_it_skips_the_taskbar)
 
     EXPECT_TRUE(manager->wm_dock.contains(window));
 }
+
+TEST_F(ManagerTest, a_window_that_skips_the_taskbar_loses_the_icon_on_restore)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    auto* window = manager->wm_windows[c.window];
+    window->minimize();
+    window->set_skip_taskbar(true);
+
+    window->restore();
+
+    EXPECT_FALSE(manager->wm_dock.contains(window));
+}
+
+TEST_F(ManagerTest, a_window_that_skips_the_taskbar_gets_an_icon_to_minimize)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    auto* window = manager->wm_windows[c.window];
+    window->set_skip_taskbar(true);
+    ASSERT_FALSE(manager->wm_dock.contains(window));
+
+    window->minimize();
+
+    EXPECT_TRUE(manager->wm_dock.contains(window));
+}
