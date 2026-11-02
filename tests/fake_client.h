@@ -111,6 +111,24 @@ class FakeClient {
         sync();
     }
 
+    // Another (input only) window keeps the time of the user. Returns it.
+    ::Window set_user_time_window(unsigned long time)
+    {
+        XSetWindowAttributes attrs = {};
+        const ::Window time_window =
+                XCreateWindow(display, DefaultRootWindow(display), -1, -1, 1, 1,
+                              0, 0, InputOnly, CopyFromParent, 0, &attrs);
+        const ::Window value = time_window;
+        XChangeProperty(display, window, dsp()._NET_WM_USER_TIME_WINDOW,
+                        XA_WINDOW, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&value), 1);
+        XChangeProperty(display, time_window, dsp()._NET_WM_USER_TIME,
+                        XA_CARDINAL, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&time), 1);
+        sync();
+        return time_window;
+    }
+
     void set_motif(unsigned long flags, unsigned long functions,
                    unsigned long decorations)
     {

@@ -1706,6 +1706,69 @@ TEST_F(ManagerTest, a_window_denied_the_focus_stays_under_the_active_one)
               std::find(order.begin(), order.end(), active_frame));
 }
 
+TEST_F(ManagerTest, the_user_time_window_of_a_new_window_is_read)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time_window(4000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+}
+
+TEST_F(ManagerTest, a_newer_time_on_the_user_time_window_takes_the_focus)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time_window(6000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+}
+
+TEST_F(ManagerTest, the_time_of_the_user_time_window_is_the_time_of_the_user)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(1000);
+    first.map();
+    run_loop();
+    pump_events();
+    const ::Window time_window = first.set_user_time_window(9000);
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(8000);
+    second.map();
+    run_loop();
+    pump_events();
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+
+    const unsigned long later = 9500;
+    XChangeProperty(first.display, time_window, dsp()._NET_WM_USER_TIME,
+                    XA_CARDINAL, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&later), 1);
+    first.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->last_user_time, later);
+}
+
 TEST_F(ManagerTest, a_window_newer_than_the_active_one_takes_the_focus)
 {
     start();
