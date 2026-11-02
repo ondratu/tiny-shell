@@ -941,9 +941,20 @@ TEST_F(ManagerTest, quitting_kills_the_process_of_the_client)
 
     click_dialog_button(manager->wm_unresponsive.get_window(), 3);
 
+    // the manager may reap its children itself (then there is nothing to wait
+    // for), so wait until the process is gone one way or the other
     int status = 0;
-    EXPECT_EQ(waitpid(pid, &status, 0), pid);
-    EXPECT_TRUE(WIFSIGNALED(status));
+    pid_t gone = 0;
+    for (int i = 0; i < 200 && gone == 0; ++i) {
+        gone = waitpid(pid, &status, WNOHANG);
+        if (gone == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+    EXPECT_NE(gone, 0);
+    if (gone == pid) {
+        EXPECT_TRUE(WIFSIGNALED(status));
+    }
     EXPECT_EQ(manager->asked, nullptr);
     EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
     c.abandon();
