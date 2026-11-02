@@ -694,16 +694,21 @@ void Manager::on_window_modal(tiny::Object* o, const XEvent&, void*)
     }
 }
 
+void Manager::update_dock_entry(Window* window)
+{
+    // a minimized window needs its icon, it is the way back
+    const bool wanted = !is_dialog(window) &&
+                        (!window->skip_taskbar() || window->get_minimized());
+    if (wanted && !wm_dock.contains(window)) {
+        wm_dock.add(window);
+    } else if (!wanted && wm_dock.contains(window)) {
+        wm_dock.remove(window);
+    }
+}
+
 void Manager::on_window_skip_taskbar(tiny::Object* o, const XEvent&, void*)
 {
-    auto* window = reinterpret_cast<Window*>(o);
-    if (window->skip_taskbar()) {
-        if (!window->get_minimized()) { // the icon brings it back
-            wm_dock.remove(window);
-        }
-    } else if (!is_dialog(window) && !wm_dock.contains(window)) {
-        wm_dock.add(window);
-    }
+    update_dock_entry(reinterpret_cast<Window*>(o));
 }
 
 void Manager::on_window_layer(tiny::Object*, const XEvent&, void*)
@@ -727,6 +732,7 @@ void Manager::remember_active(Window* window, const XEvent& e)
 void Manager::on_window_minimize(tiny::Object* o, const XEvent&, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
+    update_dock_entry(window);
     // a dialog has no dock icon, so it goes and comes back with its parent
     Window* parent = parent_of(window);
     if (parent && parent->get_minimized() != window->get_minimized()) {
