@@ -27,6 +27,9 @@ std::vector<std::string> application_dirs(const char* data_home,
                                           const char* data_dirs,
                                           const char* home);
 
+//! The directory added to `$XDG_DATA_DIRS` when it is set (see below)
+inline constexpr const char* local_share_dir = "/usr/local/share";
+
 /**
  * @short `$XDG_DATA_DIRS` with `dir` at the end, when the variable is set.
  *

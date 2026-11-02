@@ -125,6 +125,24 @@ TEST_F(SelectionTest, replace_waits_until_the_old_manager_is_gone)
     EXPECT_TRUE(old.got_selection_clear());
 }
 
+TEST_F(SelectionTest, replace_fails_when_a_third_manager_takes_the_selection)
+{
+    OtherManager old;
+    OtherManager third;
+    old.own();
+    Selection selection(display, root, screen);
+
+    std::thread racing([&old, &third] {
+        std::this_thread::sleep_for(50ms);
+        third.own();
+        old.exit();
+    });
+    const auto rv = selection.acquire(true, 5000ms);
+    racing.join();
+
+    EXPECT_EQ(rv, Selection::Result::Failed);
+}
+
 TEST_F(SelectionTest, replace_does_not_wait_for_a_window_that_is_gone)
 {
     OtherManager old;
@@ -157,7 +175,7 @@ TEST_F(SelectionTest, the_old_manager_is_told_when_it_loses_the_selection)
 
 TEST_F(SelectionTest, announce_sends_manager_message_to_the_root)
 {
-    OtherManager watcher;
+    const OtherManager watcher;
     XSelectInput(watcher.other, watcher.root, StructureNotifyMask);
     XSync(watcher.other, False);
     Selection selection(display, root, screen);

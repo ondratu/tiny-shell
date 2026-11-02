@@ -104,7 +104,7 @@ class Launcher : public tiny::Popover {
 
     ::Window root_window = None;
     bool loaded = false;
-    std::string local_share = "/usr/local/share";
+    std::string local_share = xdg::local_share_dir;
     xdg::ApplicationIndex index;
     std::unique_ptr<xdg::IconTheme> icon_theme;
     std::map<std::string, Icon> icons;        //!< by the id of the application

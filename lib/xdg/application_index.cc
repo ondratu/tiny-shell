@@ -135,7 +135,7 @@ application_dirs(const char* data_home, const char* data_dirs, const char* home)
 std::string data_dirs_with(const char* data_dirs, const std::string& dir)
 {
     if (data_dirs == nullptr || *data_dirs == '\0') {
-        return std::string();
+        return {};
     }
     return std::string(data_dirs) + ":" + dir;
 }
