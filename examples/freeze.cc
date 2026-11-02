@@ -57,7 +57,7 @@ class Freeze {
                         XInternAtom(display, "_NET_WM_PID", False), XA_CARDINAL,
                         32, PropModeReplace,
                         reinterpret_cast<const unsigned char*>(&pid), 1);
-        char host[HOST_NAME_MAX + 1] = {};
+        char host[256] = {};
         gethostname(host, sizeof(host) - 1);
         char* names[] = {host};
         XTextProperty machine;
