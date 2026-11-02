@@ -81,6 +81,31 @@ int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
     return size;
 }
 
+tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
+                           unsigned edges, int dx, int dy, int title,
+                           int min_width, int min_height)
+{
+    tiny::Rect rv = start;
+    if (edges & (tiny::Position::Left | tiny::Position::Right)) {
+        const int width =
+                start.width + (edges & tiny::Position::Right ? dx : -dx);
+        rv.width = fit_client_size(hints, true, width, min_width);
+    }
+    if (edges & (tiny::Position::Top | tiny::Position::Bottom)) {
+        const int height = start.height - title +
+                           (edges & tiny::Position::Bottom ? dy : -dy);
+        rv.height = fit_client_size(hints, false, height, min_height - title) +
+                    title;
+    }
+    if (edges & tiny::Position::Left) {
+        rv.x = start.x + start.width - rv.width;
+    }
+    if (edges & tiny::Position::Top) {
+        rv.y = start.y + start.height - rv.height;
+    }
+    return rv;
+}
+
 int client_size_units(const XSizeHints& hints, bool horizontal, int size)
 {
     const Axis axis = axis_of(hints, horizontal);
