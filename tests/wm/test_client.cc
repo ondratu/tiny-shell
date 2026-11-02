@@ -930,6 +930,126 @@ TEST_F(ClientTest, dragging_a_maximized_window_restores_it)
     EXPECT_EQ(frame().width, 200);
 }
 
+// ---- shade ----
+
+TEST_F(ClientTest, a_shaded_window_shows_only_the_title_bar)
+{
+    build();
+    const int height = frame().height;
+
+    win->shade(true);
+
+    EXPECT_TRUE(win->is_shaded());
+    EXPECT_EQ(frame().height, header_height());
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsUnmapped);
+
+    win->shade(false);
+
+    EXPECT_FALSE(win->is_shaded());
+    EXPECT_EQ(frame().height, height);
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsViewable);
+}
+
+TEST_F(ClientTest, the_shaded_state_is_published)
+{
+    build();
+
+    win->shade(true);
+
+    std::vector<Atom> atoms;
+    win->get_wm_states(atoms);
+    EXPECT_EQ(
+            std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_STATE_SHADED),
+            1);
+}
+
+TEST_F(ClientTest, a_double_click_on_the_title_rolls_the_window_up_and_down)
+{
+    build();
+    auto* title = win->header.get_title_box();
+    XEvent first = pointer(100, 100);
+    first.xbutton.time = 1000;
+    XEvent second = pointer(100, 100);
+    second.xbutton.time = 1200;
+
+    title->on_drag_begin(title, first);
+    EXPECT_FALSE(win->is_shaded());
+    title->on_drag_begin(title, second);
+    EXPECT_TRUE(win->is_shaded());
+
+    first.xbutton.time = 5000;
+    second.xbutton.time = 5100;
+    title->on_drag_begin(title, first);
+    title->on_drag_begin(title, second);
+    EXPECT_FALSE(win->is_shaded());
+}
+
+TEST_F(ClientTest, two_slow_clicks_do_not_roll_the_window_up)
+{
+    build();
+    auto* title = win->header.get_title_box();
+    XEvent first = pointer(100, 100);
+    first.xbutton.time = 1000;
+    XEvent second = pointer(100, 100);
+    second.xbutton.time = 3000;
+
+    title->on_drag_begin(title, first);
+    title->on_drag_begin(title, second);
+
+    EXPECT_FALSE(win->is_shaded());
+}
+
+TEST_F(ClientTest, a_window_without_a_title_cannot_be_shaded)
+{
+    build(0xFFFF, tiny::wm::MotifWMHints::DECOR_BORDER);
+
+    win->shade(true);
+
+    EXPECT_FALSE(win->is_shaded());
+}
+
+TEST_F(ClientTest, maximizing_unrolls_a_shaded_window)
+{
+    build();
+    win->shade(true);
+
+    win->maximize();
+
+    EXPECT_FALSE(win->is_shaded());
+    EXPECT_TRUE(win->get_maximized());
+}
+
+TEST_F(ClientTest, a_shaded_window_ignores_the_resize_of_its_client)
+{
+    build();
+    win->shade(true);
+    XEvent e = make_event(ConfigureRequest);
+    e.xconfigurerequest.value_mask = CWWidth | CWHeight;
+    e.xconfigurerequest.width = 400;
+    e.xconfigurerequest.height = 300;
+
+    win->configure_request(e.xconfigurerequest);
+
+    EXPECT_EQ(frame().height, header_height());
+}
+
+TEST_F(ClientTest, a_state_request_shades_the_window)
+{
+    build();
+    XEvent e = make_event(ClientMessage);
+    e.xclient.message_type = dsp()._NET_WM_STATE;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = tiny::Display::_NET_WM_STATE_ADD;
+    e.xclient.data.l[1] = static_cast<long>(dsp()._NET_WM_STATE_SHADED);
+
+    send(client.window, e);
+    EXPECT_TRUE(win->is_shaded());
+
+    e.xclient.data.l[0] = tiny::Display::_NET_WM_STATE_TOGGLE;
+    send(client.window, e);
+    EXPECT_FALSE(win->is_shaded());
+}
+
 // ---- resize ----
 
 TEST_F(ClientTest, resizing_the_right_bottom_corner_grows_the_window)

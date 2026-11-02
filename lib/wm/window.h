@@ -86,6 +86,9 @@ struct MotifWMHints {
 void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
                          unsigned long& functions, unsigned long& decorations);
 
+//! Are two clicks (their server times in milliseconds) a double click?
+bool is_double_click(bool has_last, unsigned long last, unsigned long time);
+
 /**
  * @short Focus stealing prevention: may a new window take the focus?
  *
@@ -218,6 +221,13 @@ class Window : public tiny::Object {
     }
     void set_maximized(bool maximized);
     void set_fullscreen(bool fullscreen);
+
+    bool is_shaded() const { return wm_states & WMState::SHADED; }
+
+    //! Roll the window up to its title bar and back (only a frame can)
+    virtual void shade(bool) {}
+
+    void set_shaded(bool shaded);
 
     virtual bool is_fullscreen() const
     {

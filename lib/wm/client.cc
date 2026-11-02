@@ -256,8 +256,43 @@ void Client::apply_decorations()
     layout_buttons();
 }
 
+void Client::shade(bool on)
+{
+    if (on == is_shaded()) {
+        return;
+    }
+    if (on) {
+        if (!header_height() || get_maximized() || is_fullscreen()) {
+            return; // nothing is left to show, or the window fills the area
+        }
+        XWindowAttributes frame;
+        XGetWindowAttributes(display, window, &frame);
+        unshaded_height = frame.height;
+        XResizeWindow(display, window, tiny::x_dim(frame.width),
+                      tiny::x_dim(header_height()));
+        if (is_resizable()) {
+            shadow.resize(frame.width, header_height());
+            shadow.unmap(); // there is nothing to drag
+        }
+    } else {
+        XWindowAttributes frame;
+        XGetWindowAttributes(display, window, &frame);
+        XResizeWindow(display, window, tiny::x_dim(frame.width),
+                      tiny::x_dim(unshaded_height));
+        if (is_resizable()) {
+            shadow.resize(frame.width, unshaded_height);
+        }
+    }
+    set_shaded(on);
+    if (!on && !get_minimized()) {
+        apply_decorations();
+    }
+    send_configure_notify();
+}
+
 void Client::on_motif_hints_changed(unsigned long new_decorations)
 {
+    shade(false); // the sizes below are of the whole window
     if (!new_decorations) {
         on_reframe(static_cast<Window*>(this),
                    XEvent()); // a window without a frame is another kind
@@ -375,6 +410,7 @@ void Client::maximize()
     if (get_maximized()) {
         return;
     }
+    shade(false);
 
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp, window, &attrs);
@@ -413,6 +449,7 @@ void Client::fullscreen(bool on)
     if (on == is_fullscreen()) {
         return;
     }
+    shade(false);
 
     if (on) {
         XWindowAttributes attrs;
@@ -461,7 +498,7 @@ void Client::fullscreen(bool on)
 
 void Client::configure_request(const XConfigureRequestEvent& e)
 {
-    if (get_maximized() || is_fullscreen()) {
+    if (get_maximized() || is_fullscreen() || is_shaded()) {
         send_configure_notify(); // the frame keeps its place
         return;
     }
@@ -635,8 +672,15 @@ void Client::show_size_units(int client_width, int client_height)
 
 void Client::on_window_drag_begin(tiny::Object* o, const XEvent& e, void* data)
 {
+    const bool twice =
+            is_double_click(has_last_click, last_click_time, e.xbutton.time);
+    has_last_click = !twice;
+    last_click_time = e.xbutton.time;
     Window::on_window_drag_begin(o, e, data);
     XGetWindowAttributes(display, window, &start_attrs);
+    if (twice) {
+        shade(!is_shaded());
+    }
 }
 
 void Client::on_window_drag_motion(tiny::Object*, const XEvent& e, void*)
