@@ -183,11 +183,11 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
-        # size (331 kB of code, with the launcher, the icon grid, the work area,
-        # the dialogs and the image decoders) with a reserve; change it on
+        # size (340 kB of code, with the launcher, the icon grid, the work area,
+        # the dialogs, the image decoders and the EWMH policies) with a reserve; change it on
         # purpose.
         run: |
-          max=340000
+          max=350000
           make CXX=clang++-19 CXXFLAGS="-Os -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -Wl,--gc-sections" build/tiny-shell
           size build/tiny-shell | tee size.txt
