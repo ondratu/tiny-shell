@@ -39,8 +39,11 @@ class Display {
     const Atom _NET_SUPPORTED;
     const Atom _NET_SUPPORTING_WM_CHECK;
     const Atom _NET_CLIENT_LIST;
+    const Atom _NET_CLIENT_LIST_STACKING;
     const Atom _NET_ACTIVE_WINDOW;
     const Atom _NET_CLOSE_WINDOW;
+    const Atom _NET_FRAME_EXTENTS;
+    const Atom _NET_REQUEST_FRAME_EXTENTS;
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_VISIBLE_NAME;
     const Atom _NET_WM_ICON;

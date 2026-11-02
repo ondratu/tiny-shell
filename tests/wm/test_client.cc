@@ -136,9 +136,102 @@ TEST_F(ClientTest, header_has_three_buttons)
 
 TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
 {
-    build(tiny::wm::MotifWMHints::FUNC_RESIZE);
+    build(tiny::wm::MotifWMHints::FUNC_RESIZE |
+          tiny::wm::MotifWMHints::FUNC_MINIMIZE |
+          tiny::wm::MotifWMHints::FUNC_CLOSE);
 
     EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+}
+
+TEST_F(ClientTest, window_without_minimize_function_has_no_minimize_button)
+{
+    build(tiny::wm::MotifWMHints::FUNC_MAXIMIZE |
+          tiny::wm::MotifWMHints::FUNC_CLOSE);
+
+    EXPECT_FALSE(win->is_minimizable());
+    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+}
+
+TEST_F(ClientTest, window_without_close_function_has_no_close_button)
+{
+    build(tiny::wm::MotifWMHints::FUNC_MAXIMIZE |
+          tiny::wm::MotifWMHints::FUNC_MINIMIZE);
+
+    EXPECT_FALSE(win->is_closable());
+    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+}
+
+TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
+{
+    const XWindowAttributes a = client.attrs();
+    win = std::make_unique<Probe>(
+            client.window, root_window(), a.width, a.height, 0xFFFF,
+            tiny::wm::MotifWMHints::DECOR_TITLE |
+                    tiny::wm::MotifWMHints::DECOR_MINIMIZE);
+    win->setup(root_window(), a.x, a.y);
+    pump_events();
+
+    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u); // close, min
+}
+
+TEST_F(ClientTest, a_dialog_has_only_the_close_button)
+{
+    client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
+                     {dsp()._NET_WM_WINDOW_TYPE_DIALOG});
+    build();
+
+    EXPECT_FALSE(win->is_minimizable() && !win->is_auxiliary());
+    EXPECT_EQ(children_of(win->header.get_window()).size(), 2u); // + title
+}
+
+TEST_F(ClientTest, maximizing_a_window_without_the_button_does_not_fail)
+{
+    client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
+                     {dsp()._NET_WM_WINDOW_TYPE_UTILITY});
+    build();
+
+    win->maximize();
+    win->restore();
+    pump_events();
+
+    EXPECT_FALSE(win->get_maximized());
+}
+
+TEST_F(ClientTest, the_frame_extents_are_the_border_and_the_header)
+{
+    build();
+
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    EXPECT_EQ(e.left, win->get_border());
+    EXPECT_EQ(e.right, win->get_border());
+    EXPECT_EQ(e.bottom, win->get_border());
+    EXPECT_EQ(e.top, header_height() + win->get_border());
+}
+
+TEST_F(ClientTest, the_frame_extents_estimate_matches_the_real_frame)
+{
+    build();
+
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    const tiny::wm::FrameExtents guess =
+            tiny::wm::Client::default_frame_extents();
+    EXPECT_EQ(guess.left, e.left);
+    EXPECT_EQ(guess.top, e.top);
+    EXPECT_EQ(guess.right, e.right);
+    EXPECT_EQ(guess.bottom, e.bottom);
+}
+
+TEST_F(ClientTest, lowering_puts_the_frame_and_its_shadow_at_the_bottom)
+{
+    build();
+
+    win->lower();
+    pump_events();
+
+    const auto stack = children_of(root_window());
+    ASSERT_GE(stack.size(), 2u);
+    EXPECT_EQ(stack[0], win->shadow.get_window());
+    EXPECT_EQ(stack[1], win->get_window());
 }
 
 TEST_F(ClientTest, create_places_a_window_under_the_panel)

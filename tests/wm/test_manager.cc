@@ -1765,7 +1765,8 @@ TEST_F(ManagerTest, a_transient_toolbar_is_not_treated_as_a_dialog)
 
     EXPECT_TRUE(
             manager->transients_of(manager->wm_windows[parent.window]).empty());
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before + 1);
+    // a toolbar is not a dialog, but it has no place in the dock either
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
 }
 
 TEST_F(ManagerTest, dialogs_of_each_other_do_not_stop_alt_tab)
@@ -2027,4 +2028,255 @@ TEST_F(ManagerTest, a_group_that_becomes_modal_takes_the_focus)
     manager->wm_windows[dialog.window]->set_modal(true);
 
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
+// ---- EWMH: stacking list, frame extents, window state ----
+
+TEST_F(ManagerTest, the_stacking_list_has_the_lowest_window_first)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    manager->focus_window(manager->wm_windows[first.window]);
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{second.window, first.window}));
+
+    manager->focus_window(manager->wm_windows[second.window]);
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{first.window, second.window}));
+    // the list in the order of mapping does not change
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW)),
+              (std::vector<::Window>{first.window, second.window}));
+}
+
+TEST_F(ManagerTest, the_stacking_list_loses_a_window_that_is_gone)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    XUnmapWindow(first.display, first.window);
+    first.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{second.window}));
+}
+
+TEST_F(ManagerTest, the_stacking_list_is_removed_when_the_manager_ends)
+{
+    start();
+    add_client();
+    run_loop();
+    ASSERT_FALSE(
+            root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING, XA_WINDOW)
+                    .empty());
+
+    manager->clear_published();
+
+    EXPECT_TRUE(
+            root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING, XA_WINDOW)
+                    .empty());
+}
+
+namespace {
+
+std::vector<long> frame_extents_of(const FakeClient& c)
+{
+    c.sync();
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    std::vector<long> values;
+    if (XGetWindowProperty(c.display, c.window, dsp()._NET_FRAME_EXTENTS, 0, 4,
+                           False, XA_CARDINAL, &type, &format, &count, &left,
+                           &data) == Success &&
+        data) {
+        const auto* first = reinterpret_cast<const long*>(data);
+        values.assign(first, first + count);
+        XFree(data);
+    }
+    return values;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, a_framed_window_gets_its_frame_extents)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+
+    const tiny::wm::FrameExtents e =
+            manager->wm_windows[c.window]->frame_extents();
+    EXPECT_EQ(frame_extents_of(c),
+              (std::vector<long>{e.left, e.right, e.top, e.bottom}));
+    EXPECT_EQ(e.top, tiny::theme.wm_win_header + e.bottom);
+}
+
+TEST_F(ManagerTest, a_window_without_a_frame_has_no_extents)
+{
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.map();
+    start();
+    run_loop();
+
+    EXPECT_EQ(frame_extents_of(c), (std::vector<long>{0, 0, 0, 0}));
+}
+
+TEST_F(ManagerTest, a_window_can_ask_for_its_extents_before_it_is_mapped)
+{
+    start();
+    const FakeClient& c = add_client(false);
+    ASSERT_TRUE(frame_extents_of(c).empty());
+
+    request(c.window, dsp()._NET_REQUEST_FRAME_EXTENTS);
+    run_loop();
+
+    const tiny::wm::FrameExtents e = tiny::wm::Client::default_frame_extents();
+    EXPECT_EQ(frame_extents_of(c),
+              (std::vector<long>{e.left, e.right, e.top, e.bottom}));
+}
+
+TEST_F(ManagerTest, a_window_without_decorations_is_told_it_has_no_frame)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+
+    request(c.window, dsp()._NET_REQUEST_FRAME_EXTENTS);
+    run_loop();
+
+    EXPECT_EQ(frame_extents_of(c), (std::vector<long>{0, 0, 0, 0}));
+}
+
+TEST_F(ManagerTest, a_utility_window_has_no_icon_in_the_dock)
+{
+    start();
+    const auto before = children_of(manager->wm_dock.get_window()).size();
+    FakeClient& c = add_client(false);
+    set_window_type(c, dsp()._NET_WM_WINDOW_TYPE_UTILITY);
+    c.map();
+    run_loop();
+
+    EXPECT_TRUE(is_managed(c));
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
+}
+
+TEST_F(ManagerTest, skip_taskbar_removes_the_icon_from_the_dock_and_back)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    auto* window = manager->wm_windows[c.window];
+    const auto with_icon = children_of(manager->wm_dock.get_window()).size();
+    ASSERT_TRUE(manager->wm_dock.contains(window));
+
+    window->set_skip_taskbar(true);
+    EXPECT_FALSE(manager->wm_dock.contains(window));
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), with_icon - 1);
+
+    window->set_skip_taskbar(false);
+    EXPECT_TRUE(manager->wm_dock.contains(window));
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), with_icon);
+}
+
+TEST_F(ManagerTest, skip_taskbar_does_not_add_a_dialog_to_the_dock)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    auto* window = manager->wm_windows[dialog.window];
+
+    window->set_skip_taskbar(true);
+    window->set_skip_taskbar(false);
+
+    EXPECT_FALSE(manager->wm_dock.contains(window));
+}
+
+TEST_F(ManagerTest, a_window_above_stays_over_the_focused_one)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    manager->wm_windows[first.window]->set_above(true);
+
+    manager->focus_window(manager->wm_windows[second.window]);
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{second.window, first.window}));
+}
+
+TEST_F(ManagerTest, a_window_below_stays_under_the_others)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[first.window]);
+
+    manager->wm_windows[first.window]->set_below(true);
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{first.window, second.window}));
+}
+
+TEST_F(ManagerTest, a_window_that_starts_above_is_on_top)
+{
+    FakeClient& first = add_client(false);
+    first.set_state({dsp()._NET_WM_STATE_ABOVE});
+    first.map();
+    start();
+    const FakeClient& second = add_client();
+    run_loop();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING,
+                                       XA_WINDOW)),
+              (std::vector<::Window>{second.window, first.window}));
+}
+
+TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
+{
+    start();
+
+    const auto atoms = root_property<Atom>(dsp()._NET_SUPPORTED, XA_ATOM);
+
+    for (const Atom atom :
+         {dsp()._NET_CLIENT_LIST_STACKING, dsp()._NET_FRAME_EXTENTS,
+          dsp()._NET_REQUEST_FRAME_EXTENTS, dsp()._NET_WM_STATE_ABOVE,
+          dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION}) {
+        EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
+    }
+}
+
+TEST_F(ManagerTest, a_minimized_window_keeps_its_icon_when_it_skips_the_taskbar)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    auto* window = manager->wm_windows[c.window];
+    window->minimize();
+
+    window->set_skip_taskbar(true);
+
+    EXPECT_TRUE(manager->wm_dock.contains(window));
 }

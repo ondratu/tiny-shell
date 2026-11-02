@@ -197,8 +197,11 @@ void Manager::set_supported()
     const Atom supported[] = {dsp._NET_SUPPORTED,
                               dsp._NET_SUPPORTING_WM_CHECK,
                               dsp._NET_CLIENT_LIST,
+                              dsp._NET_CLIENT_LIST_STACKING,
                               dsp._NET_ACTIVE_WINDOW,
                               dsp._NET_CLOSE_WINDOW,
+                              dsp._NET_FRAME_EXTENTS,
+                              dsp._NET_REQUEST_FRAME_EXTENTS,
                               dsp._NET_WORKAREA,
                               dsp._NET_WM_NAME,
                               dsp._NET_WM_WINDOW_TYPE,
@@ -209,6 +212,10 @@ void Manager::set_supported()
                               dsp._NET_WM_STATE_HIDDEN,
                               dsp._NET_WM_STATE_FOCUSED,
                               dsp._NET_WM_STATE_SKIP_TASKBAR,
+                              dsp._NET_WM_STATE_ABOVE,
+                              dsp._NET_WM_STATE_BELOW,
+                              dsp._NET_WM_STATE_DEMANDS_ATTENTION,
+                              dsp._NET_WM_STATE_MODAL,
                               dsp._NET_WM_STRUT,
                               dsp._NET_WM_STRUT_PARTIAL};
     XChangeProperty(display, root, dsp._NET_SUPPORTED, XA_ATOM, 32,
@@ -238,7 +245,8 @@ void Manager::clear_published()
     const tiny::Display& dsp = tiny::get_display();
     for (const Atom property :
          {dsp._NET_SUPPORTED, dsp._NET_SUPPORTING_WM_CHECK,
-          dsp._NET_CLIENT_LIST, dsp._NET_ACTIVE_WINDOW}) {
+          dsp._NET_CLIENT_LIST, dsp._NET_CLIENT_LIST_STACKING,
+          dsp._NET_ACTIVE_WINDOW}) {
         XDeleteProperty(display, root, property);
     }
     if (check_window != None) {
@@ -261,15 +269,98 @@ void Manager::publish_clients()
                     reinterpret_cast<const unsigned char*>(clients.data()),
                     static_cast<int>(clients.size()));
 
+    publish_stacking();
+
     const ::Window current = active ? active->get_child() : None;
     XChangeProperty(display, root, dsp._NET_ACTIVE_WINDOW, XA_WINDOW, 32,
                     PropModeReplace,
                     reinterpret_cast<const unsigned char*>(&current), 1);
 }
 
+void Manager::publish_stacking()
+{
+    const tiny::Display& dsp = tiny::get_display();
+
+    // the frames lie on the root in the stacking order, the lowest first
+    ::Window root_return;
+    ::Window parent_return;
+    ::Window* children = nullptr;
+    unsigned int count = 0;
+    std::vector<::Window> clients;
+    clients.reserve(wm_tops.size());
+    if (XQueryTree(display, root, &root_return, &parent_return, &children,
+                   &count)) {
+        for (unsigned int i = 0; i < count; ++i) {
+            for (const Window* window : wm_tops) {
+                if (window->frame() == children[i]) {
+                    clients.push_back(window->get_child());
+                    break;
+                }
+            }
+        }
+    }
+    if (children) {
+        XFree(children);
+    }
+    XChangeProperty(display, root, dsp._NET_CLIENT_LIST_STACKING, XA_WINDOW, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(clients.data()),
+                    static_cast<int>(clients.size()));
+}
+
+void Manager::restack_layers()
+{
+    // below first, so the one that is above comes out on top of all
+    for (Window* window : wm_tops) {
+        if (window->is_below() && !window->get_minimized()) {
+            window->lower();
+        }
+    }
+    // the focused window last, so it stays on top of the others in its layer
+    const auto raise_above = [this](Window* window) {
+        if (window->is_above() && !window->get_minimized()) {
+            window->raise();
+            for (Window* dialog : transients_of(window)) {
+                dialog->raise(); // a dialog stays over its parent
+            }
+        }
+    };
+    for (Window* window : wm_tops) {
+        if (window != active) {
+            raise_above(window);
+        }
+    }
+    if (active) {
+        raise_above(active);
+    }
+}
+
+void Manager::request_frame_extents(::Window child)
+{
+    const tiny::Display& dsp = tiny::get_display();
+    FrameExtents extents;
+    unsigned long functions;
+    unsigned long decorations;
+    if (!Window::get_motif_hints(child, functions, decorations) ||
+        decorations) {
+        extents = Client::default_frame_extents();
+    }
+    const long values[] = {extents.left, extents.right, extents.top,
+                           extents.bottom};
+    XChangeProperty(display, child, dsp._NET_FRAME_EXTENTS, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(values), 4);
+}
+
 bool Manager::on_root_message(const XClientMessageEvent& e)
 {
     const tiny::Display& dsp = tiny::get_display();
+    if (e.message_type == dsp._NET_REQUEST_FRAME_EXTENTS) {
+        if (!wm_windows.count(e.window)) { // a managed window has them
+            request_frame_extents(e.window);
+        }
+        return true;
+    }
     if (e.message_type != dsp._NET_ACTIVE_WINDOW &&
         e.message_type != dsp._NET_CLOSE_WINDOW) {
         return false; // the window knows the rest
@@ -506,6 +597,11 @@ void Manager::connect_window(Window* window)
                                               &Manager::on_window_minimize));
     window->on_modal.connect(this, static_cast<tiny::object_signal_t>(
                                            &Manager::on_window_modal));
+    window->on_skip_taskbar.connect(this,
+                                    static_cast<tiny::object_signal_t>(
+                                            &Manager::on_window_skip_taskbar));
+    window->on_layer.connect(this, static_cast<tiny::object_signal_t>(
+                                           &Manager::on_window_layer));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
 }
@@ -598,6 +694,24 @@ void Manager::on_window_modal(tiny::Object* o, const XEvent&, void*)
     }
 }
 
+void Manager::on_window_skip_taskbar(tiny::Object* o, const XEvent&, void*)
+{
+    auto* window = reinterpret_cast<Window*>(o);
+    if (window->skip_taskbar()) {
+        if (!window->get_minimized()) { // the icon brings it back
+            wm_dock.remove(window);
+        }
+    } else if (!is_dialog(window) && !wm_dock.contains(window)) {
+        wm_dock.add(window);
+    }
+}
+
+void Manager::on_window_layer(tiny::Object*, const XEvent&, void*)
+{
+    restack_layers();
+    publish_stacking();
+}
+
 void Manager::remember_active(Window* window, const XEvent& e)
 {
     if (active && active != window) {
@@ -606,6 +720,7 @@ void Manager::remember_active(Window* window, const XEvent& e)
     }
     active = window;
     wm_dock.redraw(active, e);
+    restack_layers();
     publish_clients();
 }
 
@@ -749,6 +864,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
 
     wm_windows[child] = window;
     wm_tops.push_back(window);
+    restack_layers(); // it may be above or below from the start
     publish_clients();
     set_application_icon(window);
     if (is_dialog(window)) { // it has no place of its own in the dock

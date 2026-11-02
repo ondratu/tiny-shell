@@ -32,11 +32,11 @@ int client_size_units(const XSizeHints& hints, bool horizontal, int size);
 bool has_resize_increment(const XSizeHints& hints);
 
 struct MotifWMHints {
-    unsigned long flags;
-    unsigned long functions;
-    unsigned long decorations;
-    long input_mode;
-    unsigned long status;
+    unsigned long flags = 0;
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+    long input_mode = 0;
+    unsigned long status = 0;
 
     static constexpr long property_length = 5L;
 
@@ -72,6 +72,26 @@ struct MotifWMHints {
         INPUT_SYSTEM_MODAL = 2,
         INPUT_FULL_APPLICATION_MODAL = 3
     };
+};
+
+/**
+ * @short What a `_MOTIF_WM_HINTS` property allows.
+ *
+ * `data` are the `nitems` 32 bit values of the property (flags, functions,
+ * decorations, ...); a property that is shorter than its flags say is read as
+ * far as it goes. A field the hints do not set (or a missing property) allows
+ * everything. When the `ALL` bit of a field is set, the other bits are the
+ * ones that are NOT allowed (Motif); the result never has the `ALL` bit.
+ */
+void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
+                         unsigned long& functions, unsigned long& decorations);
+
+//! The width of the frame around a client on each side
+struct FrameExtents {
+    int left = 0;
+    int right = 0;
+    int top = 0;
+    int bottom = 0;
 };
 
 class Window : public tiny::Object {
@@ -125,10 +145,49 @@ class Window : public tiny::Object {
         return functions & MotifWMHints::FUNC_MAXIMIZE;
     }
 
+    //! The user may minimize it (the Motif function, and not a small helper
+    //! window that only goes with its application)
+    virtual bool is_minimizable() const
+    {
+        return (functions & MotifWMHints::FUNC_MINIMIZE) && !is_auxiliary();
+    }
+
+    //! The user may close it with a button (the Motif function)
+    virtual bool is_closable() const
+    {
+        return functions & MotifWMHints::FUNC_CLOSE;
+    }
+
+    //! A dialog, toolbar, menu or utility window: no place of its own in the
+    //! dock, no minimize and maximize buttons
+    bool is_auxiliary() const
+    {
+        return wm_type == WMType::DIALOG || wm_type == WMType::UTILITY ||
+               wm_type == WMType::TOOLBAR || wm_type == WMType::MENU;
+    }
+
+    //! Not in the dock: asked by `_NET_WM_STATE_SKIP_TASKBAR` or a utility
+    //! window, a toolbar or a menu
     virtual bool skip_taskbar() const
     {
-        return wm_states & WMState::SKIP_TASKBAR;
+        return (wm_states & WMState::SKIP_TASKBAR) ||
+               wm_type == WMType::UTILITY || wm_type == WMType::TOOLBAR ||
+               wm_type == WMType::MENU;
     }
+    void set_skip_taskbar(bool skip);
+
+    //! `_NET_WM_STATE_ABOVE` and `_NET_WM_STATE_BELOW`: the stacking layer
+    bool is_above() const { return wm_states & WMState::ABOVE; }
+    bool is_below() const { return wm_states & WMState::BELOW; }
+    void set_above(bool above);
+    void set_below(bool below);
+
+    //! `_NET_WM_STATE_DEMANDS_ATTENTION`, cleared when the window is focused
+    bool demands_attention() const
+    {
+        return wm_states & WMState::DEMANDS_ATTENTION;
+    }
+    void set_demands_attention(bool demands);
 
     virtual bool skip_pager() const { return wm_states & WMState::SKIP_PAGER; }
 
@@ -198,6 +257,15 @@ class Window : public tiny::Object {
     //! Put the frame above its siblings
     virtual void raise();
 
+    //! Put the frame under its siblings
+    virtual void lower();
+
+    //! The frame around the client (nothing for a window without a frame)
+    virtual FrameExtents frame_extents() const { return {}; }
+
+    //! Write `_NET_FRAME_EXTENTS` of the client
+    void publish_frame_extents();
+
     //! Move the frame, the root coordinates of its top left corner
     virtual void move_to(int x, int y);
 
@@ -258,6 +326,10 @@ class Window : public tiny::Object {
     //! The window is minimized or restored, see `get_minimized()`
     tiny::Signal on_minimize;
     tiny::Signal on_modal; //!< The modal state changed
+    //! `skip_taskbar()` may have changed (the dock entry comes or goes)
+    tiny::Signal on_skip_taskbar;
+    //! The layer (above, below) changed; the manager restacks the windows
+    tiny::Signal on_layer;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held

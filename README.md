@@ -44,8 +44,10 @@ Done:
 
 - [x] Reparenting frames with a title, icon and close, minimize and maximize
       buttons
-- [x] Buttons and resizing follow the window: `_MOTIF_WM_HINTS` functions,
-      min and max size, windows without decorations
+- [x] Buttons and resizing follow the window: `_MOTIF_WM_HINTS` functions and
+      decorations (including the `ALL` bit that turns the list around), min
+      and max size, windows without decorations; dialogs, utility windows,
+      toolbars and menus have no minimize and maximize button
 - [x] Move and resize by the title bar, edges and corners; snapping to the
       resize increment of the client
 - [x] Focus, `WM_TAKE_FOCUS`, `WM_DELETE_WINDOW` (with `XKillClient` as the
@@ -61,8 +63,11 @@ Done:
 - [x] `ConfigureRequest` of framed windows with the synthetic
       `ConfigureNotify`
 - [x] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
-      `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the requests to activate
-      and close a window
+      `_NET_CLIENT_LIST`, `_NET_CLIENT_LIST_STACKING`, `_NET_ACTIVE_WINDOW`)
+      and the requests to activate and close a window
+- [x] `_NET_FRAME_EXTENTS` of every window and `_NET_REQUEST_FRAME_EXTENTS`
+- [x] `_NET_WM_STATE` requests: skip taskbar (no dock icon), above, below
+      (the window keeps its layer), demands attention (until it is focused)
 - [x] Dialogs (`WM_TRANSIENT_FOR`): centered over the parent, kept above it,
       minimized with it, asked to close (`WM_DELETE_WINDOW`) when it is gone or hidden, no dock icon; `_NET_WM_STATE`
       requests change each of their two atoms on their own and can toggle
@@ -88,9 +93,9 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] The rest of EWMH: `_NET_CLIENT_LIST_STACKING`, `_NET_FRAME_EXTENTS`, a
-      policy against stealing the focus, and the `_NET_WM_STATE` requests
-      other than maximize and fullscreen
+- [ ] The rest of EWMH: a policy against stealing the focus
+      (`_NET_WM_USER_TIME`), the panel as a strut, a window that is mapped
+      already fullscreen
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
 - [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)

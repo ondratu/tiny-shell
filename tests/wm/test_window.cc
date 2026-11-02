@@ -55,6 +55,81 @@ XEvent property_event(::Window window, Atom atom)
 
 // ---- static helpers ----
 
+TEST_F(WindowTest, motif_all_bit_turns_the_listed_bits_around)
+{
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+    const unsigned long hints[] = {
+            MotifWMHints::FLAG_FUNCTIONS | MotifWMHints::FLAG_DECORATIONS,
+            MotifWMHints::FUNC_ALL | MotifWMHints::FUNC_CLOSE,
+            MotifWMHints::DECOR_ALL | MotifWMHints::DECOR_MAXIMIZE};
+
+    tiny::wm::resolve_motif_hints(hints, 3, functions, decorations);
+
+    EXPECT_FALSE(functions & MotifWMHints::FUNC_CLOSE);
+    EXPECT_TRUE(functions & MotifWMHints::FUNC_MINIMIZE);
+    EXPECT_FALSE(functions & MotifWMHints::FUNC_ALL);
+    EXPECT_FALSE(decorations & MotifWMHints::DECOR_MAXIMIZE);
+    EXPECT_TRUE(decorations & MotifWMHints::DECOR_TITLE);
+    EXPECT_FALSE(decorations & MotifWMHints::DECOR_ALL);
+}
+
+TEST_F(WindowTest, motif_bits_without_all_are_the_allowed_ones)
+{
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+    const unsigned long hints[] = {
+            MotifWMHints::FLAG_FUNCTIONS | MotifWMHints::FLAG_DECORATIONS,
+            MotifWMHints::FUNC_MOVE, MotifWMHints::DECOR_TITLE};
+
+    tiny::wm::resolve_motif_hints(hints, 3, functions, decorations);
+
+    EXPECT_EQ(functions, static_cast<unsigned long>(MotifWMHints::FUNC_MOVE));
+    EXPECT_EQ(decorations,
+              static_cast<unsigned long>(MotifWMHints::DECOR_TITLE));
+}
+
+TEST_F(WindowTest, a_short_motif_property_is_not_read_past_its_end)
+{
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+    // the flags say functions and decorations, the property holds the flags
+    // and the functions only
+    const unsigned long hints[] = {MotifWMHints::FLAG_FUNCTIONS |
+                                           MotifWMHints::FLAG_DECORATIONS,
+                                   MotifWMHints::FUNC_CLOSE};
+
+    tiny::wm::resolve_motif_hints(hints, 2, functions, decorations);
+
+    EXPECT_EQ(functions, static_cast<unsigned long>(MotifWMHints::FUNC_CLOSE));
+    EXPECT_TRUE(decorations & MotifWMHints::DECOR_TITLE); // not set: all
+}
+
+TEST_F(WindowTest, motif_hints_of_another_format_are_ignored)
+{
+    const unsigned char bytes[5] = {1, 0, 0, 0, 0};
+    XChangeProperty(client.display, client.window, dsp()._MOTIF_WM_HINTS,
+                    dsp()._MOTIF_WM_HINTS, 8, PropModeReplace, bytes, 5);
+    client.sync();
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+
+    EXPECT_FALSE(
+            WmWindow::get_motif_hints(client.window, functions, decorations));
+    EXPECT_TRUE(functions & MotifWMHints::FUNC_CLOSE);
+}
+
+TEST_F(WindowTest, no_motif_data_allows_everything)
+{
+    unsigned long functions = 0;
+    unsigned long decorations = 0;
+
+    tiny::wm::resolve_motif_hints(nullptr, 0, functions, decorations);
+
+    EXPECT_TRUE(functions & MotifWMHints::FUNC_MINIMIZE);
+    EXPECT_TRUE(decorations & MotifWMHints::DECOR_MAXIMIZE);
+}
+
 TEST_F(WindowTest, motif_hints_default_to_everything_allowed)
 {
     unsigned long functions = 0;
@@ -1243,6 +1318,121 @@ TEST_F(WindowTest, client_message_with_other_state_changes_is_ignored)
                         static_cast<long>(dsp()._NET_WM_STATE_STICKY)));
 
     EXPECT_FALSE(window->get_maximized());
+}
+
+TEST_F(WindowTest, skip_taskbar_above_below_and_attention_can_be_requested)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    const auto add = static_cast<long>(tiny::Display::_NET_WM_STATE_ADD);
+    const auto remove = static_cast<long>(tiny::Display::_NET_WM_STATE_REMOVE);
+    const auto toggle = static_cast<long>(tiny::Display::_NET_WM_STATE_TOGGLE);
+
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE, add,
+                        static_cast<long>(dsp()._NET_WM_STATE_SKIP_TASKBAR),
+                        static_cast<long>(dsp()._NET_WM_STATE_ABOVE)));
+    EXPECT_TRUE(window->skip_taskbar());
+    EXPECT_TRUE(window->is_above());
+
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE, toggle,
+                        static_cast<long>(dsp()._NET_WM_STATE_ABOVE),
+                        static_cast<long>(dsp()._NET_WM_STATE_BELOW)));
+    EXPECT_FALSE(window->is_above());
+    EXPECT_TRUE(window->is_below());
+
+    send(client.window,
+         client_message(
+                 client.window, dsp()._NET_WM_STATE, add,
+                 static_cast<long>(dsp()._NET_WM_STATE_DEMANDS_ATTENTION)));
+    EXPECT_TRUE(window->demands_attention());
+
+    send(client.window,
+         client_message(client.window, dsp()._NET_WM_STATE, remove,
+                        static_cast<long>(dsp()._NET_WM_STATE_SKIP_TASKBAR)));
+    EXPECT_FALSE(window->skip_taskbar());
+}
+
+TEST_F(WindowTest, a_window_is_in_one_layer)
+{
+    auto window = manage();
+
+    window->set_above(true);
+    window->set_below(true);
+
+    EXPECT_FALSE(window->is_above());
+    EXPECT_TRUE(window->is_below());
+
+    window->set_above(true);
+    EXPECT_TRUE(window->is_above());
+    EXPECT_FALSE(window->is_below());
+}
+
+TEST_F(WindowTest, the_layer_and_taskbar_changes_are_reported_only_once)
+{
+    auto window = manage();
+    Recorder layer;
+    Recorder taskbar;
+    window->on_layer.connect(&layer, layer.slot());
+    window->on_skip_taskbar.connect(&taskbar, taskbar.slot());
+
+    window->set_above(true);
+    window->set_above(true);
+    window->set_skip_taskbar(true);
+    window->set_skip_taskbar(true);
+
+    EXPECT_EQ(layer.calls, 1);
+    EXPECT_EQ(taskbar.calls, 1);
+}
+
+TEST_F(WindowTest, focusing_the_window_clears_the_demand_for_attention)
+{
+    client.map();
+    auto window = manage();
+    window->set_demands_attention(true);
+    ASSERT_TRUE(window->demands_attention());
+
+    window->set_focus();
+
+    EXPECT_FALSE(window->demands_attention());
+
+    window->set_demands_attention(true); // it is looked at already
+    EXPECT_FALSE(window->demands_attention());
+}
+
+TEST_F(WindowTest, auxiliary_windows_have_no_dock_entry)
+{
+    client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
+                     {dsp()._NET_WM_WINDOW_TYPE_UTILITY});
+    auto window = manage();
+
+    EXPECT_TRUE(window->is_auxiliary());
+    EXPECT_TRUE(window->skip_taskbar());
+    EXPECT_FALSE(window->is_minimizable());
+}
+
+TEST_F(WindowTest, a_window_without_a_frame_has_no_extents)
+{
+    client.map();
+    auto window = manage();
+    window->publish_frame_extents();
+    client.sync();
+
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(dsp(), client.window, dsp()._NET_FRAME_EXTENTS,
+                                 0, 4, False, XA_CARDINAL, &type, &format,
+                                 &count, &left, &data),
+              Success);
+    ASSERT_EQ(count, 4u);
+    const auto* values = reinterpret_cast<const long*>(data);
+    EXPECT_EQ(values[0] + values[1] + values[2] + values[3], 0);
+    XFree(data);
 }
 
 TEST_F(WindowTest, client_message_can_iconify_the_window)

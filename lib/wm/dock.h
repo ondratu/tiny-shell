@@ -50,6 +50,9 @@ class Dock : public tiny::Box {
     using tiny::Box::remove;
     void add(Window* window);
     void remove(Window* window);
+
+    //! The window has an icon in the dock
+    bool contains(const Window* window) const;
     void redraw(Window* window, const XEvent& e);
 
     void realize(::Window parent, int x, int y) override;
