@@ -9,6 +9,7 @@
 #include <csignal>
 #include <chrono>
 #include <thread>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <list>
 #include <map>
@@ -17,6 +18,7 @@
 
 #include "wm/dock.h"
 #include "wm/panel.h"
+#include "wm/process.h"
 #include "wm/run_dialog.h"
 #include "wm/window.h"
 #include "wm/client.h"
@@ -770,17 +772,271 @@ TEST_F(ManagerTest, the_loop_wakes_up_for_the_first_overdue_ping)
     d.set_protocols({dsp()._NET_WM_PING});
     run_loop();
     pump_events();
-    EXPECT_EQ(manager->ping_timeout_ms(), -1);
 
     const auto now = WmWindow::Clock::now();
+    manager->wm_windows[c.window]->pong();
+    manager->wm_windows[d.window]->pong();
     manager->wm_windows[c.window]->ping(now);
     manager->wm_windows[d.window]->ping(now - std::chrono::seconds(1));
 
     const int ms = manager->ping_timeout_ms();
     EXPECT_GT(ms, 3000);
     EXPECT_LE(ms, 4000);
-    manager->expire_pings(); // nothing is overdue yet
+    manager->check_pings(); // nothing is overdue yet
     EXPECT_TRUE(manager->wm_windows[c.window]->is_responding());
+}
+
+TEST_F(ManagerTest, the_loop_sleeps_when_no_client_is_pinged)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    ASSERT_TRUE(is_managed(c));
+
+    EXPECT_EQ(manager->ping_timeout_ms(), -1);
+}
+
+TEST_F(ManagerTest, clients_are_pinged_while_they_live)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    XEvent e;
+    ASSERT_TRUE(c.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp()._NET_WM_PING));
+    WmWindow* window = manager->wm_windows[c.window];
+
+    manager->check_pings(); // the answer is awaited
+    EXPECT_FALSE(c.message(e));
+    window->pong();
+    EXPECT_EQ(manager->ping_timeout_ms() > 0, true);
+}
+
+namespace {
+
+// A client that does not respond and whose turn to be asked has come
+WmWindow* make_unresponsive(WmWindow* window)
+{
+    const auto now = WmWindow::Clock::now();
+    window->pong(); // forget the ping of the loop
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+    window->postpone_ask(now - WmWindow::wait_delay - std::chrono::seconds(1));
+    return window;
+}
+
+// When the user is to be asked, the beginning of time for a window that responds
+WmWindow::Clock::time_point ask_time(const WmWindow& window)
+{
+    return window.get_ask_time().value_or(WmWindow::Clock::time_point{});
+}
+
+// The button of the dialog: wait is the third child, force quit the fourth
+void click_dialog_button(::Window dialog, size_t index)
+{
+    const ::Window button = children_of(dialog).at(index);
+    send(button, make_event(EnterNotify));
+    send(button, make_event(ButtonRelease));
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_user_is_asked_about_a_client_that_does_not_respond)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+    const WmWindow* window = make_unresponsive(manager->wm_windows[c.window]);
+
+    manager->check_pings();
+
+    EXPECT_EQ(manager->asked, window);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsViewable);
+}
+
+TEST_F(ManagerTest, a_client_that_responds_is_not_asked_about)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+
+    manager->check_pings();
+
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, closing_a_client_that_does_not_respond_asks_at_once)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW, dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const auto now = WmWindow::Clock::now();
+    window->pong();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+
+    window->close();
+
+    EXPECT_EQ(manager->asked, window);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsViewable);
+}
+
+TEST_F(ManagerTest, waiting_hides_the_dialog_and_asks_again_later)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    const WmWindow* window = make_unresponsive(manager->wm_windows[c.window]);
+    manager->check_pings();
+
+    click_dialog_button(manager->wm_unresponsive.get_window(), 2);
+
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+    EXPECT_GT(ask_time(*window),
+              WmWindow::Clock::now() + WmWindow::wait_delay / 2);
+    manager->check_pings();
+    EXPECT_EQ(manager->asked, nullptr); // not yet
+    EXPECT_FALSE(window->is_responding());
+}
+
+TEST_F(ManagerTest, quitting_kills_the_process_of_the_client)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    const pid_t pid = fork();
+    ASSERT_GE(pid, 0);
+    if (pid == 0) {
+        alarm(30); // never outlives a failed test
+        pause();
+        _exit(0);
+    }
+    c.set_cardinals(dsp()._NET_WM_PID, {pid});
+    std::string host = tiny::wm::local_host_name();
+    char* names[] = {host.data()};
+    XTextProperty text;
+    ASSERT_NE(XStringListToTextProperty(names, 1, &text), 0);
+    XSetWMClientMachine(c.display, c.window, &text);
+    XFree(text.value);
+    c.sync();
+    run_loop();
+    pump_events();
+    make_unresponsive(manager->wm_windows[c.window]);
+    manager->check_pings();
+
+    click_dialog_button(manager->wm_unresponsive.get_window(), 3);
+
+    int status = 0;
+    EXPECT_EQ(waitpid(pid, &status, 0), pid);
+    EXPECT_TRUE(WIFSIGNALED(status));
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+    c.abandon();
+}
+
+TEST_F(ManagerTest, the_answer_of_the_client_takes_the_dialog_back)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    const WmWindow* window = make_unresponsive(manager->wm_windows[c.window]);
+    manager->check_pings();
+    ASSERT_EQ(manager->asked, window);
+
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = root_window();
+    e.xclient.message_type = dsp().WM_PROTOCOLS;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = static_cast<long>(dsp()._NET_WM_PING);
+    e.xclient.data.l[2] = static_cast<long>(c.window);
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    run_loop();
+
+    EXPECT_TRUE(window->is_responding());
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, a_client_that_goes_away_takes_the_dialog_back)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    make_unresponsive(manager->wm_windows[c.window]);
+    manager->check_pings();
+    ASSERT_NE(manager->asked, nullptr);
+
+    XDestroyWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, one_client_is_asked_about_at_a_time)
+{
+    start();
+    FakeClient& c = add_client();
+    FakeClient& d = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    d.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    const WmWindow* first = make_unresponsive(manager->wm_windows[c.window]);
+    const WmWindow* second = make_unresponsive(manager->wm_windows[d.window]);
+    manager->check_pings();
+    const WmWindow* shown = manager->asked;
+    ASSERT_TRUE(shown == first || shown == second);
+    EXPECT_EQ(manager->ping_timeout_ms() >= 0, true);
+
+    manager->check_pings();
+    EXPECT_EQ(manager->asked, shown);
+    click_dialog_button(manager->wm_unresponsive.get_window(), 2);
+    manager->check_pings();
+
+    EXPECT_NE(manager->asked, nullptr); // the other one is asked now
+    EXPECT_NE(manager->asked, shown);
+}
+
+TEST_F(ManagerTest, the_dialog_is_above_the_windows)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->restack_layers();
+
+    const auto order = children_of(root_window());
+    const auto dialog = std::find(order.begin(), order.end(),
+                                  manager->wm_unresponsive.get_window());
+    const auto frame =
+            std::find(order.begin(), order.end(), parent_of(c.window));
+    ASSERT_NE(dialog, order.end());
+    ASSERT_NE(frame, order.end());
+    EXPECT_GT(dialog, frame);
 }
 
 namespace {

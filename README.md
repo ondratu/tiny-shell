@@ -47,7 +47,8 @@ Implemented:
   edges and corners, maximize, fullscreen (F11), minimize (also on request of
   the client), shade, dialogs and modal dialogs, focus handling, Alt+Tab,
   windows adopted at start, clients survive a crash of the manager and are
-  given back when it exits.
+  given back when it exits, applications that stop responding are found by
+  `_NET_WM_PING` and the user chooses to wait or to force them to quit.
 - **Standards:** ICCCM, EWMH (window states, types, layers, struts and the
   work area, active window, focus stealing prevention, frame extents, the
   client lists), `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry

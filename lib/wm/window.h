@@ -1,6 +1,9 @@
 #pragma once
 
+#include <sys/types.h>
+
 #include <chrono>
+#include <optional>
 #include <vector>
 #include <set>
 #include <string>
@@ -386,7 +389,8 @@ class Window : public tiny::Object {
     virtual void move_to(int x, int y);
 
     //! Send WM_DELETE_WINDOW to window or xkill that; a window that does
-    //! not answer `_NET_WM_PING` is killed at once
+    //! not answer `_NET_WM_PING` is not killed at once: `on_unresponsive`
+    //! asks the user first
     virtual void close();
     //! Send `WM_DELETE_WINDOW`; false (nothing sent) without that protocol
     bool ask_to_close();
@@ -395,6 +399,16 @@ class Window : public tiny::Object {
 
     //! How long a client may take to answer `_NET_WM_PING`
     static constexpr std::chrono::seconds ping_timeout{5};
+
+    //! How often a client that is not minimized is pinged
+    static constexpr std::chrono::seconds ping_interval{5};
+
+    //! How long a client that does not respond is left alone, before the
+    //! user is asked what to do with it
+    static constexpr std::chrono::seconds ask_delay{10};
+
+    //! How long the user is left alone after the choice to wait
+    static constexpr std::chrono::seconds wait_delay{30};
 
     //! Ask the client whether it lives (`_NET_WM_PING`); nothing is sent
     //! without that protocol or while the last ping is not answered
@@ -411,6 +425,28 @@ class Window : public tiny::Object {
 
     //! When the pending ping is overdue
     Clock::time_point get_ping_deadline() const { return ping_deadline; }
+
+    //! Send the next ping when its time has come (see `ping_interval`)
+    void ping_if_due(Clock::time_point now);
+
+    //! When `expire_ping` or `ping_if_due` has something to do; none for a
+    //! client that is not pinged
+    std::optional<Clock::time_point> get_ping_wakeup() const;
+
+    //! When to ask the user about a client that does not respond; none while
+    //! the client responds
+    std::optional<Clock::time_point> get_ask_time() const;
+
+    //! The user chose to wait: ask again after `wait_delay`
+    void postpone_ask(Clock::time_point now);
+
+    //! The process of the client that may be killed (see `killable_pid`),
+    //! 0 if there is none
+    pid_t get_killable_pid() const;
+
+    //! Kill the process of the client, when there is one to kill, and its
+    //! connection to the X server
+    void kill_client();
 
     //! Give up waiting for an overdue ping; true when it just happened
     bool expire_ping(Clock::time_point now);
@@ -513,6 +549,8 @@ class Window : public tiny::Object {
     //! The client asks to be moved or resized (`_NET_WM_MOVERESIZE`), the
     //! event is the message
     tiny::Signal on_move_resize_request;
+    //! `close()` was asked of a client that does not respond
+    tiny::Signal on_unresponsive;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held
@@ -603,6 +641,8 @@ class Window : public tiny::Object {
     unsigned expected_unmaps = 0; //!< our unmaps of the client not seen yet
     bool ping_pending = false;
     Clock::time_point ping_deadline;
+    Clock::time_point next_ping;
+    Clock::time_point ask_at; //!< valid while the client does not respond
 };
 
 } // namespace tiny::wm

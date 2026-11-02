@@ -85,6 +85,21 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
 
+    wm_unresponsive.realize(root_arg);
+    wm_unresponsive.on_wait.connect([this](const XEvent&) {
+        if (asked) {
+            asked->postpone_ask(Window::Clock::now());
+        }
+        close_unresponsive_dialog();
+    });
+    wm_unresponsive.on_quit.connect([this](const XEvent&) {
+        Window* window = asked;
+        close_unresponsive_dialog();
+        if (window) {
+            window->kill_client();
+        }
+    });
+
     wm_launcher.realize(root_arg, 0, 0);
     wm_launcher.set_events();
     wm_launcher.keep_above(&wm_panel);
@@ -417,6 +432,7 @@ void Manager::restack_layers()
     raise_layer([](const Window* w) { return w->is_fullscreen(); });
     XRaiseWindow(display, wm_run.get_window()); // hidden until it is needed
     XRaiseWindow(display, wm_launcher.get_window());
+    XRaiseWindow(display, wm_unresponsive.get_window());
 }
 
 void Manager::request_frame_extents(::Window child)
@@ -452,6 +468,9 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         const auto it = wm_windows.find(static_cast<::Window>(e.data.l[2]));
         if (it != wm_windows.end()) {
             it->second->pong();
+            if (asked == it->second) {
+                close_unresponsive_dialog(); // it lives, no need to ask
+            }
         }
         return true;
     }
@@ -540,24 +559,60 @@ int Manager::ping_timeout_ms() const
 {
     const auto now = Window::Clock::now();
     int rv = -1;
-    for (const auto& it : wm_windows) {
-        if (!it.second->has_pending_ping()) {
-            continue;
-        }
-        const auto left = std::chrono::ceil<std::chrono::milliseconds>(
-                it.second->get_ping_deadline() - now);
+    const auto soonest = [&](const Window::Clock::time_point at) {
+        const auto left =
+                std::chrono::ceil<std::chrono::milliseconds>(at - now);
         const int ms = static_cast<int>(std::max<long long>(left.count(), 0));
         rv = rv < 0 ? ms : std::min(rv, ms);
+    };
+    for (const auto& it : wm_windows) {
+        if (const auto at = it.second->get_ping_wakeup()) {
+            soonest(*at);
+        }
+        if (const auto at = it.second->get_ask_time(); at && !asked) {
+            soonest(*at);
+        }
     }
     return rv;
 }
 
-void Manager::expire_pings()
+void Manager::check_pings()
 {
     const auto now = Window::Clock::now();
     for (const auto& it : wm_windows) {
         it.second->expire_ping(now);
+        it.second->ping_if_due(now);
     }
+    if (asked) {
+        return; // one question at a time
+    }
+    for (const auto& it : wm_windows) {
+        if (const auto at = it.second->get_ask_time(); at && *at <= now) {
+            ask_to_quit(it.second);
+            return;
+        }
+    }
+}
+
+void Manager::ask_to_quit(Window* window)
+{
+    asked = window;
+    // the other windows of the process go away with it
+    const pid_t pid = window->get_killable_pid();
+    unsigned others = 0;
+    for (const auto& it : wm_windows) {
+        others += pid && it.second != window &&
+                                  it.second->get_killable_pid() == pid
+                          ? 1
+                          : 0;
+    }
+    wm_unresponsive.popup(window->get_wm_name(), others);
+}
+
+void Manager::close_unresponsive_dialog()
+{
+    asked = nullptr;
+    wm_unresponsive.unmap();
 }
 
 bool Manager::wait_for_event()
@@ -569,7 +624,7 @@ bool Manager::wait_for_event()
         if (poll(fds, 2, wait ? ping_timeout_ms() : 0) < 0 && errno != EINTR) {
             return false;
         }
-        expire_pings();
+        check_pings();
         if (fds[1].revents & POLLIN) {
             char drain[16];
             while (read(quit_pipe[0], drain, sizeof(drain)) > 0) {}
@@ -828,6 +883,11 @@ void Manager::connect_window(Window* window)
             [this, window](const XEvent& e) { on_window_focus(window, e); });
     window->on_minimize.connect(
             [this, window](const XEvent&) { on_window_minimize(window); });
+    window->on_unresponsive.connect([this, window](const XEvent&) {
+        if (!asked) {
+            ask_to_quit(window);
+        }
+    });
     window->on_modal.connect(
             [this, window](const XEvent&) { on_window_modal(window); });
     window->on_skip_taskbar.connect(
@@ -1196,6 +1256,9 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
         return;
     }
     Window* window = it->second;
+    if (asked == window) {
+        close_unresponsive_dialog();
+    }
     if (dragged == window) {
         stop_move_resize(false); // it is gone, or comes back in a new frame
     }

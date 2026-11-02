@@ -5,10 +5,15 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <csignal>
 #include <memory>
 #include <string>
 
+#include "wm/process.h"
 #include "wm/window.h"
 
 using tiny::wm::MotifWMHints;
@@ -29,6 +34,17 @@ class WindowTest : public ::testing::Test {
                                           functions, screen_area());
     }
 };
+
+// The time of an optional that is there; the beginning of time when it is not
+WmWindow::Clock::time_point ask_time(const WmWindow& window)
+{
+    return window.get_ask_time().value_or(WmWindow::Clock::time_point{});
+}
+
+WmWindow::Clock::time_point ping_wakeup(const WmWindow& window)
+{
+    return window.get_ping_wakeup().value_or(WmWindow::Clock::time_point{});
+}
 
 XEvent client_message(::Window window, Atom type, long l0 = 0, long l1 = 0,
                       long l2 = 0)
@@ -1237,7 +1253,7 @@ TEST_F(WindowTest, the_answer_to_a_ping_makes_the_window_respond_again)
     EXPECT_FALSE(window->has_pending_ping());
 }
 
-TEST_F(WindowTest, closing_a_window_that_does_not_respond_kills_the_client)
+TEST_F(WindowTest, closing_a_window_that_does_not_respond_asks_the_user)
 {
     client.set_protocols({dsp().WM_DELETE_WINDOW, dsp()._NET_WM_PING});
     auto window = manage();
@@ -1246,10 +1262,198 @@ TEST_F(WindowTest, closing_a_window_that_does_not_respond_kills_the_client)
     window->expire_ping(now + WmWindow::ping_timeout);
     XEvent e;
     ASSERT_TRUE(client.message(e)); // the ping
+    int asked = 0;
+    window->on_unresponsive.connect([&](const XEvent&) { ++asked; });
 
     window->close();
 
+    EXPECT_EQ(asked, 1);
+    EXPECT_LE(ask_time(*window), WmWindow::Clock::now());
+    EXPECT_FALSE(client.message(e)); // nothing is sent to the client
+    const XErrors errors;
+    XWindowAttributes attrs;
+    EXPECT_NE(XGetWindowAttributes(dsp(), client.window, &attrs), 0);
+}
+
+TEST_F(WindowTest, the_user_is_asked_a_while_after_the_ping_is_missed)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    EXPECT_FALSE(window->get_ask_time());
+    window->ping(now);
+
+    window->expire_ping(now + WmWindow::ping_timeout);
+
+    EXPECT_EQ(ask_time(*window),
+              now + WmWindow::ping_timeout + WmWindow::ask_delay);
+    window->pong();
+    EXPECT_FALSE(window->get_ask_time());
+}
+
+TEST_F(WindowTest, a_second_missed_ping_does_not_postpone_the_question)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+    const auto asked_at = ask_time(*window);
+
+    window->ping_if_due(now + WmWindow::ping_timeout);
+    window->expire_ping(now + 2 * WmWindow::ping_timeout);
+
+    EXPECT_EQ(ask_time(*window), asked_at);
+}
+
+TEST_F(WindowTest, waiting_postpones_the_question)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+
+    window->postpone_ask(now + WmWindow::ask_delay);
+
+    EXPECT_EQ(ask_time(*window),
+              now + WmWindow::ask_delay + WmWindow::wait_delay);
+}
+
+TEST_F(WindowTest, a_visible_client_is_pinged_again_and_again)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    XEvent e;
+
+    window->ping_if_due(now);
+    ASSERT_TRUE(client.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp()._NET_WM_PING));
+    window->pong();
+    window->ping_if_due(now + WmWindow::ping_interval / 2);
+    EXPECT_FALSE(client.message(e)); // too early
+    window->ping_if_due(now + WmWindow::ping_interval);
+
+    EXPECT_TRUE(client.message(e));
+    EXPECT_EQ(ping_wakeup(*window),
+              now + WmWindow::ping_interval + WmWindow::ping_timeout);
+}
+
+TEST_F(WindowTest, the_next_ping_is_the_wakeup_of_a_client_that_answers)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->pong();
+
+    EXPECT_EQ(ping_wakeup(*window), now + WmWindow::ping_interval);
+}
+
+TEST_F(WindowTest, a_client_without_the_ping_protocol_is_never_woken_for)
+{
+    client.set_protocols({dsp().WM_DELETE_WINDOW});
+    auto window = manage();
+    XEvent e;
+
+    window->ping_if_due(WmWindow::Clock::now());
+
+    EXPECT_FALSE(window->get_ping_wakeup());
+    EXPECT_FALSE(client.message(e));
+}
+
+TEST_F(WindowTest, a_minimized_window_is_not_pinged)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    window->minimize();
+    XEvent e;
+
+    window->ping_if_due(WmWindow::Clock::now());
+
+    EXPECT_FALSE(window->get_ping_wakeup());
+    EXPECT_FALSE(client.message(e));
+}
+
+namespace {
+
+// A process that waits for a signal, `pid` of the client names it
+pid_t start_sleeper()
+{
+    const pid_t pid = fork();
+    if (pid == 0) {
+        alarm(30); // never outlives a failed test
+        pause();
+        _exit(0);
+    }
+    return pid;
+}
+
+bool was_killed(pid_t pid)
+{
+    int status = 0;
+    return waitpid(pid, &status, 0) == pid && WIFSIGNALED(status) &&
+           WTERMSIG(status) == SIGKILL;
+}
+
+void set_machine(FakeClient& client, const std::string& name)
+{
+    std::string copy = name;
+    char* names[] = {copy.data()};
+    XTextProperty text;
+    ASSERT_NE(XStringListToTextProperty(names, 1, &text), 0);
+    XSetWMClientMachine(client.display, client.window, &text);
+    XFree(text.value);
+    client.sync();
+}
+
+} // namespace
+
+TEST_F(WindowTest, killing_a_client_kills_its_process_and_its_connection)
+{
+    const pid_t pid = start_sleeper();
+    ASSERT_GT(pid, 0);
+    client.set_cardinals(dsp()._NET_WM_PID, {pid});
+    set_machine(client, tiny::wm::local_host_name());
+    auto window = manage();
+    ASSERT_EQ(window->get_killable_pid(), pid);
+
+    window->kill_client();
+
+    EXPECT_TRUE(was_killed(pid));
     client.abandon(); // the server closes the connection of the client
+    const XErrors errors;
+    XSync(dsp(), False);
+    XWindowAttributes attrs;
+    EXPECT_EQ(XGetWindowAttributes(dsp(), client.window, &attrs), 0);
+}
+
+TEST_F(WindowTest, a_process_on_another_machine_is_left_alone)
+{
+    const pid_t pid = start_sleeper();
+    ASSERT_GT(pid, 0);
+    client.set_cardinals(dsp()._NET_WM_PID, {pid});
+    set_machine(client, tiny::wm::local_host_name() + "-elsewhere");
+    auto window = manage();
+    EXPECT_EQ(window->get_killable_pid(), 0);
+
+    window->kill_client();
+
+    EXPECT_EQ(kill(pid, 0), 0); // still alive
+    kill(pid, SIGKILL);
+    EXPECT_TRUE(was_killed(pid));
+    client.abandon();
+}
+
+TEST_F(WindowTest, a_client_without_a_pid_is_killed_by_its_connection)
+{
+    auto window = manage();
+    EXPECT_EQ(window->get_killable_pid(), 0);
+
+    window->kill_client();
+
+    client.abandon();
     const XErrors errors;
     XSync(dsp(), False);
     XWindowAttributes attrs;
