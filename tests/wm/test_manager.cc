@@ -2512,6 +2512,106 @@ TEST_F(ManagerTest, a_window_without_decorations_is_told_it_has_no_frame)
     EXPECT_EQ(frame_extents_of(c), (std::vector<long>{0, 0, 0, 0}));
 }
 
+TEST_F(ManagerTest, the_frame_extents_ask_for_the_decorations_of_the_hints)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                tiny::wm::MotifWMHints::DECOR_TITLE);
+
+    request(c.window, dsp()._NET_REQUEST_FRAME_EXTENTS);
+    run_loop();
+
+    EXPECT_EQ(frame_extents_of(c),
+              (std::vector<long>{0, 0, tiny::theme.wm_win_header, 0}));
+}
+
+TEST_F(ManagerTest, a_window_without_a_frame_gets_one_when_the_hints_change)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.map();
+    run_loop();
+    pump_events();
+    ASSERT_FALSE(is_framed(c));
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                tiny::wm::MotifWMHints::DECOR_ALL);
+    run_loop();
+    pump_events();
+
+    EXPECT_TRUE(is_managed(c));
+    EXPECT_TRUE(is_framed(c));
+    EXPECT_EQ(frame_extents_of(c),
+              (std::vector<long>{
+                      tiny::wm::Client::default_frame_extents().left,
+                      tiny::wm::Client::default_frame_extents().right,
+                      tiny::wm::Client::default_frame_extents().top,
+                      tiny::wm::Client::default_frame_extents().bottom}));
+}
+
+TEST_F(ManagerTest, a_framed_window_loses_the_frame_when_the_hints_change)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    ASSERT_TRUE(is_framed(c));
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    run_loop();
+    pump_events();
+
+    EXPECT_TRUE(is_managed(c));
+    EXPECT_FALSE(is_framed(c));
+    EXPECT_EQ(parent_of(c.window), root_window());
+    EXPECT_EQ(attributes_of(c.window).map_state, IsViewable);
+    EXPECT_EQ(frame_extents_of(c), (std::vector<long>{0, 0, 0, 0}));
+}
+
+TEST_F(ManagerTest, a_reframed_window_keeps_the_focus_and_its_state)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.set_state({dsp()._NET_WM_STATE_ABOVE});
+    c.map();
+    run_loop();
+    pump_events();
+    ASSERT_EQ(manager->active, manager->wm_windows[c.window]);
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                tiny::wm::MotifWMHints::DECOR_ALL);
+    run_loop();
+    pump_events();
+
+    ASSERT_TRUE(is_managed(c));
+    EXPECT_EQ(manager->active, manager->wm_windows[c.window]);
+    EXPECT_TRUE(manager->wm_windows[c.window]->is_above());
+}
+
+TEST_F(ManagerTest, a_reframed_window_stays_managed_after_the_unmap_events)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.map();
+    run_loop();
+    pump_events();
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                tiny::wm::MotifWMHints::DECOR_ALL);
+    run_loop();
+    pump_events();
+    run_loop(); // the unmap of the reparenting arrives meanwhile
+    pump_events();
+
+    EXPECT_TRUE(is_managed(c));
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW)),
+              (std::vector<::Window>{c.window}));
+}
+
 TEST_F(ManagerTest, a_utility_window_has_no_icon_in_the_dock)
 {
     start();

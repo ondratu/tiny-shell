@@ -150,8 +150,8 @@ Window::Window(::Window child_arg, ::Window root_arg,
     child(child_arg),
     root(root_arg),
     dsp(tiny::get_display()),
-    functions(functions_arg),
-    work_area(area)
+    work_area(area),
+    functions(functions_arg)
 {
     hints = XAllocSizeHints();
     if (hints == nullptr) {
@@ -1297,6 +1297,13 @@ void Window::on_property_notify(const XEvent& e, void*)
     char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
     TINY_LOG("Unhandled property update: %s", atom_name);
     XFree(atom_name);
+}
+
+void Window::on_motif_hints_changed(unsigned long new_decorations)
+{
+    if (new_decorations) {
+        on_reframe(this, XEvent()); // it is a window without a frame now
+    }
 }
 
 void Window::on_user_time_window_notify(const XEvent& e, void*)

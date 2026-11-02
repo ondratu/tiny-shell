@@ -46,11 +46,12 @@ class ClientTest : public ::testing::Test {
     void SetUp() override { client.map(); }
 
     // Properties of the client must be set before.
-    Probe* build(unsigned long functions = 0xFFFF)
+    Probe* build(unsigned long functions = 0xFFFF,
+                 unsigned long decorations = 0xFFFF)
     {
         const XWindowAttributes a = client.attrs();
         win = std::make_unique<Probe>(client.window, root_window(), a.width,
-                                      a.height, functions, 0xFFFF,
+                                      a.height, functions, decorations,
                                       screen_area());
         win->setup(root_window(), a.x, a.y);
         pump_events();
@@ -176,6 +177,112 @@ TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
 
     EXPECT_EQ(mapped_children_of(win->header.get_window()).size(),
               3u); // close, min
+}
+
+TEST_F(ClientTest, a_window_without_the_title_decoration_has_no_title_bar)
+{
+    using tiny::wm::MotifWMHints;
+    build(0xFFFF, MotifWMHints::DECOR_BORDER | MotifWMHints::DECOR_RESIZE);
+
+    EXPECT_EQ(attributes_of(win->header).map_state, IsUnmapped);
+    EXPECT_EQ(child().y, 0);
+    EXPECT_EQ(frame().height, child().height);
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    EXPECT_EQ(e.top, win->get_border());
+}
+
+TEST_F(ClientTest, a_window_without_the_border_decoration_has_no_border)
+{
+    using tiny::wm::MotifWMHints;
+    build(0xFFFF, MotifWMHints::DECOR_TITLE | MotifWMHints::DECOR_RESIZE);
+
+    EXPECT_EQ(frame().border_width, 0);
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    EXPECT_EQ(e.left, 0);
+    EXPECT_EQ(e.bottom, 0);
+    EXPECT_EQ(e.top, header_height());
+}
+
+TEST_F(ClientTest, a_window_without_the_resize_decoration_has_no_handles)
+{
+    using tiny::wm::MotifWMHints;
+    build(0xFFFF, MotifWMHints::DECOR_TITLE | MotifWMHints::DECOR_BORDER);
+
+    EXPECT_TRUE(win->is_resizable());
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsUnmapped);
+}
+
+TEST_F(ClientTest, the_title_bar_comes_and_goes_with_the_title_decoration)
+{
+    using tiny::wm::MotifWMHints;
+    build();
+    const int height = frame().height;
+    const int content_y = frame().y + header_height();
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_BORDER);
+    pump_events();
+
+    EXPECT_EQ(attributes_of(win->header).map_state, IsUnmapped);
+    EXPECT_EQ(frame().height, height - header_height());
+    EXPECT_EQ(child().y, 0);
+    EXPECT_EQ(frame().y, content_y); // the content did not move
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_ALL);
+    pump_events();
+
+    EXPECT_EQ(attributes_of(win->header).map_state, IsViewable);
+    EXPECT_EQ(frame().height, height);
+    EXPECT_EQ(child().y, header_height());
+}
+
+TEST_F(ClientTest, the_border_comes_and_goes_with_the_border_decoration)
+{
+    using tiny::wm::MotifWMHints;
+    build();
+    ASSERT_NE(frame().border_width, 0);
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_TITLE);
+    pump_events();
+    EXPECT_EQ(frame().border_width, 0);
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_ALL);
+    pump_events();
+    EXPECT_NE(frame().border_width, 0);
+}
+
+TEST_F(ClientTest, the_resize_handles_follow_the_resize_decoration)
+{
+    using tiny::wm::MotifWMHints;
+    build();
+    ASSERT_EQ(attributes_of(win->shadow).map_state, IsViewable);
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_TITLE | MotifWMHints::DECOR_BORDER);
+    pump_events();
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsUnmapped);
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_ALL);
+    pump_events();
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsViewable);
+}
+
+TEST_F(ClientTest, a_maximized_window_follows_the_title_decoration)
+{
+    using tiny::wm::MotifWMHints;
+    build();
+    win->maximize();
+
+    client.set_motif(MotifWMHints::FLAG_DECORATIONS, 0,
+                     MotifWMHints::DECOR_BORDER);
+    pump_events();
+
+    EXPECT_EQ(child().height, screen_area().height);
+    EXPECT_EQ(win->frame_extents().top, 0);
 }
 
 TEST_F(ClientTest, the_buttons_follow_a_change_of_the_motif_hints)

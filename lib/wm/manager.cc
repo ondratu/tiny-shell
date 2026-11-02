@@ -362,9 +362,10 @@ void Manager::request_frame_extents(::Window child)
     FrameExtents extents;
     unsigned long functions;
     unsigned long decorations;
-    if (!Window::get_motif_hints(child, functions, decorations) ||
-        decorations) {
+    if (!Window::get_motif_hints(child, functions, decorations)) {
         extents = Client::default_frame_extents();
+    } else if (decorations) {
+        extents = Client::frame_extents_for(decorations);
     }
     const long values[] = {extents.left, extents.right, extents.top,
                            extents.bottom};
@@ -463,6 +464,7 @@ void Manager::main_loop()
     XEvent event;
 
     while (running) {
+        reframe_windows();
         if (!wait_for_event()) {
             running = false; // SIGTERM, SIGHUP or SIGINT
             break;
@@ -512,6 +514,7 @@ void Manager::main_loop()
                 break;
         }
     }
+    reframe_windows();
 }
 
 void Manager::focus_window(Window* window)
@@ -634,6 +637,8 @@ void Manager::connect_window(Window* window)
                                                &Manager::on_window_attention));
     window->on_user_time.connect(this, static_cast<tiny::object_signal_t>(
                                                &Manager::on_window_user_time));
+    window->on_reframe.connect(this, static_cast<tiny::object_signal_t>(
+                                             &Manager::on_window_reframe));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
 }
@@ -747,6 +752,74 @@ void Manager::on_window_layer(tiny::Object*, const XEvent&, void*)
 {
     restack_layers();
     publish_stacking();
+}
+
+void Manager::on_window_reframe(tiny::Object* o, const XEvent&, void*)
+{
+    // the window is in the middle of its own handler, so do it later
+    const ::Window child = reinterpret_cast<Window*>(o)->get_child();
+    if (std::find(reframes.begin(), reframes.end(), child) == reframes.end()) {
+        reframes.push_back(child);
+    }
+}
+
+void Manager::reframe_windows()
+{
+    const std::vector<::Window> children = std::move(reframes);
+    reframes.clear();
+    for (const ::Window child : children) {
+        reframe(child);
+    }
+}
+
+void Manager::reframe(::Window child)
+{
+    const tiny::Display& dsp = tiny::get_display();
+    const auto it = wm_windows.find(child);
+    if (it == wm_windows.end()) {
+        return;
+    }
+    const bool was_active =
+            it->second == active && !it->second->get_minimized();
+
+    // withdrawing a window forgets its state, the client keeps it
+    std::vector<Atom> states;
+    Atom type;
+    int format;
+    unsigned long count = 0;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    if (XGetWindowProperty(display, child, dsp._NET_WM_STATE, 0, 32, False,
+                           XA_ATOM, &type, &format, &count, &left,
+                           &data) == Success &&
+        data && format == 32) {
+        const auto* atoms = reinterpret_cast<const Atom*>(data);
+        states.assign(atoms, atoms + count);
+    }
+    if (data) {
+        XFree(data);
+    }
+
+    // the reparenting unmaps the client, which is not its own wish
+    reframed = {child, NextRequest(display), 0};
+    unmanage(child, true);
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(display, child, &attrs)) {
+        if (!states.empty()) {
+            XChangeProperty(
+                    display, child, dsp._NET_WM_STATE, XA_ATOM, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(states.data()),
+                    static_cast<int>(states.size()));
+        }
+        Window* window = manage(child, attrs);
+        XMapWindow(display, child);
+        if (window && was_active) {
+            focus_window(window);
+        }
+    }
+    XSync(display, False);
+    reframed.last = NextRequest(display);
 }
 
 void Manager::on_window_attention(tiny::Object* o, const XEvent& e, void*)
@@ -1048,6 +1121,10 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
     untrack_dock(e.window); // a hidden dock reserves nothing
     wm_desktops.erase(e.window);
     // TODO: could be append to signal handlers on wm_window.window
+    if (e.window == reframed.window && e.serial >= reframed.first &&
+        e.serial < reframed.last) {
+        return; // unmapped by the change of the frame
+    }
     const auto it = wm_windows.find(e.window);
     if (it == wm_windows.end() || it->second->get_minimized()) {
         return; // unknown, or hidden by the manager itself
