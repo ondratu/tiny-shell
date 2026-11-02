@@ -1864,8 +1864,8 @@ TEST_F(ManagerTest, a_modal_state_request_changes_the_dialog)
     dialog.map();
     run_loop();
     auto* dialog_window = manager->wm_windows[dialog.window];
-    ASSERT_FALSE(manager->modal_dialogs_of(manager->wm_windows[parent.window])
-                         .size());
+    ASSERT_TRUE(manager->modal_dialogs_of(manager->wm_windows[parent.window])
+                        .empty());
 
     dialog_window->set_modal(true);
     EXPECT_EQ(manager->modal_dialogs_of(manager->wm_windows[parent.window]),
