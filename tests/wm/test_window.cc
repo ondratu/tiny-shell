@@ -475,6 +475,83 @@ XSizeHints terminal_hints()
 
 } // namespace
 
+TEST(ResizeByEdgesTest, the_right_and_bottom_edges_grow_the_frame)
+{
+    const XSizeHints hints = {};
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {100, 50, 300, 200},
+            tiny::Position::Right | tiny::Position::Bottom, 20, 30, 24, 100,
+            100);
+
+    EXPECT_EQ(r.x, 100);
+    EXPECT_EQ(r.y, 50);
+    EXPECT_EQ(r.width, 320);
+    EXPECT_EQ(r.height, 230);
+}
+
+TEST(ResizeByEdgesTest, the_left_and_top_edges_move_the_frame)
+{
+    const XSizeHints hints = {};
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {100, 50, 300, 200},
+            tiny::Position::Left | tiny::Position::Top, -20, -30, 24, 100, 100);
+
+    EXPECT_EQ(r.x, 80);
+    EXPECT_EQ(r.y, 20);
+    EXPECT_EQ(r.width, 320);
+    EXPECT_EQ(r.height, 230);
+}
+
+TEST(ResizeByEdgesTest, an_edge_that_is_not_dragged_does_not_move)
+{
+    const XSizeHints hints = {};
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(hints, {100, 50, 300, 200},
+                                                   tiny::Position::Right, 20,
+                                                   99, 24, 100, 100);
+
+    EXPECT_EQ(r.y, 50);
+    EXPECT_EQ(r.height, 200);
+    EXPECT_EQ(r.width, 320);
+}
+
+TEST(ResizeByEdgesTest,
+     the_dragged_edge_stops_at_the_minimum_and_the_other_stays)
+{
+    const XSizeHints hints = {};
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {100, 50, 300, 200},
+            tiny::Position::Left | tiny::Position::Top, 500, 500, 24, 120, 90);
+
+    EXPECT_EQ(r.width, 120);
+    EXPECT_EQ(r.height, 90);
+    EXPECT_EQ(r.x + r.width, 400);
+    EXPECT_EQ(r.y + r.height, 250);
+}
+
+TEST(ResizeByEdgesTest, the_size_hints_are_followed)
+{
+    XSizeHints hints = {};
+    hints.flags = PMaxSize | PResizeInc | PBaseSize;
+    hints.max_width = 500;
+    hints.max_height = 500;
+    hints.width_inc = 10;
+    hints.height_inc = 10;
+    hints.base_width = 0;
+    hints.base_height = 0;
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {0, 0, 300, 224},
+            tiny::Position::Right | tiny::Position::Bottom, 1000, 37, 24, 100,
+            100);
+
+    EXPECT_EQ(r.width, 500);
+    EXPECT_EQ(r.height, 24 + 230);
+}
+
 TEST(SizeHintsTest, no_hints_leave_the_size_as_it_is)
 {
     const XSizeHints hints = {};

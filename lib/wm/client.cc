@@ -613,32 +613,17 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 {
     auto mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
     const int title = header_height();
-    int new_width = start_attrs.width;
-    int new_height = start_attrs.height;
-
-    if (mask & (tiny::Position::Left | tiny::Position::Right)) {
-        const int xdiff = e.xbutton.x_root - start_event.xbutton.x_root;
-        const int width_arg =
-                new_width + (mask & tiny::Position::Right ? xdiff : -xdiff);
-        new_width = fit_client_size(*hints, true, width_arg,
-                                    tiny::theme.wm_win_min_width);
-    }
-    if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
-        const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-        const int height_arg = new_height - title +
-                               (mask & tiny::Position::Bottom ? ydiff : -ydiff);
-        new_height = fit_client_size(*hints, false, height_arg,
-                                     tiny::theme.wm_win_min_height - title) +
-                     title;
-    }
-
-    // The edge that is not dragged stays, even when the size is limited
-    const int x = (mask & tiny::Position::Left)
-                          ? start_attrs.x + start_attrs.width - new_width
-                          : start_attrs.x;
-    const int y = (mask & tiny::Position::Top)
-                          ? start_attrs.y + start_attrs.height - new_height
-                          : start_attrs.y;
+    const tiny::Rect frame = resize_by_edges(
+            *hints,
+            {start_attrs.x, start_attrs.y, start_attrs.width,
+             start_attrs.height},
+            mask, e.xbutton.x_root - start_event.xbutton.x_root,
+            e.xbutton.y_root - start_event.xbutton.y_root, title,
+            tiny::theme.wm_win_min_width, tiny::theme.wm_win_min_height);
+    const int x = frame.x;
+    const int y = frame.y;
+    const int new_width = frame.width;
+    const int new_height = frame.height;
 
     if (mask & tiny::Position::Top || mask & tiny::Position::Left) {
         XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),

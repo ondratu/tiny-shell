@@ -8,6 +8,7 @@
 #include <X11/Xutil.h>
 
 #include "object.h"
+#include "container.h"
 #include "widget.h"
 #include "display.h"
 
@@ -25,6 +26,18 @@ namespace tiny::wm {
  */
 int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
                     int floor = 0);
+
+/**
+ * @short The frame after the edges `edges` (`tiny::Position` bits) are dragged
+ * by dx, dy from `start`.
+ *
+ * `title` is the part of the frame that is not the client (its height), the
+ * minimum is the one of the window manager for the whole frame. The edge
+ * that is not dragged stays where it is, also when the size is limited.
+ */
+tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
+                           unsigned edges, int dx, int dy, int title,
+                           int min_width, int min_height);
 
 /// Number of increments (e.g. columns or rows of a terminal) in a client size.
 int client_size_units(const XSizeHints& hints, bool horizontal, int size);
