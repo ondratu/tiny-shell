@@ -783,6 +783,146 @@ TEST_F(ManagerTest, the_loop_wakes_up_for_the_first_overdue_ping)
     EXPECT_TRUE(manager->wm_windows[c.window]->is_responding());
 }
 
+namespace {
+
+// `_NET_WM_DESKTOP` of a client as a 32 bit value (Xlib extends the sign)
+unsigned long desktop_of(FakeClient& c)
+{
+    const auto values = c.cardinals(dsp()._NET_WM_DESKTOP);
+    return values.size() == 1 ? values[0] & 0xFFFFFFFFUL : 12345;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_one_desktop_is_published)
+{
+    start();
+
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_NUMBER_OF_DESKTOPS,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{1}));
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_CURRENT_DESKTOP,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{0}));
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_DESKTOP_VIEWPORT,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{0, 0}));
+    const XWindowAttributes screen = attributes_of(root_window());
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_DESKTOP_GEOMETRY,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{
+                      static_cast<unsigned long>(screen.width),
+                      static_cast<unsigned long>(screen.height)}));
+}
+
+TEST_F(ManagerTest, the_desktop_properties_go_away_with_the_manager)
+{
+    start();
+
+    manager.reset();
+
+    EXPECT_TRUE((root_property<unsigned long>(dsp()._NET_NUMBER_OF_DESKTOPS,
+                                              XA_CARDINAL))
+                        .empty());
+    EXPECT_TRUE((root_property<unsigned long>(dsp()._NET_CURRENT_DESKTOP,
+                                              XA_CARDINAL))
+                        .empty());
+}
+
+TEST_F(ManagerTest, a_managed_window_is_on_the_desktop_zero)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+
+    EXPECT_EQ(desktop_of(c), 0u);
+}
+
+TEST_F(ManagerTest, a_window_that_asks_for_all_desktops_is_sticky)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_cardinals(dsp()._NET_WM_DESKTOP, {0xFFFFFFFFL});
+    c.map();
+    run_loop();
+
+    EXPECT_TRUE(manager->wm_windows[c.window]->is_sticky());
+    EXPECT_TRUE(c.state_has(dsp()._NET_WM_STATE_STICKY));
+    EXPECT_EQ(desktop_of(c), 0xFFFFFFFFUL);
+}
+
+TEST_F(ManagerTest, the_sticky_state_is_changed_by_requests)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request(c.window, dsp()._NET_WM_STATE, tiny::Display::_NET_WM_STATE_ADD,
+            static_cast<long>(dsp()._NET_WM_STATE_STICKY));
+    run_loop();
+    EXPECT_TRUE(manager->wm_windows[c.window]->is_sticky());
+    EXPECT_EQ(desktop_of(c), 0xFFFFFFFFUL);
+
+    request(c.window, dsp()._NET_WM_STATE, tiny::Display::_NET_WM_STATE_TOGGLE,
+            static_cast<long>(dsp()._NET_WM_STATE_STICKY));
+    run_loop();
+    EXPECT_FALSE(manager->wm_windows[c.window]->is_sticky());
+    EXPECT_EQ(desktop_of(c), 0u);
+}
+
+TEST_F(ManagerTest, a_pager_moves_a_window_to_all_desktops_or_the_only_one)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    request(c.window, dsp()._NET_WM_DESKTOP, 0xFFFFFFFFL);
+    run_loop();
+    EXPECT_TRUE(window->is_sticky());
+
+    request(c.window, dsp()._NET_WM_DESKTOP, 3); // there is no such desktop
+    run_loop();
+    EXPECT_TRUE(window->is_sticky());
+
+    request(c.window, dsp()._NET_WM_DESKTOP, 0);
+    run_loop();
+    EXPECT_FALSE(window->is_sticky());
+}
+
+TEST_F(ManagerTest, a_pager_cannot_add_desktops_or_switch_to_another)
+{
+    start();
+
+    request(root_window(), dsp()._NET_NUMBER_OF_DESKTOPS, 4);
+    request(root_window(), dsp()._NET_CURRENT_DESKTOP, 2);
+    run_loop();
+
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_NUMBER_OF_DESKTOPS,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{1}));
+    EXPECT_EQ((root_property<unsigned long>(dsp()._NET_CURRENT_DESKTOP,
+                                            XA_CARDINAL)),
+              (std::vector<unsigned long>{0}));
+}
+
+TEST_F(ManagerTest, skip_pager_is_changed_by_requests)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request(c.window, dsp()._NET_WM_STATE, tiny::Display::_NET_WM_STATE_ADD,
+            static_cast<long>(dsp()._NET_WM_STATE_SKIP_PAGER));
+    run_loop();
+
+    EXPECT_TRUE(manager->wm_windows[c.window]->skip_pager());
+    EXPECT_TRUE(c.state_has(dsp()._NET_WM_STATE_SKIP_PAGER));
+}
+
 TEST_F(ManagerTest, requests_of_an_unknown_window_are_ignored)
 {
     start();

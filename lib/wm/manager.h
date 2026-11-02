@@ -47,6 +47,10 @@ class Manager : public tiny::Object {
     //! Publish `_NET_SUPPORTED` and the window that proves the manager runs
     void set_supported();
 
+    //! The one desktop: `_NET_NUMBER_OF_DESKTOPS`, `_NET_CURRENT_DESKTOP`,
+    //! `_NET_DESKTOP_GEOMETRY` and `_NET_DESKTOP_VIEWPORT`
+    void publish_desktops();
+
     //! Remove what `set_supported` and `publish_clients` put on the root
     void clear_published();
 

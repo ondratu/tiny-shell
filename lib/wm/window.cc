@@ -174,6 +174,9 @@ Window::Window(::Window child_arg, ::Window root_arg,
     if (properties.count(dsp._NET_WM_STATE)) {
         update_wm_states();
     }
+    if (properties.count(dsp._NET_WM_DESKTOP)) {
+        update_desktop();
+    }
     if (properties.count(dsp.WM_NORMAL_HINTS)) {
         update_normal_hints();
     }
@@ -266,6 +269,7 @@ void Window::withdraw()
 {
     set_wm_state(WithdrawnState);
     XDeleteProperty(dsp, child, dsp._NET_WM_STATE);
+    XDeleteProperty(dsp, child, dsp._NET_WM_DESKTOP);
     XDeleteProperty(dsp, child, dsp._NET_FRAME_EXTENTS);
 }
 
@@ -393,6 +397,51 @@ void Window::set_skip_taskbar(bool skip)
         publish_wm_states();
         on_skip_taskbar(this, XEvent());
     }
+}
+
+void Window::set_skip_pager(bool skip)
+{
+    if (change_state(wm_states, WMState::SKIP_PAGER, skip)) {
+        publish_wm_states();
+    }
+}
+
+void Window::set_sticky(bool sticky)
+{
+    if (change_state(wm_states, WMState::STICKY, sticky)) {
+        publish_wm_states();
+        publish_desktop();
+    }
+}
+
+void Window::update_desktop()
+{
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    if (XGetWindowProperty(dsp, child, dsp._NET_WM_DESKTOP, 0, 1, False,
+                           XA_CARDINAL, &type, &format, &count, &left,
+                           &data) == Success &&
+        data) {
+        // a window that asks for all the desktops is sticky
+        // Xlib extends the 32 bit value to the long
+        if (count == 1 && format == 32 &&
+            (*reinterpret_cast<unsigned long*>(data) & all_desktops) ==
+                    all_desktops) {
+            wm_states |= WMState::STICKY;
+        }
+        XFree(data);
+    }
+}
+
+void Window::publish_desktop()
+{
+    const long desktop = is_sticky() ? static_cast<long>(all_desktops) : 0;
+    XChangeProperty(dsp, child, dsp._NET_WM_DESKTOP, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&desktop), 1);
 }
 
 void Window::set_above(bool above)
@@ -1201,6 +1250,10 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
             shade(requested(is_shaded()));
         } else if (atom == dsp._NET_WM_STATE_SKIP_TASKBAR) {
             set_skip_taskbar(requested(skip_taskbar()));
+        } else if (atom == dsp._NET_WM_STATE_SKIP_PAGER) {
+            set_skip_pager(requested(skip_pager()));
+        } else if (atom == dsp._NET_WM_STATE_STICKY) {
+            set_sticky(requested(is_sticky()));
         } else if (atom == dsp._NET_WM_STATE_ABOVE) {
             set_above(requested(is_above()));
         } else if (atom == dsp._NET_WM_STATE_BELOW) {
@@ -1290,6 +1343,9 @@ void Window::on_property_notify(const XEvent& e, void*)
     if (e.xproperty.atom == dsp._NET_WM_STATE) {
         update_wm_states();
         return;
+    }
+    if (e.xproperty.atom == dsp._NET_WM_DESKTOP) {
+        return; // ours: the manager decides, a pager asks with a message
     }
     if (e.xproperty.atom == dsp.WM_NORMAL_HINTS) {
         update_normal_hints();

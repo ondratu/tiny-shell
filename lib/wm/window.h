@@ -207,6 +207,18 @@ class Window : public tiny::Object {
     void set_demands_attention(bool demands);
 
     virtual bool skip_pager() const { return wm_states & WMState::SKIP_PAGER; }
+    void set_skip_pager(bool skip);
+
+    //! `_NET_WM_STATE_STICKY`: on all desktops. There is one desktop, so it
+    //! only changes `_NET_WM_DESKTOP` (0xFFFFFFFF, like a pager expects)
+    bool is_sticky() const { return wm_states & WMState::STICKY; }
+    void set_sticky(bool sticky);
+
+    //! Value of `_NET_WM_DESKTOP` meaning all the desktops
+    static constexpr unsigned long all_desktops = 0xFFFFFFFFUL;
+
+    //! Write `_NET_WM_DESKTOP` of the client
+    void publish_desktop();
 
     //! A modal dialog keeps the focus away from its parent
     virtual bool is_modal() const { return wm_states & WMState::MODAL; }
@@ -354,6 +366,7 @@ class Window : public tiny::Object {
     void update_normal_hints(); //!< Update XSizeHints;
     void update_wm_hints();     //!< Update XWMHints;
     void update_wm_states();    //!< Update WMStates
+    void update_desktop();      //!< `_NET_WM_DESKTOP` of all desktops: sticky
     void update_wm_name();      //!< Update wm_name
     void update_wm_class();     //!< Update wm_class
     void update_wm_icon_name(); //!< Update wm_icon_name

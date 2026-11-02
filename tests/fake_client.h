@@ -236,6 +236,27 @@ class FakeClient {
         return rv;
     }
 
+    // The 32 bit values of a property of the window (empty when it has none)
+    std::vector<unsigned long> cardinals(Atom property)
+    {
+        sync();
+        Atom type;
+        int format;
+        unsigned long count;
+        unsigned long left;
+        unsigned char* data = nullptr;
+        std::vector<unsigned long> rv;
+        if (XGetWindowProperty(display, window, property, 0, 64, False,
+                               XA_CARDINAL, &type, &format, &count, &left,
+                               &data) == Success &&
+            data) {
+            const auto* values = reinterpret_cast<unsigned long*>(data);
+            rv.assign(values, values + count);
+            XFree(data);
+        }
+        return rv;
+    }
+
     bool state_has(Atom atom)
     {
         auto states = state_property();
