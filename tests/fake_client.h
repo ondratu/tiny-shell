@@ -148,6 +148,15 @@ class FakeClient {
         sync();
     }
 
+    void set_window_group(::Window leader)
+    {
+        XWMHints hints = {};
+        hints.flags = WindowGroupHint;
+        hints.window_group = leader;
+        XSetWMHints(display, window, &hints);
+        sync();
+    }
+
     void set_icon_pixmap(int size, bool with_mask)
     {
         XWMHints hints = {};

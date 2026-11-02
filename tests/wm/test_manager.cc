@@ -1932,3 +1932,99 @@ TEST_F(ManagerTest, a_dialog_that_becomes_modal_takes_the_focus_from_its_parent)
 
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }
+
+TEST_F(ManagerTest, a_modal_window_without_a_parent_is_modal_for_its_group)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_window_group(first.window);
+    first.map();
+    run_loop();
+    FakeClient& second = add_client(false);
+    second.set_window_group(first.window);
+    second.map();
+    run_loop();
+    FakeClient& modal = add_client(false);
+    modal.set_window_group(first.window);
+    modal.set_modal();
+    modal.map();
+    run_loop();
+    const FakeClient& stranger = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[stranger.window]);
+
+    manager->focus_window(manager->wm_windows[first.window]);
+    EXPECT_EQ(manager->active, manager->wm_windows[modal.window]);
+
+    manager->focus_window(manager->wm_windows[second.window]);
+    EXPECT_EQ(manager->active, manager->wm_windows[modal.window]);
+
+    manager->focus_window(manager->wm_windows[stranger.window]);
+    EXPECT_EQ(manager->active, manager->wm_windows[stranger.window]);
+}
+
+TEST_F(ManagerTest, a_modal_window_of_a_group_does_not_block_itself)
+{
+    start();
+    FakeClient& modal = add_client(false);
+    modal.set_window_group(modal.window);
+    modal.set_modal();
+    modal.map();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[modal.window]);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[modal.window]);
+}
+
+TEST_F(ManagerTest, a_modal_window_without_a_group_blocks_nothing)
+{
+    start();
+    const FakeClient& other = add_client();
+    run_loop();
+    FakeClient& modal = add_client(false);
+    modal.set_modal();
+    modal.map();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[other.window]);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[other.window]);
+}
+
+TEST_F(ManagerTest, a_modal_transient_blocks_only_its_own_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.set_modal();
+    dialog.map();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[other.window]);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[other.window]);
+}
+
+TEST_F(ManagerTest, a_group_that_becomes_modal_takes_the_focus)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_window_group(first.window);
+    first.map();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_window_group(first.window);
+    dialog.map();
+    run_loop();
+    manager->focus_window(manager->wm_windows[first.window]);
+    ASSERT_EQ(manager->active, manager->wm_windows[first.window]);
+
+    manager->wm_windows[dialog.window]->set_modal(true);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}

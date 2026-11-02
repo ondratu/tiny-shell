@@ -538,12 +538,21 @@ std::vector<Window*> Manager::transients_of(const Window* window) const
 
 std::vector<Window*> Manager::modal_dialogs_of(const Window* window) const
 {
-    std::vector<Window*> found = transients_of(window);
-    found.erase(std::remove_if(found.begin(), found.end(),
-                               [](const Window* dialog) {
-                                   return !dialog->is_modal();
-                               }),
-                found.end());
+    std::vector<Window*> found;
+    const ::Window group = window->get_window_group();
+    std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
+                 [&](const Window* other) {
+                     if (other == window || !other->is_modal()) {
+                         return false;
+                     }
+                     if (parent_of(other)) { // modal for its parent only
+                         return is_dialog(other) && parent_of(other) == window;
+                     }
+                     // no parent: modal for the whole group
+                     return group != None &&
+                            other->get_window_group() == group &&
+                            !other->get_minimized();
+                 });
     return found;
 }
 
@@ -580,9 +589,12 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 void Manager::on_window_modal(tiny::Object* o, const XEvent&, void*)
 {
     const auto* dialog = reinterpret_cast<Window*>(o);
-    Window* parent = parent_of(dialog);
-    if (dialog->is_modal() && parent && parent == active) {
-        focus_window(parent); // the focus moves on to the dialog
+    if (!dialog->is_modal() || !active) {
+        return;
+    }
+    const std::vector<Window*> blocking = modal_dialogs_of(active);
+    if (std::find(blocking.begin(), blocking.end(), dialog) != blocking.end()) {
+        focus_window(active); // the focus moves on to the dialog
     }
 }
 
