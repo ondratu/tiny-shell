@@ -208,6 +208,41 @@ TEST_F(ClientTest, the_frame_extents_are_the_border_and_the_header)
     EXPECT_EQ(e.top, header_height() + win->get_border());
 }
 
+TEST_F(ClientTest, a_maximized_window_has_no_border_only_the_header)
+{
+    build();
+
+    win->maximize();
+
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    EXPECT_EQ(e.left, 0);
+    EXPECT_EQ(e.right, 0);
+    EXPECT_EQ(e.bottom, 0);
+    EXPECT_EQ(e.top, header_height());
+}
+
+TEST_F(ClientTest, a_fullscreen_window_has_no_frame_extents)
+{
+    build();
+
+    win->fullscreen(true);
+
+    const tiny::wm::FrameExtents e = win->frame_extents();
+    EXPECT_EQ(e.left + e.right + e.top + e.bottom, 0);
+}
+
+TEST_F(ClientTest, the_frame_extents_come_back_after_the_restore)
+{
+    build();
+    const tiny::wm::FrameExtents before = win->frame_extents();
+
+    win->maximize();
+    win->restore(0, 0);
+
+    EXPECT_EQ(win->frame_extents().left, before.left);
+    EXPECT_EQ(win->frame_extents().top, before.top);
+}
+
 TEST_F(ClientTest, the_frame_extents_estimate_matches_the_real_frame)
 {
     build();

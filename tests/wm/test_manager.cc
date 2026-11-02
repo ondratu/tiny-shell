@@ -2150,6 +2150,21 @@ TEST_F(ManagerTest, a_window_can_ask_for_its_extents_before_it_is_mapped)
               (std::vector<long>{e.left, e.right, e.top, e.bottom}));
 }
 
+TEST_F(ManagerTest, the_frame_extents_follow_maximize_and_restore)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    const auto normal = frame_extents_of(c);
+
+    manager->wm_windows[c.window]->maximize();
+    EXPECT_EQ(frame_extents_of(c),
+              (std::vector<long>{0, 0, tiny::theme.wm_win_header, 0}));
+
+    manager->wm_windows[c.window]->restore(0, 0);
+    EXPECT_EQ(frame_extents_of(c), normal);
+}
+
 TEST_F(ManagerTest, a_window_without_decorations_is_told_it_has_no_frame)
 {
     start();
