@@ -891,6 +891,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
 
     wm_windows[child] = window;
     wm_tops.push_back(window);
+    window->apply_initial_state();
     restack_layers(); // it may be above or below from the start
     publish_clients();
     set_application_icon(window);

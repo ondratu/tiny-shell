@@ -291,6 +291,9 @@ class Window : public tiny::Object {
 
     virtual void restore(int x = 0, int y = 0);
 
+    //! A window mapped with the state maximized or fullscreen is put there
+    void apply_initial_state();
+
     //! Cover the whole screen (the panel too) without decorations, or go back
     virtual void fullscreen(bool on);
 

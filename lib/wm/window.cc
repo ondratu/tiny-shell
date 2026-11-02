@@ -636,6 +636,21 @@ void Window::fullscreen(bool on)
     set_fullscreen(on);
 }
 
+void Window::apply_initial_state()
+{
+    // the flags were read from the client, the geometry is not there yet
+    const bool maximized = get_maximized();
+    const bool fullscreen_state = is_fullscreen();
+    if (maximized) {
+        set_maximized(false);
+        maximize();
+    }
+    if (fullscreen_state) {
+        set_fullscreen(false);
+        fullscreen(true);
+    }
+}
+
 void Window::restore(int x, int y)
 {
     if (get_maximized()) {
