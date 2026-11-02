@@ -54,7 +54,8 @@ Implemented:
 - **Shell:** top panel with an application menu and a user menu, a dock with
   the icons of running windows, a run dialog (Alt+F2), a full screen launcher
   with search (Super).
-- **Other:** Super + mouse moves a window, scaling of the whole theme for
+- **Other:** taking over from another window manager (`--replace`) and
+  handing over to one, Super + mouse moves a window, scaling of the whole theme for
   high-DPI screens (`TINY_SCALE_FACTOR`), unit tests of the toolkit and the
   window manager against Xvfb.
 
@@ -135,6 +136,19 @@ tools/run-xephyr.sh
 To use tiny-shell as your real window manager, run `exec build/tiny-shell` at the
 end of your `~/.xinitrc`. Set `TINY_SCALE_FACTOR` (for example `1.5` or `2`)
 to scale the theme on a high-DPI screen.
+
+### Command line
+
+```
+tiny-shell [--replace] [--info] [--version] [--help]
+```
+
+`--replace` takes over from a window manager that is already running, the way
+ICCCM describes it (the `WM_S0` selection): the old one is asked to leave and
+tiny-shell starts when it has gone. Another window manager started with its
+own `--replace` takes over from tiny-shell in the same way. Window managers
+that do not use the selection (for example twm) have to be stopped first.
+`--info` prints what tiny-shell is and which settings it uses.
 
 ### Where the launcher looks for applications
 
