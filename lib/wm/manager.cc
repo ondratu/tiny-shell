@@ -414,17 +414,20 @@ void Manager::focus_window(Window* window)
     for (auto it = parents.rbegin(); it != parents.rend(); ++it) {
         (*it)->raise();
     }
-    // the dialog gets the focus instead of the window it belongs to
+    // a modal dialog gets the focus instead of the window it belongs to
     Window* target = window;
     for (size_t depth = 0; depth < wm_tops.size(); ++depth) {
         target->raise();
-        const std::vector<Window*> dialogs = transients_of(target);
+        const std::vector<Window*> dialogs = modal_dialogs_of(target);
         if (dialogs.empty()) {
             break;
         }
         target = dialogs.back();
     }
-    target->set_focus();
+    target->set_focus(); // raises the window as well
+    for (Window* dialog : transients_of(target)) {
+        dialog->raise(); // a dialog that is not modal stays over its parent
+    }
     // do not wait for FocusIn, the next Alt + Tab can come before it
     remember_active(target, XEvent());
 }
@@ -434,7 +437,7 @@ std::vector<Window*> Manager::switchable() const
     std::vector<Window*> found;
     std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
                  [&](const Window* window) {
-                     return transients_of(window).empty();
+                     return modal_dialogs_of(window).empty();
                  });
     if (found.empty()) { // dialogs of each other: leave nothing out of reach
         found.assign(wm_tops.begin(), wm_tops.end());
@@ -501,6 +504,8 @@ void Manager::connect_window(Window* window)
                                            &Manager::on_window_focus));
     window->on_minimize.connect(this, static_cast<tiny::object_signal_t>(
                                               &Manager::on_window_minimize));
+    window->on_modal.connect(this, static_cast<tiny::object_signal_t>(
+                                           &Manager::on_window_modal));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
 }
@@ -531,6 +536,17 @@ std::vector<Window*> Manager::transients_of(const Window* window) const
     return found;
 }
 
+std::vector<Window*> Manager::modal_dialogs_of(const Window* window) const
+{
+    std::vector<Window*> found = transients_of(window);
+    found.erase(std::remove_if(found.begin(), found.end(),
+                               [](const Window* dialog) {
+                                   return !dialog->is_modal();
+                               }),
+                found.end());
+    return found;
+}
+
 void Manager::center_over(Window* dialog, const Window* parent)
 {
     XWindowAttributes outer;
@@ -554,10 +570,19 @@ void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
 void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
-    if (transients_of(window).empty()) {
+    if (modal_dialogs_of(window).empty()) {
         remember_active(window, e);
     } else {
-        focus_window(window); // clicked on a window with a dialog
+        focus_window(window); // clicked on a window with a modal dialog
+    }
+}
+
+void Manager::on_window_modal(tiny::Object* o, const XEvent&, void*)
+{
+    const auto* dialog = reinterpret_cast<Window*>(o);
+    Window* parent = parent_of(dialog);
+    if (dialog->is_modal() && parent && parent == active) {
+        focus_window(parent); // the focus moves on to the dialog
     }
 }
 
@@ -733,6 +758,8 @@ void Manager::unmanage(::Window child, bool alive)
     Window* window = it->second;
 
     Window* parent = parent_of(window);
+    // the dialogs go with the window they belong to
+    const std::vector<Window*> dialogs = transients_of(window);
     if (active == window && parent && !parent->get_minimized()) {
         wm_tops.remove(window);
         wm_windows.erase(it);
@@ -757,6 +784,10 @@ void Manager::unmanage(::Window child, bool alive)
     delete window;
     wm_windows.erase(child);
     publish_clients();
+    // an unmap comes before the destroy, so a withdrawn parent is the same
+    for (Window* dialog : dialogs) {
+        dialog->ask_to_close(); // never kill the client of a dialog
+    }
 }
 
 void Manager::track_dock(::Window dock)

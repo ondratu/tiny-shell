@@ -84,6 +84,9 @@ class Manager : public tiny::Object {
     //! Windows that are dialogs of `window`
     std::vector<Window*> transients_of(const Window* window) const;
 
+    //! Dialogs of `window` that keep the focus away from it (the modal ones)
+    std::vector<Window*> modal_dialogs_of(const Window* window) const;
+
     //! Put a dialog in the middle of its parent, inside the work area
     void center_over(Window* dialog, const Window* parent);
 
@@ -104,6 +107,7 @@ class Manager : public tiny::Object {
 
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);

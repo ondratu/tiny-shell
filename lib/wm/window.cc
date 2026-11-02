@@ -305,6 +305,17 @@ void Window::set_fullscreen(bool fullscreen_arg)
     publish_wm_states();
 }
 
+void Window::set_modal(bool modal)
+{
+    if (modal) {
+        wm_states |= WMState::MODAL;
+    } else {
+        wm_states &= static_cast<unsigned long>(~WMState::MODAL);
+    }
+    publish_wm_states();
+    on_modal(this, XEvent());
+}
+
 void Window::publish_wm_states()
 {
     std::vector<Atom> atoms;
@@ -410,18 +421,24 @@ void Window::return_focus()
     publish_wm_states();
 }
 
+bool Window::ask_to_close()
+{
+    if (!protocols.count(dsp.WM_DELETE_WINDOW)) {
+        return false;
+    }
+    XClientMessageEvent msg = {};
+    msg.window = child;
+    msg.type = ClientMessage;
+    msg.format = 32;
+    msg.message_type = dsp.WM_PROTOCOLS;
+    msg.data.l[0] = static_cast<long>(dsp.WM_DELETE_WINDOW);
+    XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
+    return true;
+}
+
 void Window::close()
 {
-    if (protocols.count(dsp.WM_DELETE_WINDOW)) {
-        XClientMessageEvent msg = {};
-        msg.window = child;
-        msg.type = ClientMessage;
-        msg.format = 32;
-        msg.message_type = dsp.WM_PROTOCOLS;
-        msg.data.l[0] = static_cast<long>(dsp.WM_DELETE_WINDOW);
-        XSendEvent(dsp, child, false, NoEventMask,
-                   reinterpret_cast<XEvent*>(&msg));
-    } else {
+    if (!ask_to_close()) {
         XKillClient(dsp, child);
     }
 }
@@ -972,6 +989,10 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
             fullscreen(action == tiny::Display::_NET_WM_STATE_TOGGLE
                                ? !is_fullscreen()
                                : action == tiny::Display::_NET_WM_STATE_ADD);
+        } else if (atom == dsp._NET_WM_STATE_MODAL) {
+            set_modal(action == tiny::Display::_NET_WM_STATE_TOGGLE
+                              ? !is_modal()
+                              : action == tiny::Display::_NET_WM_STATE_ADD);
         } else if (atom == dsp._NET_WM_STATE_MAXIMIZED_VERT ||
                    atom == dsp._NET_WM_STATE_MAXIMIZED_HORZ) {
             resize_maximized = true; // only both directions at once

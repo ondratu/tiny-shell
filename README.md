@@ -64,9 +64,11 @@ Done:
       `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the requests to activate
       and close a window
 - [x] Dialogs (`WM_TRANSIENT_FOR`): centered over the parent, kept above it,
-      minimized with it, no dock icon, the focus goes to the dialog and Alt+Tab
-      skips the parent; `_NET_WM_STATE` requests change each of
-      their two atoms on their own and can toggle
+      minimized with it, asked to close (`WM_DELETE_WINDOW`) when it is gone or hidden, no dock icon; `_NET_WM_STATE`
+      requests change each of their two atoms on their own and can toggle
+- [x] Modal dialogs (`_NET_WM_STATE_MODAL`): the focus stays in the dialog and
+      Alt+Tab skips the parent; a dialog that is not modal leaves the parent
+      focusable
 - [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
       `_NET_WORKAREA`; maximized and new windows stay inside it
 - [x] Top panel with an application menu and a user menu (logout)
@@ -90,7 +92,6 @@ Planned, grouped by importance:
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
 - [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
-- [ ] Modal dialogs (`_NET_WM_STATE_MODAL`): the focus stays in the dialog
 - [ ] An event loop that can wait for timers and child processes as well as
       for X events, without zombie processes
 
