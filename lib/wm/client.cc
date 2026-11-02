@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include "object.h"
 #include "theme.h"
@@ -77,23 +78,37 @@ Client::~Client()
 
 //! A new window is moved into the work area, a big one is made smaller
 static tiny::Rect first_place(const XWindowAttributes& attrs,
-                              const tiny::Rect& area, unsigned long decorations)
+                              const XSizeHints& hints, const tiny::Rect& area,
+                              unsigned long decorations)
 {
     const int border = border_for(decorations); // on both sides
     const int header = header_height_for(decorations);
+    int x = attrs.x;
+    int y = attrs.y;
+    // A position that the user or the program chose is the place of the
+    // window as if it had no frame; the gravity tells which point of the frame
+    // goes there. Any other position is not a wish.
+    if (hints.flags & (USPosition | PPosition)) {
+        std::tie(x, y) = frame_position(window_gravity(hints), x, y,
+                                        Client::frame_extents_for(decorations));
+    }
     // the border is drawn outside of the window, so it is not over the panel
     const tiny::Rect inner = {area.x + border, area.y + border,
                               std::max(area.width - 2 * border, 1),
                               std::max(area.height - 2 * border, 1)};
-    return fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height + header},
-                       inner);
+    return fit_in_area({x, y, attrs.width, attrs.height + header}, inner);
 }
 
 Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
                        unsigned long decorations, const tiny::Rect& area)
 {
-    const tiny::Rect place = first_place(attrs, area, decorations);
+    XSizeHints hints = {};
+    long supplied;
+    if (!XGetWMNormalHints(tiny::get_display(), child, &hints, &supplied)) {
+        hints.flags = 0;
+    }
+    const tiny::Rect place = first_place(attrs, hints, area, decorations);
     const int client_height = place.height - header_height_for(decorations);
     auto* win = new Client(child, root, place.width, client_height, functions,
                            decorations, area);
@@ -512,17 +527,24 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     // The client asks for the place of its own area (the position it gets in
     // ConfigureNotify), the frame is around it. The header stays below the
     // panel.
-    const int x = (e.value_mask & CWX)
-                          ? std::max(e.x - frame.border_width,
-                                     work_area.x + frame.border_width)
-                          : frame.x;
-    const int y = (e.value_mask & CWY)
-                          ? std::max(e.y - title - frame.border_width,
-                                     work_area.y + frame.border_width)
-                          : frame.y;
     const int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
     const int new_height =
             (e.value_mask & CWHeight) ? e.height + title : frame.height;
+    // A size change without a position keeps the reference point of the
+    // gravity of the window where it was (ICCCM 4.1.2.3)
+    const auto shift =
+            gravity_shift(window_gravity(*hints), new_width - frame.width,
+                          new_height - frame.height);
+    const int x = (e.value_mask & CWX)
+                          ? std::max(e.x - frame.border_width,
+                                     work_area.x + frame.border_width)
+                          : frame.x + shift.first;
+    const int y =
+            (e.value_mask & CWY) ? std::max(e.y - title - frame.border_width,
+                                            work_area.y + frame.border_width)
+            : shift.second < 0   ? std::max(frame.y + shift.second,
+                                            work_area.y + frame.border_width)
+                                 : frame.y + shift.second;
 
     XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),
                       tiny::x_dim(new_height));
