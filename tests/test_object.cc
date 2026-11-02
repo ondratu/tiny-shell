@@ -143,6 +143,35 @@ TEST(SignalTest, connected_signal_calls_method)
     EXPECT_EQ(r.last_data, nullptr);
 }
 
+TEST(SignalTest, connected_function_is_called_with_the_event)
+{
+    tiny::Signal signal;
+    Receiver owner;
+    int type = 0;
+
+    signal.connect([&type](const XEvent& e) { type = e.type; });
+    EXPECT_TRUE(signal);
+
+    signal(&owner, make_event(KeyPress));
+
+    EXPECT_EQ(type, KeyPress);
+}
+
+TEST(SignalTest, connecting_a_method_replaces_the_function)
+{
+    tiny::Signal signal;
+    Receiver r;
+    Receiver owner;
+    int calls = 0;
+
+    signal.connect([&calls](const XEvent&) { ++calls; });
+    signal.connect(&r, r.signal_slot());
+    signal(&owner, make_event(ButtonPress));
+
+    EXPECT_EQ(calls, 0);
+    EXPECT_EQ(r.signal_calls, 1);
+}
+
 TEST(SignalTest, connect_data_is_default_and_call_data_overrides)
 {
     tiny::Signal signal;

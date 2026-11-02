@@ -622,25 +622,27 @@ void Manager::set_application_icon(Window* window)
 
 void Manager::connect_window(Window* window)
 {
-    window->on_focus.connect(this, static_cast<tiny::object_signal_t>(
-                                           &Manager::on_window_focus));
-    window->on_minimize.connect(this, static_cast<tiny::object_signal_t>(
-                                              &Manager::on_window_minimize));
-    window->on_modal.connect(this, static_cast<tiny::object_signal_t>(
-                                           &Manager::on_window_modal));
-    window->on_skip_taskbar.connect(this,
-                                    static_cast<tiny::object_signal_t>(
-                                            &Manager::on_window_skip_taskbar));
-    window->on_layer.connect(this, static_cast<tiny::object_signal_t>(
-                                           &Manager::on_window_layer));
-    window->on_attention.connect(this, static_cast<tiny::object_signal_t>(
-                                               &Manager::on_window_attention));
-    window->on_user_time.connect(this, static_cast<tiny::object_signal_t>(
-                                               &Manager::on_window_user_time));
-    window->on_reframe.connect(this, static_cast<tiny::object_signal_t>(
-                                             &Manager::on_window_reframe));
-    window->on_modifier_drag.connect(
-            this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
+    window->on_focus.connect(
+            [this, window](const XEvent& e) { on_window_focus(window, e); });
+    window->on_minimize.connect(
+            [this, window](const XEvent&) { on_window_minimize(window); });
+    window->on_modal.connect(
+            [this, window](const XEvent&) { on_window_modal(window); });
+    window->on_skip_taskbar.connect(
+            [this, window](const XEvent&) { update_dock_entry(window); });
+    window->on_layer.connect([this](const XEvent&) {
+        restack_layers();
+        publish_stacking();
+    });
+    window->on_attention.connect(
+            [this, window](const XEvent& e) { wm_dock.redraw(window, e); });
+    window->on_user_time.connect(
+            [this, window](const XEvent&) { on_window_user_time(window); });
+    window->on_reframe.connect(
+            [this, window](const XEvent&) { on_window_reframe(window); });
+    window->on_modifier_drag.connect([this](const XEvent&) {
+        super_down = false; // Super was used to move a window, not to open
+    });
 }
 
 Window* Manager::parent_of(const Window* window) const
@@ -704,14 +706,8 @@ void Manager::center_over(Window* dialog, const Window* parent)
     dialog->move_to(std::max(x, work_area.x), std::max(y, work_area.y));
 }
 
-void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
+void Manager::on_window_focus(Window* window, const XEvent& e)
 {
-    super_down = false; // Super was used to move a window, not to open
-}
-
-void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
-{
-    auto* window = reinterpret_cast<Window*>(o);
     if (modal_dialogs_of(window).empty()) {
         remember_active(window, e);
     } else {
@@ -719,9 +715,8 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
     }
 }
 
-void Manager::on_window_modal(tiny::Object* o, const XEvent&, void*)
+void Manager::on_window_modal(const Window* dialog)
 {
-    const auto* dialog = reinterpret_cast<Window*>(o);
     if (!dialog->is_modal() || !active) {
         return;
     }
@@ -743,21 +738,10 @@ void Manager::update_dock_entry(Window* window)
     }
 }
 
-void Manager::on_window_skip_taskbar(tiny::Object* o, const XEvent&, void*)
-{
-    update_dock_entry(reinterpret_cast<Window*>(o));
-}
-
-void Manager::on_window_layer(tiny::Object*, const XEvent&, void*)
-{
-    restack_layers();
-    publish_stacking();
-}
-
-void Manager::on_window_reframe(tiny::Object* o, const XEvent&, void*)
+void Manager::on_window_reframe(const Window* window)
 {
     // the window is in the middle of its own handler, so do it later
-    const ::Window child = reinterpret_cast<Window*>(o)->get_child();
+    const ::Window child = window->get_child();
     if (std::find(reframes.begin(), reframes.end(), child) == reframes.end()) {
         reframes.push_back(child);
     }
@@ -822,11 +806,6 @@ void Manager::reframe(::Window child)
     reframed.last = NextRequest(display);
 }
 
-void Manager::on_window_attention(tiny::Object* o, const XEvent& e, void*)
-{
-    wm_dock.redraw(reinterpret_cast<Window*>(o), e);
-}
-
 void Manager::remember_active(Window* window, const XEvent& e)
 {
     if (active && active != window) {
@@ -840,9 +819,8 @@ void Manager::remember_active(Window* window, const XEvent& e)
     publish_clients();
 }
 
-void Manager::on_window_minimize(tiny::Object* o, const XEvent&, void*)
+void Manager::on_window_minimize(Window* window)
 {
-    auto* window = reinterpret_cast<Window*>(o);
     update_dock_entry(window);
     if (window == active) {
         publish_clients(); // _NET_ACTIVE_WINDOW
@@ -1189,9 +1167,8 @@ bool Manager::may_activate(Window* window, unsigned long time) const
     return takes_focus(true, time, has_user_time, last_user_time);
 }
 
-void Manager::on_window_user_time(tiny::Object* o, const XEvent&, void*)
+void Manager::on_window_user_time(const Window* window)
 {
-    auto* window = reinterpret_cast<Window*>(o);
     if (window != active) {
         return; // only the window in use tells the time of the user
     }
