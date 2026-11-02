@@ -17,9 +17,9 @@ class UnresponsiveDialog : public tiny::Container {
 
     void realize(::Window root, int x = 0, int y = 0) override;
 
-    //! Show the dialog for the application `name`; `others` more windows of
+    //! Show the dialog for the application `app`; `others` more windows of
     //! its process go away with it
-    void popup(const std::string& name, unsigned others = 0);
+    void popup(const std::string& app, unsigned others = 0);
 
     //! The user wants to wait, or to quit the application
     tiny::Signal on_wait;
