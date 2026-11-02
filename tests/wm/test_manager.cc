@@ -822,10 +822,10 @@ TEST_F(ManagerTest, a_client_can_ask_to_be_moved_with_the_pointer)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     const XWindowAttributes before = attributes_of(window->frame());
 
     request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
@@ -846,7 +846,7 @@ TEST_F(ManagerTest, a_client_can_ask_to_be_resized_with_the_pointer)
     FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     const XWindowAttributes before = attributes_of(window->frame());
 
     request_move_resize(c.window, tiny::wm::SIZE_BOTTOMRIGHT, 100, 100);
@@ -909,7 +909,7 @@ TEST_F(ManagerTest, nothing_is_dragged_when_no_button_is_down)
 {
     start();
     manager->is_button_down = []() { return false; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
 
@@ -923,7 +923,7 @@ TEST_F(ManagerTest, the_keyboard_variants_are_not_supported)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
 
@@ -976,7 +976,7 @@ TEST_F(ManagerTest, a_maximized_window_is_moved_but_not_resized_by_a_client)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
     manager->wm_windows[c.window]->maximize();
@@ -996,7 +996,7 @@ TEST_F(ManagerTest, a_button_let_go_before_the_grab_starts_no_drag)
     start();
     int checks = 0;
     manager->is_button_down = [&checks]() { return ++checks == 1; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
 
@@ -1011,7 +1011,7 @@ TEST_F(ManagerTest, the_client_can_cancel_the_drag)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
     request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
@@ -1028,10 +1028,10 @@ TEST_F(ManagerTest, the_pointer_events_of_the_grab_drive_the_window)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     const XWindowAttributes before = attributes_of(window->frame());
     request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
     run_loop();
@@ -1070,7 +1070,7 @@ TEST_F(ManagerTest, the_client_is_told_its_place_when_the_drag_ends)
     run_loop();
     pump_events();
     c.watch_structure();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
     run_loop();
     manager->move_resize_to(150, 160);
@@ -1089,7 +1089,7 @@ TEST_F(ManagerTest,
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
     request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
@@ -1100,7 +1100,7 @@ TEST_F(ManagerTest,
 
     EXPECT_EQ(manager->dragged, nullptr);
     // the pointer is free again: another drag can start
-    FakeClient& d = add_client();
+    const FakeClient& d = add_client();
     run_loop();
     pump_events();
     request_move_resize(d.window, tiny::wm::MOVE_BY_POINTER);
@@ -1112,8 +1112,8 @@ TEST_F(ManagerTest, a_new_drag_replaces_the_old_one)
 {
     start();
     manager->is_button_down = []() { return true; };
-    FakeClient& first = add_client();
-    FakeClient& second = add_client();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
     run_loop();
     pump_events();
     request_move_resize(first.window, tiny::wm::MOVE_BY_POINTER);
@@ -1278,10 +1278,10 @@ TEST_F(ManagerTest, the_sticky_state_is_changed_by_requests)
 TEST_F(ManagerTest, a_pager_moves_a_window_to_all_desktops_or_the_only_one)
 {
     start();
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
 
     request(c.window, dsp()._NET_WM_DESKTOP, 0xFFFFFFFFL);
     run_loop();
