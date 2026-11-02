@@ -24,8 +24,13 @@ Display::Display(::Display* display_arg):
     _NET_SUPPORTING_WM_CHECK(
             XInternAtom(display_arg, "_NET_SUPPORTING_WM_CHECK", 0)),
     _NET_CLIENT_LIST(XInternAtom(display_arg, "_NET_CLIENT_LIST", 0)),
+    _NET_CLIENT_LIST_STACKING(
+            XInternAtom(display_arg, "_NET_CLIENT_LIST_STACKING", 0)),
     _NET_ACTIVE_WINDOW(XInternAtom(display_arg, "_NET_ACTIVE_WINDOW", 0)),
     _NET_CLOSE_WINDOW(XInternAtom(display_arg, "_NET_CLOSE_WINDOW", 0)),
+    _NET_FRAME_EXTENTS(XInternAtom(display_arg, "_NET_FRAME_EXTENTS", 0)),
+    _NET_REQUEST_FRAME_EXTENTS(
+            XInternAtom(display_arg, "_NET_REQUEST_FRAME_EXTENTS", 0)),
     _NET_WM_NAME(XInternAtom(display_arg, "_NET_WM_NAME", 0)),
     _NET_WM_VISIBLE_NAME(XInternAtom(display_arg, "_NET_WM_VISIBLE_NAME", 0)),
     _NET_WM_ICON(XInternAtom(display_arg, "_NET_WM_ICON", 0)),

@@ -46,6 +46,15 @@ class Manager : public tiny::Object {
     //! Publish `_NET_CLIENT_LIST` and `_NET_ACTIVE_WINDOW`
     void publish_clients();
 
+    //! `_NET_CLIENT_LIST_STACKING`, the lowest window first
+    void publish_stacking();
+
+    //! Windows that are above or below keep their layer (publish after)
+    void restack_layers();
+
+    //! `_NET_REQUEST_FRAME_EXTENTS`: tell a window that is not managed yet
+    void request_frame_extents(::Window child);
+
     //! Requests of the clients to the root window (`_NET_ACTIVE_WINDOW`...)
     bool on_root_message(const XClientMessageEvent& e);
 
@@ -109,6 +118,8 @@ class Manager : public tiny::Object {
 
     /* signal event handlers */
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_layer(tiny::Object* o, const XEvent& e, void* data);
     void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);

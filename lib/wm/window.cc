@@ -93,6 +93,41 @@ bool has_resize_increment(const XSizeHints& hints)
            (hints.width_inc > 1 || hints.height_inc > 1);
 }
 
+//! The bits of a Motif field that are allowed; `all` turns the bits around
+static unsigned long motif_allowed(unsigned long value, unsigned long all,
+                                   unsigned long everything)
+{
+    return value & all ? everything & ~value : value & everything;
+}
+
+void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
+                         unsigned long& functions, unsigned long& decorations)
+{
+    constexpr unsigned long all_functions =
+            MotifWMHints::FUNC_RESIZE | MotifWMHints::FUNC_MOVE |
+            MotifWMHints::FUNC_MINIMIZE | MotifWMHints::FUNC_MAXIMIZE |
+            MotifWMHints::FUNC_CLOSE;
+    constexpr unsigned long all_decorations =
+            MotifWMHints::DECOR_BORDER | MotifWMHints::DECOR_RESIZE |
+            MotifWMHints::DECOR_TITLE | MotifWMHints::DECOR_MENU |
+            MotifWMHints::DECOR_MINIMIZE | MotifWMHints::DECOR_MAXIMIZE;
+
+    functions = all_functions;
+    decorations = all_decorations;
+    if (data == nullptr || nitems < 1) {
+        return;
+    }
+    // data[0] flags, data[1] functions, data[2] decorations
+    if ((data[0] & MotifWMHints::FLAG_FUNCTIONS) && nitems > 1) {
+        functions =
+                motif_allowed(data[1], MotifWMHints::FUNC_ALL, all_functions);
+    }
+    if ((data[0] & MotifWMHints::FLAG_DECORATIONS) && nitems > 2) {
+        decorations = motif_allowed(data[2], MotifWMHints::DECOR_ALL,
+                                    all_decorations);
+    }
+}
+
 Window::Window(::Window child_arg, ::Window root_arg,
                unsigned long functions_arg):
     child(child_arg),
@@ -197,6 +232,7 @@ Window* Window::create(::Window root, ::Window child,
     XRaiseWindow(display, child);
 
     win->set_wm_state(NormalState);
+    win->publish_frame_extents();
     win->set_events();
     // TODO: move down under panel
     return win;
@@ -214,6 +250,17 @@ void Window::withdraw()
 {
     set_wm_state(WithdrawnState);
     XDeleteProperty(dsp, child, dsp._NET_WM_STATE);
+    XDeleteProperty(dsp, child, dsp._NET_FRAME_EXTENTS);
+}
+
+void Window::publish_frame_extents()
+{
+    const FrameExtents extents = frame_extents();
+    const long values[] = {extents.left, extents.right, extents.top,
+                           extents.bottom};
+    XChangeProperty(dsp, child, dsp._NET_FRAME_EXTENTS, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(values), 4);
 }
 
 void Window::configure_request(const XConfigureRequestEvent& e)
@@ -303,6 +350,59 @@ void Window::set_fullscreen(bool fullscreen_arg)
     }
 
     publish_wm_states();
+}
+
+//! Set or clear a flag of `_NET_WM_STATE`; true when it changed
+static bool change_state(unsigned long& states, unsigned long flag, bool on)
+{
+    if (static_cast<bool>(states & flag) == on) {
+        return false;
+    }
+    states = on ? states | flag : states & ~flag;
+    return true;
+}
+
+void Window::set_skip_taskbar(bool skip)
+{
+    if (change_state(wm_states, WMState::SKIP_TASKBAR, skip)) {
+        publish_wm_states();
+        on_skip_taskbar(this, XEvent());
+    }
+}
+
+void Window::set_above(bool above)
+{
+    // a window is in one layer
+    const bool changed = change_state(wm_states, WMState::ABOVE, above);
+    if (above) {
+        change_state(wm_states, WMState::BELOW, false);
+    }
+    if (changed) {
+        publish_wm_states();
+        on_layer(this, XEvent());
+    }
+}
+
+void Window::set_below(bool below)
+{
+    const bool changed = change_state(wm_states, WMState::BELOW, below);
+    if (below) {
+        change_state(wm_states, WMState::ABOVE, false);
+    }
+    if (changed) {
+        publish_wm_states();
+        on_layer(this, XEvent());
+    }
+}
+
+void Window::set_demands_attention(bool demands)
+{
+    if (demands && (wm_states & WMState::FOCUSED)) {
+        return; // the user looks at the window already
+    }
+    if (change_state(wm_states, WMState::DEMANDS_ATTENTION, demands)) {
+        publish_wm_states();
+    }
 }
 
 void Window::set_modal(bool modal)
@@ -399,6 +499,8 @@ void Window::set_focus()
     XRaiseWindow(dsp, child);
 
     wm_states |= WMState::FOCUSED;
+    // the user looks at the window now
+    wm_states &= static_cast<unsigned long>(~WMState::DEMANDS_ATTENTION);
 
     publish_wm_states();
 }
@@ -406,6 +508,11 @@ void Window::set_focus()
 void Window::raise()
 {
     XRaiseWindow(dsp, child);
+}
+
+void Window::lower()
+{
+    XLowerWindow(dsp, child);
 }
 
 void Window::move_to(int x, int y)
@@ -577,7 +684,6 @@ void Window::update_normal_hints()
     if (hints->flags & PMinSize && hints->flags & PMaxSize &&
         (hints->min_width == hints->max_width) &&
         (hints->min_height == hints->max_height)) {
-        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_ALL);
         functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_RESIZE);
         functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_MAXIMIZE);
     }
@@ -983,6 +1089,11 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
         return; // not a request
     }
     bool resize_maximized = false;
+    const auto requested = [action](bool current) {
+        return action == tiny::Display::_NET_WM_STATE_TOGGLE
+                       ? !current
+                       : action == tiny::Display::_NET_WM_STATE_ADD;
+    };
     // the two atoms of a request are independent (EWMH 1.5)
     for (const int i : {1, 2}) {
         const auto atom = static_cast<Atom>(e.data.l[i]);
@@ -993,6 +1104,14 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
             fullscreen(action == tiny::Display::_NET_WM_STATE_TOGGLE
                                ? !is_fullscreen()
                                : action == tiny::Display::_NET_WM_STATE_ADD);
+        } else if (atom == dsp._NET_WM_STATE_SKIP_TASKBAR) {
+            set_skip_taskbar(requested(skip_taskbar()));
+        } else if (atom == dsp._NET_WM_STATE_ABOVE) {
+            set_above(requested(is_above()));
+        } else if (atom == dsp._NET_WM_STATE_BELOW) {
+            set_below(requested(is_below()));
+        } else if (atom == dsp._NET_WM_STATE_DEMANDS_ATTENTION) {
+            set_demands_attention(requested(demands_attention()));
         } else if (atom == dsp._NET_WM_STATE_MODAL) {
             set_modal(action == tiny::Display::_NET_WM_STATE_TOGGLE
                               ? !is_modal()
@@ -1114,7 +1233,8 @@ void Window::on_property_notify(const XEvent& e, void*)
         return;
     }
 
-    if (e.xproperty.atom == dsp.WM_STATE) {
+    if (e.xproperty.atom == dsp.WM_STATE ||
+        e.xproperty.atom == dsp._NET_FRAME_EXTENTS) {
         return; // written by the window manager itself
     }
 
@@ -1250,40 +1370,27 @@ Window::WMType Window::get_net_wm_type(::Window window)
 bool Window::get_motif_hints(::Window window, unsigned long& functions,
                              unsigned long& decorations)
 {
-    functions = MotifWMHints::FUNC_ALL | MotifWMHints::FUNC_RESIZE |
-                MotifWMHints::FUNC_MOVE | MotifWMHints::FUNC_MINIMIZE |
-                MotifWMHints::FUNC_MAXIMIZE | MotifWMHints::FUNC_CLOSE;
-
-    decorations = MotifWMHints::DECOR_ALL | MotifWMHints::DECOR_BORDER |
-                  MotifWMHints::DECOR_RESIZE | MotifWMHints::DECOR_TITLE |
-                  MotifWMHints::DECOR_MENU | MotifWMHints::DECOR_MINIMIZE |
-                  MotifWMHints::DECOR_MAXIMIZE;
-
     const tiny::Display& display = tiny::get_display();
     Atom returned_type;
     int size;
-    unsigned long nitems;
+    unsigned long nitems = 0;
     unsigned long bytes_left;
-    MotifWMHints* mhints = nullptr;
+    unsigned char* data = nullptr;
 
-    if (XGetWindowProperty(display, window, display._MOTIF_WM_HINTS, 0L,
-                           MotifWMHints::property_length, false,
-                           display._MOTIF_WM_HINTS, &returned_type, &size,
-                           &nitems, &bytes_left,
-                           reinterpret_cast<uint8_t**>(&mhints)) != Success ||
-        !nitems) {
-        return false;
+    const bool found =
+            XGetWindowProperty(display, window, display._MOTIF_WM_HINTS, 0L,
+                               MotifWMHints::property_length, false,
+                               display._MOTIF_WM_HINTS, &returned_type, &size,
+                               &nitems, &bytes_left, &data) == Success &&
+            data && nitems && size == 32 &&
+            returned_type == display._MOTIF_WM_HINTS;
+    resolve_motif_hints(found ? reinterpret_cast<const unsigned long*>(data)
+                              : nullptr,
+                        found ? nitems : 0, functions, decorations);
+    if (data) {
+        XFree(data);
     }
-    if (mhints->flags & MotifWMHints::FLAG_FUNCTIONS) {
-        functions = mhints->functions;
-    }
-    if (mhints->flags & MotifWMHints::FLAG_DECORATIONS) {
-        decorations = mhints->decorations;
-    }
-
-    XFree(mhints);
-
-    return true;
+    return found;
 }
 
 } // namespace tiny::wm

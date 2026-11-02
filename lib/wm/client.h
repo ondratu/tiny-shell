@@ -36,6 +36,14 @@ class Client : public tiny::Container, public Window {
 
     void raise() override;
 
+    void lower() override;
+
+    //! The border, the header on the top
+    FrameExtents frame_extents() const override;
+
+    //! The frame of a client before it has one (`_NET_REQUEST_FRAME_EXTENTS`)
+    static FrameExtents default_frame_extents();
+
     void move_to(int x, int y) override;
 
     //! Minimize (Iconify) window
@@ -86,6 +94,18 @@ class Client : public tiny::Container, public Window {
 
     //! Show the size of the client in units (e.g. columns and rows)
     void show_size_units(int client_width, int client_height);
+
+    //! The buttons the window has: what Motif hints and the type allow
+    bool has_close_button() const { return is_closable(); }
+    bool has_minimize_button() const
+    {
+        return is_minimizable() && (decorations & MotifWMHints::DECOR_MINIMIZE);
+    }
+    bool has_maximize_button() const
+    {
+        return is_maximizable() && !is_auxiliary() &&
+               (decorations & MotifWMHints::DECOR_MAXIMIZE);
+    }
 
     unsigned long decorations = 0;
 

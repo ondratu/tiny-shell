@@ -89,6 +89,7 @@ Window* Client::create(::Window root, ::Window child,
     win->map_all();
 
     win->set_wm_state(NormalState);
+    win->publish_frame_extents();
     return win;
 }
 
@@ -102,14 +103,18 @@ void Client::realize(::Window parent_arg, int x, int y)
     }
 
     add(&header, 0, 0);
-    header.push_back(&cls_btn, header.get_padding(),
-                     header.get_padding() - cls_btn.get_border());
-    if (is_maximizable()) {
+    if (has_close_button()) {
+        header.push_back(&cls_btn, header.get_padding(),
+                         header.get_padding() - cls_btn.get_border());
+    }
+    if (has_maximize_button()) {
         header.push_back(&max_btn, header.get_padding(),
                          header.get_padding() - max_btn.get_border());
     }
-    header.push_back(&min_btn, header.get_padding(),
-                     header.get_padding() - min_btn.get_border());
+    if (has_minimize_button()) {
+        header.push_back(&min_btn, header.get_padding(),
+                         header.get_padding() - min_btn.get_border());
+    }
 
     XSetWindowBorderWidth(display, child, 0);
     XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
@@ -198,6 +203,29 @@ void Client::raise()
     XRaiseWindow(display, window);
 }
 
+void Client::lower()
+{
+    XLowerWindow(display, window);
+    if (is_resizable()) {
+        XLowerWindow(display, shadow.get_window()); // shadow is lower
+    }
+}
+
+static FrameExtents extents_with(int border)
+{
+    return {border, border, tiny::theme.wm_win_header + border, border};
+}
+
+FrameExtents Client::frame_extents() const
+{
+    return extents_with(get_border());
+}
+
+FrameExtents Client::default_frame_extents()
+{
+    return extents_with(tiny::Style().border_width);
+}
+
 void Client::move_to(int x, int y)
 {
     if (is_resizable()) {
@@ -229,7 +257,9 @@ void Client::maximize()
     state.height = height;
 
     place_maximized();
-    max_btn.set_restore(true);
+    if (has_maximize_button()) {
+        max_btn.set_restore(true);
+    }
     set_maximized(true);
 }
 
@@ -361,7 +391,9 @@ void Client::restore(int x, int y)
                           tiny::x_uint(state.height));
         XSetWindowBorderWidth(display, window, 1);
 
-        max_btn.set_restore(false);
+        if (has_maximize_button()) {
+            max_btn.set_restore(false);
+        }
         set_maximized(false);
         send_configure_notify();
     } else {
