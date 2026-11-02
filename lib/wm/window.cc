@@ -533,6 +533,14 @@ void Window::lower()
     XLowerWindow(dsp, child);
 }
 
+void Window::stack_under(::Window sibling)
+{
+    XWindowChanges changes = {};
+    changes.sibling = sibling;
+    changes.stack_mode = Below;
+    XConfigureWindow(dsp, child, CWSibling | CWStackMode, &changes);
+}
+
 void Window::move_to(int x, int y)
 {
     XMoveWindow(dsp, child, x, y);

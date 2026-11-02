@@ -1066,6 +1066,7 @@ void Manager::on_map_request(const XMapRequestEvent& e)
         window->set_focus();
     } else {
         window->set_demands_attention(true); // the user decides
+        window->stack_under(active->frame()); // it does not cover the user
     }
 }
 

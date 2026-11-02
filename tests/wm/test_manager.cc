@@ -1608,6 +1608,28 @@ TEST_F(ManagerTest, a_window_older_than_the_active_one_does_not_steal_the_focus)
     EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
 }
 
+TEST_F(ManagerTest, a_window_denied_the_focus_stays_under_the_active_one)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(4000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    const std::vector<::Window> order = children_of(root_window());
+    const ::Window active_frame = manager->wm_windows[first.window]->frame();
+    const ::Window denied_frame = manager->wm_windows[second.window]->frame();
+    ASSERT_NE(std::find(order.begin(), order.end(), active_frame), order.end());
+    EXPECT_LT(std::find(order.begin(), order.end(), denied_frame),
+              std::find(order.begin(), order.end(), active_frame));
+}
+
 TEST_F(ManagerTest, a_window_newer_than_the_active_one_takes_the_focus)
 {
     start();

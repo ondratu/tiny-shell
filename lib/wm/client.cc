@@ -238,6 +238,19 @@ void Client::lower()
     }
 }
 
+void Client::stack_under(::Window sibling)
+{
+    XWindowChanges changes = {};
+    changes.sibling = sibling;
+    changes.stack_mode = Below;
+    XConfigureWindow(display, window, CWSibling | CWStackMode, &changes);
+    if (is_resizable()) {
+        changes.sibling = window;
+        XConfigureWindow(display, shadow.get_window(),
+                         CWSibling | CWStackMode, &changes); // under the frame
+    }
+}
+
 static FrameExtents extents_with(int border)
 {
     return {border, border, tiny::theme.wm_win_header + border, border};
