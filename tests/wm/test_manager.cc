@@ -858,6 +858,18 @@ TEST_F(ManagerTest, a_hidden_dock_reserves_nothing)
     EXPECT_EQ(manager->work_area.x, 0);
 }
 
+TEST_F(ManagerTest, the_panel_reserves_its_edge_with_a_strut)
+{
+    start();
+
+    const tiny::wm::Struts strut =
+            tiny::wm::read_struts(manager->wm_panel.get_window());
+
+    EXPECT_EQ(strut.top, manager->wm_panel.get_height());
+    EXPECT_EQ(strut.left + strut.right + strut.bottom, 0);
+    EXPECT_EQ(manager->work_area.y, strut.top);
+}
+
 TEST_F(ManagerTest, maximized_windows_follow_a_dock)
 {
     start();

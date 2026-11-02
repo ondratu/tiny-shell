@@ -21,8 +21,8 @@ struct Struts {
 //! edge is reserved.
 Struts read_struts(::Window window);
 
-//! The screen without the panel at the top and the struts of the docks
-tiny::Rect compute_work_area(int screen_width, int screen_height, int panel,
+//! The screen without the struts of the docks and of the panel
+tiny::Rect compute_work_area(int screen_width, int screen_height,
                              const std::vector<Struts>& docks);
 
 //! Shrink the frame to the area and move it inside
