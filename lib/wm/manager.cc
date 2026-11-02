@@ -376,7 +376,14 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         return true; // unknown window, nothing to do
     }
     if (e.message_type == dsp._NET_ACTIVE_WINDOW) {
-        focus_window(it->second);
+        // data[0] is the source: 1 an application, 2 a pager (the user)
+        const bool by_application = e.data.l[0] == 1;
+        if (!by_application ||
+            may_activate(it->second, static_cast<unsigned long>(e.data.l[1]))) {
+            focus_window(it->second);
+        } else {
+            it->second->set_demands_attention(true); // the user decides
+        }
     } else {
         it->second->close();
     }
@@ -1078,6 +1085,16 @@ bool Manager::may_take_focus(Window* window) const
     unsigned long time = 0;
     const bool has_time = Window::get_user_time(window->get_child(), time);
     return takes_focus(has_time, time, has_user_time, last_user_time);
+}
+
+bool Manager::may_activate(Window* window, unsigned long time) const
+{
+    if (!active || active->get_minimized() || window == active ||
+        parent_of(window) == active) {
+        return true; // nothing to steal
+    }
+    // an application has to tell the time of the action of the user
+    return takes_focus(true, time, has_user_time, last_user_time);
 }
 
 void Manager::on_window_user_time(tiny::Object* o, const XEvent&, void*)
