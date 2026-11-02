@@ -28,6 +28,14 @@ std::vector<std::string> application_dirs(const char* data_home,
                                           const char* home);
 
 /**
+ * @short `$XDG_DATA_DIRS` with `dir` at the end, when the variable is set.
+ *
+ * The default of the variable already has the usual directories, a set one
+ * may not. Empty string means unset (use the default).
+ */
+std::string data_dirs_with(const char* data_dirs, const std::string& dir);
+
+/**
  * @short Does `program` exist as an executable file?
  *
  * A name with a slash is a path (relative to the working directory), other
