@@ -330,6 +330,8 @@ class Window : public tiny::Object {
     tiny::Signal on_skip_taskbar;
     //! The layer (above, below) changed; the manager restacks the windows
     tiny::Signal on_layer;
+    //! `demands_attention()` changed (the dock marks the icon)
+    tiny::Signal on_attention;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held

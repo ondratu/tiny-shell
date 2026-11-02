@@ -150,6 +150,13 @@ void DockIcon::on_expose(const XEvent&, void*)
         XDrawArc(display, window, gc, 1, 1, tiny::x_uint(width - 3),
                  tiny::x_uint(height - 3), 0, 360 * 64);
     }
+    if (task->demands_attention()) {
+        const int bar = std::max(
+                2, static_cast<int>(lround(3 * tiny::theme.scale_factor)));
+        XSetForeground(display, gc, tiny::theme.wm_dock.attention);
+        XFillRectangle(display, window, gc, 0, height - bar,
+                       tiny::x_uint(width), tiny::x_uint(bar));
+    }
     XFreeGC(display, gc);
 }
 

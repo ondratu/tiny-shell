@@ -607,6 +607,8 @@ void Manager::connect_window(Window* window)
                                             &Manager::on_window_skip_taskbar));
     window->on_layer.connect(this, static_cast<tiny::object_signal_t>(
                                            &Manager::on_window_layer));
+    window->on_attention.connect(this, static_cast<tiny::object_signal_t>(
+                                               &Manager::on_window_attention));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
 }
@@ -720,6 +722,11 @@ void Manager::on_window_layer(tiny::Object*, const XEvent&, void*)
 {
     restack_layers();
     publish_stacking();
+}
+
+void Manager::on_window_attention(tiny::Object* o, const XEvent& e, void*)
+{
+    wm_dock.redraw(reinterpret_cast<Window*>(o), e);
 }
 
 void Manager::remember_active(Window* window, const XEvent& e)

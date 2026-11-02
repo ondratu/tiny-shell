@@ -404,6 +404,7 @@ void Window::set_demands_attention(bool demands)
     }
     if (change_state(wm_states, WMState::DEMANDS_ATTENTION, demands)) {
         publish_wm_states();
+        on_attention(this, XEvent());
     }
 }
 

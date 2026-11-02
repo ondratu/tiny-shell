@@ -124,6 +124,7 @@ class Manager : public tiny::Object {
     void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
     void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);
     void on_window_layer(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_attention(tiny::Object* o, const XEvent& e, void* data);
     void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);
