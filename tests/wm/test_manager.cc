@@ -2412,6 +2412,39 @@ TEST_F(ManagerTest, a_desktop_window_stays_under_a_window_below)
     EXPECT_LT(desktop_at, frame_at);
 }
 
+TEST_F(ManagerTest, a_window_that_starts_fullscreen_covers_the_screen)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_state({dsp()._NET_WM_STATE_FULLSCREEN});
+    c.map();
+    run_loop();
+
+    auto* window = manager->wm_windows[c.window];
+    const XWindowAttributes screen = attributes_of(root_window());
+    const XWindowAttributes frame = attributes_of(window->frame());
+    EXPECT_TRUE(window->is_fullscreen());
+    EXPECT_EQ(frame.width, screen.width);
+    EXPECT_EQ(frame.height, screen.height);
+    EXPECT_EQ(frame_extents_of(c), (std::vector<long>{0, 0, 0, 0}));
+}
+
+TEST_F(ManagerTest, a_window_that_starts_maximized_fills_the_work_area)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                 dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+    c.map();
+    run_loop();
+
+    auto* window = manager->wm_windows[c.window];
+    const XWindowAttributes frame = attributes_of(window->frame());
+    EXPECT_TRUE(window->get_maximized());
+    EXPECT_EQ(frame.width, manager->work_area.width);
+    EXPECT_EQ(frame.height, manager->work_area.height);
+}
+
 TEST_F(ManagerTest, a_window_that_starts_above_is_on_top)
 {
     FakeClient& first = add_client(false);
