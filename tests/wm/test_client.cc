@@ -507,6 +507,21 @@ TEST_F(ClientTest, create_ignores_the_gravity_of_a_position_nobody_chose)
     EXPECT_EQ(f.y, 200);
 }
 
+TEST_F(ClientTest, create_keeps_the_position_of_a_window_that_was_there_already)
+{
+    XMoveWindow(dsp(), client.window, 300, 200);
+    client.set_normal_hints(position_hints(USPosition, StaticGravity));
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(
+            tiny::wm::Client::create(root_window(), client.window, a, 0xFFFF,
+                                     0xFFFF, screen_area(), false));
+
+    const XWindowAttributes f = attributes_of(
+            static_cast<tiny::wm::Client*>(w.get())->get_window());
+    EXPECT_EQ(f.x, 300);
+    EXPECT_EQ(f.y, 200);
+}
+
 TEST_F(ClientTest, create_makes_a_big_window_fit_the_work_area)
 {
     XResizeWindow(dsp(), client.window, 3000, 2000);
@@ -1584,6 +1599,18 @@ TEST_F(ClientTest, a_window_that_grows_keeps_its_gravity_point)
 
     EXPECT_EQ(frame().x, before.x - 40);
     EXPECT_EQ(frame().y, before.y - 30);
+}
+
+TEST_F(ClientTest, a_window_that_grows_west_stays_inside_the_work_area)
+{
+    client.set_normal_hints(position_hints(0, EastGravity));
+    build();
+    win->configure_request(configure_request(client.window, CWX | CWY, 0,
+                                             screen_area().y + 100, 0, 0));
+    win->configure_request(configure_request(client.window, CWWidth, 0, 0,
+                                             child().width + 80, 0));
+
+    EXPECT_GE(frame().x, screen_area().x + frame().border_width);
 }
 
 TEST_F(ClientTest, a_window_with_north_west_gravity_grows_to_the_south_east)

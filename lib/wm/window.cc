@@ -147,6 +147,10 @@ tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
         int client_height = rv.height - title;
         fit_aspect(hints, rv.width, client_height,
                    across && (!down || std::abs(dx) >= std::abs(dy)));
+        // the grid and the minimum of the manager are stronger than the ratio
+        rv.width = fit_client_size(hints, true, rv.width, min_width);
+        client_height = fit_client_size(hints, false, client_height,
+                                        min_height - title);
         rv.height = client_height + title;
     }
     if (edges & tiny::Position::Left) {
@@ -375,9 +379,6 @@ Window::Window(::Window child_arg, ::Window root_arg,
         if (hints->flags & PMaxSize) {
             state.width = std::min(state.width, hints->max_width);
             state.height = std::min(state.height, hints->max_height);
-        }
-        if (hints->flags & PAspect) {
-            fit_aspect(*hints, state.width, state.height, true);
         }
     }
 
@@ -656,7 +657,7 @@ void Window::update_desktop()
 std::vector<Atom> Window::get_allowed_actions() const
 {
     std::vector<Atom> atoms;
-    if (functions & MotifWMHints::FUNC_MOVE) {
+    if (is_movable()) {
         atoms.push_back(dsp._NET_WM_ACTION_MOVE);
     }
     if (is_resizable()) {
@@ -1642,6 +1643,7 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
     if (e.xproperty.atom == dsp.WM_NORMAL_HINTS) {
         update_normal_hints();
+        publish_allowed_actions(); // a fixed size cannot be resized
         return;
     }
     if (e.xproperty.atom == dsp._MOTIF_WM_HINTS) {

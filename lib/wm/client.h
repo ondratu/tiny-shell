@@ -23,7 +23,7 @@ class Client : public tiny::Container, public Window {
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
                           unsigned long functions, unsigned long decorations,
-                          const tiny::Rect& area);
+                          const tiny::Rect& area, bool fresh = true);
 
     void realize(::Window parent, int x, int y) override;
 

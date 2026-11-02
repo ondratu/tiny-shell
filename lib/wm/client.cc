@@ -101,12 +101,14 @@ static tiny::Rect first_place(const XWindowAttributes& attrs,
 
 Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
-                       unsigned long decorations, const tiny::Rect& area)
+                       unsigned long decorations, const tiny::Rect& area,
+                       bool fresh)
 {
     XSizeHints hints = {};
     long supplied;
-    if (!XGetWMNormalHints(tiny::get_display(), child, &hints, &supplied)) {
-        hints.flags = 0;
+    if (!fresh ||
+        !XGetWMNormalHints(tiny::get_display(), child, &hints, &supplied)) {
+        hints.flags = 0; // the position of a window that is there is real
     }
     const tiny::Rect place = first_place(attrs, hints, area, decorations);
     const int client_height = place.height - header_height_for(decorations);
@@ -540,7 +542,9 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     const int x = (e.value_mask & CWX)
                           ? std::max(e.x - frame.border_width,
                                      work_area.x + frame.border_width)
-                          : frame.x + shift.first;
+                  : shift.first < 0 ? std::max(frame.x + shift.first,
+                                               work_area.x + frame.border_width)
+                                    : frame.x + shift.first;
     const int y =
             (e.value_mask & CWY) ? std::max(e.y - title - frame.border_width,
                                             work_area.y + frame.border_width)

@@ -991,6 +991,22 @@ TEST_F(ManagerTest, a_maximized_window_is_moved_but_not_resized_by_a_client)
     EXPECT_FALSE(manager->wm_windows[c.window]->get_maximized());
 }
 
+TEST_F(ManagerTest, a_button_let_go_before_the_grab_starts_no_drag)
+{
+    start();
+    int checks = 0;
+    manager->is_button_down = [&checks]() { return ++checks == 1; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+    EXPECT_EQ(checks, 2);
+}
+
 TEST_F(ManagerTest, the_client_can_cancel_the_drag)
 {
     start();
@@ -1036,6 +1052,11 @@ TEST_F(ManagerTest, the_pointer_events_of_the_grab_drive_the_window)
 
     XEvent release = make_event(ButtonRelease);
     release.xbutton.window = root_window();
+    release.xbutton.button = Button2; // not the button of the drag
+    XSendEvent(dsp(), root_window(), False, ButtonReleaseMask, &release);
+    run_loop();
+    EXPECT_EQ(manager->dragged, window);
+    release.xbutton.button = Button1;
     XSendEvent(dsp(), root_window(), False, ButtonReleaseMask, &release);
     run_loop();
     EXPECT_EQ(manager->dragged, nullptr);
@@ -1145,6 +1166,25 @@ TEST_F(ManagerTest, the_allowed_actions_follow_the_motif_functions)
     EXPECT_EQ(std::count(actions.begin(), actions.end(),
                          dsp()._NET_WM_ACTION_MOVE),
               1);
+}
+
+TEST_F(ManagerTest, a_fixed_size_takes_the_resize_from_the_allowed_actions)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    c.set_size_hints(PMinSize | PMaxSize, 100, 100, 100, 100);
+    run_loop();
+
+    const auto actions = c.atoms_of(dsp()._NET_WM_ALLOWED_ACTIONS);
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_RESIZE),
+              0);
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_MAXIMIZE_HORZ),
+              0);
 }
 
 TEST_F(ManagerTest, the_allowed_actions_are_removed_when_the_client_leaves)

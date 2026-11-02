@@ -114,7 +114,10 @@ class Manager : public tiny::Object {
     void center_over(Window* dialog, const Window* parent);
 
     //! Frame (or not) and register a client; null for a type that is not managed
-    Window* manage(::Window child, const XWindowAttributes& attrs);
+    //! `fresh`: the window was just mapped, so its position is a wish (a window
+    //! that was there already is where it is)
+    Window* manage(::Window child, const XWindowAttributes& attrs,
+                   bool fresh = true);
 
     //! Forget a client; `alive` is false when it is gone already
     //! `reframing`: the window comes back at once, so its dialogs stay
@@ -209,6 +212,7 @@ class Manager : public tiny::Object {
 
     Window* active = nullptr;
     Window* dragged = nullptr; //!< moved or resized by the manager
+    unsigned drag_button = 0;  //!< its release ends the drag, 0: any
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
     unsigned long last_user_time = 0; //!< of the last user action we know of
