@@ -8,7 +8,7 @@ namespace tiny::wm {
 
 std::string local_host_name()
 {
-    char name[HOST_NAME_MAX + 1] = {};
+    char name[256] = {}; // HOST_NAME_MAX is not everywhere
     if (gethostname(name, sizeof(name) - 1) != 0) {
         return "";
     }
