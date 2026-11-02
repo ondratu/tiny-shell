@@ -46,7 +46,8 @@ class Selection {
   private:
     //! The time of the server (the timestamp ICCCM wants) from an event
     Time server_time();
-    bool wait_for_destroy(::Window owner, std::chrono::milliseconds timeout);
+    //! Acquired when the old owner is gone, Timeout or Failed otherwise
+    Result wait_for_destroy(::Window owner, std::chrono::milliseconds timeout);
 
     ::Display* display;
     ::Window root;

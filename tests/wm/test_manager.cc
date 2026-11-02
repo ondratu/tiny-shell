@@ -3569,6 +3569,7 @@ TEST_F(ManagerTest, leaves_when_another_manager_takes_the_selection)
     e.window = XGetSelectionOwner(display, e.selection);
     manager->running = true;
     manager->on_selection_clear(e);
+    manager->set_selection(nullptr); // the selection ends with the test
 
     EXPECT_FALSE(manager->running);
 }
@@ -3588,6 +3589,7 @@ TEST_F(ManagerTest, other_selections_do_not_stop_it)
             XGetSelectionOwner(display, XInternAtom(display, "WM_S0", False));
     manager->running = true;
     manager->on_selection_clear(e);
+    manager->set_selection(nullptr); // the selection ends with the test
 
     EXPECT_TRUE(manager->running);
 }
@@ -3595,7 +3597,7 @@ TEST_F(ManagerTest, other_selections_do_not_stop_it)
 TEST_F(ManagerTest, a_manager_without_selection_ignores_the_clear)
 {
     start();
-    XSelectionClearEvent e = {};
+    const XSelectionClearEvent e = {};
     manager->running = true;
     manager->on_selection_clear(e);
 

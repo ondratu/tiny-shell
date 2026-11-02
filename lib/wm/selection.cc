@@ -10,12 +10,15 @@ namespace tiny::wm {
 
 namespace {
 
-//! Set by on_x_error, to know that the window of the old owner is gone
-bool x_error_seen = false;
+//! The window the handler waits for, and whether it was reported missing
+::Window watched = None;
+bool watched_is_gone = false;
 
-int on_x_error(::Display* /*display*/, XErrorEvent* /*error*/)
+int on_x_error(::Display* /*display*/, XErrorEvent* error)
 {
-    x_error_seen = true;
+    if (error->error_code == BadWindow && error->resourceid == watched) {
+        watched_is_gone = true;
+    }
     return 0;
 }
 
@@ -68,21 +71,30 @@ Selection::Result Selection::acquire(bool replace,
     if (old_owner == None) {
         return Result::Acquired;
     }
-    return wait_for_destroy(old_owner, timeout) ? Result::Acquired
-                                                : Result::Timeout;
+    const Result rv = wait_for_destroy(old_owner, timeout);
+    if (rv == Result::Acquired &&
+        XGetSelectionOwner(display, selection) != owner_window) {
+        return Result::Failed; // a third manager was quicker
+    }
+    return rv;
 }
 
-bool Selection::wait_for_destroy(::Window owner,
-                                 std::chrono::milliseconds timeout)
+Selection::Result Selection::wait_for_destroy(::Window owner,
+                                              std::chrono::milliseconds timeout)
 {
     // the owner can be gone already
+    XSync(display, False); // older errors are not about the owner
+    // a window of an earlier owner can have the same id (ids are reused)
+    XEvent old_event;
+    while (XCheckTypedWindowEvent(display, owner, DestroyNotify, &old_event)) {}
     XErrorHandler old_handler = XSetErrorHandler(&on_x_error);
-    x_error_seen = false;
+    watched = owner;
+    watched_is_gone = false;
     XSelectInput(display, owner, StructureNotifyMask);
     XSync(display, False);
     XSetErrorHandler(old_handler);
-    if (x_error_seen) {
-        return true;
+    if (watched_is_gone) {
+        return Result::Acquired;
     }
 
     const auto deadline = std::chrono::steady_clock::now() + timeout;
@@ -92,13 +104,16 @@ bool Selection::wait_for_destroy(::Window owner,
         while (XPending(display) > 0) {
             XNextEvent(display, &e);
             if (e.type == DestroyNotify && e.xdestroywindow.window == owner) {
-                return true;
+                return Result::Acquired;
+            }
+            if (e.type == SelectionClear && is_lost_by(e.xselectionclear)) {
+                return Result::Failed; // someone else wants it too
             }
         }
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
                 deadline - std::chrono::steady_clock::now());
         if (left.count() <= 0) {
-            return false;
+            return Result::Timeout;
         }
         pollfd fd = {ConnectionNumber(display), POLLIN, 0};
         poll(&fd, 1, static_cast<int>(left.count()));
@@ -117,6 +132,7 @@ void Selection::announce()
     e.data.l[2] = static_cast<long>(owner_window);
     XSendEvent(display, root, False, StructureNotifyMask,
                reinterpret_cast<XEvent*>(&e));
+    XFlush(display); // the clients wait for it
 }
 
 bool Selection::is_lost_by(const XSelectionClearEvent& e) const

@@ -2,9 +2,12 @@
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <unistd.h>
 
 #include "object.h"
 #include "theme.h"
@@ -28,10 +31,10 @@ int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
     return 0;
 }
 
-} // namespace
-
-//! What the options ask to print, for the actions that do not need X
-int print_and_exit(const tiny::wm::Options& options, const char* program)
+//! What the options ask to print, for the actions that do not need X; the
+//! exit code, or nothing when tiny-shell is to run
+std::optional<int> print_and_exit(const tiny::wm::Options& options,
+                                  const char* program)
 {
     using Action = tiny::wm::Options::Action;
     switch (options.action) {
@@ -43,8 +46,8 @@ int print_and_exit(const tiny::wm::Options& options, const char* program)
             return EXIT_SUCCESS;
         case Action::Info: {
             const char* data_dirs = getenv("XDG_DATA_DIRS");
-            const std::string with_local =
-                    tiny::xdg::data_dirs_with(data_dirs, "/usr/local/share");
+            const std::string with_local = tiny::xdg::data_dirs_with(
+                    data_dirs, tiny::xdg::local_share_dir);
             fputs(tiny::wm::info_text(tiny::Theme::env_scale_factor(),
                                       tiny::xdg::application_dirs(
                                               getenv("XDG_DATA_HOME"),
@@ -63,15 +66,30 @@ int print_and_exit(const tiny::wm::Options& options, const char* program)
         case Action::Run:
             break;
     }
-    return -1;
+    return std::nullopt;
 }
+
+//! True when nobody else has the redirect of the root window
+bool root_is_free(::Display* display, ::Window root)
+{
+    wm_detected = false;
+    XErrorHandler old = XSetErrorHandler(&on_wm_detected);
+    XSelectInput(display, root,
+                 SubstructureRedirectMask | SubstructureNotifyMask);
+    XSync(display, False);
+    XSelectInput(display, root, 0); // Reparent do UnmapWindow, do not track
+    XSetErrorHandler(old);
+    return !wm_detected;
+}
+
+} // namespace
 
 int main(int argc, char** argv)
 {
     const tiny::wm::Options options = tiny::wm::parse_options(
             std::vector<std::string>(argv + 1, argv + argc));
-    if (const int rv = print_and_exit(options, argv[0]); rv >= 0) {
-        return rv;
+    if (const auto rv = print_and_exit(options, argv[0])) {
+        return *rv;
     }
 
     // The names of the applications are sorted by the language of the user
@@ -104,14 +122,16 @@ int main(int argc, char** argv)
                                          "selection.");
         }
 
-        XErrorHandler old = XSetErrorHandler(&on_wm_detected);
-        XSelectInput(display, root,
-                     SubstructureRedirectMask | SubstructureNotifyMask);
-        XSync(display, False);
-        XSelectInput(display, root, 0); // Reparent do UnmapWindow, do not track
-        XSetErrorHandler(old);
+        // The old manager can still hold the root for a moment after it
+        // gave up the selection
+        const int attempts = options.replace ? 20 : 1;
+        bool free_root = root_is_free(display, root);
+        for (int i = 1; !free_root && i < attempts; ++i) {
+            usleep(100 * 1000);
+            free_root = root_is_free(display, root);
+        }
 
-        if (wm_detected) {
+        if (!free_root) {
             tiny::error("Detected another window manager on display %s",
                         XDisplayString(display));
             // it does not own the selection, so --replace cannot ask it to go

@@ -71,7 +71,7 @@ PROGS = $(TARGET) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: all examples clean check coverage format lint asan cppcheck help
+.PHONY: FORCE all examples clean check coverage format lint asan cppcheck help
 .DELETE_ON_ERROR:
 
 all: $(TARGET)
@@ -93,9 +93,17 @@ examples: $(EXAMPLES)
 
 -include $(DEP)
 
+# options.o is rebuilt when the version changes (the stamp changes only then)
 ifneq (,$(TINY_VERSION))
 $(BUILD)/lib/wm/options.o: override CXXFLAGS += -DTINY_SHELL_VERSION='"$(TINY_VERSION)"'
+$(BUILD)/lib/wm/options.o: $(BUILD)/.version
 endif
+
+$(BUILD)/.version: FORCE
+	@mkdir -p $(BUILD)
+	@echo '$(TINY_VERSION)' | cmp -s - $@ || echo '$(TINY_VERSION)' > $@
+
+FORCE:
 
 $(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
 	@mkdir -p $(@D)
