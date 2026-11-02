@@ -6,7 +6,25 @@ namespace tiny::wm {
 
 namespace {
 
-constexpr int dialog_width = 400;
+constexpr int max_name = 48; //!< bytes of the name of the application
+
+int dialog_width()
+{
+    return 20 * tiny::theme.wm_menu_item_height;
+}
+
+// The name is the client's, so it may be anything: cut it on a character
+std::string shorten(const std::string& name)
+{
+    if (name.size() <= max_name) {
+        return name;
+    }
+    size_t end = max_name;
+    while (end > 0 && (name[end] & 0xC0) == 0x80) {
+        --end; // inside of a UTF-8 sequence
+    }
+    return name.substr(0, end) + "...";
+}
 
 int spacing()
 {
@@ -25,7 +43,7 @@ int button_height()
 
 int button_width()
 {
-    return (dialog_width - 3 * spacing()) / 2;
+    return (dialog_width() - 3 * spacing()) / 2;
 }
 
 int dialog_height()
@@ -37,9 +55,9 @@ int dialog_height()
 } // namespace
 
 UnresponsiveDialog::UnresponsiveDialog():
-    tiny::Container(dialog_width, dialog_height(), "unresponsive-dialog"),
-    title(dialog_width - 2 * spacing(), line_height()),
-    detail(dialog_width - 2 * spacing(), line_height()),
+    tiny::Container(dialog_width(), dialog_height(), "unresponsive-dialog"),
+    title(dialog_width() - 2 * spacing(), line_height()),
+    detail(dialog_width() - 2 * spacing(), line_height()),
     wait(button_width(), button_height(), "Wait"),
     quit(button_width(), button_height(), "Force quit")
 {
@@ -70,7 +88,7 @@ void UnresponsiveDialog::realize(::Window root, int, int)
 
 void UnresponsiveDialog::popup(const std::string& name, unsigned others)
 {
-    title.set_text("\"" + name + "\" is not responding");
+    title.set_text("\"" + shorten(name) + "\" is not responding");
     detail.set_text(others == 0 ? "You may wait, or force it to quit."
                                 : "Quitting closes " + std::to_string(others) +
                                           " more window" +

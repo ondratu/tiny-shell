@@ -115,3 +115,18 @@ TEST_F(UnresponsiveDialogTest, the_buttons_wait_and_quit)
     EXPECT_EQ(waited, 1);
     EXPECT_EQ(quit, 1);
 }
+
+TEST_F(UnresponsiveDialogTest, a_long_name_is_cut_inside_the_dialog)
+{
+    tiny::wm::UnresponsiveDialog dialog;
+    dialog.realize(root_window());
+    std::string name;
+    for (int i = 0; i < 40; ++i) {
+        name += "\xc4\x9b"; // a two byte character, 80 bytes in all
+    }
+
+    dialog.popup(name);
+    dialog.popup(std::string(200, 'x'));
+
+    EXPECT_EQ(attributes_of(dialog).map_state, IsViewable);
+}
