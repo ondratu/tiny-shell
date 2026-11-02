@@ -1,3 +1,4 @@
+#include <chrono>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
@@ -9,11 +10,15 @@
 #include "theme.h"
 #include "wm/manager.h"
 #include "wm/options.h"
+#include "wm/selection.h"
 #include "xdg/application_index.h"
 
 namespace {
 
 bool wm_detected = false;
+
+//! How long --replace waits for the old window manager to exit
+constexpr std::chrono::seconds replace_timeout{5};
 
 int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
 {
@@ -81,6 +86,24 @@ int main(int argc, char** argv)
         tiny::theme.init();
 
         const ::Window root = XDefaultRootWindow(display);
+
+        // The manager selection says who is the window manager (ICCCM 2.8)
+        tiny::wm::Selection selection(display, root, XDefaultScreen(display));
+        switch (selection.acquire(options.replace, replace_timeout)) {
+            case tiny::wm::Selection::Result::Acquired:
+                break;
+            case tiny::wm::Selection::Result::Occupied:
+                throw std::runtime_error(
+                        "Another window manager runs, use --replace to take "
+                        "over from it.");
+            case tiny::wm::Selection::Result::Timeout:
+                throw std::runtime_error(
+                        "The window manager that runs did not exit.");
+            case tiny::wm::Selection::Result::Failed:
+                throw std::runtime_error("Could not take the manager "
+                                         "selection.");
+        }
+
         XErrorHandler old = XSetErrorHandler(&on_wm_detected);
         XSelectInput(display, root,
                      SubstructureRedirectMask | SubstructureNotifyMask);
@@ -91,10 +114,15 @@ int main(int argc, char** argv)
         if (wm_detected) {
             tiny::error("Detected another window manager on display %s",
                         XDisplayString(display));
-            throw std::runtime_error("Detected another window manager.");
+            // it does not own the selection, so --replace cannot ask it to go
+            throw std::runtime_error(
+                    "Detected another window manager that does not support "
+                    "--replace, stop it first.");
         }
 
         tiny::wm::Manager manager(display, root);
+        manager.set_selection(&selection);
+        selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {
         fprintf(stderr, "Failed to initialize window manager: %s\n", e.what());

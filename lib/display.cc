@@ -19,6 +19,7 @@ Display::Display(::Display* display_arg):
     WM_CHANGE_STATE(XInternAtom(display_arg, "WM_CHANGE_STATE", 0)),
     WM_STATE(XInternAtom(display_arg, "WM_STATE", 0)),
     UTF8_STRING(XInternAtom(display_arg, "UTF8_STRING", 0)),
+    MANAGER(XInternAtom(display_arg, "MANAGER", 0)),
     _MOTIF_WM_HINTS(XInternAtom(display_arg, "_MOTIF_WM_HINTS", 0)),
     _NET_SUPPORTED(XInternAtom(display_arg, "_NET_SUPPORTED", 0)),
     _NET_SUPPORTING_WM_CHECK(

@@ -34,6 +34,9 @@ class Display {
     // Types
     const Atom UTF8_STRING;
 
+    // Manager selections (ICCCM 2.8)
+    const Atom MANAGER;
+
     // EWMH
     const Atom _MOTIF_WM_HINTS;
     const Atom _NET_SUPPORTED;

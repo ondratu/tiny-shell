@@ -3554,3 +3554,50 @@ TEST_F(ManagerTest, a_window_that_skips_the_taskbar_gets_an_icon_to_minimize)
 
     EXPECT_TRUE(manager->wm_dock.contains(window));
 }
+
+TEST_F(ManagerTest, leaves_when_another_manager_takes_the_selection)
+{
+    start();
+    ::Display* display = tiny::get_display();
+    tiny::wm::Selection selection(display, root_window(),
+                                  XDefaultScreen(display));
+    selection.acquire(false, std::chrono::milliseconds(100));
+    manager->set_selection(&selection);
+
+    XSelectionClearEvent e = {};
+    e.selection = XInternAtom(display, "WM_S0", False);
+    e.window = XGetSelectionOwner(display, e.selection);
+    manager->running = true;
+    manager->on_selection_clear(e);
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, other_selections_do_not_stop_it)
+{
+    start();
+    ::Display* display = tiny::get_display();
+    tiny::wm::Selection selection(display, root_window(),
+                                  XDefaultScreen(display));
+    selection.acquire(false, std::chrono::milliseconds(100));
+    manager->set_selection(&selection);
+
+    XSelectionClearEvent e = {};
+    e.selection = XInternAtom(display, "CLIPBOARD", False);
+    e.window =
+            XGetSelectionOwner(display, XInternAtom(display, "WM_S0", False));
+    manager->running = true;
+    manager->on_selection_clear(e);
+
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, a_manager_without_selection_ignores_the_clear)
+{
+    start();
+    XSelectionClearEvent e = {};
+    manager->running = true;
+    manager->on_selection_clear(e);
+
+    EXPECT_TRUE(manager->running);
+}
