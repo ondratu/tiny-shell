@@ -138,7 +138,8 @@ class DockIconTest : public ::testing::Test {
     void SetUp() override
     {
         client.map();
-        task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
+        task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF,
+                                          screen_area());
         icon = std::make_unique<tiny::wm::DockIcon>(task.get());
         icon->realize(root_window(), 0, 0);
         icon->map_all();
@@ -176,7 +177,8 @@ TEST_F(DockIconTest, draws_the_icon_of_the_task)
     icon.reset();
     task.reset();
     client.set_icon_pixmap(icon_size(), false); // red
-    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
+    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF,
+                                      screen_area());
     icon = std::make_unique<tiny::wm::DockIcon>(task.get());
     icon->realize(root_window(), 0, 0);
     icon->map_all();
@@ -194,7 +196,8 @@ TEST_F(DockIconTest, the_icon_of_the_application_is_preferred)
     icon.reset();
     task.reset();
     client.set_icon_pixmap(icon_size(), false); // red
-    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF);
+    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF,
+                                      screen_area());
     tiny::image::Image image;
     image.width = icon_size();
     image.height = icon_size();
@@ -275,8 +278,8 @@ class DockTest : public ::testing::Test {
     WmWindow* manage(FakeClient& c)
     {
         c.map();
-        windows.push_back(
-                std::make_unique<WmWindow>(c.window, root_window(), 0xFFFF));
+        windows.push_back(std::make_unique<WmWindow>(c.window, root_window(),
+                                                     0xFFFF, screen_area()));
         return windows.back().get();
     }
 
@@ -430,7 +433,7 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
 {
     FakeClient c;
     c.map();
-    WmWindow w(c.window, root_window(), 0xFFFF);
+    WmWindow w(c.window, root_window(), 0xFFFF, screen_area());
     ::Window dock_window;
     {
         tiny::wm::Dock dock;

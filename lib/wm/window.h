@@ -135,7 +135,8 @@ class Window : public tiny::Object {
         FOCUSED = 1L << 12
     };
 
-    Window(::Window child, ::Window root, unsigned long functions);
+    Window(::Window child, ::Window root, unsigned long functions,
+           const tiny::Rect& area);
     ~Window() override;
 
     static Window* create(::Window root, ::Window child,
