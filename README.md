@@ -64,7 +64,6 @@ Planned, grouped by importance:
 
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
-- [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
 - [ ] An event loop that can wait for timers and child processes as well as
       for X events, without zombie processes
 
