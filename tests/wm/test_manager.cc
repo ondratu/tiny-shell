@@ -1879,7 +1879,7 @@ TEST_F(ManagerTest, a_modal_state_request_changes_the_dialog)
 TEST_F(ManagerTest, closing_the_parent_asks_its_dialogs_to_close)
 {
     start();
-    FakeClient& parent = add_client();
+    const FakeClient& parent = add_client();
     run_loop();
     FakeClient& dialog = add_client(false);
     dialog.set_transient_for(parent.window);
@@ -1902,7 +1902,7 @@ TEST_F(ManagerTest, closing_the_parent_asks_its_dialogs_to_close)
 TEST_F(ManagerTest, a_dialog_without_the_delete_protocol_is_not_killed)
 {
     start();
-    FakeClient& parent = add_client();
+    const FakeClient& parent = add_client();
     run_loop();
     FakeClient& dialog = add_client(false);
     dialog.set_transient_for(parent.window);
