@@ -234,6 +234,21 @@ TEST_F(DockIconTest, focused_task_is_drawn_selected)
     EXPECT_EQ(after.at(0, 0), widget_bg(tiny::Style::State::Selected));
 }
 
+TEST_F(DockIconTest, a_window_that_demands_attention_gets_a_bar)
+{
+    send(*icon, Expose);
+    const Image before(icon->get_window(), icon_size(), icon_size());
+
+    task->set_demands_attention(true);
+    send(*icon, Expose);
+    const Image after(icon->get_window(), icon_size(), icon_size());
+
+    EXPECT_NE(before.at(icon_size() / 2, icon_size() - 1),
+              tiny::theme.wm_dock.attention);
+    EXPECT_EQ(after.at(icon_size() / 2, icon_size() - 1),
+              tiny::theme.wm_dock.attention);
+}
+
 // ---- Dock ----
 
 class DockTest : public ::testing::Test {

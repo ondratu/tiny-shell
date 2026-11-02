@@ -607,6 +607,24 @@ TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)
     EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
 }
 
+TEST_F(ManagerTest, the_dock_is_redrawn_when_a_window_demands_attention)
+{
+    start();
+    const FakeClient& c = add_client();
+    const FakeClient& other = add_client();
+    run_loop();
+    pump_events();
+    auto* window = manager->wm_windows[c.window];
+    ASSERT_FALSE(window->is_focused());
+    ASSERT_NE(other.window, None);
+
+    window->set_demands_attention(true);
+
+    EXPECT_TRUE(window->demands_attention());
+    window->set_focus();
+    EXPECT_FALSE(window->demands_attention());
+}
+
 TEST_F(ManagerTest, a_minimized_window_is_not_published_as_active)
 {
     start();

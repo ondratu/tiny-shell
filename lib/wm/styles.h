@@ -46,6 +46,9 @@ class DockStyle : public tiny::Style {
         padding_width = 5;
     }
 
+    //! The bar under the icon of a window that demands attention
+    uint32_t attention = 0xE95420;
+
 }; // DockStyle
 
 } // namespace tiny::wm
