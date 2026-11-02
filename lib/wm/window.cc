@@ -134,8 +134,8 @@ bool is_double_click(bool has_last, unsigned long last, unsigned long time)
 {
     const unsigned long interval = 400; // ms
     return has_last &&
-           static_cast<uint32_t>(static_cast<uint32_t>(time) -
-                                 static_cast<uint32_t>(last)) <= interval;
+           static_cast<uint32_t>(time) - static_cast<uint32_t>(last) <=
+                   interval;
 }
 
 bool takes_focus(bool has_time, unsigned long time, bool has_last,
