@@ -475,6 +475,170 @@ XSizeHints terminal_hints()
 
 } // namespace
 
+// ---- aspect ratio ----
+
+namespace {
+
+// width / height between min_x:min_y and max_x:max_y
+XSizeHints aspect_hints(int min_x, int min_y, int max_x, int max_y)
+{
+    XSizeHints hints = {};
+    hints.flags = PAspect;
+    hints.min_aspect.x = min_x;
+    hints.min_aspect.y = min_y;
+    hints.max_aspect.x = max_x;
+    hints.max_aspect.y = max_y;
+    return hints;
+}
+
+} // namespace
+
+TEST(AspectTest, hints_without_a_ratio_leave_the_size_alone)
+{
+    const XSizeHints hints = {};
+    int width = 400;
+    int height = 100;
+
+    tiny::wm::fit_aspect(hints, width, height, true);
+
+    EXPECT_EQ(width, 400);
+    EXPECT_EQ(height, 100);
+}
+
+TEST(AspectTest, a_size_inside_the_ratio_is_left_alone)
+{
+    const XSizeHints hints = aspect_hints(1, 2, 2, 1);
+    int width = 300;
+    int height = 200;
+
+    tiny::wm::fit_aspect(hints, width, height, true);
+
+    EXPECT_EQ(width, 300);
+    EXPECT_EQ(height, 200);
+}
+
+TEST(AspectTest, a_window_that_is_too_wide_gets_taller_or_narrower)
+{
+    const XSizeHints hints = aspect_hints(1, 1, 2, 1);
+    int width = 400;
+    int height = 100;
+    tiny::wm::fit_aspect(hints, width, height, true);
+    EXPECT_EQ(width, 400);
+    EXPECT_EQ(height, 200);
+
+    width = 400;
+    height = 100;
+    tiny::wm::fit_aspect(hints, width, height, false);
+    EXPECT_EQ(width, 200);
+    EXPECT_EQ(height, 100);
+}
+
+TEST(AspectTest, a_window_that_is_too_tall_gets_shorter_or_wider)
+{
+    const XSizeHints hints = aspect_hints(1, 1, 2, 1);
+    int width = 100;
+    int height = 400;
+    tiny::wm::fit_aspect(hints, width, height, true);
+    EXPECT_EQ(width, 100);
+    EXPECT_EQ(height, 100);
+
+    width = 100;
+    height = 400;
+    tiny::wm::fit_aspect(hints, width, height, false);
+    EXPECT_EQ(width, 400);
+    EXPECT_EQ(height, 400);
+}
+
+TEST(AspectTest, the_ratio_counts_from_the_base_size)
+{
+    XSizeHints hints = aspect_hints(1, 1, 1, 1);
+    hints.flags |= PBaseSize;
+    hints.base_width = 20;
+    hints.base_height = 10;
+    int width = 120; // 100 over the base
+    int height = 60; // 50 over the base
+
+    tiny::wm::fit_aspect(hints, width, height, true);
+
+    EXPECT_EQ(width, 120);
+    EXPECT_EQ(height, 110);
+}
+
+TEST(AspectTest, the_limits_of_the_client_win_over_the_ratio)
+{
+    XSizeHints hints = aspect_hints(1, 1, 1, 1);
+    hints.flags |= PMaxSize;
+    hints.max_width = 1000;
+    hints.max_height = 150;
+    int width = 400;
+    int height = 100;
+
+    tiny::wm::fit_aspect(hints, width, height, false);
+
+    EXPECT_EQ(width, 100);
+    hints.flags = PAspect | PMinSize | PBaseSize;
+    hints.min_width = 250;
+    hints.min_height = 0;
+    hints.base_width = 0;
+    hints.base_height = 0;
+    width = 400;
+    height = 100;
+    tiny::wm::fit_aspect(hints, width, height, false);
+    EXPECT_EQ(width, 250);
+}
+
+TEST(AspectTest, an_unset_side_of_the_ratio_is_not_a_limit)
+{
+    const XSizeHints hints = aspect_hints(0, 0, 0, 0);
+    int width = 400;
+    int height = 100;
+
+    tiny::wm::fit_aspect(hints, width, height, true);
+
+    EXPECT_EQ(width, 400);
+    EXPECT_EQ(height, 100);
+}
+
+TEST(ResizeByEdgesTest, a_ratio_follows_the_dragged_side)
+{
+    const XSizeHints hints = aspect_hints(16, 9, 16, 9);
+
+    const tiny::Rect right = tiny::wm::resize_by_edges(
+            hints, {0, 0, 320, 180}, tiny::Position::Right, 160, 37, 0, 10, 10);
+    EXPECT_EQ(right.width, 480);
+    EXPECT_EQ(right.height, 270);
+
+    const tiny::Rect bottom = tiny::wm::resize_by_edges(
+            hints, {0, 0, 320, 180}, tiny::Position::Bottom, 37, 90, 0, 10, 10);
+    EXPECT_EQ(bottom.width, 480);
+    EXPECT_EQ(bottom.height, 270);
+}
+
+TEST(ResizeByEdgesTest, a_ratio_keeps_the_opposite_corner_in_place)
+{
+    const XSizeHints hints = aspect_hints(16, 9, 16, 9);
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {100, 100, 320, 180},
+            tiny::Position::Left | tiny::Position::Top, -160, -20, 0, 10, 10);
+
+    EXPECT_EQ(r.width, 480); // the horizontal move is the larger one
+    EXPECT_EQ(r.height, 270);
+    EXPECT_EQ(r.x + r.width, 420);
+    EXPECT_EQ(r.y + r.height, 280);
+}
+
+TEST(ResizeByEdgesTest, a_ratio_does_not_count_the_title_bar)
+{
+    const XSizeHints hints = aspect_hints(2, 1, 2, 1);
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(
+            hints, {0, 0, 200, 124}, tiny::Position::Right, 100, 0, 24, 10, 10);
+
+    EXPECT_EQ(r.width, 300);
+    EXPECT_EQ(r.height, 150 + 24);
+}
+
 // ---- gravity ----
 
 namespace {
@@ -843,6 +1007,70 @@ TEST_F(WindowTest, a_window_without_a_frame_keeps_its_gravity_point_too)
     EXPECT_EQ(client.attrs().x, before.x - 40);
     EXPECT_EQ(client.attrs().y, before.y - 30);
     EXPECT_EQ(client.attrs().width, before.width + 40);
+}
+
+TEST_F(WindowTest, a_requested_size_is_fitted_to_the_hints_of_the_client)
+{
+    client.set_size_hints(PMinSize | PMaxSize, 50, 50, 300, 300);
+    client.map();
+    auto window = manage();
+
+    XConfigureRequestEvent e = {};
+    e.window = client.window;
+    e.value_mask = CWWidth | CWHeight;
+    e.width = 900;
+    e.height = 10;
+    window->configure_request(e);
+
+    EXPECT_EQ(client.attrs().width, 300);
+    EXPECT_EQ(client.attrs().height, 50);
+}
+
+TEST_F(WindowTest, a_requested_width_alone_keeps_the_height_unless_the_ratio)
+{
+    client.map();
+    auto window = manage();
+    const XWindowAttributes before = client.attrs();
+
+    XConfigureRequestEvent e = {};
+    e.window = client.window;
+    e.value_mask = CWWidth;
+    e.width = 333;
+    window->configure_request(e);
+
+    EXPECT_EQ(client.attrs().width, 333);
+    EXPECT_EQ(client.attrs().height, before.height);
+}
+
+TEST_F(WindowTest, a_requested_size_follows_the_ratio_of_the_client)
+{
+    const XSizeHints hints = aspect_hints(2, 1, 2, 1);
+    client.set_normal_hints(hints);
+    client.map();
+    auto window = manage();
+
+    XConfigureRequestEvent e = {};
+    e.window = client.window;
+    e.value_mask = CWWidth;
+    e.width = 400;
+    window->configure_request(e);
+
+    EXPECT_EQ(client.attrs().width, 400);
+    EXPECT_EQ(client.attrs().height, 200);
+}
+
+TEST_F(WindowTest, a_window_mapped_maximized_gets_a_size_of_its_ratio)
+{
+    const XSizeHints hints = aspect_hints(1, 1, 1, 1);
+    client.set_normal_hints(hints);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+    client.map();
+    auto window = manage();
+
+    window->restore(); // goes back to the size it would have had
+
+    EXPECT_EQ(client.attrs().width, client.attrs().height);
 }
 
 TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)

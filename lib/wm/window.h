@@ -29,6 +29,17 @@ int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
                     int floor = 0);
 
 /**
+ * @short Make a client size fit the aspect ratio of the hints (`PAspect`).
+ *
+ * The ratio (width - base) / (height - base) stays between `min_aspect` and
+ * `max_aspect`. When it does not, `keep_width` tells which side gives way:
+ * the height changes when it is set, the width otherwise. The limits of the
+ * client (`PMinSize`, `PMaxSize`) win over the ratio.
+ */
+void fit_aspect(const XSizeHints& hints, int& width, int& height,
+                bool keep_width);
+
+/**
  * @short The frame after the edges `edges` (`tiny::Position` bits) are dragged
  * by dx, dy from `start`.
  *
@@ -420,6 +431,10 @@ class Window : public tiny::Object {
 
     //! The client leaves the manager: WithdrawnState and no _NET_WM_STATE
     void withdraw();
+
+    //! The size a client may have: the hints of the client applied to what
+    //! it asked for (`CWWidth`, `CWHeight` of `mask`)
+    void fit_requested_size(unsigned long mask, int& width, int& height) const;
 
     //! The client asks for another position or size (ConfigureRequest)
     virtual void configure_request(const XConfigureRequestEvent& e);
