@@ -609,6 +609,8 @@ void Manager::connect_window(Window* window)
                                            &Manager::on_window_layer));
     window->on_attention.connect(this, static_cast<tiny::object_signal_t>(
                                                &Manager::on_window_attention));
+    window->on_user_time.connect(this, static_cast<tiny::object_signal_t>(
+                                               &Manager::on_window_user_time));
     window->on_modifier_drag.connect(
             this, static_cast<tiny::object_signal_t>(&Manager::on_window_drag));
 }
@@ -736,6 +738,7 @@ void Manager::remember_active(Window* window, const XEvent& e)
         wm_dock.redraw(active, e);
     }
     active = window;
+    note_user_time(window); // focused by the user, or at least with a time
     wm_dock.redraw(active, e);
     restack_layers();
     publish_clients();
@@ -1032,8 +1035,42 @@ void Manager::on_map_request(const XMapRequestEvent& e)
 
     Window* window = manage(e.window, attrs);
     XMapWindow(display, e.window);
-    if (window) { // else the type of the window is not managed
+    if (!window) { // the type of the window is not managed
+        return;
+    }
+    if (may_take_focus(window)) {
         window->set_focus();
+    } else {
+        window->set_demands_attention(true); // the user decides
+    }
+}
+
+bool Manager::may_take_focus(Window* window) const
+{
+    if (!active || active->get_minimized() || parent_of(window) == active) {
+        return true; // nothing to steal, or a dialog of the window in use
+    }
+    unsigned long time = 0;
+    const bool has_time = Window::get_user_time(window->get_child(), time);
+    return takes_focus(has_time, time, has_user_time, last_user_time);
+}
+
+void Manager::on_window_user_time(tiny::Object* o, const XEvent&, void*)
+{
+    auto* window = reinterpret_cast<Window*>(o);
+    if (window != active) {
+        return; // only the window in use tells the time of the user
+    }
+    note_user_time(window);
+}
+
+void Manager::note_user_time(const Window* window)
+{
+    unsigned long time = 0;
+    if (Window::get_user_time(window->get_child(), time) && time != 0 &&
+        takes_focus(true, time, has_user_time, last_user_time)) {
+        last_user_time = time;
+        has_user_time = true;
     }
 }
 

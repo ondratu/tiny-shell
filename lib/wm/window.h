@@ -86,6 +86,18 @@ struct MotifWMHints {
 void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
                          unsigned long& functions, unsigned long& decorations);
 
+/**
+ * @short Focus stealing prevention: may a new window take the focus?
+ *
+ * `time` is the `_NET_WM_USER_TIME` of the new window (`has_time` is false
+ * when it has none), `last` the time of the last user action. A window
+ * without the property is an old client and gets the focus; 0 means "not
+ * after a user action" and never does. The times are server times of 32 bits,
+ * compared with the wrap around.
+ */
+bool takes_focus(bool has_time, unsigned long time, bool has_last,
+                 unsigned long last);
+
 //! The width of the frame around a client on each side
 struct FrameExtents {
     int left = 0;
@@ -312,6 +324,9 @@ class Window : public tiny::Object {
     //! Return _NET_WM_TYPE or WMType::NORMAL when property can't be read
     static WMType get_net_wm_type(::Window window);
 
+    //! `_NET_WM_USER_TIME` of the window, false when it has none
+    static bool get_user_time(::Window window, unsigned long& time);
+
     //! Return _MOTIF_WM_HINTS od return ALL flags set
     static bool get_motif_hints(::Window window, unsigned long& functions,
                                 unsigned long& decorations);
@@ -332,6 +347,8 @@ class Window : public tiny::Object {
     tiny::Signal on_layer;
     //! `demands_attention()` changed (the dock marks the icon)
     tiny::Signal on_attention;
+    //! The client wrote `_NET_WM_USER_TIME` (with every key press)
+    tiny::Signal on_user_time;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held

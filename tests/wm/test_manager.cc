@@ -1520,6 +1520,111 @@ TEST_F(ManagerTest, x_errors_are_logged_and_ignored)
     EXPECT_EQ(tiny::wm::Manager::on_error(dsp(), &error), 0);
 }
 
+// ---- focus stealing prevention ----
+
+TEST_F(ManagerTest, a_new_window_without_user_time_takes_the_focus)
+{
+    start();
+    const FakeClient& first = add_client();
+    run_loop();
+    pump_events();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+    EXPECT_NE(first.window, second.window);
+}
+
+TEST_F(ManagerTest, a_new_window_with_user_time_zero_does_not_take_the_focus)
+{
+    start();
+    const FakeClient& first = add_client();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(0);
+    second.map();
+    run_loop();
+    pump_events();
+
+    auto* window = manager->wm_windows[second.window];
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+    EXPECT_TRUE(window->demands_attention());
+}
+
+TEST_F(ManagerTest, a_window_older_than_the_active_one_does_not_steal_the_focus)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(4000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+}
+
+TEST_F(ManagerTest, a_window_newer_than_the_active_one_takes_the_focus)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(6000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+}
+
+TEST_F(ManagerTest, the_active_window_moves_the_time_of_the_user_forward)
+{
+    start();
+    FakeClient& first = add_client(false);
+    first.set_user_time(5000);
+    first.map();
+    run_loop();
+    pump_events();
+    first.set_user_time(8000); // a key press in the window
+    run_loop();
+    pump_events();
+    FakeClient& second = add_client(false);
+    second.set_user_time(7000);
+    second.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+}
+
+TEST_F(ManagerTest, a_dialog_of_the_active_window_takes_the_focus)
+{
+    start();
+    FakeClient& parent = add_client(false);
+    parent.set_user_time(5000);
+    parent.map();
+    run_loop();
+    pump_events();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.set_user_time(0);
+    dialog.map();
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
 // ---- transient windows (dialogs) ----
 
 TEST_F(ManagerTest, a_dialog_is_centered_over_its_parent)
