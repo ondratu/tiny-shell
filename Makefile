@@ -45,6 +45,9 @@ PKGS = x11 xft xrender
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
+# The version for --version: the tag, or the commit when there is no tag
+TINY_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null)
+
 # X headers are system headers: their warnings are not ours to fix
 SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
@@ -89,6 +92,10 @@ help:
 examples: $(EXAMPLES)
 
 -include $(DEP)
+
+ifneq (,$(TINY_VERSION))
+$(BUILD)/lib/wm/options.o: override CXXFLAGS += -DTINY_SHELL_VERSION='"$(TINY_VERSION)"'
+endif
 
 $(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
 	@mkdir -p $(@D)

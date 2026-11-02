@@ -132,6 +132,14 @@ application_dirs(const char* data_home, const char* data_dirs, const char* home)
     return dirs;
 }
 
+std::string data_dirs_with(const char* data_dirs, const std::string& dir)
+{
+    if (data_dirs == nullptr || *data_dirs == '\0') {
+        return std::string();
+    }
+    return std::string(data_dirs) + ":" + dir;
+}
+
 bool executable_exists(std::string_view program, std::string_view path)
 {
     if (program.empty()) {

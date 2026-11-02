@@ -101,6 +101,17 @@ TEST(ApplicationDirsTest, trailing_slashes_and_duplicates_are_dropped)
     EXPECT_EQ(dirs[3], "/applications");
 }
 
+TEST(DataDirsWithTest, adds_the_directory_to_a_set_variable)
+{
+    EXPECT_EQ(tiny::xdg::data_dirs_with("/a:/b", "/c"), "/a:/b:/c");
+}
+
+TEST(DataDirsWithTest, unset_variable_stays_unset)
+{
+    EXPECT_EQ(tiny::xdg::data_dirs_with(nullptr, "/c"), "");
+    EXPECT_EQ(tiny::xdg::data_dirs_with("", "/c"), "");
+}
+
 TEST_F(ApplicationIndexTest, executable_exists)
 {
     const auto script = root / "bin" / "tool";
