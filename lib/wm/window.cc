@@ -999,8 +999,8 @@ std::optional<Window::Clock::time_point> Window::get_ping_wakeup() const
 
 std::optional<Window::Clock::time_point> Window::get_ask_time() const
 {
-    if (responding) {
-        return std::nullopt;
+    if (responding || get_minimized()) {
+        return std::nullopt; // nobody waits for a window that is not shown
     }
     return ask_at;
 }

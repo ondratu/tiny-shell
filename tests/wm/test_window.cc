@@ -1306,6 +1306,19 @@ TEST_F(WindowTest, a_second_missed_ping_does_not_postpone_the_question)
     EXPECT_EQ(ask_time(*window), asked_at);
 }
 
+TEST_F(WindowTest, nobody_asks_about_a_minimized_window)
+{
+    client.set_protocols({dsp()._NET_WM_PING});
+    auto window = manage();
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+
+    window->minimize();
+
+    EXPECT_FALSE(window->get_ask_time());
+}
+
 TEST_F(WindowTest, waiting_postpones_the_question)
 {
     client.set_protocols({dsp()._NET_WM_PING});

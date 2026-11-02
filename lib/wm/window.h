@@ -434,7 +434,7 @@ class Window : public tiny::Object {
     std::optional<Clock::time_point> get_ping_wakeup() const;
 
     //! When to ask the user about a client that does not respond; none while
-    //! the client responds
+    //! the client responds or is minimized
     std::optional<Clock::time_point> get_ask_time() const;
 
     //! The user chose to wait: ask again after `wait_delay`
