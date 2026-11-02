@@ -118,6 +118,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     }
 
     set_supported();
+    publish_desktops();
     publish_clients();
 
     wm_panel.map_all();
@@ -203,6 +204,13 @@ void Manager::set_supported()
                               dsp._NET_ACTIVE_WINDOW,
                               dsp._NET_CLOSE_WINDOW,
                               dsp._NET_WM_PING,
+                              dsp._NET_NUMBER_OF_DESKTOPS,
+                              dsp._NET_CURRENT_DESKTOP,
+                              dsp._NET_DESKTOP_GEOMETRY,
+                              dsp._NET_DESKTOP_VIEWPORT,
+                              dsp._NET_WM_DESKTOP,
+                              dsp._NET_WM_STATE_STICKY,
+                              dsp._NET_WM_STATE_SKIP_PAGER,
                               dsp._NET_FRAME_EXTENTS,
                               dsp._NET_REQUEST_FRAME_EXTENTS,
                               dsp._NET_WORKAREA,
@@ -243,13 +251,39 @@ void Manager::set_supported()
     }
 }
 
+void Manager::publish_desktops()
+{
+    const tiny::Display& dsp = tiny::get_display();
+    XWindowAttributes attrs;
+    XGetWindowAttributes(display, root, &attrs);
+    const long one = 1;
+    const long first = 0;
+    const long geometry[] = {attrs.width, attrs.height};
+    const long viewport[] = {0, 0};
+    const struct {
+        Atom property;
+        const long* values;
+        int count;
+    } properties[] = {{dsp._NET_NUMBER_OF_DESKTOPS, &one, 1},
+                      {dsp._NET_CURRENT_DESKTOP, &first, 1},
+                      {dsp._NET_DESKTOP_GEOMETRY, geometry, 2},
+                      {dsp._NET_DESKTOP_VIEWPORT, viewport, 2}};
+    for (const auto& p : properties) {
+        XChangeProperty(
+                display, root, p.property, XA_CARDINAL, 32, PropModeReplace,
+                reinterpret_cast<const unsigned char*>(p.values), p.count);
+    }
+}
+
 void Manager::clear_published()
 {
     const tiny::Display& dsp = tiny::get_display();
     for (const Atom property :
          {dsp._NET_SUPPORTED, dsp._NET_SUPPORTING_WM_CHECK,
           dsp._NET_CLIENT_LIST, dsp._NET_CLIENT_LIST_STACKING,
-          dsp._NET_ACTIVE_WINDOW}) {
+          dsp._NET_ACTIVE_WINDOW, dsp._NET_NUMBER_OF_DESKTOPS,
+          dsp._NET_CURRENT_DESKTOP, dsp._NET_DESKTOP_GEOMETRY,
+          dsp._NET_DESKTOP_VIEWPORT}) {
         XDeleteProperty(display, root, property);
     }
     if (check_window != None) {
@@ -391,6 +425,22 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         const auto it = wm_windows.find(static_cast<::Window>(e.data.l[2]));
         if (it != wm_windows.end()) {
             it->second->pong();
+        }
+        return true;
+    }
+    if (e.message_type == dsp._NET_CURRENT_DESKTOP ||
+        e.message_type == dsp._NET_NUMBER_OF_DESKTOPS) {
+        publish_desktops(); // there is one desktop, whatever is asked
+        return true;
+    }
+    if (e.message_type == dsp._NET_WM_DESKTOP) {
+        // only "all the desktops" or the one there is
+        const auto found = wm_windows.find(e.window);
+        const auto desktop =
+                static_cast<unsigned long>(e.data.l[0]) & Window::all_desktops;
+        if (found != wm_windows.end() &&
+            (desktop == 0 || desktop == Window::all_desktops)) {
+            found->second->set_sticky(desktop == Window::all_desktops);
         }
         return true;
     }
@@ -1003,6 +1053,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
 
     wm_windows[child] = window;
     wm_tops.push_back(window);
+    window->publish_desktop();
     window->apply_initial_state();
     restack_layers(); // it may be above or below from the start
     publish_clients();

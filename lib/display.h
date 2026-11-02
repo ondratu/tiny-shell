@@ -79,6 +79,10 @@ class Display {
     const Atom _NET_WM_STRUT;
     const Atom _NET_WM_STRUT_PARTIAL;
     const Atom _NET_WORKAREA;
+    const Atom _NET_DESKTOP_VIEWPORT;
+    const Atom _NET_DESKTOP_GEOMETRY;
+    const Atom _NET_CURRENT_DESKTOP;
+    const Atom _NET_NUMBER_OF_DESKTOPS;
 
   private:
     ::Display* display;
