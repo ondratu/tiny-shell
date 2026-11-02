@@ -65,9 +65,16 @@ Done:
 - [x] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
       `_NET_CLIENT_LIST`, `_NET_CLIENT_LIST_STACKING`, `_NET_ACTIVE_WINDOW`)
       and the requests to activate and close a window
-- [x] `_NET_FRAME_EXTENTS` of every window and `_NET_REQUEST_FRAME_EXTENTS`
+- [x] `_NET_FRAME_EXTENTS` of every window (no border while it is maximized
+      or fullscreen) and `_NET_REQUEST_FRAME_EXTENTS`
+- [x] `_MOTIF_WM_HINTS` changes are followed: buttons come and go
+- [x] Focus stealing prevention (`_NET_WM_USER_TIME`): an older or "not by the
+      user" window does not take the focus, its dock icon is marked instead
+- [x] A window mapped as maximized or fullscreen is placed so; `DESKTOP`
+      windows stay at the very bottom; the panel is a strut like a dock
 - [x] `_NET_WM_STATE` requests: skip taskbar (no dock icon), above, below
-      (the window keeps its layer), demands attention (until it is focused)
+      (the window keeps its layer), demands attention (until it is focused,
+      the dock marks the icon)
 - [x] Dialogs (`WM_TRANSIENT_FOR`): centered over the parent, kept above it,
       minimized with it, asked to close (`WM_DELETE_WINDOW`) when it is gone or hidden, no dock icon; `_NET_WM_STATE`
       requests change each of their two atoms on their own and can toggle
@@ -93,9 +100,9 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] The rest of EWMH: a policy against stealing the focus
-      (`_NET_WM_USER_TIME`), the panel as a strut, a window that is mapped
-      already fullscreen
+- [ ] The rest of EWMH: the layers of the panel and the dock, the source of
+      `_NET_ACTIVE_WINDOW` requests, the decoration bits of `_MOTIF_WM_HINTS`
+      (title, border)
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
 - [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
