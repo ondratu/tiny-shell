@@ -67,9 +67,15 @@ Done:
       and the requests to activate and close a window
 - [x] `_NET_FRAME_EXTENTS` of every window (no border while it is maximized
       or fullscreen) and `_NET_REQUEST_FRAME_EXTENTS`
-- [x] `_MOTIF_WM_HINTS` changes are followed: buttons come and go
+- [x] `_MOTIF_WM_HINTS` changes are followed: buttons, title bar, border and
+      resize handles come and go, a window gets or loses its frame
 - [x] Focus stealing prevention (`_NET_WM_USER_TIME`): an older or "not by the
       user" window does not take the focus, its dock icon is marked instead
+- [x] `_NET_ACTIVE_WINDOW` requests of applications obey the focus stealing
+      prevention (a pager always wins); `_NET_WM_USER_TIME_WINDOW`; a window
+      denied the focus stays under the active one
+- [x] Layers: desktop, below, normal, panel and docks, above, fullscreen
+- [x] Shaded windows (double click on the title bar, `_NET_WM_STATE_SHADED`)
 - [x] A window mapped as maximized or fullscreen is placed so; `DESKTOP`
       windows stay at the very bottom; the panel is a strut like a dock
 - [x] `_NET_WM_STATE` requests: skip taskbar (no dock icon), above, below
@@ -100,9 +106,6 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] The rest of EWMH: the layers of the panel and the dock, the source of
-      `_NET_ACTIVE_WINDOW` requests, the decoration bits of `_MOTIF_WM_HINTS`
-      (title, border)
 - [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
       the client
 - [ ] Position and size hints (`PWinGravity`, `USPosition`, aspect ratio)
