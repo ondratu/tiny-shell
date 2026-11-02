@@ -189,6 +189,8 @@ class Window : public tiny::Object {
 
     //! The window the client is a dialog of (`WM_TRANSIENT_FOR`), or None
     ::Window get_transient_for() const { return transient_for; }
+    //! The group of the window (`WM_HINTS`), or None
+    ::Window get_window_group() const { return window_group; }
 
     //! The top level window the manager shows: the frame, or the client
     virtual ::Window frame() const { return child; }
@@ -310,6 +312,7 @@ class Window : public tiny::Object {
     unsigned long functions = 0;
     unsigned long wm_states = 0;
     ::Window transient_for = None;
+    ::Window window_group = None;
     WMType wm_type = WMType::NORMAL;
     std::string wm_name;
     bool is_net_wm_name = true;

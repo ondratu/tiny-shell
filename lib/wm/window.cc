@@ -586,8 +586,12 @@ void Window::update_normal_hints()
 void Window::update_wm_hints()
 {
     XWMHints* wm_hints = XGetWMHints(dsp, child);
+    window_group = None;
     if (wm_hints == nullptr) {
         return;
+    }
+    if (wm_hints->flags & WindowGroupHint) {
+        window_group = wm_hints->window_group;
     }
     if (!(wm_hints->flags & IconPixmapHint)) {
         XFree(wm_hints);

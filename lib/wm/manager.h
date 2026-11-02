@@ -84,7 +84,9 @@ class Manager : public tiny::Object {
     //! Windows that are dialogs of `window`
     std::vector<Window*> transients_of(const Window* window) const;
 
-    //! Dialogs of `window` that keep the focus away from it (the modal ones)
+    //! Modal dialogs that keep the focus away from `window`: its modal
+    //! transients and the modal windows without a parent of its group
+    //! (EWMH `_NET_WM_STATE_MODAL`)
     std::vector<Window*> modal_dialogs_of(const Window* window) const;
 
     //! Put a dialog in the middle of its parent, inside the work area
