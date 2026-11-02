@@ -1376,6 +1376,42 @@ TEST_F(ManagerTest, destructor_releases_the_shortcuts_and_the_root_window)
     EXPECT_EQ(errors.errors(), 0);
 }
 
+TEST_F(ManagerTest, destructor_gives_the_clients_back_to_the_root_window)
+{
+    start();
+    FakeClient& framed = add_client();
+    FakeClient& bare = add_client();
+    bare.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    FakeClient& hidden = add_client();
+    run_loop();
+    pump_events();
+    ASSERT_TRUE(is_framed(framed));
+    manager->wm_windows[hidden.window]->minimize();
+
+    manager.reset();
+
+    for (FakeClient* c : {&framed, &bare, &hidden}) {
+        EXPECT_EQ(parent_of(c->window), root_window());
+        EXPECT_EQ(c->attrs().map_state, IsViewable);
+    }
+    EXPECT_TRUE(
+            root_property<::Window>(dsp()._NET_CLIENT_LIST, XA_WINDOW).empty());
+}
+
+TEST_F(ManagerTest, destructor_does_not_leave_a_released_window_minimized)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->minimize();
+    ASSERT_TRUE(c.state_has(dsp()._NET_WM_STATE_HIDDEN));
+
+    manager.reset();
+
+    EXPECT_FALSE(c.state_has(dsp()._NET_WM_STATE_HIDDEN));
+}
+
 TEST_F(ManagerTest, destructor_leaves_the_display_of_the_caller_open)
 {
     start();
@@ -1771,20 +1807,97 @@ TEST_F(ManagerTest, unmap_of_an_unknown_window_is_ignored)
     EXPECT_EQ(manager->wm_windows.size(), 0u);
 }
 
-TEST_F(ManagerTest, unmap_of_a_minimized_window_keeps_it)
+TEST_F(ManagerTest, a_client_can_ask_the_manager_to_iconify_its_window)
 {
     start();
     const FakeClient& c = add_client();
     run_loop();
+    pump_events();
     WmWindow* window = manager->wm_windows[c.window];
-    window->minimize();
-    XUnmapEvent e = {};
-    e.type = UnmapNotify;
-    e.window = c.window;
 
-    manager->on_unmap_notify(e);
+    request(c.window, dsp().WM_CHANGE_STATE, IconicState);
+    run_loop();
+    pump_events();
+
+    EXPECT_TRUE(window->get_minimized());
+    EXPECT_TRUE(is_managed(c));
+    XWindowAttributes frame;
+    ASSERT_NE(XGetWindowAttributes(dsp(), parent_of(c.window), &frame), 0);
+    EXPECT_EQ(frame.map_state, IsUnmapped); // no empty frame is left
+}
+
+TEST_F(ManagerTest, a_request_to_iconify_with_another_state_does_nothing)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request(c.window, dsp().WM_CHANGE_STATE, NormalState);
+    request(12345, dsp().WM_CHANGE_STATE, IconicState); // unknown window
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, a_window_that_may_not_be_minimized_ignores_the_request)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                tiny::wm::MotifWMHints::FUNC_MOVE, 0);
+    run_loop();
+    pump_events();
+    ASSERT_TRUE(is_managed(c));
+
+    request(c.window, dsp().WM_CHANGE_STATE, IconicState);
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, unmap_done_by_the_manager_does_not_forget_the_window)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0); // no frame
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    window->minimize(); // unmaps the client itself
+    run_loop();
+    pump_events();
 
     EXPECT_TRUE(is_managed(c));
+    EXPECT_EQ(c.attrs().map_state, IsUnmapped);
+    window->restore();
+    run_loop();
+    pump_events();
+    EXPECT_TRUE(is_managed(c));
+    EXPECT_EQ(c.attrs().map_state, IsViewable);
+}
+
+TEST_F(ManagerTest, a_minimized_window_withdrawn_by_the_client_is_forgotten)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->minimize();
+    run_loop();
+    pump_events();
+    ASSERT_TRUE(is_managed(c));
+
+    XUnmapWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    pump_events();
+
+    EXPECT_FALSE(is_managed(c));
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
 }
 
 TEST_F(ManagerTest, destroyed_window_is_forgotten)

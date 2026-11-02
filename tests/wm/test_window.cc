@@ -2126,6 +2126,56 @@ TEST_F(WindowTest, client_message_can_iconify_the_window)
     EXPECT_EQ(client.attrs().map_state, IsUnmapped);
 }
 
+TEST_F(WindowTest, the_unmap_of_a_minimized_window_is_ours_but_only_once)
+{
+    client.map();
+    auto window = manage();
+    EXPECT_FALSE(window->consume_unmap()); // nothing was unmapped by us
+
+    window->minimize();
+    window->minimize(); // already minimized, not unmapped twice
+
+    EXPECT_TRUE(window->consume_unmap());
+    EXPECT_FALSE(window->consume_unmap()); // the next one is the client's
+}
+
+TEST_F(WindowTest, a_client_that_is_unmapped_already_is_not_counted)
+{
+    auto window = manage(); // never mapped
+
+    window->minimize();
+
+    EXPECT_TRUE(window->get_minimized());
+    EXPECT_FALSE(window->consume_unmap());
+}
+
+TEST_F(WindowTest, client_message_cannot_iconify_a_window_that_may_not_be)
+{
+    client.map();
+    auto window = manage(MotifWMHints::FUNC_MOVE);
+    window->set_events();
+
+    send(client.window,
+         client_message(client.window, dsp().WM_CHANGE_STATE, IconicState));
+
+    EXPECT_FALSE(window->get_minimized());
+}
+
+TEST_F(WindowTest, minimizing_the_focused_window_lets_go_of_the_focus)
+{
+    client.map();
+    auto window = manage();
+    window->set_focus();
+    ASSERT_TRUE(window->is_focused());
+
+    window->minimize();
+
+    ::Window focus;
+    int revert;
+    XGetInputFocus(dsp(), &focus, &revert);
+    EXPECT_NE(focus, client.window);
+}
+
 TEST_F(WindowTest, unknown_client_message_is_ignored)
 {
     auto window = manage();

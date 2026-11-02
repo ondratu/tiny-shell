@@ -418,6 +418,14 @@ class Window : public tiny::Object {
     virtual void minimize();
     virtual void maximize();
 
+    /*!
+     * An UnmapNotify of the client came; true when it is the echo of an unmap
+     * the manager did itself (ICCCM 4.1.4), false when the client withdrew.
+     * Only a window without a frame hides its client; a frame is unmapped
+     * with the client inside, which sends no event.
+     */
+    bool consume_unmap();
+
     virtual void restore(int x = 0, int y = 0);
 
     //! A window mapped with the state maximized or fullscreen is put there
@@ -592,6 +600,7 @@ class Window : public tiny::Object {
     unsigned drag_edges = 0; //!< of `begin_drag`, none: the window is moved
 
     bool responding = true;
+    unsigned expected_unmaps = 0; //!< our unmaps of the client not seen yet
     bool ping_pending = false;
     Clock::time_point ping_deadline;
 };

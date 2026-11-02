@@ -44,9 +44,10 @@ Implemented:
 
 - **Window manager:** reparenting frames drawn by tiny-shell (title, icon,
   close, minimize and maximize buttons), move and resize by the title bar,
-  edges and corners, maximize, fullscreen (F11), minimize, shade, dialogs and
-  modal dialogs, focus handling, Alt+Tab, windows adopted at start, clients
-  survive a crash of the manager.
+  edges and corners, maximize, fullscreen (F11), minimize (also on request of
+  the client), shade, dialogs and modal dialogs, focus handling, Alt+Tab,
+  windows adopted at start, clients survive a crash of the manager and are
+  given back when it exits.
 - **Standards:** ICCCM, EWMH (window states, types, layers, struts and the
   work area, active window, focus stealing prevention, frame extents, the
   client lists), `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry
@@ -63,8 +64,6 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] Window life cycle: tell the unmaps of the manager from the unmaps of
-      the client
 - [ ] An event loop that can wait for timers and child processes as well as
       for X events, without zombie processes
 

@@ -127,6 +127,9 @@ class Manager : public tiny::Object {
     //! `reframing`: the window comes back at once, so its dialogs stay
     void unmanage(::Window child, bool alive, bool reframing = false);
 
+    //! Give all the clients back to the root window, shown
+    void release_windows();
+
     //! Remember the struts of a dock (a window that is not framed)
     void track_dock(::Window dock);
 

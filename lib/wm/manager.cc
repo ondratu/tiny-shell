@@ -163,6 +163,7 @@ Manager::~Manager()
                        root);
     grab_super(false);
     stop_move_resize(false);
+    release_windows();
     clear_published();
     release_quit_signals();
 
@@ -467,6 +468,15 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         if (found != wm_windows.end() &&
             (desktop == 0 || desktop == Window::all_desktops)) {
             found->second->set_sticky(desktop == Window::all_desktops);
+        }
+        return true;
+    }
+    if (e.message_type == dsp.WM_CHANGE_STATE) {
+        // XIconifyWindow() of the client; it is only a request (ICCCM 4.1.4)
+        const auto found = wm_windows.find(e.window);
+        if (found != wm_windows.end() && e.data.l[0] == IconicState &&
+            found->second->is_minimizable()) {
+            found->second->minimize();
         }
         return true;
     }
@@ -1225,6 +1235,24 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
     }
 }
 
+void Manager::release_windows()
+{
+    active = nullptr; // nothing is refocused on the way
+    while (!wm_windows.empty()) {
+        const ::Window child = wm_windows.begin()->first;
+        Window* window = wm_windows.begin()->second;
+        wm_tops.remove(window);
+        wm_dock.remove(window);
+        window->withdraw(); // the next manager starts from the client's word
+        delete window;      // gives the client back to the root
+        wm_windows.erase(child);
+        XRemoveFromSaveSet(display, child);
+        XMapWindow(display, child); // whoever comes next finds it shown
+    }
+    XSetInputFocus(display, PointerRoot, RevertToPointerRoot, CurrentTime);
+    XSync(display, False);
+}
+
 void Manager::track_dock(::Window dock)
 {
     XSelectInput(display, dock, PropertyChangeMask);
@@ -1309,7 +1337,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
         return; // unmapped by the change of the frame
     }
     const auto it = wm_windows.find(e.window);
-    if (it == wm_windows.end() || it->second->get_minimized()) {
+    if (it == wm_windows.end() || it->second->consume_unmap()) {
         return; // unknown, or hidden by the manager itself
     }
     unmanage(e.window, true);

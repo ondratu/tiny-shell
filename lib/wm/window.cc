@@ -938,8 +938,26 @@ void Window::minimize()
         return;
     }
 
-    XIconifyWindow(dsp, child, 0);
+    // without a frame there is only the client to hide, and it is told so
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(dsp, child, &attrs) &&
+        attrs.map_state != IsUnmapped) {
+        ++expected_unmaps;
+        XUnmapWindow(dsp, child);
+    }
+    if (is_focused()) {
+        XSetInputFocus(dsp, PointerRoot, RevertToPointerRoot, CurrentTime);
+    }
     set_minimized(true);
+}
+
+bool Window::consume_unmap()
+{
+    if (!expected_unmaps) {
+        return false;
+    }
+    --expected_unmaps;
+    return true;
 }
 
 void Window::maximize()
@@ -1589,8 +1607,9 @@ void Window::on_client_message(const XEvent& e, void*)
 
     if (e.xclient.message_type == dsp.WM_CHANGE_STATE) {
         if (e.xclient.data.l[0] == IconicState) {
-            set_minimized(true);
-            XUnmapWindow(dsp, child);
+            if (is_minimizable()) {
+                minimize(); // the frame goes with it
+            }
             return;
         }
     }
