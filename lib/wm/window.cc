@@ -130,6 +130,14 @@ void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
     }
 }
 
+bool is_double_click(bool has_last, unsigned long last, unsigned long time)
+{
+    const unsigned long interval = 400; // ms
+    return has_last &&
+           static_cast<uint32_t>(static_cast<uint32_t>(time) -
+                                 static_cast<uint32_t>(last)) <= interval;
+}
+
 bool takes_focus(bool has_time, unsigned long time, bool has_last,
                  unsigned long last)
 {
@@ -370,6 +378,13 @@ static bool change_state(unsigned long& states, unsigned long flag, bool on)
     }
     states = on ? states | flag : states & ~flag;
     return true;
+}
+
+void Window::set_shaded(bool shaded)
+{
+    if (change_state(wm_states, WMState::SHADED, shaded)) {
+        publish_wm_states();
+    }
 }
 
 void Window::set_skip_taskbar(bool skip)
@@ -1138,6 +1153,8 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
             fullscreen(action == tiny::Display::_NET_WM_STATE_TOGGLE
                                ? !is_fullscreen()
                                : action == tiny::Display::_NET_WM_STATE_ADD);
+        } else if (atom == dsp._NET_WM_STATE_SHADED) {
+            shade(requested(is_shaded()));
         } else if (atom == dsp._NET_WM_STATE_SKIP_TASKBAR) {
             set_skip_taskbar(requested(skip_taskbar()));
         } else if (atom == dsp._NET_WM_STATE_ABOVE) {

@@ -55,6 +55,18 @@ XEvent property_event(::Window window, Atom atom)
 
 // ---- static helpers ----
 
+TEST_F(WindowTest, two_clicks_close_in_time_are_a_double_click)
+{
+    EXPECT_TRUE(tiny::wm::is_double_click(true, 1000, 1300));
+    EXPECT_FALSE(tiny::wm::is_double_click(true, 1000, 1500));
+    EXPECT_FALSE(tiny::wm::is_double_click(false, 0, 10));
+}
+
+TEST_F(WindowTest, the_time_of_a_double_click_wraps_around)
+{
+    EXPECT_TRUE(tiny::wm::is_double_click(true, 0xFFFFFF00UL, 0x20UL));
+}
+
 TEST_F(WindowTest, an_old_client_without_user_time_takes_the_focus)
 {
     EXPECT_TRUE(tiny::wm::takes_focus(false, 0, true, 1000));

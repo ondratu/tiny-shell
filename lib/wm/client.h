@@ -64,6 +64,8 @@ class Client : public tiny::Container, public Window {
 
     void fullscreen(bool on) override;
 
+    void shade(bool on) override;
+
     //! Move and resize the frame, so the client gets the asked place
     void configure_request(const XConfigureRequestEvent& e) override;
 
@@ -129,6 +131,9 @@ class Client : public tiny::Container, public Window {
     }
 
     unsigned long decorations = 0;
+    int unshaded_height = 0;     //!< of the frame, while it is rolled up
+    bool has_last_click = false; //!< on the title bar
+    unsigned long last_click_time = 0;
 
     Header header;
     CloseButton cls_btn;
