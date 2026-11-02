@@ -272,6 +272,9 @@ class Window : public tiny::Object {
     //! Put the frame under its siblings
     virtual void lower();
 
+    //! Put the frame right under `sibling` (a top level window)
+    virtual void stack_under(::Window sibling);
+
     //! The frame around the client (nothing for a window without a frame)
     virtual FrameExtents frame_extents() const { return {}; }
 

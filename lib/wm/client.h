@@ -38,6 +38,8 @@ class Client : public tiny::Container, public Window {
 
     void lower() override;
 
+    void stack_under(::Window sibling) override;
+
     //! The border, the header on the top
     FrameExtents frame_extents() const override;
 
