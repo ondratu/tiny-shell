@@ -2590,6 +2590,101 @@ TEST_F(ManagerTest, a_window_below_stays_under_the_others)
               (std::vector<::Window>{first.window, second.window}));
 }
 
+namespace {
+
+// True when `lower` is under `upper` among the children of the root.
+bool stacked_under(::Window lower, ::Window upper)
+{
+    const auto stack = children_of(root_window());
+    const auto lower_at = std::find(stack.begin(), stack.end(), lower);
+    const auto upper_at = std::find(stack.begin(), stack.end(), upper);
+    return lower_at != stack.end() && upper_at != stack.end() &&
+           lower_at < upper_at;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_panel_and_the_dock_stay_over_the_normal_windows)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[first.window]);
+
+    for (const FakeClient* c : {&first, &second}) {
+        const ::Window frame = manager->wm_windows[c->window]->frame();
+        EXPECT_TRUE(stacked_under(frame, manager->wm_panel.get_window()));
+        EXPECT_TRUE(stacked_under(frame, manager->wm_dock.get_window()));
+    }
+}
+
+TEST_F(ManagerTest, a_window_above_is_over_the_panel_and_the_dock)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+
+    manager->wm_windows[c.window]->set_above(true);
+
+    const ::Window frame = manager->wm_windows[c.window]->frame();
+    EXPECT_TRUE(stacked_under(manager->wm_panel.get_window(), frame));
+    EXPECT_TRUE(stacked_under(manager->wm_dock.get_window(), frame));
+}
+
+TEST_F(ManagerTest, a_fullscreen_window_is_over_a_window_above_and_the_panel)
+{
+    start();
+    const FakeClient& above = add_client();
+    const FakeClient& full = add_client();
+    run_loop();
+    manager->wm_windows[above.window]->set_above(true);
+
+    manager->wm_windows[full.window]->set_fullscreen(true);
+    manager->focus_window(manager->wm_windows[above.window]);
+
+    const ::Window full_frame = manager->wm_windows[full.window]->frame();
+    EXPECT_TRUE(stacked_under(manager->wm_panel.get_window(), full_frame));
+    EXPECT_TRUE(stacked_under(manager->wm_windows[above.window]->frame(),
+                              full_frame));
+}
+
+TEST_F(ManagerTest, the_dock_of_a_client_is_over_the_normal_windows)
+{
+    start();
+    FakeClient& dock = add_client(false);
+    set_window_type(dock, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    dock.map();
+    const FakeClient& c = add_client();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[c.window]);
+
+    EXPECT_TRUE(
+            stacked_under(manager->wm_windows[c.window]->frame(), dock.window));
+}
+
+TEST_F(ManagerTest, a_dialog_of_a_window_below_goes_down_with_it)
+{
+    start();
+    const FakeClient& other = add_client();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+
+    manager->wm_windows[parent.window]->set_below(true);
+
+    const ::Window other_frame = manager->wm_windows[other.window]->frame();
+    const ::Window parent_frame = manager->wm_windows[parent.window]->frame();
+    const ::Window dialog_frame = manager->wm_windows[dialog.window]->frame();
+    EXPECT_TRUE(stacked_under(dialog_frame, other_frame));
+    EXPECT_TRUE(stacked_under(parent_frame, dialog_frame));
+}
+
 TEST_F(ManagerTest, a_desktop_window_stays_under_a_window_below)
 {
     start();

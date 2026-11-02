@@ -313,32 +313,47 @@ void Manager::publish_stacking()
 
 void Manager::restack_layers()
 {
-    // below first, so the one that is above comes out on top of all
+    // desktop, below, normal, panels and docks, above, fullscreen: the layers
+    // from the bottom; the last one raised is on top of the others
     for (Window* window : wm_tops) {
         if (window->is_below() && !window->get_minimized()) {
+            for (Window* dialog : transients_of(window)) {
+                dialog->lower(); // a dialog stays with its parent, over it
+            }
             window->lower();
         }
     }
     for (const ::Window desktop : wm_desktops) { // under all the others
         XLowerWindow(display, desktop);
     }
+    XRaiseWindow(display, wm_panel.get_window());
+    XRaiseWindow(display, wm_dock.get_window());
+    for (const auto& dock : wm_docks) {
+        XRaiseWindow(display, dock.first);
+    }
     // the focused window last, so it stays on top of the others in its layer
-    const auto raise_above = [this](Window* window) {
-        if (window->is_above() && !window->get_minimized()) {
+    const auto raise_if = [this](Window* window, bool layer) {
+        if (layer && !window->get_minimized()) {
             window->raise();
             for (Window* dialog : transients_of(window)) {
                 dialog->raise(); // a dialog stays over its parent
             }
         }
     };
-    for (Window* window : wm_tops) {
-        if (window != active) {
-            raise_above(window);
+    const auto raise_layer = [&](bool (*in_layer)(const Window*)) {
+        for (Window* window : wm_tops) {
+            if (window != active) {
+                raise_if(window, in_layer(window));
+            }
         }
-    }
-    if (active) {
-        raise_above(active);
-    }
+        if (active) {
+            raise_if(active, in_layer(active));
+        }
+    };
+    raise_layer([](const Window* w) { return w->is_above(); });
+    raise_layer([](const Window* w) { return w->is_fullscreen(); });
+    XRaiseWindow(display, wm_run.get_window()); // hidden until it is needed
+    XRaiseWindow(display, wm_launcher.get_window());
 }
 
 void Manager::request_frame_extents(::Window child)
