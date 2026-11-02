@@ -46,6 +46,7 @@ class Display {
     const Atom _NET_REQUEST_FRAME_EXTENTS;
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_PING;
+    const Atom _NET_WM_MOVERESIZE;
     const Atom _NET_WM_ACTION_BELOW;
     const Atom _NET_WM_ACTION_ABOVE;
     const Atom _NET_WM_ACTION_CLOSE;

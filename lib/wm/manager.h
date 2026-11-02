@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <set>
 #include <list>
@@ -146,6 +147,21 @@ class Manager : public tiny::Object {
     //! Add or remove the dock icon of the window, as its state wants
     void update_dock_entry(Window* window);
 
+    /**
+     * @short A client asks to be moved or resized (`_NET_WM_MOVERESIZE`).
+     *
+     * The manager grabs the pointer and drives the window until the button
+     * is released. Nothing happens when no button is down (the client was
+     * late) or the window may not be moved or resized that way.
+     */
+    void start_move_resize(Window* window, const XClientMessageEvent& e);
+
+    //! Follow the pointer while a window is moved or resized
+    void move_resize_to(int x_root, int y_root);
+
+    //! Release the pointer; `finish` tells the window it is let go
+    void stop_move_resize(bool finish = true);
+
     /* signal event handlers */
 
     //! The decorations came or went: the window needs another kind of frame
@@ -192,6 +208,9 @@ class Manager : public tiny::Object {
     Dock wm_dock;
 
     Window* active = nullptr;
+    Window* dragged = nullptr; //!< moved or resized by the manager
+    //! Is a pointer button held (a test replaces it)
+    std::function<bool()> is_button_down;
     unsigned long last_user_time = 0; //!< of the last user action we know of
     bool has_user_time = false;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients

@@ -33,6 +33,7 @@ Display::Display(::Display* display_arg):
             XInternAtom(display_arg, "_NET_REQUEST_FRAME_EXTENTS", 0)),
     _NET_WM_NAME(XInternAtom(display_arg, "_NET_WM_NAME", 0)),
     _NET_WM_PING(XInternAtom(display_arg, "_NET_WM_PING", 0)),
+    _NET_WM_MOVERESIZE(XInternAtom(display_arg, "_NET_WM_MOVERESIZE", 0)),
     _NET_WM_ACTION_BELOW(XInternAtom(display_arg, "_NET_WM_ACTION_BELOW", 0)),
     _NET_WM_ACTION_ABOVE(XInternAtom(display_arg, "_NET_WM_ACTION_ABOVE", 0)),
     _NET_WM_ACTION_CLOSE(XInternAtom(display_arg, "_NET_WM_ACTION_CLOSE", 0)),

@@ -100,6 +100,9 @@ struct MotifWMHints {
 void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
                          unsigned long& functions, unsigned long& decorations);
 
+//! A button press at the given root coordinates, to start a drag with
+XEvent make_pointer_event(int x_root, int y_root);
+
 //! Are two clicks (their server times in milliseconds) a double click?
 bool is_double_click(bool has_last, unsigned long last, unsigned long time);
 
@@ -122,6 +125,25 @@ struct FrameExtents {
     int top = 0;
     int bottom = 0;
 };
+
+//! The directions of a `_NET_WM_MOVERESIZE` request (EWMH)
+enum MoveResizeDirection {
+    SIZE_TOPLEFT = 0,
+    SIZE_TOP = 1,
+    SIZE_TOPRIGHT = 2,
+    SIZE_RIGHT = 3,
+    SIZE_BOTTOMRIGHT = 4,
+    SIZE_BOTTOM = 5,
+    SIZE_BOTTOMLEFT = 6,
+    SIZE_LEFT = 7,
+    MOVE_BY_POINTER = 8,
+    SIZE_KEYBOARD = 9,
+    MOVE_KEYBOARD = 10,
+    MOVE_RESIZE_CANCEL = 11
+};
+
+/// The edges (`tiny::Position` bits) a sizing direction drags, 0 for the rest.
+unsigned edges_of_direction(long direction);
 
 class Window : public tiny::Object {
   public:
@@ -181,6 +203,9 @@ class Window : public tiny::Object {
     {
         return (functions & MotifWMHints::FUNC_MINIMIZE) && !is_auxiliary();
     }
+
+    //! The user may move it (the Motif function)
+    bool is_movable() const { return functions & MotifWMHints::FUNC_MOVE; }
 
     //! The user may close it with a button (the Motif function)
     virtual bool is_closable() const
@@ -410,6 +435,19 @@ class Window : public tiny::Object {
     static bool get_motif_hints(::Window window, unsigned long& functions,
                                 unsigned long& decorations);
 
+    /**
+     * @short Move (no edges) or resize the window with the pointer.
+     *
+     * Like the drag of the title bar or an edge, but started and driven by
+     * the manager (`_NET_WM_MOVERESIZE`): the pointer is at x_root, y_root.
+     */
+    virtual void begin_drag(unsigned edges, int x_root, int y_root);
+
+    //! The pointer moved while the window is dragged
+    virtual void drag_to(int x_root, int y_root);
+
+    virtual void end_drag();
+
     virtual void on_window_drag_begin(tiny::Object* o, const XEvent& e,
                                       void* data);
 
@@ -430,6 +468,9 @@ class Window : public tiny::Object {
     tiny::Signal on_user_time;
     //! The frame comes or goes (the decorations are none, or were none)
     tiny::Signal on_reframe;
+    //! The client asks to be moved or resized (`_NET_WM_MOVERESIZE`), the
+    //! event is the message
+    tiny::Signal on_move_resize_request;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held
@@ -513,6 +554,8 @@ class Window : public tiny::Object {
 
     std::set<Atom> protocols;
     std::set<Atom> properties;
+
+    unsigned drag_edges = 0; //!< of `begin_drag`, none: the window is moved
 
     bool responding = true;
     bool ping_pending = false;

@@ -697,6 +697,41 @@ void Client::on_responding_changed()
     header.set_title(title_text());
 }
 
+void Client::begin_drag(unsigned edges, int x_root, int y_root)
+{
+    drag_edges = edges;
+    const XEvent e = make_pointer_event(x_root, y_root);
+    if (edges) {
+        on_move_resize_begin(nullptr, e, nullptr);
+        return;
+    }
+    Window::on_window_drag_begin(nullptr, e,
+                                 nullptr); // a double click is not one
+    XGetWindowAttributes(display, window, &start_attrs);
+}
+
+void Client::drag_to(int x_root, int y_root)
+{
+    const XEvent e = make_pointer_event(x_root, y_root);
+    if (drag_edges) {
+        on_move_resize_motion(nullptr, e,
+                              reinterpret_cast<void*>(static_cast<size_t>(
+                                      static_cast<uint16_t>(drag_edges))));
+    } else {
+        on_window_drag_motion(nullptr, e, nullptr);
+    }
+}
+
+void Client::end_drag()
+{
+    if (drag_edges) {
+        on_move_resize_end(nullptr, XEvent(), nullptr);
+    } else {
+        on_window_drag_end(nullptr, XEvent(), nullptr);
+    }
+    drag_edges = 0;
+}
+
 void Client::on_focus_in(const XEvent& e, void* data)
 {
     if (!is_focus_change(e)) {
