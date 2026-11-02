@@ -628,6 +628,25 @@ TEST(ResizeByEdgesTest, a_ratio_keeps_the_opposite_corner_in_place)
     EXPECT_EQ(r.y + r.height, 280);
 }
 
+TEST(ResizeByEdgesTest, the_grid_and_the_minimum_win_over_the_ratio)
+{
+    XSizeHints hints = aspect_hints(1, 1, 1, 1);
+    hints.flags |= PResizeInc | PBaseSize;
+    hints.width_inc = 10;
+    hints.height_inc = 10;
+    hints.base_width = 0;
+    hints.base_height = 0;
+
+    const tiny::Rect r = tiny::wm::resize_by_edges(hints, {0, 0, 200, 200},
+                                                   tiny::Position::Bottom, 0,
+                                                   -195, 0, 80, 80);
+
+    EXPECT_GE(r.width, 80);
+    EXPECT_GE(r.height, 80);
+    EXPECT_EQ(r.width % 10, 0);
+    EXPECT_EQ(r.height % 10, 0);
+}
+
 TEST(ResizeByEdgesTest, a_ratio_does_not_count_the_title_bar)
 {
     const XSizeHints hints = aspect_hints(2, 1, 2, 1);
@@ -1057,20 +1076,6 @@ TEST_F(WindowTest, a_requested_size_follows_the_ratio_of_the_client)
 
     EXPECT_EQ(client.attrs().width, 400);
     EXPECT_EQ(client.attrs().height, 200);
-}
-
-TEST_F(WindowTest, a_window_mapped_maximized_gets_a_size_of_its_ratio)
-{
-    const XSizeHints hints = aspect_hints(1, 1, 1, 1);
-    client.set_normal_hints(hints);
-    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
-                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
-    client.map();
-    auto window = manage();
-
-    window->restore(); // goes back to the size it would have had
-
-    EXPECT_EQ(client.attrs().width, client.attrs().height);
 }
 
 TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)

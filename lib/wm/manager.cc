@@ -108,7 +108,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
                 continue; // menu, special tools (idesk) and so on
             }
 
-            manage(rv_child[i], child_attrs);
+            manage(rv_child[i], child_attrs, false);
         }
         XFree(rv_child);
     }
@@ -594,7 +594,10 @@ void Manager::main_loop()
             continue;
         }
         if (dragged && event.type == ButtonRelease) {
-            stop_move_resize();
+            // the other buttons and the wheel do not end it
+            if (!drag_button || event.xbutton.button == drag_button) {
+                stop_move_resize();
+            }
             continue;
         }
 
@@ -673,7 +676,12 @@ void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
     if (grabbed != GrabSuccess) {
         return;
     }
+    if (!is_button_down()) { // it was let go before the grab
+        XUngrabPointer(display, CurrentTime);
+        return;
+    }
     dragged = window;
+    drag_button = static_cast<unsigned>(e.data.l[3]);
     window->begin_drag(edges, static_cast<int>(e.data.l[0]),
                        static_cast<int>(e.data.l[1]));
 }
@@ -980,7 +988,7 @@ void Manager::reframe(::Window child)
                     reinterpret_cast<const unsigned char*>(states.data()),
                     static_cast<int>(states.size()));
         }
-        Window* window = manage(child, attrs);
+        Window* window = manage(child, attrs, false);
         XMapWindow(display, child);
         if (window && was_active) {
             focus_window(window);
@@ -1114,7 +1122,8 @@ void Manager::on_key_release(const XKeyEvent& xkey)
             xkey.time, xkey.keycode);
 }
 
-Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
+Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
+                        bool fresh)
 {
     std::set<Atom> properties;
     Window::get_properties(child, properties);
@@ -1143,7 +1152,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
         window = Window::create(root, child, attrs, functions, work_area);
     } else {
         window = Client::create(root, child, attrs, functions, decorations,
-                                work_area);
+                                work_area, fresh);
     }
 
     // the client survives a crash of the manager
