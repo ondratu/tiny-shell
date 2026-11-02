@@ -204,6 +204,20 @@ TEST_F(ClientTest, the_buttons_come_back_when_the_motif_hints_are_gone)
     EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
 }
 
+TEST_F(ClientTest, a_change_of_the_motif_hints_keeps_a_fixed_size)
+{
+    client.set_size_hints(PMinSize | PMaxSize, 200, 100, 200, 100);
+    build();
+    ASSERT_FALSE(win->is_maximizable());
+
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                     tiny::wm::MotifWMHints::FUNC_ALL, 0);
+    pump_events();
+
+    EXPECT_FALSE(win->is_maximizable());
+    EXPECT_FALSE(win->is_resizable());
+}
+
 TEST_F(ClientTest, the_remaining_buttons_stay_at_the_right_edge)
 {
     build();

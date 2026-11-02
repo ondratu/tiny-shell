@@ -151,8 +151,7 @@ void DockIcon::on_expose(const XEvent&, void*)
                  tiny::x_uint(height - 3), 0, 360 * 64);
     }
     if (task->demands_attention()) {
-        const int bar = std::max(
-                2, static_cast<int>(lround(3 * tiny::theme.scale_factor)));
+        const int bar = tiny::theme.wm_dock_attention_bar;
         XSetForeground(display, gc, tiny::theme.wm_dock.attention);
         XFillRectangle(display, window, gc, 0, height - bar,
                        tiny::x_uint(width), tiny::x_uint(bar));

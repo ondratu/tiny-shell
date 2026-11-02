@@ -32,6 +32,7 @@ class Theme {
     int wm_panel = 30;
     int wm_icon = 48;
     int wm_dock_border = 5;
+    int wm_dock_attention_bar = 3; //!< under the icon that demands attention
     int wm_panel_app_width = 200;
     int wm_panel_login_width = 120;
     int wm_menu_width = 120;

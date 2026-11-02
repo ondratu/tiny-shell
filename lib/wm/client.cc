@@ -165,10 +165,11 @@ void Client::set_events(long mask)
                 reinterpret_cast<tiny::Object*>(this),
                 reinterpret_cast<tiny::object_signal_t>(
                         &Client::on_move_resize_end));
-        max_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
-                                 reinterpret_cast<tiny::object_signal_t>(
-                                         &Client::on_maximize_click));
     }
+    // the button can come later with the hints
+    max_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
+                             reinterpret_cast<tiny::object_signal_t>(
+                                     &Client::on_maximize_click));
 }
 
 void Client::map_all()
