@@ -357,6 +357,8 @@ class Window : public tiny::Object {
     tiny::Signal on_attention;
     //! The client wrote `_NET_WM_USER_TIME` (with every key press)
     tiny::Signal on_user_time;
+    //! The frame comes or goes (the decorations are none, or were none)
+    tiny::Signal on_reframe;
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held
@@ -378,7 +380,7 @@ class Window : public tiny::Object {
     void watch_user_time_window();
 
     //! `_MOTIF_WM_HINTS` changed; `functions` is new, the decorations are not
-    virtual void on_motif_hints_changed(unsigned long) {}
+    virtual void on_motif_hints_changed(unsigned long new_decorations);
 
     virtual void on_button_press(const XEvent& e, void* data);
 

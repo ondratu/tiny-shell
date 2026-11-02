@@ -140,6 +140,14 @@ class Manager : public tiny::Object {
     void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);
     void on_window_layer(tiny::Object* o, const XEvent& e, void* data);
     void on_window_attention(tiny::Object* o, const XEvent& e, void* data);
+
+    //! The decorations came or went: the window needs another kind of frame
+    void on_window_reframe(tiny::Object* o, const XEvent& e, void* data);
+
+    //! Manage the windows that asked for another frame again
+    void reframe_windows();
+
+    void reframe(::Window child);
     void on_window_user_time(tiny::Object* o, const XEvent& e, void* data);
     void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
@@ -189,6 +197,13 @@ class Manager : public tiny::Object {
     bool key_done;
     bool super_down = false; //!< Super is held and nothing cancelled it
     bool running;
+    std::vector<::Window> reframes; //!< windows that need another frame
+    //! The unmaps of this window in the serials [first, last) are our own
+    struct {
+        ::Window window;
+        unsigned long first;
+        unsigned long last;
+    } reframed = {None, 0, 0};
 
     // until there is a configuration the commands are the systemd ones
     std::string restart_command = "systemctl reboot";

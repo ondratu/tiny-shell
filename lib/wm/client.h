@@ -41,11 +41,17 @@ class Client : public tiny::Container, public Window {
 
     void stack_under(::Window sibling) override;
 
+    //! The border of the frame, none without `DECOR_BORDER`
+    int get_border() const override;
+
     //! The border, the header on the top
     FrameExtents frame_extents() const override;
 
     //! The frame of a client before it has one (`_NET_REQUEST_FRAME_EXTENTS`)
     static FrameExtents default_frame_extents();
+
+    //! The frame the decoration bits ask for
+    static FrameExtents frame_extents_for(unsigned long decorations);
 
     void move_to(int x, int y) override;
 
@@ -93,8 +99,14 @@ class Client : public tiny::Container, public Window {
 
     void on_property_notify(const XEvent& e, void* data) override;
 
-    //! Show the buttons the hints allow, the others are hidden
+    //! Show the parts the hints allow, the others are hidden
     void on_motif_hints_changed(unsigned long new_decorations) override;
+
+    //! The height of the title bar, none without `DECOR_TITLE`
+    int header_height() const;
+
+    //! Show or hide the title bar and the handles of the decorations
+    void apply_decorations();
 
     //! Place the visible buttons in a row from the right edge
     void layout_buttons();

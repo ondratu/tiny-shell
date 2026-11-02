@@ -17,14 +17,31 @@ extern std::shared_ptr<Display> display;
 
 namespace tiny::wm {
 
+static bool has_title(unsigned long decorations)
+{
+    return decorations & MotifWMHints::DECOR_TITLE;
+}
+
+static int header_height_for(unsigned long decorations)
+{
+    return has_title(decorations) ? tiny::theme.wm_win_header : 0;
+}
+
+static int border_for(unsigned long decorations)
+{
+    return (decorations & MotifWMHints::DECOR_BORDER)
+                   ? tiny::theme.widget.border_width
+                   : 0;
+}
+
 Client::Client(::Window child_arg, ::Window root_arg, int w, int h,
                unsigned long functions_arg, unsigned long decorations_arg,
                const tiny::Rect& area):
-    tiny::Container(w, h + tiny::theme.wm_win_header, "wm_window"),
+    tiny::Container(w, h + header_height_for(decorations_arg), "wm_window"),
     Window(child_arg, root_arg, functions_arg, area),
     decorations(decorations_arg),
     header(w, tiny::theme.wm_win_header),
-    shadow(w, h + tiny::theme.wm_win_header)
+    shadow(w, h + header_height_for(decorations_arg))
 {}
 
 static int ignore_x_error(::Display*, XErrorEvent*)
@@ -40,7 +57,7 @@ Client::~Client()
     if (XGetWindowAttributes(display, window, &attrs)) {
         XErrorHandler old = XSetErrorHandler(ignore_x_error);
         XReparentWindow(display, child, parent, attrs.x,
-                        attrs.y + tiny::theme.wm_win_header);
+                        attrs.y + header_height());
         XSync(display, False);
         XSetErrorHandler(old);
     }
@@ -60,10 +77,10 @@ Client::~Client()
 
 //! A new window is moved into the work area, a big one is made smaller
 static tiny::Rect first_place(const XWindowAttributes& attrs,
-                              const tiny::Rect& area)
+                              const tiny::Rect& area, unsigned long decorations)
 {
-    const int border = 1; // of the frame, it is on both sides
-    const int header = tiny::theme.wm_win_header;
+    const int border = border_for(decorations); // on both sides
+    const int header = header_height_for(decorations);
     // the border is drawn outside of the window, so it is not over the panel
     const tiny::Rect inner = {area.x + border, area.y + border,
                               std::max(area.width - 2 * border, 1),
@@ -76,8 +93,8 @@ Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
                        unsigned long decorations, const tiny::Rect& area)
 {
-    const tiny::Rect place = first_place(attrs, area);
-    const int client_height = place.height - tiny::theme.wm_win_header;
+    const tiny::Rect place = first_place(attrs, area, decorations);
+    const int client_height = place.height - header_height_for(decorations);
     auto* win = new Client(child, root, place.width, client_height, functions,
                            decorations, area);
     if (place.width != attrs.width || client_height != attrs.height) {
@@ -112,7 +129,7 @@ void Client::realize(::Window parent_arg, int x, int y)
     layout_buttons();
 
     XSetWindowBorderWidth(display, child, 0);
-    XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
+    XReparentWindow(display, child, window, 0, header_height());
     header.set_title(wm_name);
 }
 
@@ -178,7 +195,7 @@ void Client::map_all()
         shadow.map_all();
     }
     tiny::Container::map_all();
-    layout_buttons(); // map_all showed the hidden ones too
+    apply_decorations(); // map_all showed the hidden ones too
 
     if (is_resizable()) {
         XRaiseWindow(display, shadow.get_window()); // shadow is lower
@@ -210,10 +227,68 @@ void Client::layout_buttons()
     }
 }
 
+int Client::get_border() const
+{
+    return (decorations & MotifWMHints::DECOR_BORDER)
+                   ? tiny::Container::get_border()
+                   : 0;
+}
+
+int Client::header_height() const
+{
+    return header_height_for(decorations);
+}
+
+void Client::apply_decorations()
+{
+    if (has_title(decorations)) {
+        header.map();
+    } else {
+        header.unmap();
+    }
+    if (is_resizable()) {
+        if (decorations & MotifWMHints::DECOR_RESIZE) {
+            shadow.map();
+        } else {
+            shadow.unmap();
+        }
+    }
+    layout_buttons();
+}
+
 void Client::on_motif_hints_changed(unsigned long new_decorations)
 {
+    if (!new_decorations) {
+        on_reframe(static_cast<Window*>(this),
+                   XEvent()); // a window without a frame is another kind
+        return;
+    }
+    const int old_header = header_height();
     decorations = new_decorations;
-    layout_buttons();
+    const int delta = header_height() - old_header;
+    if (!is_fullscreen()) {
+        if (get_maximized()) {
+            place_maximized();
+        } else {
+            XWindowAttributes frame;
+            XGetWindowAttributes(display, window, &frame);
+            // the content stays where it is, the title bar comes or goes
+            XSetWindowBorderWidth(display, window, tiny::x_uint(get_border()));
+            XMoveResizeWindow(display, window, frame.x, frame.y - delta,
+                              tiny::x_dim(frame.width),
+                              tiny::x_dim(frame.height + delta));
+            XMoveWindow(display, child, 0, header_height());
+            if (is_resizable()) {
+                shadow.move_resize(frame.x, frame.y - delta, frame.width,
+                                   frame.height + delta);
+            }
+            send_configure_notify();
+        }
+    }
+    if (!get_minimized()) {
+        apply_decorations();
+    }
+    publish_frame_extents();
 }
 
 void Client::set_focus()
@@ -251,9 +326,9 @@ void Client::stack_under(::Window sibling)
     }
 }
 
-static FrameExtents extents_with(int border)
+static FrameExtents extents_with(int header, int border)
 {
-    return {border, border, tiny::theme.wm_win_header + border, border};
+    return {border, border, header + border, border};
 }
 
 FrameExtents Client::frame_extents() const
@@ -262,14 +337,20 @@ FrameExtents Client::frame_extents() const
         return {}; // the client covers the whole frame
     }
     if (get_maximized()) {
-        return {0, 0, tiny::theme.wm_win_header, 0}; // no border
+        return {0, 0, header_height(), 0}; // no border
     }
-    return extents_with(get_border());
+    return extents_with(header_height(), get_border());
+}
+
+FrameExtents Client::frame_extents_for(unsigned long decorations)
+{
+    return extents_with(header_height_for(decorations),
+                        border_for(decorations));
 }
 
 FrameExtents Client::default_frame_extents()
 {
-    return extents_with(tiny::theme.widget.border_width);
+    return frame_extents_for(~0UL);
 }
 
 void Client::move_to(int x, int y)
@@ -318,7 +399,7 @@ void Client::place_maximized()
     XMoveResizeWindow(display, window, area.x, area.y, tiny::x_uint(area.width),
                       tiny::x_uint(area.height));
     XResizeWindow(display, child, tiny::x_uint(area.width),
-                  tiny::x_uint(area.height - tiny::theme.wm_win_header));
+                  tiny::x_uint(area.height - header_height()));
 
     if (is_resizable()) {
         shadow.move_resize(area.x, area.y, area.width, area.height);
@@ -361,12 +442,12 @@ void Client::fullscreen(bool on)
         return;
     } else {
         const tiny::Rect& r = before_fullscreen;
-        XSetWindowBorderWidth(display, window, 1);
+        XSetWindowBorderWidth(display, window, tiny::x_uint(get_border()));
         XMoveResizeWindow(display, window, r.x, r.y, tiny::x_uint(r.width),
                           tiny::x_uint(r.height));
-        XMoveResizeWindow(display, child, 0, tiny::theme.wm_win_header,
+        XMoveResizeWindow(display, child, 0, header_height(),
                           tiny::x_uint(r.width),
-                          tiny::x_uint(r.height - tiny::theme.wm_win_header));
+                          tiny::x_uint(r.height - header_height()));
         if (is_resizable()) {
             shadow.move_resize(r.x, r.y, r.width, r.height);
             shadow.map();
@@ -385,7 +466,7 @@ void Client::configure_request(const XConfigureRequestEvent& e)
         return;
     }
 
-    const int header_height = tiny::theme.wm_win_header;
+    const int title = header_height();
     XWindowAttributes frame;
     XGetWindowAttributes(display, window, &frame);
     // The client asks for the place of its own area (the position it gets in
@@ -396,21 +477,21 @@ void Client::configure_request(const XConfigureRequestEvent& e)
                                      work_area.x + frame.border_width)
                           : frame.x;
     const int y = (e.value_mask & CWY)
-                          ? std::max(e.y - header_height - frame.border_width,
+                          ? std::max(e.y - title - frame.border_width,
                                      work_area.y + frame.border_width)
                           : frame.y;
     const int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
     const int new_height =
-            (e.value_mask & CWHeight) ? e.height + header_height : frame.height;
+            (e.value_mask & CWHeight) ? e.height + title : frame.height;
 
     XMoveResizeWindow(display, window, x, y, tiny::x_dim(new_width),
                       tiny::x_dim(new_height));
     XResizeWindow(display, child, tiny::x_dim(new_width),
-                  tiny::x_dim(new_height - header_height));
+                  tiny::x_dim(new_height - title));
     if (is_resizable()) {
         shadow.move_resize(x, y, new_width, new_height);
     }
-    header.resize(new_width, header_height);
+    header.resize(new_width, tiny::theme.wm_win_header);
     if ((e.value_mask & CWStackMode) && e.detail == Above) {
         if (is_resizable()) {
             XRaiseWindow(display, shadow.get_window());
@@ -432,10 +513,10 @@ void Client::restore(int x, int y)
         }
         header.resize(state.width, tiny::theme.wm_win_header);
         XResizeWindow(display, child, tiny::x_uint(state.width),
-                      tiny::x_uint(state.height - tiny::theme.wm_win_header));
+                      tiny::x_uint(state.height - header_height()));
         XMoveResizeWindow(display, window, x, y, tiny::x_uint(state.width),
                           tiny::x_uint(state.height));
-        XSetWindowBorderWidth(display, window, 1);
+        XSetWindowBorderWidth(display, window, tiny::x_uint(get_border()));
 
         if (has_maximize_button()) {
             max_btn.set_restore(false);
@@ -484,14 +565,14 @@ void Client::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
         size_label->map();
         XRaiseWindow(display, size_label->get_window());
         show_size_units(start_attrs.width,
-                        start_attrs.height - tiny::theme.wm_win_header);
+                        start_attrs.height - header_height());
     }
 }
 
 void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 {
     auto mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
-    const int header_height = tiny::theme.wm_win_header;
+    const int title = header_height();
     int new_width = start_attrs.width;
     int new_height = start_attrs.height;
 
@@ -504,12 +585,11 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
     }
     if (mask & (tiny::Position::Top | tiny::Position::Bottom)) {
         const int ydiff = e.xbutton.y_root - start_event.xbutton.y_root;
-        const int height_arg = new_height - header_height +
+        const int height_arg = new_height - title +
                                (mask & tiny::Position::Bottom ? ydiff : -ydiff);
-        new_height =
-                fit_client_size(*hints, false, height_arg,
-                                tiny::theme.wm_win_min_height - header_height) +
-                header_height;
+        new_height = fit_client_size(*hints, false, height_arg,
+                                     tiny::theme.wm_win_min_height - title) +
+                     title;
     }
 
     // The edge that is not dragged stays, even when the size is limited
@@ -531,10 +611,10 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
     }
 
     XResizeWindow(display, child, tiny::x_uint(new_width),
-                  tiny::x_dim(new_height - header_height));
-    header.resize(new_width, header_height);
+                  tiny::x_dim(new_height - title));
+    header.resize(new_width, tiny::theme.wm_win_header);
     if (size_label) {
-        show_size_units(new_width, new_height - header_height);
+        show_size_units(new_width, new_height - title);
     }
 }
 
@@ -546,8 +626,7 @@ void Client::on_move_resize_end(tiny::Object*, const XEvent&, void*)
 
 void Client::show_size_units(int client_width, int client_height)
 {
-    size_label->set_area(client_width, client_height,
-                         tiny::theme.wm_win_header);
+    size_label->set_area(client_width, client_height, header_height());
     size_label->set_text(
             std::to_string(client_size_units(*hints, true, client_width)) +
             " × " +
