@@ -870,6 +870,32 @@ TEST_F(ManagerTest, the_panel_reserves_its_edge_with_a_strut)
     EXPECT_EQ(manager->work_area.y, strut.top);
 }
 
+TEST_F(ManagerTest, the_strut_of_the_panel_spans_the_whole_width)
+{
+    start();
+    ::Display* dpy = tiny::get_display();
+
+    Atom type;
+    int format;
+    unsigned long items;
+    unsigned long after;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(dpy, manager->wm_panel.get_window(),
+                                 tiny::get_display()._NET_WM_STRUT_PARTIAL, 0,
+                                 12, False, XA_CARDINAL, &type, &format, &items,
+                                 &after, &data),
+              Success);
+    ASSERT_EQ(items, 12u);
+    const auto* v = reinterpret_cast<const long*>(data);
+    const long top_start_x = v[8];
+    const long top_end_x = v[9];
+    XFree(data);
+    XWindowAttributes screen;
+    XGetWindowAttributes(dpy, DefaultRootWindow(dpy), &screen);
+    EXPECT_EQ(top_start_x, 0);
+    EXPECT_EQ(top_end_x, screen.width - 1);
+}
+
 TEST_F(ManagerTest, maximized_windows_follow_a_dock)
 {
     start();

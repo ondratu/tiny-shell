@@ -965,9 +965,12 @@ void Manager::publish_panel_strut()
 {
     // like any panel: the others can see what is reserved
     const Struts strut = panel_strut();
-    const long data[12] = {strut.left, strut.right, strut.top, strut.bottom,
-                           0,          0,           0,         0,
-                           0,          0,           0,         0};
+    XWindowAttributes screen;
+    XGetWindowAttributes(display, root, &screen);
+    // top_start_x, top_end_x: the panel spans the whole width
+    const long data[12] = {
+            strut.left, strut.right, strut.top, strut.bottom,      0, 0,
+            0,          0,           0,         screen.width - 1L, 0, 0};
     XChangeProperty(display, wm_panel.get_window(),
                     tiny::get_display()._NET_WM_STRUT_PARTIAL, XA_CARDINAL, 32,
                     PropModeReplace,

@@ -1235,7 +1235,12 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
     if (e.xproperty.atom == dsp._MOTIF_WM_HINTS) {
         unsigned long new_decorations;
+        // the shadow of the frame exists (or not) from the start
+        const unsigned long resize = functions & MotifWMHints::FUNC_RESIZE;
         get_motif_hints(child, functions, new_decorations); // none: all
+        functions &= static_cast<unsigned long>(~MotifWMHints::FUNC_RESIZE);
+        functions |= resize;
+        update_normal_hints(); // the size hints limit the functions too
         on_motif_hints_changed(new_decorations);
         return;
     }
