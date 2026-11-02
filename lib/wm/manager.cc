@@ -271,7 +271,9 @@ void Manager::publish_clients()
 
     publish_stacking();
 
-    const ::Window current = active ? active->get_child() : None;
+    // a minimized window is not the active one for the others
+    const ::Window current =
+            active && !active->get_minimized() ? active->get_child() : None;
     XChangeProperty(display, root, dsp._NET_ACTIVE_WINDOW, XA_WINDOW, 32,
                     PropModeReplace,
                     reinterpret_cast<const unsigned char*>(&current), 1);
@@ -733,6 +735,9 @@ void Manager::on_window_minimize(tiny::Object* o, const XEvent&, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
     update_dock_entry(window);
+    if (window == active) {
+        publish_clients(); // _NET_ACTIVE_WINDOW
+    }
     // a dialog has no dock icon, so it goes and comes back with its parent
     Window* parent = parent_of(window);
     if (parent && parent->get_minimized() != window->get_minimized()) {
