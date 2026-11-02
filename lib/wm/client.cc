@@ -527,9 +527,11 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     // The client asks for the place of its own area (the position it gets in
     // ConfigureNotify), the frame is around it. The header stays below the
     // panel.
-    const int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
-    const int new_height =
-            (e.value_mask & CWHeight) ? e.height + title : frame.height;
+    int new_width = (e.value_mask & CWWidth) ? e.width : frame.width;
+    int client_height =
+            (e.value_mask & CWHeight) ? e.height : frame.height - title;
+    fit_requested_size(e.value_mask, new_width, client_height);
+    const int new_height = client_height + title;
     // A size change without a position keeps the reference point of the
     // gravity of the window where it was (ICCCM 4.1.2.3)
     const auto shift =

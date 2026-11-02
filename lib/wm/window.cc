@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <climits>
 #include <memory>
@@ -81,6 +82,46 @@ int fit_client_size(const XSizeHints& hints, bool horizontal, int size,
     return size;
 }
 
+void fit_aspect(const XSizeHints& hints, int& width, int& height,
+                bool keep_width)
+{
+    if (!(hints.flags & PAspect)) {
+        return;
+    }
+    const Axis across = axis_of(hints, true);
+    const Axis down = axis_of(hints, false);
+    long long w = std::max(width - across.base, 0);
+    long long h = std::max(height - down.base, 0);
+    const long long max_x = hints.max_aspect.x;
+    const long long max_y = hints.max_aspect.y;
+    const long long min_x = hints.min_aspect.x;
+    const long long min_y = hints.min_aspect.y;
+
+    if (max_x > 0 && max_y > 0 && w * max_y > h * max_x) { // too wide
+        if (keep_width) {
+            h = (w * max_y + max_x - 1) / max_x;
+        } else {
+            w = h * max_x / max_y;
+        }
+    } else if (min_x > 0 && min_y > 0 && w * min_y < h * min_x) { // too tall
+        if (keep_width) {
+            h = w * min_y / min_x;
+        } else {
+            w = (h * min_x + min_y - 1) / min_y;
+        }
+    }
+    // the limits of the client are stronger than its ratio
+    const auto limited = [](const Axis& axis, long long size, int base) {
+        int rv = static_cast<int>(size) + base;
+        if (axis.max > 0) {
+            rv = std::min(rv, axis.max);
+        }
+        return std::max(rv, axis.min);
+    };
+    width = limited(across, w, across.base);
+    height = limited(down, h, down.base);
+}
+
 tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
                            unsigned edges, int dx, int dy, int title,
                            int min_width, int min_height)
@@ -96,6 +137,17 @@ tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
                            (edges & tiny::Position::Bottom ? dy : -dy);
         rv.height = fit_client_size(hints, false, height, min_height - title) +
                     title;
+    }
+    if (hints.flags & PAspect) {
+        // the side that is dragged leads, the other one follows
+        const bool across =
+                edges & (tiny::Position::Left | tiny::Position::Right);
+        const bool down =
+                edges & (tiny::Position::Top | tiny::Position::Bottom);
+        int client_height = rv.height - title;
+        fit_aspect(hints, rv.width, client_height,
+                   across && (!down || std::abs(dx) >= std::abs(dy)));
+        rv.height = client_height + title;
     }
     if (edges & tiny::Position::Left) {
         rv.x = start.x + start.width - rv.width;
@@ -325,8 +377,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
             state.height = std::min(state.height, hints->max_height);
         }
         if (hints->flags & PAspect) {
-            // TODO: fix ratio if is set
-            TINY_LOG("Aspect ratio problem...");
+            fit_aspect(*hints, state.width, state.height, true);
         }
     }
 
@@ -414,6 +465,21 @@ void Window::publish_frame_extents()
                     reinterpret_cast<const unsigned char*>(values), 4);
 }
 
+void Window::fit_requested_size(unsigned long mask, int& width,
+                                int& height) const
+{
+    if (mask & CWWidth) {
+        width = fit_client_size(*hints, true, width);
+    }
+    if (mask & CWHeight) {
+        height = fit_client_size(*hints, false, height);
+    }
+    if (mask & (CWWidth | CWHeight)) {
+        // the side that was asked for is kept, the other one follows
+        fit_aspect(*hints, width, height, mask & CWWidth);
+    }
+}
+
 void Window::configure_request(const XConfigureRequestEvent& e)
 {
     if (get_maximized() || is_fullscreen()) {
@@ -431,18 +497,23 @@ void Window::configure_request(const XConfigureRequestEvent& e)
     ch.stack_mode = e.detail;
     unsigned int mask = static_cast<unsigned int>(e.value_mask);
 
-    // A size change without a position keeps the reference point of the
-    // gravity of the window where it was (ICCCM 4.1.2.3)
     XWindowAttributes now;
-    if (!(mask & (CWX | CWY)) && (mask & (CWWidth | CWHeight)) &&
+    if ((mask & (CWWidth | CWHeight)) &&
         XGetWindowAttributes(dsp, child, &now)) {
-        const auto shift =
-                gravity_shift(window_gravity(*hints),
-                              (mask & CWWidth) ? e.width - now.width : 0,
-                              (mask & CWHeight) ? e.height - now.height : 0);
-        ch.x = now.x + shift.first;
-        ch.y = now.y + shift.second;
-        mask |= CWX | CWY;
+        ch.width = (mask & CWWidth) ? e.width : now.width;
+        ch.height = (mask & CWHeight) ? e.height : now.height;
+        fit_requested_size(mask, ch.width, ch.height);
+        mask |= CWWidth | CWHeight;
+        // A size change without a position keeps the reference point of the
+        // gravity of the window where it was (ICCCM 4.1.2.3)
+        if (!(mask & (CWX | CWY))) {
+            const auto shift =
+                    gravity_shift(window_gravity(*hints), ch.width - now.width,
+                                  ch.height - now.height);
+            ch.x = now.x + shift.first;
+            ch.y = now.y + shift.second;
+            mask |= CWX | CWY;
+        }
     }
 
     XConfigureWindow(dsp, child, mask, &ch);

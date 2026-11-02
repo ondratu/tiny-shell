@@ -1532,6 +1532,44 @@ TEST_F(ClientTest, configure_request_keeps_what_it_does_not_ask_for)
     EXPECT_EQ(frame().height, before.height);
 }
 
+TEST_F(ClientTest,
+       configure_request_follows_the_limits_and_the_grid_of_the_hints)
+{
+    XSizeHints hints = {};
+    hints.flags = PMaxSize | PResizeInc;
+    hints.max_width = 300;
+    hints.max_height = 200;
+    hints.width_inc = 10;
+    hints.height_inc = 10;
+    client.set_normal_hints(hints);
+    build();
+
+    win->configure_request(configure_request(client.window, CWWidth | CWHeight,
+                                             0, 0, 999, 123));
+
+    EXPECT_EQ(child().width, 300);
+    EXPECT_EQ(child().height, 120);
+    EXPECT_EQ(frame().height, 120 + header_height());
+}
+
+TEST_F(ClientTest, configure_request_follows_the_ratio_of_the_hints)
+{
+    XSizeHints hints = {};
+    hints.flags = PAspect;
+    hints.min_aspect.x = 2;
+    hints.min_aspect.y = 1;
+    hints.max_aspect.x = 2;
+    hints.max_aspect.y = 1;
+    client.set_normal_hints(hints);
+    build();
+
+    win->configure_request(
+            configure_request(client.window, CWHeight, 0, 0, 0, 150));
+
+    EXPECT_EQ(child().height, 150);
+    EXPECT_EQ(child().width, 300);
+}
+
 TEST_F(ClientTest, a_window_that_grows_keeps_its_gravity_point)
 {
     client.set_normal_hints(position_hints(0, SouthEastGravity));
