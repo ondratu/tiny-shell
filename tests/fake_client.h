@@ -217,7 +217,8 @@ class FakeClient {
         return XCheckTypedWindowEvent(display, window, ClientMessage, &out);
     }
 
-    std::vector<Atom> state_property()
+    // The atoms of a property of the window (empty when it has none)
+    std::vector<Atom> atoms_of(Atom property)
     {
         sync();
         Atom type;
@@ -226,8 +227,8 @@ class FakeClient {
         unsigned long left;
         unsigned char* data = nullptr;
         std::vector<Atom> rv;
-        XGetWindowProperty(display, window, dsp()._NET_WM_STATE, 0, 64, False,
-                           XA_ATOM, &type, &format, &count, &left, &data);
+        XGetWindowProperty(display, window, property, 0, 64, False, XA_ATOM,
+                           &type, &format, &count, &left, &data);
         if (data) {
             Atom* atoms = reinterpret_cast<Atom*>(data);
             rv.assign(atoms, atoms + count);
@@ -235,6 +236,8 @@ class FakeClient {
         }
         return rv;
     }
+
+    std::vector<Atom> state_property() { return atoms_of(dsp()._NET_WM_STATE); }
 
     // The 32 bit values of a property of the window (empty when it has none)
     std::vector<unsigned long> cardinals(Atom property)

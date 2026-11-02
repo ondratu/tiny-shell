@@ -270,6 +270,7 @@ void Window::withdraw()
     set_wm_state(WithdrawnState);
     XDeleteProperty(dsp, child, dsp._NET_WM_STATE);
     XDeleteProperty(dsp, child, dsp._NET_WM_DESKTOP);
+    XDeleteProperty(dsp, child, dsp._NET_WM_ALLOWED_ACTIONS);
     XDeleteProperty(dsp, child, dsp._NET_FRAME_EXTENTS);
 }
 
@@ -434,6 +435,47 @@ void Window::update_desktop()
         }
         XFree(data);
     }
+}
+
+std::vector<Atom> Window::get_allowed_actions() const
+{
+    std::vector<Atom> atoms;
+    if (functions & MotifWMHints::FUNC_MOVE) {
+        atoms.push_back(dsp._NET_WM_ACTION_MOVE);
+    }
+    if (is_resizable()) {
+        atoms.push_back(dsp._NET_WM_ACTION_RESIZE);
+    }
+    if (is_minimizable()) {
+        atoms.push_back(dsp._NET_WM_ACTION_MINIMIZE);
+    }
+    if (is_shadable()) {
+        atoms.push_back(dsp._NET_WM_ACTION_SHADE);
+    }
+    atoms.push_back(dsp._NET_WM_ACTION_STICK);
+    if (is_maximizable()) {
+        atoms.push_back(dsp._NET_WM_ACTION_MAXIMIZE_HORZ);
+        atoms.push_back(dsp._NET_WM_ACTION_MAXIMIZE_VERT);
+    }
+    if (!is_auxiliary()) { // a dialog or a toolbar does not fill the screen
+        atoms.push_back(dsp._NET_WM_ACTION_FULLSCREEN);
+    }
+    atoms.push_back(dsp._NET_WM_ACTION_CHANGE_DESKTOP);
+    if (is_closable()) {
+        atoms.push_back(dsp._NET_WM_ACTION_CLOSE);
+    }
+    atoms.push_back(dsp._NET_WM_ACTION_ABOVE);
+    atoms.push_back(dsp._NET_WM_ACTION_BELOW);
+    return atoms;
+}
+
+void Window::publish_allowed_actions()
+{
+    const std::vector<Atom> atoms = get_allowed_actions();
+    XChangeProperty(dsp, child, dsp._NET_WM_ALLOWED_ACTIONS, XA_ATOM, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(atoms.data()),
+                    static_cast<int>(atoms.size()));
 }
 
 void Window::publish_desktop()
@@ -1360,6 +1402,7 @@ void Window::on_property_notify(const XEvent& e, void*)
         functions |= resize;
         update_normal_hints(); // the size hints limit the functions too
         on_motif_hints_changed(new_decorations);
+        publish_allowed_actions();
         return;
     }
     if (e.xproperty.atom == XA_WM_TRANSIENT_FOR) {

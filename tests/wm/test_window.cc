@@ -624,6 +624,80 @@ TEST_F(WindowTest, window_manager_protocols_are_read)
     EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
+// ---- _NET_WM_ALLOWED_ACTIONS ----
+
+namespace {
+
+bool has_action(const std::vector<Atom>& actions, Atom action)
+{
+    return std::count(actions.begin(), actions.end(), action) == 1;
+}
+
+} // namespace
+
+TEST_F(WindowTest, a_window_with_all_functions_allows_all_the_actions)
+{
+    auto window = manage();
+
+    const auto actions = window->get_allowed_actions();
+
+    for (const Atom action :
+         {dsp()._NET_WM_ACTION_MOVE, dsp()._NET_WM_ACTION_RESIZE,
+          dsp()._NET_WM_ACTION_MINIMIZE, dsp()._NET_WM_ACTION_STICK,
+          dsp()._NET_WM_ACTION_MAXIMIZE_HORZ,
+          dsp()._NET_WM_ACTION_MAXIMIZE_VERT, dsp()._NET_WM_ACTION_FULLSCREEN,
+          dsp()._NET_WM_ACTION_CHANGE_DESKTOP, dsp()._NET_WM_ACTION_CLOSE,
+          dsp()._NET_WM_ACTION_ABOVE, dsp()._NET_WM_ACTION_BELOW}) {
+        EXPECT_TRUE(has_action(actions, action));
+    }
+}
+
+TEST_F(WindowTest, a_window_without_a_frame_cannot_be_rolled_up)
+{
+    auto window = manage();
+
+    EXPECT_FALSE(has_action(window->get_allowed_actions(),
+                            dsp()._NET_WM_ACTION_SHADE));
+}
+
+TEST_F(WindowTest, the_functions_of_the_window_limit_the_actions)
+{
+    using tiny::wm::MotifWMHints;
+    auto window = manage(MotifWMHints::FUNC_MOVE | MotifWMHints::FUNC_CLOSE);
+
+    const auto actions = window->get_allowed_actions();
+
+    EXPECT_TRUE(has_action(actions, dsp()._NET_WM_ACTION_MOVE));
+    EXPECT_TRUE(has_action(actions, dsp()._NET_WM_ACTION_CLOSE));
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_RESIZE));
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_MINIMIZE));
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_MAXIMIZE_HORZ));
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_MAXIMIZE_VERT));
+}
+
+TEST_F(WindowTest, a_dialog_cannot_be_minimized_or_made_fullscreen)
+{
+    client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
+                     {dsp()._NET_WM_WINDOW_TYPE_DIALOG});
+    auto window = manage();
+
+    const auto actions = window->get_allowed_actions();
+
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_MINIMIZE));
+    EXPECT_FALSE(has_action(actions, dsp()._NET_WM_ACTION_FULLSCREEN));
+    EXPECT_TRUE(has_action(actions, dsp()._NET_WM_ACTION_CLOSE));
+}
+
+TEST_F(WindowTest, the_allowed_actions_are_written_to_the_client)
+{
+    auto window = manage();
+
+    window->publish_allowed_actions();
+
+    EXPECT_EQ(client.atoms_of(dsp()._NET_WM_ALLOWED_ACTIONS),
+              window->get_allowed_actions());
+}
+
 // ---- _NET_WM_PING ----
 
 TEST_F(WindowTest, closing_pings_a_client_that_answers_pings)

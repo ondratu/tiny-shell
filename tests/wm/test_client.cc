@@ -1548,6 +1548,28 @@ TEST_F(ClientTest, the_client_is_told_its_place_after_moving_and_resizing)
 
 } // namespace
 
+TEST_F(ClientTest, a_window_with_a_title_bar_can_be_rolled_up)
+{
+    Probe* win = build();
+
+    const auto actions = win->get_allowed_actions();
+
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_SHADE),
+              1);
+}
+
+TEST_F(ClientTest, a_window_without_a_title_bar_cannot_be_rolled_up)
+{
+    Probe* win = build(0xFFFF, tiny::wm::MotifWMHints::DECOR_BORDER);
+
+    const auto actions = win->get_allowed_actions();
+
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_SHADE),
+              0);
+}
+
 TEST_F(ClientTest, the_title_says_when_the_window_does_not_respond)
 {
     client.set_title("Editor");
