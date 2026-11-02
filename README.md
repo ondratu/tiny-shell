@@ -12,8 +12,8 @@ much as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog and an application launcher. Large parts of EWMH and the task bar
-> with a clock are still missing, see below.
+> dialog and an application launcher. A clock, a task bar
+> and a configuration file are still missing, see below.
 
 ## What it is
 
@@ -40,67 +40,23 @@ much as it can give.
 
 ## Features
 
-Done:
+Implemented:
 
-- [x] Reparenting frames with a title, icon and close, minimize and maximize
-      buttons
-- [x] Buttons and resizing follow the window: `_MOTIF_WM_HINTS` functions and
-      decorations (including the `ALL` bit that turns the list around), min
-      and max size, windows without decorations; dialogs, utility windows,
-      toolbars and menus have no minimize and maximize button
-- [x] Move and resize by the title bar, edges and corners; snapping to the
-      resize increment of the client
-- [x] Focus, `WM_TAKE_FOCUS`, `WM_DELETE_WINDOW` (with `XKillClient` as the
-      fallback)
-- [x] Window titles from `_NET_WM_NAME` and `WM_NAME`, icons from
-      `_NET_WM_ICON` and `WM_HINTS`
-- [x] Minimize, maximize, fullscreen (F11) and restore, with `_NET_WM_STATE`
-      kept up to date
-- [x] Existing windows are adopted when the manager starts
-- [x] `DESKTOP`, `DOCK` and `SPLASH` windows are left unmanaged
-- [x] Window life cycle: destroyed and minimized windows, `WM_STATE`, the save
-      set (clients survive a crash of the manager)
-- [x] `ConfigureRequest` of framed windows with the synthetic
-      `ConfigureNotify`
-- [x] EWMH root properties (`_NET_SUPPORTED`, `_NET_SUPPORTING_WM_CHECK`,
-      `_NET_CLIENT_LIST`, `_NET_CLIENT_LIST_STACKING`, `_NET_ACTIVE_WINDOW`)
-      and the requests to activate and close a window
-- [x] `_NET_FRAME_EXTENTS` of every window (no border while it is maximized
-      or fullscreen) and `_NET_REQUEST_FRAME_EXTENTS`
-- [x] `_MOTIF_WM_HINTS` changes are followed: buttons, title bar, border and
-      resize handles come and go, a window gets or loses its frame
-- [x] Focus stealing prevention (`_NET_WM_USER_TIME`): an older or "not by the
-      user" window does not take the focus, its dock icon is marked instead
-- [x] `_NET_ACTIVE_WINDOW` requests of applications obey the focus stealing
-      prevention (a pager always wins); `_NET_WM_USER_TIME_WINDOW`; a window
-      denied the focus stays under the active one
-- [x] Layers: desktop, below, normal, panel and docks, above, fullscreen
-- [x] Shaded windows (double click on the title bar, `_NET_WM_STATE_SHADED`)
-- [x] A window mapped as maximized or fullscreen is placed so; `DESKTOP`
-      windows stay at the very bottom; the panel is a strut like a dock
-- [x] `_NET_WM_STATE` requests: skip taskbar (no dock icon), above, below
-      (the window keeps its layer), demands attention (until it is focused,
-      the dock marks the icon)
-- [x] Dialogs (`WM_TRANSIENT_FOR`): centered over the parent, kept above it,
-      minimized with it, asked to close (`WM_DELETE_WINDOW`) when it is gone or hidden, no dock icon; `_NET_WM_STATE`
-      requests change each of their two atoms on their own and can toggle
-- [x] Modal dialogs (`_NET_WM_STATE_MODAL`): the focus stays in the dialog and
-      Alt+Tab skips the parent; a dialog that is not modal leaves the parent
-      focusable; a modal window without a parent is modal for its window
-      group (`WM_HINTS`). `examples/dialogs.cc` is a small Xlib program to try
-      both kinds
-- [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
-      `_NET_WORKAREA`; maximized and new windows stay inside it
-- [x] Top panel with an application menu and a user menu (logout)
-- [x] Dock with the icons of the running windows
-- [x] Run dialog (Alt+F2) and window switching (Alt+Tab, Alt+Shift+Tab)
-- [x] Desktop Entry files, icon theme lookup (PNG, SVG, XPM) and a full
-      screen launcher with search (Super); the dock shows the icons of the
-      applications
-- [x] Super + mouse moves a window (like Alt)
-- [x] Scaling of the whole theme for high-DPI screens
-      (`TINY_SCALE_FACTOR`)
-- [x] Unit tests of the toolkit and of the window manager against Xvfb
+- **Window manager:** reparenting frames drawn by tiny-shell (title, icon,
+  close, minimize and maximize buttons), move and resize by the title bar,
+  edges and corners, maximize, fullscreen (F11), minimize, shade, dialogs and
+  modal dialogs, focus handling, Alt+Tab, windows adopted at start, clients
+  survive a crash of the manager.
+- **Standards:** ICCCM, EWMH (window states, types, layers, struts and the
+  work area, active window, focus stealing prevention, frame extents, the
+  client lists), `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry
+  and the Icon Theme specification (PNG, SVG, XPM).
+- **Shell:** top panel with an application menu and a user menu, a dock with
+  the icons of running windows, a run dialog (Alt+F2), a full screen launcher
+  with search (Super).
+- **Other:** Super + mouse moves a window, scaling of the whole theme for
+  high-DPI screens (`TINY_SCALE_FACTOR`), unit tests of the toolkit and the
+  window manager against Xvfb.
 
 Planned, grouped by importance:
 
