@@ -339,6 +339,7 @@ void Window::set_maximized(bool maximized)
     }
 
     publish_wm_states();
+    publish_frame_extents();
 }
 
 void Window::set_fullscreen(bool fullscreen_arg)
@@ -350,6 +351,7 @@ void Window::set_fullscreen(bool fullscreen_arg)
     }
 
     publish_wm_states();
+    publish_frame_extents();
 }
 
 //! Set or clear a flag of `_NET_WM_STATE`; true when it changed

@@ -218,12 +218,18 @@ static FrameExtents extents_with(int border)
 
 FrameExtents Client::frame_extents() const
 {
+    if (is_fullscreen()) {
+        return {}; // the client covers the whole frame
+    }
+    if (get_maximized()) {
+        return {0, 0, tiny::theme.wm_win_header, 0}; // no border
+    }
     return extents_with(get_border());
 }
 
 FrameExtents Client::default_frame_extents()
 {
-    return extents_with(tiny::Style().border_width);
+    return extents_with(tiny::theme.widget.border_width);
 }
 
 void Client::move_to(int x, int y)
