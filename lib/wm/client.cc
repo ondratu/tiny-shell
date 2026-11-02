@@ -247,7 +247,8 @@ void Client::apply_decorations()
         header.unmap();
     }
     if (is_resizable()) {
-        if (decorations & MotifWMHints::DECOR_RESIZE) {
+        if ((decorations & MotifWMHints::DECOR_RESIZE) && !is_fullscreen() &&
+            !is_shaded()) {
             shadow.map();
         } else {
             shadow.unmap();
@@ -470,7 +471,7 @@ void Client::fullscreen(bool on)
     } else if (get_maximized()) {
         // the work area can have changed meanwhile
         set_fullscreen(false);
-        if (is_resizable()) {
+        if (is_resizable() && (decorations & MotifWMHints::DECOR_RESIZE)) {
             shadow.map();
             XRaiseWindow(display, shadow.get_window()); // shadow is lower
             XRaiseWindow(display, window);
@@ -487,7 +488,9 @@ void Client::fullscreen(bool on)
                           tiny::x_uint(r.height - header_height()));
         if (is_resizable()) {
             shadow.move_resize(r.x, r.y, r.width, r.height);
-            shadow.map();
+            if (decorations & MotifWMHints::DECOR_RESIZE) {
+                shadow.map();
+            }
             XRaiseWindow(display, shadow.get_window()); // shadow is lower
             XRaiseWindow(display, window);
         }

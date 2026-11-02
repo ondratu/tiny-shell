@@ -665,6 +665,10 @@ void Window::apply_initial_state()
         set_fullscreen(false);
         fullscreen(true);
     }
+    if (is_shaded()) {
+        set_shaded(false); // the frame is not rolled up yet
+        shade(true);
+    }
 }
 
 void Window::restore(int x, int y)
@@ -1347,7 +1351,12 @@ void Window::watch_user_time_window()
     }
     user_time_window = named;
     if (named != None) {
-        XSelectInput(dsp, named, PropertyChangeMask);
+        XWindowAttributes attrs;
+        long mask = PropertyChangeMask;
+        if (XGetWindowAttributes(dsp, named, &attrs)) {
+            mask |= attrs.your_event_mask; // the window may be ours already
+        }
+        XSelectInput(dsp, named, mask);
         connect_window(PropertyNotify, named,
                        reinterpret_cast<tiny::event_signal_t>(
                                &Window::on_user_time_window_notify));

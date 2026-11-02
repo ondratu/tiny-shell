@@ -2611,6 +2611,59 @@ TEST_F(ManagerTest, a_reframed_window_stays_managed_after_the_unmap_events)
               (std::vector<::Window>{c.window}));
 }
 
+TEST_F(ManagerTest, a_reframed_window_stays_minimized)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->minimize();
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    run_loop();
+    pump_events();
+
+    ASSERT_TRUE(is_managed(c));
+    EXPECT_TRUE(manager->wm_windows[c.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, a_reframe_keeps_the_dialogs_of_the_window)
+{
+    start();
+    FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    pump_events();
+
+    parent.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    run_loop();
+    pump_events();
+
+    XEvent message;
+    EXPECT_TRUE(is_managed(parent));
+    EXPECT_TRUE(is_managed(dialog));
+    EXPECT_FALSE(dialog.message(message)); // nobody asked it to close
+}
+
+TEST_F(ManagerTest, a_window_that_starts_shaded_is_rolled_up)
+{
+    start();
+    FakeClient& c = add_client(false);
+    c.set_state({dsp()._NET_WM_STATE_SHADED});
+    c.map();
+    run_loop();
+    pump_events();
+
+    auto* window = manager->wm_windows[c.window];
+    EXPECT_TRUE(window->is_shaded());
+    EXPECT_EQ(attributes_of(window->frame()).height, tiny::theme.wm_win_header);
+    window->shade(false);
+    EXPECT_GT(attributes_of(window->frame()).height, tiny::theme.wm_win_header);
+}
+
 TEST_F(ManagerTest, a_utility_window_has_no_icon_in_the_dock)
 {
     start();
