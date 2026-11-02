@@ -220,6 +220,15 @@ class Window : public tiny::Object {
     //! Write `_NET_WM_DESKTOP` of the client
     void publish_desktop();
 
+    //! The user may roll the window up to its title bar
+    virtual bool is_shadable() const { return false; }
+
+    //! The `_NET_WM_ACTION_*` atoms of what the user may do with the window
+    std::vector<Atom> get_allowed_actions() const;
+
+    //! Write `_NET_WM_ALLOWED_ACTIONS` of the client
+    void publish_allowed_actions();
+
     //! A modal dialog keeps the focus away from its parent
     virtual bool is_modal() const { return wm_states & WMState::MODAL; }
     void set_modal(bool modal);

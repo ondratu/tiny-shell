@@ -33,6 +33,25 @@ Display::Display(::Display* display_arg):
             XInternAtom(display_arg, "_NET_REQUEST_FRAME_EXTENTS", 0)),
     _NET_WM_NAME(XInternAtom(display_arg, "_NET_WM_NAME", 0)),
     _NET_WM_PING(XInternAtom(display_arg, "_NET_WM_PING", 0)),
+    _NET_WM_ACTION_BELOW(XInternAtom(display_arg, "_NET_WM_ACTION_BELOW", 0)),
+    _NET_WM_ACTION_ABOVE(XInternAtom(display_arg, "_NET_WM_ACTION_ABOVE", 0)),
+    _NET_WM_ACTION_CLOSE(XInternAtom(display_arg, "_NET_WM_ACTION_CLOSE", 0)),
+    _NET_WM_ACTION_CHANGE_DESKTOP(
+            XInternAtom(display_arg, "_NET_WM_ACTION_CHANGE_DESKTOP", 0)),
+    _NET_WM_ACTION_FULLSCREEN(
+            XInternAtom(display_arg, "_NET_WM_ACTION_FULLSCREEN", 0)),
+    _NET_WM_ACTION_MAXIMIZE_VERT(
+            XInternAtom(display_arg, "_NET_WM_ACTION_MAXIMIZE_VERT", 0)),
+    _NET_WM_ACTION_MAXIMIZE_HORZ(
+            XInternAtom(display_arg, "_NET_WM_ACTION_MAXIMIZE_HORZ", 0)),
+    _NET_WM_ACTION_STICK(XInternAtom(display_arg, "_NET_WM_ACTION_STICK", 0)),
+    _NET_WM_ACTION_SHADE(XInternAtom(display_arg, "_NET_WM_ACTION_SHADE", 0)),
+    _NET_WM_ACTION_MINIMIZE(
+            XInternAtom(display_arg, "_NET_WM_ACTION_MINIMIZE", 0)),
+    _NET_WM_ACTION_RESIZE(XInternAtom(display_arg, "_NET_WM_ACTION_RESIZE", 0)),
+    _NET_WM_ACTION_MOVE(XInternAtom(display_arg, "_NET_WM_ACTION_MOVE", 0)),
+    _NET_WM_ALLOWED_ACTIONS(
+            XInternAtom(display_arg, "_NET_WM_ALLOWED_ACTIONS", 0)),
     _NET_WM_VISIBLE_NAME(XInternAtom(display_arg, "_NET_WM_VISIBLE_NAME", 0)),
     _NET_WM_ICON(XInternAtom(display_arg, "_NET_WM_ICON", 0)),
     _NET_WM_ICON_NAME(XInternAtom(display_arg, "_NET_WM_ICON_NAME", 0)),

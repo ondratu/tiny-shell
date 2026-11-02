@@ -209,6 +209,19 @@ void Manager::set_supported()
                               dsp._NET_DESKTOP_GEOMETRY,
                               dsp._NET_DESKTOP_VIEWPORT,
                               dsp._NET_WM_DESKTOP,
+                              dsp._NET_WM_ALLOWED_ACTIONS,
+                              dsp._NET_WM_ACTION_MOVE,
+                              dsp._NET_WM_ACTION_RESIZE,
+                              dsp._NET_WM_ACTION_MINIMIZE,
+                              dsp._NET_WM_ACTION_SHADE,
+                              dsp._NET_WM_ACTION_STICK,
+                              dsp._NET_WM_ACTION_MAXIMIZE_HORZ,
+                              dsp._NET_WM_ACTION_MAXIMIZE_VERT,
+                              dsp._NET_WM_ACTION_FULLSCREEN,
+                              dsp._NET_WM_ACTION_CHANGE_DESKTOP,
+                              dsp._NET_WM_ACTION_CLOSE,
+                              dsp._NET_WM_ACTION_ABOVE,
+                              dsp._NET_WM_ACTION_BELOW,
                               dsp._NET_WM_STATE_STICKY,
                               dsp._NET_WM_STATE_SKIP_PAGER,
                               dsp._NET_FRAME_EXTENTS,
@@ -1054,6 +1067,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     wm_windows[child] = window;
     wm_tops.push_back(window);
     window->publish_desktop();
+    window->publish_allowed_actions();
     window->apply_initial_state();
     restack_layers(); // it may be above or below from the start
     publish_clients();

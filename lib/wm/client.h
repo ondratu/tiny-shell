@@ -66,6 +66,9 @@ class Client : public tiny::Container, public Window {
 
     void shade(bool on) override;
 
+    //! Only a window with a title bar can be rolled up to it
+    bool is_shadable() const override { return header_height() > 0; }
+
     //! Move and resize the frame, so the client gets the asked place
     void configure_request(const XConfigureRequestEvent& e) override;
 

@@ -794,6 +794,53 @@ unsigned long desktop_of(FakeClient& c)
 
 } // namespace
 
+TEST_F(ManagerTest, a_managed_window_gets_its_allowed_actions)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+
+    const auto actions = c.atoms_of(dsp()._NET_WM_ALLOWED_ACTIONS);
+
+    EXPECT_EQ(actions, manager->wm_windows[c.window]->get_allowed_actions());
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_SHADE),
+              1);
+}
+
+TEST_F(ManagerTest, the_allowed_actions_follow_the_motif_functions)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                tiny::wm::MotifWMHints::FUNC_ALL |
+                        tiny::wm::MotifWMHints::FUNC_CLOSE,
+                0);
+    run_loop();
+
+    const auto actions = c.atoms_of(dsp()._NET_WM_ALLOWED_ACTIONS);
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_CLOSE),
+              0);
+    EXPECT_EQ(std::count(actions.begin(), actions.end(),
+                         dsp()._NET_WM_ACTION_MOVE),
+              1);
+}
+
+TEST_F(ManagerTest, the_allowed_actions_are_removed_when_the_client_leaves)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+
+    manager->unmanage(c.window, true);
+
+    EXPECT_FALSE(c.has_property(dsp()._NET_WM_ALLOWED_ACTIONS));
+}
+
 TEST_F(ManagerTest, the_one_desktop_is_published)
 {
     start();
