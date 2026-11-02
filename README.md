@@ -64,7 +64,8 @@ Done:
       `_NET_CLIENT_LIST`, `_NET_ACTIVE_WINDOW`) and the requests to activate
       and close a window
 - [x] Dialogs (`WM_TRANSIENT_FOR`): centered over the parent, kept above it,
-      minimized with it, no dock icon; `_NET_WM_STATE` requests change each of
+      minimized with it, no dock icon, the focus goes to the dialog and Alt+Tab
+      skips the parent; `_NET_WM_STATE` requests change each of
       their two atoms on their own and can toggle
 - [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
       `_NET_WORKAREA`; maximized and new windows stay inside it

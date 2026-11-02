@@ -400,48 +400,86 @@ void Manager::focus_window(Window* window)
     if (window->get_minimized()) {
         window->restore();
     }
-    window->set_focus();
+    // the windows a dialog belongs to lie under it, the oldest at the bottom
+    std::vector<Window*> parents;
+    const Window* from = window;
+    while (parents.size() < wm_tops.size()) {
+        parents.push_back(parent_of(from));
+        if (!parents.back()) {
+            parents.pop_back();
+            break;
+        }
+        from = parents.back();
+    }
+    for (auto it = parents.rbegin(); it != parents.rend(); ++it) {
+        (*it)->raise();
+    }
+    // the dialog gets the focus instead of the window it belongs to
+    Window* target = window;
+    for (size_t depth = 0; depth < wm_tops.size(); ++depth) {
+        target->raise();
+        const std::vector<Window*> dialogs = transients_of(target);
+        if (dialogs.empty()) {
+            break;
+        }
+        target = dialogs.back();
+    }
+    target->set_focus();
     // do not wait for FocusIn, the next Alt + Tab can come before it
-    on_window_focus(window, XEvent(), nullptr);
+    remember_active(target, XEvent());
+}
+
+std::vector<Window*> Manager::switchable() const
+{
+    std::vector<Window*> found;
+    std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
+                 [&](const Window* window) {
+                     return transients_of(window).empty();
+                 });
+    if (found.empty()) { // dialogs of each other: leave nothing out of reach
+        found.assign(wm_tops.begin(), wm_tops.end());
+    }
+    return found;
 }
 
 void Manager::activate_next_window()
 {
-    if (wm_windows.empty()) {
+    const std::vector<Window*> windows = switchable();
+    if (windows.empty()) {
         return; // no window to activate
     }
-
-    Window* next = *wm_tops.cbegin();
-    for (auto it = wm_tops.cbegin(); it != wm_tops.cend(); ++it) {
-        if (active == *it) {
-            if (++it == wm_tops.cend()) {
-                it = wm_tops.cbegin();
-            }
-            next = *it;
-            break;
-        }
-    }
-
-    focus_window(next);
+    const auto it = std::find(windows.cbegin(), windows.cend(), active);
+    focus_window(it == windows.cend() || it + 1 == windows.cend() ? windows[0]
+                                                                  : *(it + 1));
 }
 
 void Manager::activate_prev_window()
 {
-    if (wm_tops.empty()) {
+    const std::vector<Window*> windows = switchable();
+    if (windows.empty()) {
         return; // no window to activate
     }
+    const auto it = std::find(windows.cbegin(), windows.cend(), active);
+    focus_window(it == windows.cend() || it == windows.cbegin() ? windows.back()
+                                                                : *(it - 1));
+}
 
-    Window* prev = *wm_tops.crbegin();
-    for (auto it = wm_tops.crbegin(); it != wm_tops.crend(); ++it) {
-        if (active == *it) {
-            if (++it == wm_tops.crend()) {
-                it = wm_tops.crbegin();
-            }
-            prev = *it;
-            break;
+Window* Manager::previous_shown(const Window* window) const
+{
+    auto it = std::find(wm_tops.crbegin(), wm_tops.crend(), window);
+    if (it == wm_tops.crend()) {
+        return nullptr;
+    }
+    // walk back from the window, around the end of the list
+    for (size_t i = 1; i < wm_tops.size(); ++i) {
+        if (++it == wm_tops.crend()) {
+            it = wm_tops.crbegin();
+        }
+        if (!(*it)->get_minimized() && parent_of(*it) != window) {
+            return *it;
         }
     }
-    focus_window(prev);
+    return nullptr;
 }
 
 void Manager::set_application_icon(Window* window)
@@ -474,12 +512,21 @@ Window* Manager::parent_of(const Window* window) const
                                                           : it->second;
 }
 
+bool Manager::is_dialog(const Window* window) const
+{
+    // a toolbar or a menu knows its place and has its own icon
+    const Window::WMType type = window->get_wm_type();
+    return parent_of(window) &&
+           (type == Window::WMType::DIALOG || type == Window::WMType::NORMAL);
+}
+
 std::vector<Window*> Manager::transients_of(const Window* window) const
 {
     std::vector<Window*> found;
     std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
                  [&](const Window* other) {
-                     return other != window && parent_of(other) == window;
+                     return other != window && is_dialog(other) &&
+                            parent_of(other) == window;
                  });
     return found;
 }
@@ -507,6 +554,15 @@ void Manager::on_window_drag(tiny::Object*, const XEvent&, void*)
 void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
+    if (transients_of(window).empty()) {
+        remember_active(window, e);
+    } else {
+        focus_window(window); // clicked on a window with a dialog
+    }
+}
+
+void Manager::remember_active(Window* window, const XEvent& e)
+{
     if (active && active != window) {
         active->return_focus();
         wm_dock.redraw(active, e);
@@ -514,17 +570,20 @@ void Manager::on_window_focus(tiny::Object* o, const XEvent& e, void*)
     active = window;
     wm_dock.redraw(active, e);
     publish_clients();
-    for (Window* dialog : transients_of(window)) {
-        if (dialog->get_minimized()) {
-            dialog->restore(); // it has no dock icon to be found by
-        }
-        dialog->raise(); // the dialogs stay above their parent
-    }
 }
 
 void Manager::on_window_minimize(tiny::Object* o, const XEvent&, void*)
 {
     auto* window = reinterpret_cast<Window*>(o);
+    // a dialog has no dock icon, so it goes and comes back with its parent
+    Window* parent = parent_of(window);
+    if (parent && parent->get_minimized() != window->get_minimized()) {
+        if (window->get_minimized()) {
+            parent->minimize();
+        } else {
+            parent->restore();
+        }
+    }
     for (Window* dialog : transients_of(window)) {
         if (dialog->get_minimized() == window->get_minimized()) {
             continue;
@@ -655,12 +714,8 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     wm_tops.push_back(window);
     publish_clients();
     set_application_icon(window);
-    const Window* parent = parent_of(window);
-    if (parent) { // a dialog has no place of its own in the dock
-        const Window::WMType type = Window::get_net_wm_type(child);
-        if (type == Window::WMType::DIALOG || type == Window::WMType::NORMAL) {
-            center_over(window, parent); // a toolbar or a menu knows its place
-        }
+    if (is_dialog(window)) { // it has no place of its own in the dock
+        center_over(window, parent_of(window));
         window->raise();
     } else if (!window->skip_taskbar()) {
         wm_dock.add(window);
@@ -681,9 +736,14 @@ void Manager::unmanage(::Window child, bool alive)
     if (active == window && parent && !parent->get_minimized()) {
         wm_tops.remove(window);
         wm_windows.erase(it);
+        active = nullptr;
         focus_window(parent); // back to the window the dialog belonged to
-    } else if (active == window && wm_tops.size() > 1) {
-        activate_prev_window(); // while the window is still in the list
+    } else if (active == window) {
+        // a minimized window is not brought back by the closing of another
+        Window* previous = previous_shown(window);
+        if (previous) {
+            focus_window(previous);
+        }
     }
     if (active == window) {
         active = nullptr;

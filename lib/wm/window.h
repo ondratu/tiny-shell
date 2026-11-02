@@ -181,6 +181,8 @@ class Window : public tiny::Object {
     virtual void set_focus();
     virtual void return_focus();
 
+    WMType get_wm_type() const { return wm_type; }
+
     //! The window the client is a dialog of (`WM_TRANSIENT_FOR`), or None
     ::Window get_transient_for() const { return transient_for; }
 
@@ -301,6 +303,7 @@ class Window : public tiny::Object {
     unsigned long functions = 0;
     unsigned long wm_states = 0;
     ::Window transient_for = None;
+    WMType wm_type = WMType::NORMAL;
     std::string wm_name;
     bool is_net_wm_name = true;
     std::string wm_icon_name;
