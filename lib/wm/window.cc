@@ -128,6 +128,21 @@ void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
     }
 }
 
+bool takes_focus(bool has_time, unsigned long time, bool has_last,
+                 unsigned long last)
+{
+    if (!has_time) {
+        return true;
+    }
+    if (time == 0) {
+        return false;
+    }
+    if (!has_last) {
+        return true;
+    }
+    return static_cast<int32_t>(static_cast<uint32_t>(time - last)) >= 0;
+}
+
 Window::Window(::Window child_arg, ::Window root_arg,
                unsigned long functions_arg):
     child(child_arg),
@@ -1248,7 +1263,8 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
 
     if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
-        return; // changes with every key press, the focus policy ignores it
+        on_user_time(this, XEvent()); // with every key press
+        return;
     }
 
     char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
@@ -1374,6 +1390,29 @@ Window::WMType Window::get_net_wm_type(::Window window)
     }
     XFree(data);
     return wm_type;
+}
+
+bool Window::get_user_time(::Window window, unsigned long& time)
+{
+    const tiny::Display& display = tiny::get_display();
+    Atom returned_type;
+    int size;
+    unsigned long nitems = 0;
+    unsigned long bytes_left;
+    unsigned char* data = nullptr;
+
+    const bool found =
+            XGetWindowProperty(display, window, display._NET_WM_USER_TIME, 0L,
+                               1L, false, XA_CARDINAL, &returned_type, &size,
+                               &nitems, &bytes_left, &data) == Success &&
+            data && nitems == 1 && size == 32 && returned_type == XA_CARDINAL;
+    if (found) {
+        time = *reinterpret_cast<unsigned long*>(data);
+    }
+    if (data) {
+        XFree(data);
+    }
+    return found;
 }
 
 bool Window::get_motif_hints(::Window window, unsigned long& functions,

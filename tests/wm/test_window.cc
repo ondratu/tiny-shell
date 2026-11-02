@@ -55,6 +55,35 @@ XEvent property_event(::Window window, Atom atom)
 
 // ---- static helpers ----
 
+TEST_F(WindowTest, an_old_client_without_user_time_takes_the_focus)
+{
+    EXPECT_TRUE(tiny::wm::takes_focus(false, 0, true, 1000));
+}
+
+TEST_F(WindowTest, user_time_zero_never_takes_the_focus)
+{
+    EXPECT_FALSE(tiny::wm::takes_focus(true, 0, false, 0));
+    EXPECT_FALSE(tiny::wm::takes_focus(true, 0, true, 1000));
+}
+
+TEST_F(WindowTest, a_window_older_than_the_last_action_does_not_take_the_focus)
+{
+    EXPECT_FALSE(tiny::wm::takes_focus(true, 999, true, 1000));
+    EXPECT_TRUE(tiny::wm::takes_focus(true, 1000, true, 1000));
+    EXPECT_TRUE(tiny::wm::takes_focus(true, 1001, true, 1000));
+}
+
+TEST_F(WindowTest, without_a_known_action_a_window_with_a_time_takes_the_focus)
+{
+    EXPECT_TRUE(tiny::wm::takes_focus(true, 5, false, 0));
+}
+
+TEST_F(WindowTest, the_user_time_wraps_around_like_the_server_time)
+{
+    EXPECT_TRUE(tiny::wm::takes_focus(true, 10, true, 0xFFFFFFF0UL));
+    EXPECT_FALSE(tiny::wm::takes_focus(true, 0xFFFFFFF0UL, true, 10));
+}
+
 TEST_F(WindowTest, motif_all_bit_turns_the_listed_bits_around)
 {
     unsigned long functions = 0;

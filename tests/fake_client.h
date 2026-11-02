@@ -103,6 +103,14 @@ class FakeClient {
         sync();
     }
 
+    void set_user_time(unsigned long time)
+    {
+        XChangeProperty(display, window, dsp()._NET_WM_USER_TIME, XA_CARDINAL,
+                        32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&time), 1);
+        sync();
+    }
+
     void set_motif(unsigned long flags, unsigned long functions,
                    unsigned long decorations)
     {

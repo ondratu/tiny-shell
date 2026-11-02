@@ -131,7 +131,8 @@ TEST_F(ClientTest, header_has_three_buttons)
 {
     build();
 
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u); // + title
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(),
+              4u); // + title
 }
 
 TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
@@ -171,7 +172,8 @@ TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
     win->setup(root_window(), a.x, a.y);
     pump_events();
 
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u); // close, min
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(),
+              3u); // close, min
 }
 
 TEST_F(ClientTest, the_buttons_follow_a_change_of_the_motif_hints)
@@ -221,7 +223,8 @@ TEST_F(ClientTest, a_dialog_has_only_the_close_button)
     build();
 
     EXPECT_FALSE(win->is_minimizable() && !win->is_auxiliary());
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 2u); // + title
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(),
+              2u); // + title
 }
 
 TEST_F(ClientTest, maximizing_a_window_without_the_button_does_not_fail)

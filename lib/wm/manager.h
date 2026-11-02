@@ -117,6 +117,12 @@ class Manager : public tiny::Object {
     //! Compute the work area again; windows and _NET_WORKAREA follow it
     void update_work_area();
 
+    //! Focus stealing prevention: may a window that was just mapped have it
+    bool may_take_focus(Window* window) const;
+
+    //! Remember `_NET_WM_USER_TIME` of the window as the time of the user
+    void note_user_time(const Window* window);
+
     //! Add or remove the dock icon of the window, as its state wants
     void update_dock_entry(Window* window);
 
@@ -125,6 +131,7 @@ class Manager : public tiny::Object {
     void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);
     void on_window_layer(tiny::Object* o, const XEvent& e, void* data);
     void on_window_attention(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_user_time(tiny::Object* o, const XEvent& e, void* data);
     void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
     void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
     void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);
@@ -161,6 +168,8 @@ class Manager : public tiny::Object {
     Dock wm_dock;
 
     Window* active = nullptr;
+    unsigned long last_user_time = 0; //!< of the last user action we know of
+    bool has_user_time = false;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients
     std::set<::Window> wm_desktops;      //!< windows of the DESKTOP type
     tiny::Rect work_area = {0, 0, 0, 0};
