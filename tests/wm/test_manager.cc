@@ -1813,7 +1813,7 @@ TEST_F(ManagerTest, a_client_can_ask_the_manager_to_iconify_its_window)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
 
     request(c.window, dsp().WM_CHANGE_STATE, IconicState);
     run_loop();
@@ -1883,7 +1883,7 @@ TEST_F(ManagerTest, unmap_done_by_the_manager_does_not_forget_the_window)
 TEST_F(ManagerTest, a_minimized_window_withdrawn_by_the_client_is_forgotten)
 {
     start();
-    FakeClient& c = add_client();
+    const FakeClient& c = add_client();
     run_loop();
     pump_events();
     manager->wm_windows[c.window]->minimize();
