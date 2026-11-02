@@ -475,6 +475,97 @@ XSizeHints terminal_hints()
 
 } // namespace
 
+// ---- gravity ----
+
+namespace {
+
+// 2 pixels of border on each side and 26 of title bar
+tiny::wm::FrameExtents titled_extents()
+{
+    tiny::wm::FrameExtents e;
+    e.left = 2;
+    e.right = 2;
+    e.top = 26;
+    e.bottom = 2;
+    return e;
+}
+
+} // namespace
+
+TEST(GravityTest, the_reference_point_of_the_frame_is_placed_at_the_position)
+{
+    const tiny::wm::FrameExtents e = titled_extents();
+    using P = std::pair<int, int>;
+
+    EXPECT_EQ(tiny::wm::frame_position(NorthWestGravity, 100, 100, e),
+              P(100, 100));
+    EXPECT_EQ(tiny::wm::frame_position(NorthGravity, 100, 100, e), P(98, 100));
+    EXPECT_EQ(tiny::wm::frame_position(NorthEastGravity, 100, 100, e),
+              P(96, 100));
+    EXPECT_EQ(tiny::wm::frame_position(WestGravity, 100, 100, e), P(100, 86));
+    EXPECT_EQ(tiny::wm::frame_position(CenterGravity, 100, 100, e), P(98, 86));
+    EXPECT_EQ(tiny::wm::frame_position(EastGravity, 100, 100, e), P(96, 86));
+    EXPECT_EQ(tiny::wm::frame_position(SouthWestGravity, 100, 100, e),
+              P(100, 72));
+    EXPECT_EQ(tiny::wm::frame_position(SouthGravity, 100, 100, e), P(98, 72));
+    EXPECT_EQ(tiny::wm::frame_position(SouthEastGravity, 100, 100, e),
+              P(96, 72));
+}
+
+TEST(GravityTest, static_gravity_places_the_client_itself)
+{
+    EXPECT_EQ(
+            tiny::wm::frame_position(StaticGravity, 100, 100, titled_extents()),
+            std::make_pair(98, 74));
+}
+
+TEST(GravityTest, forget_gravity_is_north_west)
+{
+    EXPECT_EQ(
+            tiny::wm::frame_position(ForgetGravity, 100, 100, titled_extents()),
+            std::make_pair(100, 100));
+}
+
+TEST(GravityTest, a_frame_without_extents_is_not_moved)
+{
+    for (int gravity = ForgetGravity; gravity <= StaticGravity; ++gravity) {
+        EXPECT_EQ(tiny::wm::frame_position(gravity, 7, 9, {}),
+                  std::make_pair(7, 9));
+    }
+}
+
+TEST(GravityTest, a_growing_window_keeps_its_reference_point)
+{
+    using P = std::pair<int, int>;
+
+    EXPECT_EQ(tiny::wm::gravity_shift(NorthWestGravity, 10, 20), P(0, 0));
+    EXPECT_EQ(tiny::wm::gravity_shift(NorthGravity, 10, 20), P(-5, 0));
+    EXPECT_EQ(tiny::wm::gravity_shift(NorthEastGravity, 10, 20), P(-10, 0));
+    EXPECT_EQ(tiny::wm::gravity_shift(WestGravity, 10, 20), P(0, -10));
+    EXPECT_EQ(tiny::wm::gravity_shift(CenterGravity, 10, 20), P(-5, -10));
+    EXPECT_EQ(tiny::wm::gravity_shift(EastGravity, 10, 20), P(-10, -10));
+    EXPECT_EQ(tiny::wm::gravity_shift(SouthWestGravity, 10, 20), P(0, -20));
+    EXPECT_EQ(tiny::wm::gravity_shift(SouthGravity, 10, 20), P(-5, -20));
+    EXPECT_EQ(tiny::wm::gravity_shift(SouthEastGravity, 10, 20), P(-10, -20));
+    EXPECT_EQ(tiny::wm::gravity_shift(StaticGravity, 10, 20), P(0, 0));
+}
+
+TEST(GravityTest, a_shrinking_window_moves_the_other_way)
+{
+    EXPECT_EQ(tiny::wm::gravity_shift(SouthEastGravity, -10, -20),
+              std::make_pair(10, 20));
+}
+
+TEST(GravityTest, the_gravity_of_the_hints_is_north_west_without_a_flag)
+{
+    XSizeHints hints = {};
+    hints.win_gravity = SouthGravity;
+    EXPECT_EQ(tiny::wm::window_gravity(hints), NorthWestGravity);
+
+    hints.flags = PWinGravity;
+    EXPECT_EQ(tiny::wm::window_gravity(hints), SouthGravity);
+}
+
 TEST(ResizeByEdgesTest, the_right_and_bottom_edges_grow_the_frame)
 {
     const XSizeHints hints = {};
@@ -730,6 +821,28 @@ TEST(MoveResizeTest, moving_and_the_rest_drag_no_edge)
     EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_KEYBOARD), 0u);
     EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::MOVE_RESIZE_CANCEL), 0u);
     EXPECT_EQ(tiny::wm::edges_of_direction(-1), 0u);
+}
+
+TEST_F(WindowTest, a_window_without_a_frame_keeps_its_gravity_point_too)
+{
+    XSizeHints hints = {};
+    hints.flags = PWinGravity;
+    hints.win_gravity = SouthEastGravity;
+    client.set_normal_hints(hints);
+    client.map();
+    auto window = manage();
+    const XWindowAttributes before = client.attrs();
+
+    XConfigureRequestEvent e = {};
+    e.window = client.window;
+    e.value_mask = CWWidth | CWHeight;
+    e.width = before.width + 40;
+    e.height = before.height + 30;
+    window->configure_request(e);
+
+    EXPECT_EQ(client.attrs().x, before.x - 40);
+    EXPECT_EQ(client.attrs().y, before.y - 30);
+    EXPECT_EQ(client.attrs().width, before.width + 40);
 }
 
 TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)

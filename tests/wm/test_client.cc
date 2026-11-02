@@ -449,6 +449,64 @@ TEST_F(ClientTest, create_places_a_window_under_the_panel)
     EXPECT_EQ(f.y, tiny::theme.wm_panel + f.border_width);
 }
 
+namespace {
+
+XSizeHints position_hints(long flags, int gravity = NorthWestGravity)
+{
+    XSizeHints hints = {};
+    hints.flags = flags | PWinGravity;
+    hints.win_gravity = gravity;
+    return hints;
+}
+
+} // namespace
+
+TEST_F(ClientTest, create_places_the_frame_by_the_gravity_of_a_chosen_position)
+{
+    XMoveWindow(dsp(), client.window, 300, 200);
+    client.set_normal_hints(position_hints(USPosition, SouthEastGravity));
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
+
+    const XWindowAttributes f = attributes_of(
+            static_cast<tiny::wm::Client*>(w.get())->get_window());
+    const tiny::wm::FrameExtents e = w->frame_extents();
+    EXPECT_EQ(f.x, 300 - (e.left + e.right));
+    EXPECT_EQ(f.y, 200 - (e.top + e.bottom));
+}
+
+TEST_F(ClientTest, create_places_the_client_itself_with_the_static_gravity)
+{
+    XMoveWindow(dsp(), client.window, 300, 200);
+    client.set_normal_hints(position_hints(PPosition, StaticGravity));
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
+
+    ::Window unused;
+    int x;
+    int y;
+    XTranslateCoordinates(dsp(), client.window, root_window(), 0, 0, &x, &y,
+                          &unused);
+    EXPECT_EQ(x, 300);
+    EXPECT_EQ(y, 200);
+}
+
+TEST_F(ClientTest, create_ignores_the_gravity_of_a_position_nobody_chose)
+{
+    XMoveWindow(dsp(), client.window, 300, 200);
+    client.set_normal_hints(position_hints(0, SouthEastGravity));
+    const XWindowAttributes a = client.attrs();
+    const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
+
+    const XWindowAttributes f = attributes_of(
+            static_cast<tiny::wm::Client*>(w.get())->get_window());
+    EXPECT_EQ(f.x, 300);
+    EXPECT_EQ(f.y, 200);
+}
+
 TEST_F(ClientTest, create_makes_a_big_window_fit_the_work_area)
 {
     XResizeWindow(dsp(), client.window, 3000, 2000);
@@ -1472,6 +1530,37 @@ TEST_F(ClientTest, configure_request_keeps_what_it_does_not_ask_for)
     EXPECT_EQ(frame().y, before.y);
     EXPECT_EQ(frame().width, 333);
     EXPECT_EQ(frame().height, before.height);
+}
+
+TEST_F(ClientTest, a_window_that_grows_keeps_its_gravity_point)
+{
+    client.set_normal_hints(position_hints(0, SouthEastGravity));
+    build();
+    win->configure_request(
+            configure_request(client.window, CWX | CWY, 300, 300, 0, 0));
+    const XWindowAttributes before = frame();
+
+    win->configure_request(configure_request(client.window, CWWidth | CWHeight,
+                                             0, 0, child().width + 40,
+                                             child().height + 30));
+
+    EXPECT_EQ(frame().x, before.x - 40);
+    EXPECT_EQ(frame().y, before.y - 30);
+}
+
+TEST_F(ClientTest, a_window_with_north_west_gravity_grows_to_the_south_east)
+{
+    build();
+    win->configure_request(
+            configure_request(client.window, CWX | CWY, 300, 300, 0, 0));
+    const XWindowAttributes before = frame();
+
+    win->configure_request(configure_request(client.window, CWWidth | CWHeight,
+                                             0, 0, child().width + 40,
+                                             child().height + 30));
+
+    EXPECT_EQ(frame().x, before.x);
+    EXPECT_EQ(frame().y, before.y);
 }
 
 TEST_F(ClientTest, configure_request_tells_the_client_where_it_is)

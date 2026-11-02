@@ -106,6 +106,75 @@ tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
     return rv;
 }
 
+namespace {
+
+// The reference point of a gravity in halves of the size: 0 is the west or
+// north edge, 1 the middle, 2 the east or south edge.
+void gravity_halves(int gravity, int& horizontal, int& vertical)
+{
+    horizontal = 0;
+    vertical = 0;
+    switch (gravity) {
+        case NorthGravity:
+        case CenterGravity:
+        case SouthGravity:
+            horizontal = 1;
+            break;
+        case NorthEastGravity:
+        case EastGravity:
+        case SouthEastGravity:
+            horizontal = 2;
+            break;
+        default:
+            break;
+    }
+    switch (gravity) {
+        case WestGravity:
+        case CenterGravity:
+        case EastGravity:
+            vertical = 1;
+            break;
+        case SouthWestGravity:
+        case SouthGravity:
+        case SouthEastGravity:
+            vertical = 2;
+            break;
+        default:
+            break;
+    }
+}
+
+} // namespace
+
+std::pair<int, int> frame_position(int gravity, int x, int y,
+                                   const FrameExtents& extents)
+{
+    if (gravity == StaticGravity) {
+        return {x - extents.left, y - extents.top};
+    }
+    int h;
+    int v;
+    gravity_halves(gravity, h, v);
+    return {x - h * (extents.left + extents.right) / 2,
+            y - v * (extents.top + extents.bottom) / 2};
+}
+
+std::pair<int, int> gravity_shift(int gravity, int dw, int dh)
+{
+    if (gravity == StaticGravity) {
+        return {0, 0};
+    }
+    int h;
+    int v;
+    gravity_halves(gravity, h, v);
+    return {-h * dw / 2, -v * dh / 2};
+}
+
+int window_gravity(const XSizeHints& hints)
+{
+    return (hints.flags & PWinGravity) ? hints.win_gravity : NorthWestGravity;
+}
+
 unsigned edges_of_direction(long direction)
 {
     using tiny::Position;
@@ -360,8 +429,23 @@ void Window::configure_request(const XConfigureRequestEvent& e)
     ch.border_width = e.border_width;
     ch.sibling = e.above;
     ch.stack_mode = e.detail;
+    unsigned int mask = static_cast<unsigned int>(e.value_mask);
 
-    XConfigureWindow(dsp, child, static_cast<unsigned int>(e.value_mask), &ch);
+    // A size change without a position keeps the reference point of the
+    // gravity of the window where it was (ICCCM 4.1.2.3)
+    XWindowAttributes now;
+    if (!(mask & (CWX | CWY)) && (mask & (CWWidth | CWHeight)) &&
+        XGetWindowAttributes(dsp, child, &now)) {
+        const auto shift =
+                gravity_shift(window_gravity(*hints),
+                              (mask & CWWidth) ? e.width - now.width : 0,
+                              (mask & CWHeight) ? e.height - now.height : 0);
+        ch.x = now.x + shift.first;
+        ch.y = now.y + shift.second;
+        mask |= CWX | CWY;
+    }
+
+    XConfigureWindow(dsp, child, mask, &ch);
     send_configure_notify();
 }
 

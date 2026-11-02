@@ -140,6 +140,12 @@ class FakeClient {
         sync();
     }
 
+    void set_normal_hints(const XSizeHints& hints)
+    {
+        XSetWMNormalHints(display, window, const_cast<XSizeHints*>(&hints));
+        sync();
+    }
+
     void set_size_hints(long flags, int min_w, int min_h, int max_w, int max_h)
     {
         XSizeHints hints = {};

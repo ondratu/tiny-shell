@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <utility>
 
 #include <X11/Xutil.h>
 
@@ -144,6 +145,24 @@ enum MoveResizeDirection {
 
 /// The edges (`tiny::Position` bits) a sizing direction drags, 0 for the rest.
 unsigned edges_of_direction(long direction);
+
+/**
+ * @short Where the top left corner of a frame goes, so the window lies where
+ * its client asked for (ICCCM 4.1.2.3).
+ *
+ * The client asks for x, y as if it had no frame. Its `gravity` says which
+ * point of the frame is placed there: a corner, the middle of an edge, the
+ * center, or (`StaticGravity`) the top left corner of the client itself.
+ */
+std::pair<int, int> frame_position(int gravity, int x, int y,
+                                   const FrameExtents& extents);
+
+/// How far the frame moves, when the client grows by dw, dh and keeps its
+/// reference point (the gravity) where it was.
+std::pair<int, int> gravity_shift(int gravity, int dw, int dh);
+
+/// The gravity of the hints, `NorthWestGravity` when they have none.
+int window_gravity(const XSizeHints& hints);
 
 class Window : public tiny::Object {
   public:
