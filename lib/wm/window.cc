@@ -106,6 +106,31 @@ tiny::Rect resize_by_edges(const XSizeHints& hints, const tiny::Rect& start,
     return rv;
 }
 
+unsigned edges_of_direction(long direction)
+{
+    using tiny::Position;
+    switch (direction) {
+        case SIZE_TOPLEFT:
+            return Position::Top | Position::Left;
+        case SIZE_TOP:
+            return Position::Top;
+        case SIZE_TOPRIGHT:
+            return Position::Top | Position::Right;
+        case SIZE_RIGHT:
+            return Position::Right;
+        case SIZE_BOTTOMRIGHT:
+            return Position::Bottom | Position::Right;
+        case SIZE_BOTTOM:
+            return Position::Bottom;
+        case SIZE_BOTTOMLEFT:
+            return Position::Bottom | Position::Left;
+        case SIZE_LEFT:
+            return Position::Left;
+        default:
+            return 0;
+    }
+}
+
 int client_size_units(const XSizeHints& hints, bool horizontal, int size)
 {
     const Axis axis = axis_of(hints, horizontal);
@@ -153,6 +178,17 @@ void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
         decorations = motif_allowed(data[2], MotifWMHints::DECOR_ALL,
                                     all_decorations);
     }
+}
+
+XEvent make_pointer_event(int x_root, int y_root)
+{
+    XEvent e = {};
+    e.type = ButtonPress;
+    e.xbutton.x = x_root;
+    e.xbutton.y = y_root;
+    e.xbutton.x_root = x_root;
+    e.xbutton.y_root = y_root;
+    return e;
 }
 
 bool is_double_click(bool has_last, unsigned long last, unsigned long time)
@@ -1244,6 +1280,36 @@ void Window::update_wm_icon()
     }
 }
 
+void Window::begin_drag(unsigned edges, int x_root, int y_root)
+{
+    drag_edges = edges;
+    start_event = make_pointer_event(x_root, y_root);
+    XGetWindowAttributes(dsp, child, &start_attrs);
+}
+
+void Window::drag_to(int x_root, int y_root)
+{
+    const int dx = x_root - start_event.xbutton.x_root;
+    const int dy = y_root - start_event.xbutton.y_root;
+    if (!drag_edges) {
+        XMoveWindow(dsp, child, start_attrs.x + dx, start_attrs.y + dy);
+        return;
+    }
+    const tiny::Rect r =
+            resize_by_edges(*hints,
+                            {start_attrs.x, start_attrs.y, start_attrs.width,
+                             start_attrs.height},
+                            drag_edges, dx, dy, 0, 1, 1);
+    XMoveResizeWindow(dsp, child, r.x, r.y, tiny::x_dim(r.width),
+                      tiny::x_dim(r.height));
+}
+
+void Window::end_drag()
+{
+    drag_edges = 0;
+    send_configure_notify();
+}
+
 void Window::on_window_drag_begin(tiny::Object*, const XEvent& e, void*)
 {
     set_focus(); // check if is not have focus yet
@@ -1357,6 +1423,11 @@ void Window::on_client_message(const XEvent& e, void*)
 {
     if (e.xclient.message_type == dsp._NET_WM_STATE) {
         on_net_wm_state(e.xclient);
+        return;
+    }
+
+    if (e.xclient.message_type == dsp._NET_WM_MOVERESIZE) {
+        on_move_resize_request(this, e);
         return;
     }
 

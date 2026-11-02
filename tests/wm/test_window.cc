@@ -701,6 +701,53 @@ TEST_F(WindowTest, window_manager_protocols_are_read)
     EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
+// ---- _NET_WM_MOVERESIZE ----
+
+TEST(MoveResizeTest, the_directions_name_the_edges)
+{
+    using tiny::Position;
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_TOPLEFT),
+              unsigned(Position::Top | Position::Left));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_TOP),
+              unsigned(Position::Top));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_TOPRIGHT),
+              unsigned(Position::Top | Position::Right));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_RIGHT),
+              unsigned(Position::Right));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_BOTTOMRIGHT),
+              unsigned(Position::Bottom | Position::Right));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_BOTTOM),
+              unsigned(Position::Bottom));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_BOTTOMLEFT),
+              unsigned(Position::Bottom | Position::Left));
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_LEFT),
+              unsigned(Position::Left));
+}
+
+TEST(MoveResizeTest, moving_and_the_rest_drag_no_edge)
+{
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::MOVE_BY_POINTER), 0u);
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::SIZE_KEYBOARD), 0u);
+    EXPECT_EQ(tiny::wm::edges_of_direction(tiny::wm::MOVE_RESIZE_CANCEL), 0u);
+    EXPECT_EQ(tiny::wm::edges_of_direction(-1), 0u);
+}
+
+TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)
+{
+    auto window = manage();
+    Recorder recorder;
+    window->on_move_resize_request.connect(&recorder, recorder.slot());
+    window->set_events();
+
+    send(client.window, client_message(client.window, dsp()._NET_WM_MOVERESIZE,
+                                       5, 6, tiny::wm::MOVE_BY_POINTER));
+
+    EXPECT_EQ(recorder.calls, 1);
+    EXPECT_EQ(recorder.last_event.xclient.data.l[0], 5);
+    EXPECT_EQ(recorder.last_event.xclient.data.l[2],
+              static_cast<long>(tiny::wm::MOVE_BY_POINTER));
+}
+
 // ---- _NET_WM_ALLOWED_ACTIONS ----
 
 namespace {

@@ -794,6 +794,323 @@ unsigned long desktop_of(FakeClient& c)
 
 } // namespace
 
+// ---- _NET_WM_MOVERESIZE ----
+
+namespace {
+
+// A client asks the window manager to move or resize its window.
+void request_move_resize(::Window window, long direction, long x = 100,
+                         long y = 100)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = dsp()._NET_WM_MOVERESIZE;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = x;
+    e.xclient.data.l[1] = y;
+    e.xclient.data.l[2] = direction;
+    e.xclient.data.l[3] = 1;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+} // namespace
+
+TEST_F(ManagerTest, a_client_can_ask_to_be_moved_with_the_pointer)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
+    run_loop();
+    ASSERT_EQ(manager->dragged, window);
+    manager->move_resize_to(130, 150);
+
+    const XWindowAttributes after = attributes_of(window->frame());
+    EXPECT_EQ(after.x, before.x + 30);
+    EXPECT_EQ(after.y, before.y + 50);
+    EXPECT_EQ(after.width, before.width);
+}
+
+TEST_F(ManagerTest, a_client_can_ask_to_be_resized_with_the_pointer)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+
+    request_move_resize(c.window, tiny::wm::SIZE_BOTTOMRIGHT, 100, 100);
+    run_loop();
+    ASSERT_EQ(manager->dragged, window);
+    manager->move_resize_to(140, 170);
+
+    const XWindowAttributes after = attributes_of(window->frame());
+    EXPECT_EQ(after.x, before.x);
+    EXPECT_EQ(after.y, before.y);
+    EXPECT_EQ(after.width, before.width + 40);
+    EXPECT_EQ(after.height, before.height + 70);
+    EXPECT_EQ(c.attrs().width, before.width + 40);
+}
+
+TEST_F(ManagerTest, a_window_without_a_frame_is_resized_by_the_pointer)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.map();
+    run_loop();
+    pump_events();
+    ASSERT_FALSE(is_framed(c));
+    const XWindowAttributes before = c.attrs();
+
+    request_move_resize(c.window, tiny::wm::SIZE_TOPLEFT, 100, 100);
+    run_loop();
+    ASSERT_NE(manager->dragged, nullptr);
+    manager->move_resize_to(90, 80); // 10 and 20 pixels outside
+
+    const XWindowAttributes after = c.attrs();
+    EXPECT_EQ(after.x, before.x - 10);
+    EXPECT_EQ(after.y, before.y - 20);
+    EXPECT_EQ(after.width, 210);
+    EXPECT_EQ(after.height, 120);
+}
+
+TEST_F(ManagerTest, a_window_without_a_frame_is_moved_by_the_pointer)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0, 0);
+    c.map();
+    run_loop();
+    pump_events();
+    const XWindowAttributes before = c.attrs();
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
+    run_loop();
+    manager->move_resize_to(110, 125);
+
+    EXPECT_EQ(c.attrs().x, before.x + 10);
+    EXPECT_EQ(c.attrs().y, before.y + 25);
+}
+
+TEST_F(ManagerTest, nothing_is_dragged_when_no_button_is_down)
+{
+    start();
+    manager->is_button_down = []() { return false; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, the_keyboard_variants_are_not_supported)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_move_resize(c.window, tiny::wm::SIZE_KEYBOARD);
+    request_move_resize(c.window, tiny::wm::MOVE_KEYBOARD);
+    request_move_resize(c.window, 99);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, a_window_that_may_not_resize_is_not_resized_by_a_client)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                tiny::wm::MotifWMHints::FUNC_MOVE, 0xFFFF);
+    c.map();
+    run_loop();
+    pump_events();
+
+    request_move_resize(c.window, tiny::wm::SIZE_RIGHT);
+    run_loop();
+    EXPECT_EQ(manager->dragged, nullptr);
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+    EXPECT_NE(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, a_window_that_may_not_move_is_not_moved_by_a_client)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client(false);
+    c.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                tiny::wm::MotifWMHints::FUNC_RESIZE, 0xFFFF);
+    c.map();
+    run_loop();
+    pump_events();
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, a_maximized_window_is_moved_but_not_resized_by_a_client)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->maximize();
+
+    request_move_resize(c.window, tiny::wm::SIZE_BOTTOM);
+    run_loop();
+    EXPECT_EQ(manager->dragged, nullptr);
+
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 300, 20);
+    run_loop();
+    EXPECT_NE(manager->dragged, nullptr);
+    EXPECT_FALSE(manager->wm_windows[c.window]->get_maximized());
+}
+
+TEST_F(ManagerTest, the_client_can_cancel_the_drag)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+    ASSERT_NE(manager->dragged, nullptr);
+
+    request_move_resize(c.window, tiny::wm::MOVE_RESIZE_CANCEL);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, the_pointer_events_of_the_grab_drive_the_window)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
+    run_loop();
+    ASSERT_EQ(manager->dragged, window);
+
+    // the events of a grab come to the root; here they are sent by hand
+    XSelectInput(dsp(), root_window(),
+                 SubstructureNotifyMask | SubstructureRedirectMask |
+                         PointerMotionMask | ButtonReleaseMask);
+    XEvent motion = make_event(MotionNotify);
+    motion.xmotion.window = root_window();
+    motion.xmotion.x_root = 120;
+    motion.xmotion.y_root = 110;
+    XSendEvent(dsp(), root_window(), False, PointerMotionMask, &motion);
+    run_loop();
+    EXPECT_EQ(attributes_of(window->frame()).x, before.x + 20);
+    EXPECT_EQ(attributes_of(window->frame()).y, before.y + 10);
+
+    XEvent release = make_event(ButtonRelease);
+    release.xbutton.window = root_window();
+    XSendEvent(dsp(), root_window(), False, ButtonReleaseMask, &release);
+    run_loop();
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, the_client_is_told_its_place_when_the_drag_ends)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    c.watch_structure();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER, 100, 100);
+    run_loop();
+    manager->move_resize_to(150, 160);
+
+    manager->stop_move_resize();
+
+    XConfigureEvent notify;
+    ASSERT_TRUE(c.synthetic_configure(notify));
+    const XWindowAttributes frame = attributes_of(window->frame());
+    EXPECT_EQ(notify.x, frame.x + frame.border_width + c.attrs().x);
+    EXPECT_EQ(notify.y, frame.y + frame.border_width + c.attrs().y);
+}
+
+TEST_F(ManagerTest,
+       a_window_that_goes_away_during_the_drag_releases_the_pointer)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    request_move_resize(c.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+    ASSERT_NE(manager->dragged, nullptr);
+
+    manager->unmanage(c.window, true);
+
+    EXPECT_EQ(manager->dragged, nullptr);
+    // the pointer is free again: another drag can start
+    FakeClient& d = add_client();
+    run_loop();
+    pump_events();
+    request_move_resize(d.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+    EXPECT_NE(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, a_new_drag_replaces_the_old_one)
+{
+    start();
+    manager->is_button_down = []() { return true; };
+    FakeClient& first = add_client();
+    FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+    request_move_resize(first.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+
+    request_move_resize(second.window, tiny::wm::MOVE_BY_POINTER);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, manager->wm_windows[second.window]);
+}
+
+TEST_F(ManagerTest, the_default_check_sees_that_no_button_is_down)
+{
+    start();
+
+    EXPECT_FALSE(manager->is_button_down());
+}
+
 TEST_F(ManagerTest, a_managed_window_gets_its_allowed_actions)
 {
     start();

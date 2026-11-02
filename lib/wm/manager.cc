@@ -117,6 +117,17 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         wm_tops.back()->set_focus(); // the topmost one
     }
 
+    is_button_down = [this]() {
+        ::Window pointer_root;
+        ::Window child;
+        int x;
+        int y;
+        unsigned int buttons = 0;
+        XQueryPointer(display, root, &pointer_root, &child, &x, &y, &x, &y,
+                      &buttons);
+        return (buttons & (Button1Mask | Button2Mask | Button3Mask |
+                           Button4Mask | Button5Mask)) != 0;
+    };
     set_supported();
     publish_desktops();
     publish_clients();
@@ -151,6 +162,7 @@ Manager::~Manager()
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
     grab_super(false);
+    stop_move_resize(false);
     clear_published();
     release_quit_signals();
 
@@ -204,6 +216,7 @@ void Manager::set_supported()
                               dsp._NET_ACTIVE_WINDOW,
                               dsp._NET_CLOSE_WINDOW,
                               dsp._NET_WM_PING,
+                              dsp._NET_WM_MOVERESIZE,
                               dsp._NET_NUMBER_OF_DESKTOPS,
                               dsp._NET_CURRENT_DESKTOP,
                               dsp._NET_DESKTOP_GEOMETRY,
@@ -575,6 +588,16 @@ void Manager::main_loop()
             continue;
         }
 
+        if (dragged && event.type == MotionNotify) {
+            while (XCheckTypedEvent(display, MotionNotify, &event)) {}
+            move_resize_to(event.xmotion.x_root, event.xmotion.y_root);
+            continue;
+        }
+        if (dragged && event.type == ButtonRelease) {
+            stop_move_resize();
+            continue;
+        }
+
         auto signal_id = std::make_pair(event.type, window);
 
         // call manager handlers first
@@ -614,6 +637,65 @@ void Manager::main_loop()
         }
     }
     reframe_windows();
+}
+
+void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
+{
+    const long direction = e.data.l[2];
+    if (direction == MOVE_RESIZE_CANCEL) {
+        if (dragged == window) {
+            stop_move_resize();
+        }
+        return;
+    }
+    const unsigned edges = edges_of_direction(direction);
+    // the keyboard variants are left out
+    if (direction != MOVE_BY_POINTER && !edges) {
+        return;
+    }
+    const bool allowed =
+            edges ? window->is_resizable() && !window->get_maximized() &&
+                            !window->is_fullscreen() && !window->is_shaded()
+                  : window->is_movable() && !window->is_fullscreen();
+    if (!allowed || !is_button_down()) {
+        return;
+    }
+    stop_move_resize();
+
+    const Cursor cursor = XCreateFontCursor(
+            display, edges ? tiny::Position::get_cursor_shape(
+                                     static_cast<uint16_t>(edges))
+                           : XC_fleur);
+    const int grabbed = XGrabPointer(
+            display, root, False, ButtonReleaseMask | PointerMotionMask,
+            GrabModeAsync, GrabModeAsync, None, cursor, CurrentTime);
+    XFreeCursor(display, cursor);
+    if (grabbed != GrabSuccess) {
+        return;
+    }
+    dragged = window;
+    window->begin_drag(edges, static_cast<int>(e.data.l[0]),
+                       static_cast<int>(e.data.l[1]));
+}
+
+void Manager::move_resize_to(int x_root, int y_root)
+{
+    if (dragged) {
+        dragged->drag_to(x_root, y_root);
+    }
+}
+
+void Manager::stop_move_resize(bool finish)
+{
+    if (!dragged) {
+        return;
+    }
+    Window* window = dragged;
+    dragged = nullptr;
+    XUngrabPointer(display, CurrentTime);
+    if (finish) {
+        window->end_drag();
+    }
 }
 
 void Manager::focus_window(Window* window)
@@ -739,6 +821,9 @@ void Manager::connect_window(Window* window)
             [this, window](const XEvent&) { on_window_user_time(window); });
     window->on_reframe.connect(
             [this, window](const XEvent&) { on_window_reframe(window); });
+    window->on_move_resize_request.connect([this, window](const XEvent& e) {
+        start_move_resize(window, e.xclient);
+    });
     window->on_modifier_drag.connect([this](const XEvent&) {
         super_down = false; // Super was used to move a window, not to open
     });
@@ -1089,6 +1174,9 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
         return;
     }
     Window* window = it->second;
+    if (dragged == window) {
+        stop_move_resize(false); // it is gone, or comes back in a new frame
+    }
 
     Window* parent = parent_of(window);
     // the dialogs go with the window they belong to

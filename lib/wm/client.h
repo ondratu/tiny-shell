@@ -95,6 +95,12 @@ class Client : public tiny::Container, public Window {
 
     void on_window_drag_end(tiny::Object* o, const XEvent& e, void* data);
 
+    void begin_drag(unsigned edges, int x_root, int y_root) override;
+
+    void drag_to(int x_root, int y_root) override;
+
+    void end_drag() override;
+
   protected:
     /* event handlers */
 
