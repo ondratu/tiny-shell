@@ -103,18 +103,13 @@ void Client::realize(::Window parent_arg, int x, int y)
     }
 
     add(&header, 0, 0);
-    if (has_close_button()) {
-        header.push_back(&cls_btn, header.get_padding(),
-                         header.get_padding() - cls_btn.get_border());
+    // all of them exist, the hints can change; layout_buttons() shows some
+    for (tiny::Widget* button : {static_cast<tiny::Widget*>(&cls_btn),
+                                 static_cast<tiny::Widget*>(&max_btn),
+                                 static_cast<tiny::Widget*>(&min_btn)}) {
+        header.add(button, 0, 0, SouthEastGravity);
     }
-    if (has_maximize_button()) {
-        header.push_back(&max_btn, header.get_padding(),
-                         header.get_padding() - max_btn.get_border());
-    }
-    if (has_minimize_button()) {
-        header.push_back(&min_btn, header.get_padding(),
-                         header.get_padding() - min_btn.get_border());
-    }
+    layout_buttons();
 
     XSetWindowBorderWidth(display, child, 0);
     XReparentWindow(display, child, window, 0, tiny::theme.wm_win_header);
@@ -182,11 +177,42 @@ void Client::map_all()
         shadow.map_all();
     }
     tiny::Container::map_all();
+    layout_buttons(); // map_all showed the hidden ones too
 
     if (is_resizable()) {
         XRaiseWindow(display, shadow.get_window()); // shadow is lower
     }
     XRaiseWindow(display, window);
+}
+
+void Client::layout_buttons()
+{
+    const int padding = header.get_padding();
+    int x = header.get_width() - 1; // like Box::push_back
+    const struct {
+        tiny::Widget* button;
+        bool shown;
+    } row[] = {{&cls_btn, has_close_button()},
+               {&max_btn, has_maximize_button()},
+               {&min_btn, has_minimize_button()}};
+    for (const auto& item : row) {
+        if (!item.shown) {
+            item.button->unmap();
+            continue;
+        }
+        x -= padding + item.button->get_width();
+        XMoveWindow(display, item.button->get_window(), x,
+                    padding - item.button->get_border());
+        if (header.get_maped()) {
+            item.button->map();
+        }
+    }
+}
+
+void Client::on_motif_hints_changed(unsigned long new_decorations)
+{
+    decorations = new_decorations;
+    layout_buttons();
 }
 
 void Client::set_focus()

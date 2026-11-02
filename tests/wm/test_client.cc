@@ -131,7 +131,7 @@ TEST_F(ClientTest, header_has_three_buttons)
 {
     build();
 
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 4u); // + title
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u); // + title
 }
 
 TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
@@ -140,7 +140,7 @@ TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
           tiny::wm::MotifWMHints::FUNC_MINIMIZE |
           tiny::wm::MotifWMHints::FUNC_CLOSE);
 
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
 }
 
 TEST_F(ClientTest, window_without_minimize_function_has_no_minimize_button)
@@ -149,7 +149,7 @@ TEST_F(ClientTest, window_without_minimize_function_has_no_minimize_button)
           tiny::wm::MotifWMHints::FUNC_CLOSE);
 
     EXPECT_FALSE(win->is_minimizable());
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
 }
 
 TEST_F(ClientTest, window_without_close_function_has_no_close_button)
@@ -158,7 +158,7 @@ TEST_F(ClientTest, window_without_close_function_has_no_close_button)
           tiny::wm::MotifWMHints::FUNC_MINIMIZE);
 
     EXPECT_FALSE(win->is_closable());
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
 }
 
 TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
@@ -171,7 +171,47 @@ TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
     win->setup(root_window(), a.x, a.y);
     pump_events();
 
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 3u); // close, min
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u); // close, min
+}
+
+TEST_F(ClientTest, the_buttons_follow_a_change_of_the_motif_hints)
+{
+    build();
+    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
+
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                     tiny::wm::MotifWMHints::FUNC_CLOSE, 0);
+    pump_events();
+
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 2u);
+    EXPECT_FALSE(win->is_minimizable());
+    EXPECT_FALSE(win->is_maximizable());
+}
+
+TEST_F(ClientTest, the_buttons_come_back_when_the_motif_hints_are_gone)
+{
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                     tiny::wm::MotifWMHints::FUNC_CLOSE, 0);
+    build(tiny::wm::MotifWMHints::FUNC_CLOSE);
+    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 2u);
+
+    XDeleteProperty(client.display, client.window, dsp()._MOTIF_WM_HINTS);
+    client.sync();
+    pump_events();
+
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
+}
+
+TEST_F(ClientTest, the_remaining_buttons_stay_at_the_right_edge)
+{
+    build();
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                     tiny::wm::MotifWMHints::FUNC_CLOSE, 0);
+    pump_events();
+
+    const XWindowAttributes b = attributes_of(win->cls_btn.get_window());
+    EXPECT_EQ(b.x + b.width + 2 * b.border_width + win->header.get_padding(),
+              win->header.get_width() - 1);
 }
 
 TEST_F(ClientTest, a_dialog_has_only_the_close_button)
@@ -181,7 +221,7 @@ TEST_F(ClientTest, a_dialog_has_only_the_close_button)
     build();
 
     EXPECT_FALSE(win->is_minimizable() && !win->is_auxiliary());
-    EXPECT_EQ(children_of(win->header.get_window()).size(), 2u); // + title
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 2u); // + title
 }
 
 TEST_F(ClientTest, maximizing_a_window_without_the_button_does_not_fail)

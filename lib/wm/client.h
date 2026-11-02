@@ -90,6 +90,12 @@ class Client : public tiny::Container, public Window {
 
     void on_property_notify(const XEvent& e, void* data) override;
 
+    //! Show the buttons the hints allow, the others are hidden
+    void on_motif_hints_changed(unsigned long new_decorations) override;
+
+    //! Place the visible buttons in a row from the right edge
+    void layout_buttons();
+
     void place_maximized() override;
 
     //! Show the size of the client in units (e.g. columns and rows)

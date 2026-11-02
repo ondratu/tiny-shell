@@ -104,6 +104,18 @@ inline std::vector<::Window> children_of(::Window parent)
     return rv;
 }
 
+// Windows directly inside `parent` that are mapped.
+inline std::vector<::Window> mapped_children_of(::Window parent)
+{
+    std::vector<::Window> rv;
+    for (const ::Window w : children_of(parent)) {
+        if (attributes_of(w).map_state != IsUnmapped) {
+            rv.push_back(w);
+        }
+    }
+    return rv;
+}
+
 // Child of `parent` placed at x, y (0 when there is none).
 inline ::Window child_at(::Window parent, int x, int y)
 {
