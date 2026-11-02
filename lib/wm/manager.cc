@@ -601,10 +601,10 @@ void Manager::ask_to_quit(Window* window)
     const pid_t pid = window->get_killable_pid();
     unsigned others = 0;
     for (const auto& it : wm_windows) {
-        others += pid && it.second != window &&
-                                  it.second->get_killable_pid() == pid
-                          ? 1
-                          : 0;
+        if (pid && it.second != window &&
+            it.second->get_killable_pid() == pid) {
+            ++others;
+        }
     }
     wm_unresponsive.popup(window->get_wm_name(), others);
 }
