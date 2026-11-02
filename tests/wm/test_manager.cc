@@ -2027,8 +2027,7 @@ TEST_F(ManagerTest,
     dialog.map();
     run_loop();
 
-    manager->on_window_focus(manager->wm_windows[parent.window], XEvent(),
-                             nullptr);
+    manager->on_window_focus(manager->wm_windows[parent.window], XEvent());
 
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }

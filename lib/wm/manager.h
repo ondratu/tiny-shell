@@ -136,22 +136,18 @@ class Manager : public tiny::Object {
     void update_dock_entry(Window* window);
 
     /* signal event handlers */
-    void on_window_drag(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_skip_taskbar(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_layer(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_attention(tiny::Object* o, const XEvent& e, void* data);
 
     //! The decorations came or went: the window needs another kind of frame
-    void on_window_reframe(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_reframe(const Window* window);
 
     //! Manage the windows that asked for another frame again
     void reframe_windows();
 
     void reframe(::Window child);
-    void on_window_user_time(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_modal(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_focus(tiny::Object* o, const XEvent& e, void* data);
-    void on_window_minimize(tiny::Object* o, const XEvent& e, void* data);
+    void on_window_user_time(const Window* window);
+    void on_window_modal(const Window* dialog);
+    void on_window_focus(Window* window, const XEvent& e);
+    void on_window_minimize(Window* window);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
     void on_restart(tiny::Object* o, const XEvent& e, void* data);
     void on_shutdown(tiny::Object* o, const XEvent& e, void* data);

@@ -35,14 +35,25 @@ Signal::Signal(): object(nullptr), method(nullptr), data(nullptr) {}
 
 void Signal::operator()(Object* owner, const XEvent& e, void* event_data)
 {
-    if (object && method) {
+    if (callback) {
+        callback(e);
+    } else if (object && method) {
         (object->*method)(owner, e, (event_data ? event_data : this->data));
     }
+}
+
+void Signal::connect(std::function<void(const XEvent& e)> function)
+{
+    object = nullptr;
+    method = nullptr;
+    data = nullptr;
+    callback = std::move(function);
 }
 
 void Signal::connect(Object* object_arg, object_signal_t method_arg,
                      void* data_arg)
 {
+    callback = nullptr;
     this->object = object_arg;
     this->method = method_arg;
     this->data = data_arg;

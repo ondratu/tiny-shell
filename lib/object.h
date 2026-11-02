@@ -3,6 +3,7 @@
 #include <X11/Xlib.h>
 
 #include <stdint.h>
+#include <functional>
 #include <map>
 #include <set>
 
@@ -34,14 +35,18 @@ class Signal {
 
     void operator()(Object* owner, const XEvent& e, void* data = nullptr);
 
-    operator bool() const { return (object && method); }
+    operator bool() const { return (object && method) || callback; }
 
     void connect(Object* object, object_signal_t method, void* data = nullptr);
+
+    //! Call the function instead of a method of an object
+    void connect(std::function<void(const XEvent& e)> function);
 
   private:
     Object* object;         // method owner
     object_signal_t method; // method to call
     void* data;             // user data to send
+    std::function<void(const XEvent& e)> callback;
 };
 
 class Object {
