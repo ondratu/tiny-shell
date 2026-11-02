@@ -344,6 +344,9 @@ class Window : public tiny::Object {
 
     virtual void on_property_notify(const XEvent& e, void* data);
 
+    //! `_MOTIF_WM_HINTS` changed; `functions` is new, the decorations are not
+    virtual void on_motif_hints_changed(unsigned long) {}
+
     virtual void on_button_press(const XEvent& e, void* data);
 
     virtual void on_button_release(const XEvent& e, void* data);

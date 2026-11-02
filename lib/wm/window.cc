@@ -1202,6 +1202,12 @@ void Window::on_property_notify(const XEvent& e, void*)
         update_normal_hints();
         return;
     }
+    if (e.xproperty.atom == dsp._MOTIF_WM_HINTS) {
+        unsigned long new_decorations;
+        get_motif_hints(child, functions, new_decorations); // none: all
+        on_motif_hints_changed(new_decorations);
+        return;
+    }
     if (e.xproperty.atom == XA_WM_TRANSIENT_FOR) {
         update_transient_for();
         return;
