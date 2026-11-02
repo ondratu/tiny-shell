@@ -68,7 +68,9 @@ Done:
       requests change each of their two atoms on their own and can toggle
 - [x] Modal dialogs (`_NET_WM_STATE_MODAL`): the focus stays in the dialog and
       Alt+Tab skips the parent; a dialog that is not modal leaves the parent
-      focusable
+      focusable; a modal window without a parent is modal for its window
+      group (`WM_HINTS`). `examples/dialogs.cc` is a small Xlib program to try
+      both kinds
 - [x] Work area: the struts of docks of clients (`_NET_WM_STRUT[_PARTIAL]`),
       `_NET_WORKAREA`; maximized and new windows stay inside it
 - [x] Top panel with an application menu and a user menu (logout)
