@@ -463,7 +463,7 @@ std::vector<T> root_property(Atom property, Atom type)
 }
 
 // A request of a client to the window manager, sent to the root window.
-void request(::Window window, Atom message, long data0 = 0)
+void request(::Window window, Atom message, long data0 = 0, long data1 = 0)
 {
     XEvent e = {};
     e.xclient.type = ClientMessage;
@@ -471,6 +471,7 @@ void request(::Window window, Atom message, long data0 = 0)
     e.xclient.message_type = message;
     e.xclient.format = 32;
     e.xclient.data.l[0] = data0;
+    e.xclient.data.l[1] = data1;
     XSendEvent(dsp(), root_window(), False,
                SubstructureRedirectMask | SubstructureNotifyMask, &e);
     XSync(dsp(), False);
@@ -589,6 +590,81 @@ TEST_F(ManagerTest, active_window_request_focuses_the_window)
     EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
     EXPECT_EQ((root_property<::Window>(dsp()._NET_ACTIVE_WINDOW, XA_WINDOW)),
               (std::vector<::Window>{first.window}));
+}
+
+TEST_F(ManagerTest, an_old_request_of_an_application_only_marks_the_window)
+{
+    start();
+    FakeClient& first = add_client(false);
+    FakeClient& second = add_client(false);
+    first.set_user_time(5000);
+    second.set_user_time(6000);
+    first.map();
+    second.map();
+    run_loop();
+    pump_events();
+    ASSERT_EQ(manager->active, manager->wm_windows[second.window]);
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW, 1, 4000);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+    EXPECT_TRUE(manager->wm_windows[first.window]->demands_attention());
+}
+
+TEST_F(ManagerTest, a_request_of_an_application_without_a_time_only_marks)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW, 1, 0);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+    EXPECT_TRUE(manager->wm_windows[first.window]->demands_attention());
+}
+
+TEST_F(ManagerTest, a_recent_request_of_an_application_focuses_the_window)
+{
+    start();
+    FakeClient& first = add_client(false);
+    FakeClient& second = add_client(false);
+    first.set_user_time(5000);
+    second.set_user_time(6000);
+    first.map();
+    second.map();
+    run_loop();
+    pump_events();
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW, 1, 7000);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
+}
+
+TEST_F(ManagerTest, an_old_request_of_a_pager_still_focuses_the_window)
+{
+    start();
+    FakeClient& first = add_client(false);
+    FakeClient& second = add_client(false);
+    first.set_user_time(5000);
+    second.set_user_time(6000);
+    first.map();
+    second.map();
+    run_loop();
+    pump_events();
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW, 2, 4000);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[first.window]);
 }
 
 TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)

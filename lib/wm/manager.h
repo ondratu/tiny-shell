@@ -126,6 +126,9 @@ class Manager : public tiny::Object {
     //! Focus stealing prevention: may a window that was just mapped have it
     bool may_take_focus(Window* window) const;
 
+    //! May an application activate the window with a request of that time
+    bool may_activate(Window* window, unsigned long time) const;
+
     //! Remember `_NET_WM_USER_TIME` of the window as the time of the user
     void note_user_time(const Window* window);
 
