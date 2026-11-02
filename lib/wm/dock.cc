@@ -195,8 +195,8 @@ void Dock::remove(Window* window_arg)
 bool Dock::contains(const Window* window_arg) const
 {
     return std::any_of(wm_task_icons.begin(), wm_task_icons.end(),
-                       [window_arg](const auto& icon) {
-                           return icon.first == window_arg;
+                       [window_arg](const auto& entry) {
+                           return entry.first == window_arg;
                        });
 }
 
