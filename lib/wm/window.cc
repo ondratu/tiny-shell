@@ -579,9 +579,49 @@ bool Window::ask_to_close()
 
 void Window::close()
 {
-    if (!ask_to_close()) {
+    if (!responding || !ask_to_close()) {
         XKillClient(dsp, child);
+        return;
     }
+    ping(Clock::now()); // the next click kills it, when it does not answer
+}
+
+void Window::ping(Clock::time_point now)
+{
+    if (ping_pending || !protocols.count(dsp._NET_WM_PING)) {
+        return;
+    }
+    XClientMessageEvent msg = {};
+    msg.window = child;
+    msg.type = ClientMessage;
+    msg.format = 32;
+    msg.message_type = dsp.WM_PROTOCOLS;
+    msg.data.l[0] = static_cast<long>(dsp._NET_WM_PING);
+    msg.data.l[1] = CurrentTime;
+    msg.data.l[2] = static_cast<long>(child);
+    XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
+    ping_pending = true;
+    ping_deadline = now + ping_timeout;
+}
+
+void Window::pong()
+{
+    ping_pending = false;
+    if (!responding) {
+        responding = true;
+        on_responding_changed();
+    }
+}
+
+bool Window::expire_ping(Clock::time_point now)
+{
+    if (!ping_pending || now < ping_deadline) {
+        return false;
+    }
+    ping_pending = false;
+    responding = false;
+    on_responding_changed();
+    return true;
 }
 
 void Window::minimize()

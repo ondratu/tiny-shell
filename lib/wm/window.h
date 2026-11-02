@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <vector>
 #include <set>
 #include <string>
@@ -295,10 +296,35 @@ class Window : public tiny::Object {
     //! Move the frame, the root coordinates of its top left corner
     virtual void move_to(int x, int y);
 
-    //! Send WM_DELETE_WINDOW to window or xkill that
+    //! Send WM_DELETE_WINDOW to window or xkill that; a window that does
+    //! not answer `_NET_WM_PING` is killed at once
     virtual void close();
     //! Send `WM_DELETE_WINDOW`; false (nothing sent) without that protocol
     bool ask_to_close();
+
+    using Clock = std::chrono::steady_clock;
+
+    //! How long a client may take to answer `_NET_WM_PING`
+    static constexpr std::chrono::seconds ping_timeout{5};
+
+    //! Ask the client whether it lives (`_NET_WM_PING`); nothing is sent
+    //! without that protocol or while the last ping is not answered
+    void ping(Clock::time_point now);
+
+    //! The client answered the ping: it responds again
+    void pong();
+
+    //! False when the client did not answer a ping in time
+    bool is_responding() const { return responding; }
+
+    //! A ping waits for the answer
+    bool has_pending_ping() const { return ping_pending; }
+
+    //! When the pending ping is overdue
+    Clock::time_point get_ping_deadline() const { return ping_deadline; }
+
+    //! Give up waiting for an overdue ping; true when it just happened
+    bool expire_ping(Clock::time_point now);
 
     virtual void minimize();
     virtual void maximize();
@@ -389,6 +415,9 @@ class Window : public tiny::Object {
     //! Listen to the window of `_NET_WM_USER_TIME_WINDOW` (none: the client)
     void watch_user_time_window();
 
+    //! `is_responding()` changed
+    virtual void on_responding_changed() {}
+
     //! `_MOTIF_WM_HINTS` changed; `functions` is new, the decorations are not
     virtual void on_motif_hints_changed(unsigned long new_decorations);
 
@@ -449,6 +478,10 @@ class Window : public tiny::Object {
 
     std::set<Atom> protocols;
     std::set<Atom> properties;
+
+    bool responding = true;
+    bool ping_pending = false;
+    Clock::time_point ping_deadline;
 };
 
 } // namespace tiny::wm

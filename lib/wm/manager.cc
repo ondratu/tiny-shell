@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cerrno>
 #include <csignal>
 #include <cstring>
@@ -201,6 +202,7 @@ void Manager::set_supported()
                               dsp._NET_CLIENT_LIST_STACKING,
                               dsp._NET_ACTIVE_WINDOW,
                               dsp._NET_CLOSE_WINDOW,
+                              dsp._NET_WM_PING,
                               dsp._NET_FRAME_EXTENTS,
                               dsp._NET_REQUEST_FRAME_EXTENTS,
                               dsp._NET_WORKAREA,
@@ -383,6 +385,15 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         }
         return true;
     }
+    if (e.message_type == dsp.WM_PROTOCOLS &&
+        static_cast<Atom>(e.data.l[0]) == dsp._NET_WM_PING) {
+        // the echo of a ping names the client in data[2] (EWMH)
+        const auto it = wm_windows.find(static_cast<::Window>(e.data.l[2]));
+        if (it != wm_windows.end()) {
+            it->second->pong();
+        }
+        return true;
+    }
     if (e.message_type != dsp._NET_ACTIVE_WINDOW &&
         e.message_type != dsp._NET_CLOSE_WINDOW) {
         return false; // the window knows the rest
@@ -439,15 +450,40 @@ void Manager::release_quit_signals()
     }
 }
 
+int Manager::ping_timeout_ms() const
+{
+    const auto now = Window::Clock::now();
+    int rv = -1;
+    for (const auto& it : wm_windows) {
+        if (!it.second->has_pending_ping()) {
+            continue;
+        }
+        const auto left = std::chrono::ceil<std::chrono::milliseconds>(
+                it.second->get_ping_deadline() - now);
+        const int ms = static_cast<int>(std::max<long long>(left.count(), 0));
+        rv = rv < 0 ? ms : std::min(rv, ms);
+    }
+    return rv;
+}
+
+void Manager::expire_pings()
+{
+    const auto now = Window::Clock::now();
+    for (const auto& it : wm_windows) {
+        it.second->expire_ping(now);
+    }
+}
+
 bool Manager::wait_for_event()
 {
     // A client that floods the queue must not delay the signal.
     for (bool wait = XPending(display) == 0;; wait = true) {
         struct pollfd fds[2] = {{ConnectionNumber(display), POLLIN, 0},
                                 {quit_pipe[0], POLLIN, 0}};
-        if (poll(fds, 2, wait ? -1 : 0) < 0 && errno != EINTR) {
+        if (poll(fds, 2, wait ? ping_timeout_ms() : 0) < 0 && errno != EINTR) {
             return false;
         }
+        expire_pings();
         if (fds[1].revents & POLLIN) {
             char drain[16];
             while (read(quit_pipe[0], drain, sizeof(drain)) > 0) {}

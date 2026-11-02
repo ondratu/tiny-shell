@@ -35,6 +35,12 @@ class Manager : public tiny::Object {
     //! Block until an event is queued; false when a signal asks to quit
     bool wait_for_event();
 
+    //! Milliseconds to the first overdue ping, -1 when none waits
+    int ping_timeout_ms() const;
+
+    //! Mark the windows that did not answer their ping in time
+    void expire_pings();
+
     //! Grab (or release) the Super keys that open the launcher
     void grab_super(bool grab);
 

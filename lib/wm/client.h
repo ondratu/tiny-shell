@@ -104,6 +104,12 @@ class Client : public tiny::Container, public Window {
     //! Show the parts the hints allow, the others are hidden
     void on_motif_hints_changed(unsigned long new_decorations) override;
 
+    //! The title with a note when the window does not answer
+    std::string title_text() const;
+
+    //! Mark the title of a window that does not answer
+    void on_responding_changed() override;
+
     //! The height of the title bar, none without `DECOR_TITLE`
     int header_height() const;
 

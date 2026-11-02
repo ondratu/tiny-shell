@@ -492,6 +492,7 @@ TEST_F(ManagerTest, the_supported_properties_are_published_on_the_root)
     EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_CLOSE_WINDOW),
               0);
     EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_STATE), 0);
+    EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_PING), 0);
 }
 
 TEST_F(ManagerTest, a_check_window_with_the_name_proves_the_manager_runs)
@@ -730,6 +731,56 @@ TEST_F(ManagerTest, close_window_request_asks_the_client_to_close)
     c.sync(); // the manager sends the message over its own connection
     ASSERT_TRUE(XCheckTypedEvent(c.display, ClientMessage, &e));
     EXPECT_EQ(static_cast<Atom>(e.xclient.data.l[0]), dsp().WM_DELETE_WINDOW);
+}
+
+TEST_F(ManagerTest, the_echo_of_a_ping_is_taken_from_the_root)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const auto now = WmWindow::Clock::now();
+    window->ping(now);
+    window->expire_ping(now + WmWindow::ping_timeout);
+    ASSERT_FALSE(window->is_responding());
+
+    // the window is named in data[2]
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = root_window();
+    e.xclient.message_type = dsp().WM_PROTOCOLS;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = static_cast<long>(dsp()._NET_WM_PING);
+    e.xclient.data.l[2] = static_cast<long>(c.window);
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    run_loop();
+
+    EXPECT_TRUE(window->is_responding());
+}
+
+TEST_F(ManagerTest, the_loop_wakes_up_for_the_first_overdue_ping)
+{
+    start();
+    FakeClient& c = add_client();
+    FakeClient& d = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    d.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    EXPECT_EQ(manager->ping_timeout_ms(), -1);
+
+    const auto now = WmWindow::Clock::now();
+    manager->wm_windows[c.window]->ping(now);
+    manager->wm_windows[d.window]->ping(now - std::chrono::seconds(1));
+
+    const int ms = manager->ping_timeout_ms();
+    EXPECT_GT(ms, 3000);
+    EXPECT_LE(ms, 4000);
+    manager->expire_pings(); // nothing is overdue yet
+    EXPECT_TRUE(manager->wm_windows[c.window]->is_responding());
 }
 
 TEST_F(ManagerTest, requests_of_an_unknown_window_are_ignored)
