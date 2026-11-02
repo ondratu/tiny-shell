@@ -607,6 +607,19 @@ TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)
     EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
 }
 
+TEST_F(ManagerTest, a_minimized_window_is_not_published_as_active)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    manager->wm_windows[c.window]->minimize();
+
+    EXPECT_EQ((root_property<::Window>(dsp()._NET_ACTIVE_WINDOW, XA_WINDOW)),
+              (std::vector<::Window>{None}));
+}
+
 TEST_F(ManagerTest, close_window_request_asks_the_client_to_close)
 {
     start();
