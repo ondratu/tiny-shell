@@ -146,22 +146,17 @@ bool takes_focus(bool has_time, unsigned long time, bool has_last,
 }
 
 Window::Window(::Window child_arg, ::Window root_arg,
-               unsigned long functions_arg):
+               unsigned long functions_arg, const tiny::Rect& area):
     child(child_arg),
     root(root_arg),
     dsp(tiny::get_display()),
-    functions(functions_arg)
+    functions(functions_arg),
+    work_area(area)
 {
     hints = XAllocSizeHints();
     if (hints == nullptr) {
         throw std::bad_alloc();
     }
-
-    // the whole screen below the panel, until the manager gives the real one
-    XWindowAttributes screen;
-    XGetWindowAttributes(dsp, root_arg, &screen);
-    work_area = {0, tiny::theme.wm_panel, screen.width,
-                 screen.height - tiny::theme.wm_panel};
 
     update_protocols();
     update_properties();
@@ -181,11 +176,8 @@ Window::Window(::Window child_arg, ::Window root_arg,
             state.height = hints->min_height;
         }
 
-        XWindowAttributes attrs;
-        XGetWindowAttributes(dsp, root_arg,
-                             &attrs); //!< TODO: get screen size instead
-        state.width = std::max(state.width, attrs.width / 3 * 2);
-        state.height = std::max(state.height, attrs.height / 3 * 2);
+        state.width = std::max(state.width, work_area.width / 3 * 2);
+        state.height = std::max(state.height, work_area.height / 3 * 2);
 
         if (hints->flags & PMaxSize) {
             state.width = std::min(state.width, hints->max_width);
@@ -234,8 +226,7 @@ Window* Window::create(::Window root, ::Window child,
                        const tiny::Rect& area)
 {
     const tiny::Display& display = tiny::get_display();
-    auto* win = new Window(child, root, functions);
-    win->work_area = area;
+    auto* win = new Window(child, root, functions, area);
 
     // inside of the work area, the border is outside of the window
     const tiny::Rect place =

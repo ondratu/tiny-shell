@@ -15,7 +15,8 @@ class Client : public tiny::Container, public Window {
 
   public:
     Client(::Window child, ::Window root, int width, int height,
-           unsigned long functions, unsigned long decorations);
+           unsigned long functions, unsigned long decorations,
+           const tiny::Rect& area);
 
     ~Client() override;
 

@@ -50,7 +50,8 @@ class ClientTest : public ::testing::Test {
     {
         const XWindowAttributes a = client.attrs();
         win = std::make_unique<Probe>(client.window, root_window(), a.width,
-                                      a.height, functions, 0xFFFF);
+                                      a.height, functions, 0xFFFF,
+                                      screen_area());
         win->setup(root_window(), a.x, a.y);
         pump_events();
         return win.get();
@@ -168,7 +169,8 @@ TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
     win = std::make_unique<Probe>(
             client.window, root_window(), a.width, a.height, 0xFFFF,
             tiny::wm::MotifWMHints::DECOR_TITLE |
-                    tiny::wm::MotifWMHints::DECOR_MINIMIZE);
+                    tiny::wm::MotifWMHints::DECOR_MINIMIZE,
+            screen_area());
     win->setup(root_window(), a.x, a.y);
     pump_events();
 
@@ -664,8 +666,8 @@ TEST_F(ClientTest, set_focus_raises_the_window)
     FakeClient other(100, 100);
     other.map();
     const XWindowAttributes a = other.attrs();
-    Probe second(other.window, root_window(), a.width, a.height, 0xFFFF,
-                 0xFFFF);
+    Probe second(other.window, root_window(), a.width, a.height, 0xFFFF, 0xFFFF,
+                 screen_area());
     second.setup(root_window(), a.x, a.y);
     ASSERT_EQ(children_of(root_window()).back(), second.get_window());
 

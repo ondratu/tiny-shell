@@ -18,9 +18,10 @@ extern std::shared_ptr<Display> display;
 namespace tiny::wm {
 
 Client::Client(::Window child_arg, ::Window root_arg, int w, int h,
-               unsigned long functions_arg, unsigned long decorations_arg):
+               unsigned long functions_arg, unsigned long decorations_arg,
+               const tiny::Rect& area):
     tiny::Container(w, h + tiny::theme.wm_win_header, "wm_window"),
-    Window(child_arg, root_arg, functions_arg),
+    Window(child_arg, root_arg, functions_arg, area),
     decorations(decorations_arg),
     header(w, tiny::theme.wm_win_header),
     shadow(w, h + tiny::theme.wm_win_header)
@@ -78,8 +79,7 @@ Window* Client::create(::Window root, ::Window child,
     const tiny::Rect place = first_place(attrs, area);
     const int client_height = place.height - tiny::theme.wm_win_header;
     auto* win = new Client(child, root, place.width, client_height, functions,
-                           decorations);
-    win->work_area = area;
+                           decorations, area);
     if (place.width != attrs.width || client_height != attrs.height) {
         XResizeWindow(win->dsp, child, tiny::x_dim(place.width),
                       tiny::x_dim(client_height));
@@ -246,8 +246,8 @@ void Client::stack_under(::Window sibling)
     XConfigureWindow(display, window, CWSibling | CWStackMode, &changes);
     if (is_resizable()) {
         changes.sibling = window;
-        XConfigureWindow(display, shadow.get_window(),
-                         CWSibling | CWStackMode, &changes); // under the frame
+        XConfigureWindow(display, shadow.get_window(), CWSibling | CWStackMode,
+                         &changes); // under the frame
     }
 }
 

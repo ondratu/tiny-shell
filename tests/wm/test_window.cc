@@ -26,7 +26,7 @@ class WindowTest : public ::testing::Test {
     std::unique_ptr<WmWindow> manage(unsigned long functions = 0xFFFF)
     {
         return std::make_unique<WmWindow>(client.window, root_window(),
-                                          functions);
+                                          functions, screen_area());
     }
 };
 
@@ -795,7 +795,7 @@ class SizedWindow : public WmWindow {
 TEST_F(WindowTest, removed_normal_hints_leave_no_limits)
 {
     client.set_size_hints(PMinSize | PMaxSize, 300, 200, 300, 200);
-    SizedWindow window(client.window, root_window(), 0xFFFF);
+    SizedWindow window(client.window, root_window(), 0xFFFF, screen_area());
     ASSERT_NE(window.hint_flags() & PMinSize, 0);
 
     XDeleteProperty(client.display, client.window, XA_WM_NORMAL_HINTS);
@@ -805,15 +805,17 @@ TEST_F(WindowTest, removed_normal_hints_leave_no_limits)
     EXPECT_EQ(window.hint_flags(), 0);
 }
 
-TEST_F(WindowTest, maximized_window_without_size_gets_two_thirds_of_screen)
+TEST_F(WindowTest,
+       maximized_window_without_size_gets_two_thirds_of_the_work_area)
 {
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    const SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF,
+                             screen_area());
 
-    EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
-    EXPECT_EQ(window.restore_size().height, screen().height / 3 * 2);
+    EXPECT_EQ(window.restore_size().width, screen_area().width / 3 * 2);
+    EXPECT_EQ(window.restore_size().height, screen_area().height / 3 * 2);
 }
 
 TEST_F(WindowTest, maximized_window_is_not_smaller_than_its_minimum_size)
@@ -824,7 +826,8 @@ TEST_F(WindowTest, maximized_window_is_not_smaller_than_its_minimum_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    const SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF,
+                             screen_area());
 
     EXPECT_EQ(window.restore_size().width, min_w);
     EXPECT_EQ(window.restore_size().height, min_h);
@@ -836,7 +839,8 @@ TEST_F(WindowTest, maximized_window_is_not_bigger_than_its_maximum_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    const SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF,
+                             screen_area());
 
     EXPECT_EQ(window.restore_size().width, 120);
     EXPECT_EQ(window.restore_size().height, 90);
@@ -848,7 +852,8 @@ TEST_F(WindowTest, maximized_window_with_aspect_ratio_still_gets_a_size)
     client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
                       dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
 
-    const SizedWindow window(client.window, root_window(), 0xFFFF);
+    const SizedWindow window(client.window, root_window(), 0xFFFF,
+                             screen_area());
 
     EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
 }
