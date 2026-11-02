@@ -1738,3 +1738,22 @@ TEST_F(ClientTest, the_title_says_when_the_window_does_not_respond)
     win->pong();
     EXPECT_EQ(win->header.get_title(), "Editor");
 }
+
+TEST_F(ClientTest, the_title_that_changed_meanwhile_comes_back_when_it_responds)
+{
+    client.set_title("Editor");
+    client.set_protocols({dsp()._NET_WM_PING});
+    build();
+    const auto now = Probe::Clock::now();
+    win->ping(now);
+    win->expire_ping(now + Probe::ping_timeout);
+    client.set_title("Report");
+    XEvent e = make_event(PropertyNotify);
+    e.xproperty.atom = dsp().WM_NAME;
+    send(client.window, e);
+    EXPECT_EQ(win->header.get_title(), "Report (not responding)");
+
+    win->pong();
+
+    EXPECT_EQ(win->header.get_title(), "Report");
+}

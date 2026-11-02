@@ -12,6 +12,7 @@
 #include "wm/panel.h"
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
+#include "wm/unresponsive_dialog.h"
 #include "wm/dock.h"
 #include "wm/selection.h"
 #include "wm/work_area.h"
@@ -40,11 +41,19 @@ class Manager : public tiny::Object {
     //! Block until an event is queued; false when a signal asks to quit
     bool wait_for_event();
 
-    //! Milliseconds to the first overdue ping, -1 when none waits
+    //! Milliseconds to the next ping, its deadline or the question to the
+    //! user, -1 when nothing waits
     int ping_timeout_ms() const;
 
-    //! Mark the windows that did not answer their ping in time
-    void expire_pings();
+    //! Ping the windows, mark those that did not answer in time and ask the
+    //! user about the ones that do not respond for long
+    void check_pings();
+
+    //! Show the dialog for a window that does not respond
+    void ask_to_quit(Window* window);
+
+    //! Hide the dialog; the window answered, is gone or the user chose
+    void close_unresponsive_dialog();
 
     //! Grab (or release) the Super keys that open the launcher
     void grab_super(bool grab);
@@ -215,6 +224,8 @@ class Manager : public tiny::Object {
 
     Panel wm_panel;
     RunDialog wm_run;
+    UnresponsiveDialog wm_unresponsive;
+    Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
     Dock wm_dock;
 

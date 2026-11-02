@@ -9,10 +9,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <climits>
+#include <csignal>
 #include <memory>
 #include <new>
 
 #include "object.h"
+#include "wm/process.h"
 #include "wm/window.h"
 #include "wm/work_area.h"
 #include "image/pixmap.h"
@@ -887,11 +889,52 @@ bool Window::ask_to_close()
 
 void Window::close()
 {
-    if (!responding || !ask_to_close()) {
+    if (!responding) {
+        // the user decides, the next ping may even bring the client back
+        ask_at = Clock::now();
+        on_unresponsive(this, XEvent());
+        return;
+    }
+    if (!ask_to_close()) {
         XKillClient(dsp, child);
         return;
     }
-    ping(Clock::now()); // the next click kills it, when it does not answer
+    ping(Clock::now()); // find out whether it answers
+}
+
+pid_t Window::get_killable_pid() const
+{
+    Atom type;
+    int format;
+    unsigned long nitems;
+    unsigned long leftover;
+    unsigned char* data = nullptr;
+    unsigned long pid = 0;
+    if (XGetWindowProperty(dsp, child, dsp._NET_WM_PID, 0, 1, False,
+                           XA_CARDINAL, &type, &format, &nitems, &leftover,
+                           &data) == Success &&
+        data) {
+        if (type == XA_CARDINAL && format == 32 && nitems == 1) {
+            pid = *reinterpret_cast<unsigned long*>(data);
+        }
+        XFree(data);
+    }
+    std::string machine;
+    XTextProperty text = {};
+    if (XGetWMClientMachine(dsp, child, &text) && text.value) {
+        machine = reinterpret_cast<char*>(text.value);
+        XFree(text.value);
+    }
+    return killable_pid(pid, machine, local_host_name());
+}
+
+void Window::kill_client()
+{
+    const pid_t pid = get_killable_pid();
+    if (pid) {
+        kill(pid, SIGKILL);
+    }
+    XKillClient(dsp, child);
 }
 
 void Window::ping(Clock::time_point now)
@@ -910,6 +953,7 @@ void Window::ping(Clock::time_point now)
     XSendEvent(dsp, child, false, NoEventMask, reinterpret_cast<XEvent*>(&msg));
     ping_pending = true;
     ping_deadline = now + ping_timeout;
+    next_ping = now + ping_interval;
 }
 
 void Window::pong()
@@ -927,9 +971,43 @@ bool Window::expire_ping(Clock::time_point now)
         return false;
     }
     ping_pending = false;
-    responding = false;
-    on_responding_changed();
+    if (responding) {
+        responding = false;
+        ask_at = now + ask_delay;
+        on_responding_changed();
+    }
     return true;
+}
+
+void Window::ping_if_due(Clock::time_point now)
+{
+    if (!get_minimized() && now >= next_ping) {
+        ping(now);
+    }
+}
+
+std::optional<Window::Clock::time_point> Window::get_ping_wakeup() const
+{
+    if (ping_pending) {
+        return ping_deadline;
+    }
+    if (!protocols.count(dsp._NET_WM_PING) || get_minimized()) {
+        return std::nullopt;
+    }
+    return next_ping;
+}
+
+std::optional<Window::Clock::time_point> Window::get_ask_time() const
+{
+    if (responding) {
+        return std::nullopt;
+    }
+    return ask_at;
+}
+
+void Window::postpone_ask(Clock::time_point now)
+{
+    ask_at = now + wait_delay;
 }
 
 void Window::minimize()
