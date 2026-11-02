@@ -318,6 +318,9 @@ void Manager::restack_layers()
             window->lower();
         }
     }
+    for (const ::Window desktop : wm_desktops) { // under all the others
+        XLowerWindow(display, desktop);
+    }
     // the focused window last, so it stays on top of the others in its layer
     const auto raise_above = [this](Window* window) {
         if (window->is_above() && !window->get_minimized()) {
@@ -852,6 +855,9 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
                 track_dock(child);
                 return nullptr;
             case Window::WMType::DESKTOP:
+                wm_desktops.insert(child);
+                XLowerWindow(display, child);
+                return nullptr; // it is not framed, but it stays at the bottom
             case Window::WMType::SPLASH:
                 return nullptr; // do not manage this window type
             default:
@@ -984,6 +990,7 @@ void Manager::on_property_notify(const XPropertyEvent& e)
 void Manager::on_unmap_notify(const XUnmapEvent& e)
 {
     untrack_dock(e.window); // a hidden dock reserves nothing
+    wm_desktops.erase(e.window);
     // TODO: could be append to signal handlers on wm_window.window
     const auto it = wm_windows.find(e.window);
     if (it == wm_windows.end() || it->second->get_minimized()) {
@@ -995,6 +1002,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
 void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
 {
     untrack_dock(e.window);
+    wm_desktops.erase(e.window);
     unmanage(e.window, false);
 }
 
