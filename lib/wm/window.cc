@@ -93,6 +93,8 @@ bool has_resize_increment(const XSizeHints& hints)
            (hints.width_inc > 1 || hints.height_inc > 1);
 }
 
+static bool read_user_time_window(::Window window, ::Window& named);
+
 //! The bits of a Motif field that are allowed; `all` turns the bits around
 static unsigned long motif_allowed(unsigned long value, unsigned long all,
                                    unsigned long everything)
@@ -1295,9 +1297,46 @@ void Window::on_property_notify(const XEvent& e, void*)
         return;
     }
 
+    if (e.xproperty.atom == dsp._NET_WM_USER_TIME_WINDOW) {
+        watch_user_time_window();
+        on_user_time(this, XEvent());
+        return;
+    }
+
     char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
     TINY_LOG("Unhandled property update: %s", atom_name);
     XFree(atom_name);
+}
+
+void Window::on_user_time_window_notify(const XEvent& e, void*)
+{
+    if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
+        on_user_time(this, XEvent());
+    }
+}
+
+void Window::watch_user_time_window()
+{
+    ::Window named = None;
+    if (!read_user_time_window(child, named)) {
+        named = None;
+    }
+    if (named == child) {
+        named = None;
+    }
+    if (named == user_time_window) {
+        return;
+    }
+    if (user_time_window != None) {
+        disconnect_window(PropertyNotify, user_time_window);
+    }
+    user_time_window = named;
+    if (named != None) {
+        XSelectInput(dsp, named, PropertyChangeMask);
+        connect_window(PropertyNotify, named,
+                       reinterpret_cast<tiny::event_signal_t>(
+                               &Window::on_user_time_window_notify));
+    }
 }
 
 void Window::on_key_release(const XEvent& e, void*)
@@ -1316,6 +1355,8 @@ void Window::set_events()
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync, GrabModeSync,
                 None, None);
     tiny::x_grab_key(dsp, XKeysymToKeycode(dsp, XK_F4), Mod1Mask, child);
+
+    watch_user_time_window();
 
     connect_window(
             FocusIn, child,
@@ -1420,9 +1461,37 @@ Window::WMType Window::get_net_wm_type(::Window window)
     return wm_type;
 }
 
+static bool read_user_time_window(::Window window, ::Window& named)
+{
+    const tiny::Display& display = tiny::get_display();
+    Atom returned_type;
+    int size;
+    unsigned long nitems = 0;
+    unsigned long bytes_left;
+    unsigned char* data = nullptr;
+
+    const bool found =
+            XGetWindowProperty(display, window,
+                               display._NET_WM_USER_TIME_WINDOW, 0L, 1L, false,
+                               XA_WINDOW, &returned_type, &size, &nitems,
+                               &bytes_left, &data) == Success &&
+            data && nitems == 1 && size == 32 && returned_type == XA_WINDOW;
+    if (found) {
+        named = *reinterpret_cast<::Window*>(data);
+    }
+    if (data) {
+        XFree(data);
+    }
+    return found;
+}
+
 bool Window::get_user_time(::Window window, unsigned long& time)
 {
     const tiny::Display& display = tiny::get_display();
+    ::Window named;
+    if (read_user_time_window(window, named) && named != None) {
+        window = named; // the time is kept on a window of its own
+    }
     Atom returned_type;
     int size;
     unsigned long nitems = 0;

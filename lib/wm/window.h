@@ -330,7 +330,8 @@ class Window : public tiny::Object {
     //! Return _NET_WM_TYPE or WMType::NORMAL when property can't be read
     static WMType get_net_wm_type(::Window window);
 
-    //! `_NET_WM_USER_TIME` of the window, false when it has none
+    //! `_NET_WM_USER_TIME` of the window, or of the window its
+    //! `_NET_WM_USER_TIME_WINDOW` names; false when there is none
     static bool get_user_time(::Window window, unsigned long& time);
 
     //! Return _MOTIF_WM_HINTS od return ALL flags set
@@ -368,6 +369,12 @@ class Window : public tiny::Object {
     void on_net_wm_state(const XClientMessageEvent& e);
 
     virtual void on_property_notify(const XEvent& e, void* data);
+
+    //! `_NET_WM_USER_TIME` changed on the window of `_NET_WM_USER_TIME_WINDOW`
+    void on_user_time_window_notify(const XEvent& e, void* data);
+
+    //! Listen to the window of `_NET_WM_USER_TIME_WINDOW` (none: the client)
+    void watch_user_time_window();
 
     //! `_MOTIF_WM_HINTS` changed; `functions` is new, the decorations are not
     virtual void on_motif_hints_changed(unsigned long) {}
@@ -413,6 +420,7 @@ class Window : public tiny::Object {
     unsigned long wm_states = 0;
     ::Window transient_for = None;
     ::Window window_group = None;
+    ::Window user_time_window = None; //!< listened to, None: the client
     WMType wm_type = WMType::NORMAL;
     std::string wm_name;
     bool is_net_wm_name = true;
