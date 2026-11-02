@@ -45,12 +45,12 @@ Struts read_struts(::Window window)
     return {edge(v[0]), edge(v[1]), edge(v[2]), edge(v[3])};
 }
 
-tiny::Rect compute_work_area(int screen_width, int screen_height, int panel,
+tiny::Rect compute_work_area(int screen_width, int screen_height,
                              const std::vector<Struts>& docks)
 {
     int left = 0;
     int right = 0;
-    int top = panel;
+    int top = 0;
     int bottom = 0;
     for (const Struts& s : docks) {
         left = std::max(left, s.left);

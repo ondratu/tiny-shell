@@ -74,6 +74,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_panel.realize(root_arg, 0, 0);
     wm_panel.set_events();
+    publish_panel_strut();
 
     wm_dock.realize(root_arg, attrs.width / 2,
                     attrs.height - wm_dock.get_height() -
@@ -960,17 +961,36 @@ void Manager::untrack_dock(::Window dock)
     }
 }
 
+void Manager::publish_panel_strut()
+{
+    // like any panel: the others can see what is reserved
+    const Struts strut = panel_strut();
+    const long data[12] = {strut.left, strut.right, strut.top, strut.bottom,
+                           0,          0,           0,         0,
+                           0,          0,           0,         0};
+    XChangeProperty(display, wm_panel.get_window(),
+                    tiny::get_display()._NET_WM_STRUT_PARTIAL, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(data), 12);
+}
+
+Struts Manager::panel_strut() const
+{
+    return {0, 0, wm_panel.get_height(), 0};
+}
+
 void Manager::update_work_area()
 {
     XWindowAttributes screen;
     XGetWindowAttributes(display, root, &screen);
     std::vector<Struts> docks;
-    docks.reserve(wm_docks.size());
+    docks.reserve(wm_docks.size() + 1);
+    docks.push_back(panel_strut()); // our own panel is a dock like the others
     for (const auto& dock : wm_docks) {
         docks.push_back(dock.second);
     }
-    const tiny::Rect area = compute_work_area(screen.width, screen.height,
-                                              tiny::theme.wm_panel, docks);
+    const tiny::Rect area =
+            compute_work_area(screen.width, screen.height, docks);
     if (area.x == work_area.x && area.y == work_area.y &&
         area.width == work_area.width && area.height == work_area.height) {
         return;

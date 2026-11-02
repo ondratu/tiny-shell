@@ -114,6 +114,12 @@ class Manager : public tiny::Object {
     //! Forget a dock that is gone or hidden
     void untrack_dock(::Window dock);
 
+    //! The top edge taken by our own panel
+    Struts panel_strut() const;
+
+    //! Write `_NET_WM_STRUT_PARTIAL` of the panel
+    void publish_panel_strut();
+
     //! Compute the work area again; windows and _NET_WORKAREA follow it
     void update_work_area();
 

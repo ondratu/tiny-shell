@@ -8,41 +8,49 @@ using tiny::wm::fit_in_area;
 using tiny::wm::read_struts;
 using tiny::wm::Struts;
 
-TEST(WorkAreaTest, without_docks_the_area_starts_under_the_panel)
+TEST(WorkAreaTest, without_struts_the_area_is_the_screen)
 {
-    const tiny::Rect a = compute_work_area(1024, 768, 30, {});
+    const tiny::Rect a = compute_work_area(1024, 768, {});
 
     EXPECT_EQ(a.x, 0);
-    EXPECT_EQ(a.y, 30);
+    EXPECT_EQ(a.y, 0);
     EXPECT_EQ(a.width, 1024);
+    EXPECT_EQ(a.height, 768);
+}
+
+TEST(WorkAreaTest, the_panel_is_a_strut_like_a_dock)
+{
+    const tiny::Rect a = compute_work_area(1024, 768, {Struts{0, 0, 30, 0}});
+
+    EXPECT_EQ(a.y, 30);
     EXPECT_EQ(a.height, 738);
 }
 
 TEST(WorkAreaTest, docks_reserve_the_edges)
 {
     const tiny::Rect a = compute_work_area(
-            1000, 800, 30,
+            1000, 800,
             {Struts{50, 0, 0, 0}, Struts{0, 20, 0, 0}, Struts{0, 0, 0, 40}});
 
     EXPECT_EQ(a.x, 50);
-    EXPECT_EQ(a.y, 30);
+    EXPECT_EQ(a.y, 0);
     EXPECT_EQ(a.width, 930);
-    EXPECT_EQ(a.height, 730);
+    EXPECT_EQ(a.height, 760);
 }
 
 TEST(WorkAreaTest, the_biggest_strut_of_an_edge_wins)
 {
     const tiny::Rect a = compute_work_area(
-            1000, 800, 30, {Struts{0, 0, 10, 0}, Struts{0, 0, 60, 0}});
+            1000, 800, {Struts{0, 0, 10, 0}, Struts{0, 0, 60, 0}});
 
-    EXPECT_EQ(a.y, 60); // the panel is 30
+    EXPECT_EQ(a.y, 60);
     EXPECT_EQ(a.height, 740);
 }
 
 TEST(WorkAreaTest, docks_cannot_take_the_whole_screen)
 {
     const tiny::Rect a =
-            compute_work_area(100, 100, 30, {Struts{500, 500, 500, 500}});
+            compute_work_area(100, 100, {Struts{500, 500, 500, 500}});
 
     EXPECT_GE(a.width, 1);
     EXPECT_GE(a.height, 1);
