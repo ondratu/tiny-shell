@@ -619,6 +619,9 @@ void Manager::main_loop()
             case UnmapNotify: // need for delete windows frames (wm_windows)
                 on_unmap_notify(event.xunmap);
                 break;
+            case SelectionClear: // another manager replaces us
+                on_selection_clear(event.xselectionclear);
+                break;
             case DestroyNotify: // the client is gone, also when minimized
                 on_destroy_notify(event.xdestroywindow);
                 break;
@@ -1310,6 +1313,14 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
         return; // unknown, or hidden by the manager itself
     }
     unmanage(e.window, true);
+}
+
+void Manager::on_selection_clear(const XSelectionClearEvent& e)
+{
+    if (selection && selection->is_lost_by(e)) {
+        tiny::error("Another window manager takes over, leaving");
+        running = false;
+    }
 }
 
 void Manager::on_destroy_notify(const XDestroyWindowEvent& e)

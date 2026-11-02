@@ -13,6 +13,7 @@
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/dock.h"
+#include "wm/selection.h"
 #include "wm/work_area.h"
 
 namespace tiny::wm {
@@ -24,6 +25,9 @@ class Manager : public tiny::Object {
     ~Manager() override;
 
     void main_loop();
+
+    //! The manager ends when another one takes this selection (`--replace`)
+    void set_selection(const Selection* owned) { selection = owned; }
 
   private:
     void set_events();
@@ -191,6 +195,7 @@ class Manager : public tiny::Object {
     void on_unmap_notify(const XUnmapEvent& e);
 
     void on_destroy_notify(const XDestroyWindowEvent& e);
+    void on_selection_clear(const XSelectionClearEvent& e);
 
     void on_property_notify(const XPropertyEvent& e);
 
@@ -227,6 +232,7 @@ class Manager : public tiny::Object {
     bool key_done;
     bool super_down = false; //!< Super is held and nothing cancelled it
     bool running;
+    const Selection* selection = nullptr;
     std::vector<::Window> reframes; //!< windows that need another frame
     //! The unmaps of this window in the serials [first, last) are our own
     struct {
