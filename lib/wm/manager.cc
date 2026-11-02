@@ -763,8 +763,8 @@ void Manager::reframe(::Window child)
     if (it == wm_windows.end()) {
         return;
     }
-    const bool was_active =
-            it->second == active && !it->second->get_minimized();
+    const bool was_minimized = it->second->get_minimized();
+    const bool was_active = it->second == active && !was_minimized;
 
     // withdrawing a window forgets its state, the client keeps it
     std::vector<Atom> states;
@@ -786,7 +786,7 @@ void Manager::reframe(::Window child)
 
     // the reparenting unmaps the client, which is not its own wish
     reframed = {child, NextRequest(display), 0};
-    unmanage(child, true);
+    unmanage(child, true, true);
     XWindowAttributes attrs;
     if (XGetWindowAttributes(display, child, &attrs)) {
         if (!states.empty()) {
@@ -800,6 +800,8 @@ void Manager::reframe(::Window child)
         XMapWindow(display, child);
         if (window && was_active) {
             focus_window(window);
+        } else if (window && was_minimized) {
+            window->minimize();
         }
     }
     XSync(display, False);
@@ -979,7 +981,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs)
     return window;
 }
 
-void Manager::unmanage(::Window child, bool alive)
+void Manager::unmanage(::Window child, bool alive, bool reframing)
 {
     const auto it = wm_windows.find(child);
     if (it == wm_windows.end()) {
@@ -1016,7 +1018,9 @@ void Manager::unmanage(::Window child, bool alive)
     publish_clients();
     // an unmap comes before the destroy, so a withdrawn parent is the same
     for (Window* dialog : dialogs) {
-        dialog->ask_to_close(); // never kill the client of a dialog
+        if (!reframing) {
+            dialog->ask_to_close(); // never kill the client of a dialog
+        }
     }
 }
 

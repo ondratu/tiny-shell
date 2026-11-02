@@ -106,7 +106,8 @@ class Manager : public tiny::Object {
     Window* manage(::Window child, const XWindowAttributes& attrs);
 
     //! Forget a client; `alive` is false when it is gone already
-    void unmanage(::Window child, bool alive);
+    //! `reframing`: the window comes back at once, so its dialogs stay
+    void unmanage(::Window child, bool alive, bool reframing = false);
 
     //! Remember the struts of a dock (a window that is not framed)
     void track_dock(::Window dock);

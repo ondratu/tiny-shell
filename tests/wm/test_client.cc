@@ -1033,6 +1033,30 @@ TEST_F(ClientTest, a_shaded_window_ignores_the_resize_of_its_client)
     EXPECT_EQ(frame().height, header_height());
 }
 
+TEST_F(ClientTest, leaving_fullscreen_keeps_the_handles_the_hints_forbid)
+{
+    using tiny::wm::MotifWMHints;
+    build(0xFFFF, MotifWMHints::DECOR_TITLE | MotifWMHints::DECOR_BORDER);
+
+    win->fullscreen(true);
+    win->fullscreen(false);
+
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsUnmapped);
+}
+
+TEST_F(ClientTest, a_hints_change_while_shaded_unrolls_the_window)
+{
+    build();
+    win->shade(true);
+
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
+                     tiny::wm::MotifWMHints::FUNC_ALL, 0);
+    pump_events();
+
+    EXPECT_FALSE(win->is_shaded());
+    EXPECT_EQ(attributes_of(win->shadow).map_state, IsViewable);
+}
+
 TEST_F(ClientTest, a_state_request_shades_the_window)
 {
     build();
