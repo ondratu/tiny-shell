@@ -54,9 +54,18 @@ class Manager : public tiny::Object {
     //! Restore, focus and remember as active at once
     void focus_window(Window* window);
 
+    //! `window` has the focus now: tell the dock and the root properties
+    void remember_active(Window* window, const XEvent& e);
+
+    //! Windows Alt + Tab walks through: the ones that have no dialog open
+    std::vector<Window*> switchable() const;
+
     void activate_next_window();
 
     void activate_prev_window();
+
+    //! The window before `window` that is not minimized, null if none
+    Window* previous_shown(const Window* window) const;
 
     //! The icon of the desktop entry of the window, for the dock
     void set_application_icon(Window* window);
@@ -68,6 +77,9 @@ class Manager : public tiny::Object {
 
     //! The managed window that `window` is a dialog of, null if it is none
     Window* parent_of(const Window* window) const;
+
+    //! A dialog of a managed window (not a toolbar, menu and the like)
+    bool is_dialog(const Window* window) const;
 
     //! Windows that are dialogs of `window`
     std::vector<Window*> transients_of(const Window* window) const;

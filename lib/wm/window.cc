@@ -114,6 +114,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
     update_protocols();
     update_properties();
     update_transient_for();
+    wm_type = get_net_wm_type(child_arg);
 
     if (properties.count(dsp._NET_WM_STATE)) {
         update_wm_states();

@@ -1603,4 +1603,184 @@ TEST_F(ManagerTest, closing_a_dialog_gives_the_focus_back_to_its_parent)
     EXPECT_NE(manager->active, manager->wm_windows[other.window]);
 }
 
+TEST_F(ManagerTest, minimizing_a_dialog_minimizes_its_parent_too)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    auto* parent_window = manager->wm_windows[parent.window];
+    auto* dialog_window = manager->wm_windows[dialog.window];
+
+    dialog_window->minimize();
+    EXPECT_TRUE(parent_window->get_minimized());
+
+    dialog_window->restore();
+    EXPECT_FALSE(parent_window->get_minimized());
+    EXPECT_FALSE(dialog_window->get_minimized());
+}
+
+TEST_F(ManagerTest, closing_a_window_does_not_restore_a_minimized_one)
+{
+    start();
+    const FakeClient& hidden = add_client();
+    run_loop();
+    const FakeClient& closed = add_client();
+    run_loop();
+    manager->wm_windows[hidden.window]->minimize();
+    manager->focus_window(manager->wm_windows[closed.window]);
+
+    XDestroyWindow(closed.display, closed.window);
+    closed.sync();
+    run_loop();
+
+    EXPECT_TRUE(manager->wm_windows[hidden.window]->get_minimized());
+    EXPECT_EQ(manager->active, nullptr);
+}
+
+TEST_F(ManagerTest, closing_a_window_focuses_the_one_before_it)
+{
+    start();
+    const FakeClient& first = add_client();
+    run_loop();
+    const FakeClient& second = add_client();
+    run_loop();
+    const FakeClient& third = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[third.window]);
+
+    XDestroyWindow(third.display, third.window);
+    third.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->active, manager->wm_windows[second.window]);
+    EXPECT_NE(manager->active, manager->wm_windows[first.window]);
+}
+
+TEST_F(ManagerTest, focusing_a_window_with_a_dialog_focuses_the_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[other.window]);
+    ASSERT_EQ(manager->active, manager->wm_windows[other.window]);
+
+    manager->focus_window(manager->wm_windows[parent.window]);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
+TEST_F(ManagerTest, focus_event_of_a_window_with_a_dialog_moves_to_the_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+
+    manager->on_window_focus(manager->wm_windows[parent.window], XEvent(),
+                             nullptr);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
+TEST_F(ManagerTest, alt_tab_skips_a_window_that_has_a_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[other.window]);
+
+    manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+
+    manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, manager->wm_windows[other.window]);
+
+    manager->on_key_press(key(XK_Tab, Mod1Mask | ShiftMask));
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
+TEST_F(ManagerTest, focusing_a_dialog_raises_its_parent_under_it)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    manager->wm_windows[other.window]->raise();
+
+    manager->focus_window(manager->wm_windows[dialog.window]);
+    XSync(dsp(), False);
+
+    ::Window root;
+    ::Window top_parent;
+    ::Window* kids = nullptr;
+    unsigned int count;
+    XQueryTree(dsp(), root_window(), &root, &top_parent, &kids, &count);
+    const auto position = [&](const FakeClient& c) {
+        return std::find(kids, kids + count, parent_of(c.window)) - kids;
+    };
+    EXPECT_GT(position(parent), position(other));
+    EXPECT_GT(position(dialog), position(parent));
+    XFree(kids);
+}
+
+TEST_F(ManagerTest, a_transient_toolbar_is_not_treated_as_a_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    const auto before = children_of(manager->wm_dock.get_window()).size();
+    FakeClient& toolbar = add_client(false);
+    set_window_type(toolbar, dsp()._NET_WM_WINDOW_TYPE_TOOLBAR);
+    toolbar.set_transient_for(parent.window);
+    toolbar.map();
+    run_loop();
+
+    EXPECT_TRUE(
+            manager->transients_of(manager->wm_windows[parent.window]).empty());
+    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before + 1);
+}
+
+TEST_F(ManagerTest, dialogs_of_each_other_do_not_stop_alt_tab)
+{
+    start();
+    const FakeClient& first = add_client();
+    run_loop();
+    const FakeClient& second = add_client();
+    run_loop();
+    XSetTransientForHint(first.display, first.window, second.window);
+    XSetTransientForHint(second.display, second.window, first.window);
+    first.sync();
+    second.sync();
+    manager->wm_windows[first.window]->update_transient_for();
+    manager->wm_windows[second.window]->update_transient_for();
+
+    manager->on_key_press(key(XK_Tab));
+
+    EXPECT_NE(manager->active, nullptr);
+}
+
 } // namespace
