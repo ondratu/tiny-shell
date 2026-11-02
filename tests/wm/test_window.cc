@@ -1181,6 +1181,48 @@ TEST_F(WindowTest, client_message_toggles_fullscreen)
     EXPECT_FALSE(window->is_fullscreen());
 }
 
+TEST_F(WindowTest, client_message_toggles_modal)
+{
+    client.map();
+    auto window = manage();
+    window->set_events();
+    const auto modal = [&](long action) {
+        send(client.window,
+             client_message(client.window, dsp()._NET_WM_STATE, action,
+                            static_cast<long>(dsp()._NET_WM_STATE_MODAL)));
+    };
+
+    modal(tiny::Display::_NET_WM_STATE_ADD);
+    EXPECT_TRUE(window->is_modal());
+    modal(tiny::Display::_NET_WM_STATE_REMOVE);
+    EXPECT_FALSE(window->is_modal());
+    modal(tiny::Display::_NET_WM_STATE_TOGGLE);
+    EXPECT_TRUE(window->is_modal());
+    modal(tiny::Display::_NET_WM_STATE_TOGGLE);
+    EXPECT_FALSE(window->is_modal());
+}
+
+TEST_F(WindowTest, modal_state_is_published)
+{
+    client.map();
+    auto window = manage();
+
+    window->set_modal(true);
+
+    std::vector<Atom> atoms;
+    window->get_wm_states(atoms);
+    EXPECT_NE(std::find(atoms.begin(), atoms.end(), dsp()._NET_WM_STATE_MODAL),
+              atoms.end());
+}
+
+TEST_F(WindowTest, ask_to_close_needs_the_delete_protocol)
+{
+    client.map();
+    auto window = manage();
+
+    EXPECT_FALSE(window->ask_to_close());
+}
+
 TEST_F(WindowTest, client_message_with_other_state_changes_is_ignored)
 {
     client.map();

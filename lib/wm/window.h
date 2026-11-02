@@ -132,6 +132,10 @@ class Window : public tiny::Object {
 
     virtual bool skip_pager() const { return wm_states & WMState::SKIP_PAGER; }
 
+    //! A modal dialog keeps the focus away from its parent
+    virtual bool is_modal() const { return wm_states & WMState::MODAL; }
+    void set_modal(bool modal);
+
     virtual bool get_minimized() const { return wm_states & WMState::HIDDEN; }
     void set_minimized(bool minimized);
 
@@ -197,6 +201,8 @@ class Window : public tiny::Object {
 
     //! Send WM_DELETE_WINDOW to window or xkill that
     virtual void close();
+    //! Send `WM_DELETE_WINDOW`; false (nothing sent) without that protocol
+    bool ask_to_close();
 
     virtual void minimize();
     virtual void maximize();
@@ -249,6 +255,7 @@ class Window : public tiny::Object {
     tiny::Signal on_focus;
     //! The window is minimized or restored, see `get_minimized()`
     tiny::Signal on_minimize;
+    tiny::Signal on_modal; //!< The modal state changed
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_motion;
     //! The window is dragged by its body with Alt or Super held

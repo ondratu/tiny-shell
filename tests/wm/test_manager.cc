@@ -1660,12 +1660,13 @@ TEST_F(ManagerTest, closing_a_window_focuses_the_one_before_it)
     EXPECT_NE(manager->active, manager->wm_windows[first.window]);
 }
 
-TEST_F(ManagerTest, focusing_a_window_with_a_dialog_focuses_the_dialog)
+TEST_F(ManagerTest, focusing_a_window_with_a_modal_dialog_focuses_the_dialog)
 {
     start();
     const FakeClient& parent = add_client();
     run_loop();
     FakeClient& dialog = add_client(false);
+    dialog.set_modal();
     dialog.set_transient_for(parent.window);
     dialog.map();
     run_loop();
@@ -1679,12 +1680,14 @@ TEST_F(ManagerTest, focusing_a_window_with_a_dialog_focuses_the_dialog)
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }
 
-TEST_F(ManagerTest, focus_event_of_a_window_with_a_dialog_moves_to_the_dialog)
+TEST_F(ManagerTest,
+       focus_event_of_a_window_with_a_modal_dialog_moves_to_the_dialog)
 {
     start();
     const FakeClient& parent = add_client();
     run_loop();
     FakeClient& dialog = add_client(false);
+    dialog.set_modal();
     dialog.set_transient_for(parent.window);
     dialog.map();
     run_loop();
@@ -1695,12 +1698,13 @@ TEST_F(ManagerTest, focus_event_of_a_window_with_a_dialog_moves_to_the_dialog)
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }
 
-TEST_F(ManagerTest, alt_tab_skips_a_window_that_has_a_dialog)
+TEST_F(ManagerTest, alt_tab_skips_a_window_that_has_a_modal_dialog)
 {
     start();
     const FakeClient& parent = add_client();
     run_loop();
     FakeClient& dialog = add_client(false);
+    dialog.set_modal();
     dialog.set_transient_for(parent.window);
     dialog.map();
     run_loop();
@@ -1784,3 +1788,147 @@ TEST_F(ManagerTest, dialogs_of_each_other_do_not_stop_alt_tab)
 }
 
 } // namespace
+
+TEST_F(ManagerTest, a_dialog_that_is_not_modal_leaves_the_focus_to_its_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+    manager->focus_window(manager->wm_windows[other.window]);
+
+    manager->focus_window(manager->wm_windows[parent.window]);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[parent.window]);
+}
+
+TEST_F(ManagerTest, alt_tab_visits_a_dialog_that_is_not_modal_and_its_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    manager->focus_window(manager->wm_windows[dialog.window]);
+
+    manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, manager->wm_windows[parent.window]);
+
+    manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}
+
+TEST_F(ManagerTest, focusing_the_parent_raises_a_dialog_that_is_not_modal)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
+
+    manager->focus_window(manager->wm_windows[parent.window]);
+
+    ::Window root_return;
+    ::Window parent_return;
+    ::Window* children = nullptr;
+    unsigned int count = 0;
+    XQueryTree(manager->display, root_window(), &root_return, &parent_return,
+               &children, &count);
+    const auto position = [&](const FakeClient& c) {
+        const ::Window frame = manager->wm_windows[c.window]->frame();
+        return std::find(children, children + count, frame) - children;
+    };
+    EXPECT_GT(position(dialog), position(parent));
+    EXPECT_GT(position(parent), position(other));
+    XFree(children);
+}
+
+TEST_F(ManagerTest, a_modal_state_request_changes_the_dialog)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    auto* dialog_window = manager->wm_windows[dialog.window];
+    ASSERT_FALSE(manager->modal_dialogs_of(manager->wm_windows[parent.window])
+                         .size());
+
+    dialog_window->set_modal(true);
+    EXPECT_EQ(manager->modal_dialogs_of(manager->wm_windows[parent.window]),
+              std::vector<tiny::wm::Window*>{dialog_window});
+
+    dialog_window->set_modal(false);
+    EXPECT_TRUE(manager->modal_dialogs_of(manager->wm_windows[parent.window])
+                        .empty());
+}
+
+TEST_F(ManagerTest, closing_the_parent_asks_its_dialogs_to_close)
+{
+    start();
+    FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.set_protocols({dsp().WM_DELETE_WINDOW});
+    dialog.map();
+    XSelectInput(dialog.display, dialog.window, NoEventMask);
+    run_loop();
+    pump_events();
+
+    XDestroyWindow(parent.display, parent.window);
+    parent.sync();
+    run_loop();
+
+    XEvent e;
+    dialog.sync();
+    ASSERT_TRUE(XCheckTypedEvent(dialog.display, ClientMessage, &e));
+    EXPECT_EQ(static_cast<Atom>(e.xclient.data.l[0]), dsp().WM_DELETE_WINDOW);
+}
+
+TEST_F(ManagerTest, a_dialog_without_the_delete_protocol_is_not_killed)
+{
+    start();
+    FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+
+    XDestroyWindow(parent.display, parent.window);
+    parent.sync();
+    run_loop();
+
+    EXPECT_TRUE(is_managed(dialog));
+}
+
+TEST_F(ManagerTest, a_dialog_that_becomes_modal_takes_the_focus_from_its_parent)
+{
+    start();
+    const FakeClient& parent = add_client();
+    run_loop();
+    FakeClient& dialog = add_client(false);
+    dialog.set_transient_for(parent.window);
+    dialog.map();
+    run_loop();
+    manager->focus_window(manager->wm_windows[parent.window]);
+    ASSERT_EQ(manager->active, manager->wm_windows[parent.window]);
+
+    manager->wm_windows[dialog.window]->set_modal(true);
+
+    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+}

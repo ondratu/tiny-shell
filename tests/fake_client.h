@@ -88,6 +88,8 @@ class FakeClient {
         set_atoms(dsp()._NET_WM_STATE, atoms);
     }
 
+    void set_modal() { set_state({dsp()._NET_WM_STATE_MODAL}); }
+
     void set_transient_for(::Window parent)
     {
         XSetTransientForHint(display, window, parent);
