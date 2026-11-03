@@ -11,8 +11,6 @@ class AppMenu : public tiny::Popover {
 
     ~AppMenu() override;
 
-    void realize(::Window parent, int x = 0, int y = 0) override;
-
   private:
     //tiny::LabelButton urxvt;
 };

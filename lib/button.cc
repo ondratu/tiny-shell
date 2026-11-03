@@ -74,11 +74,6 @@ void LabelButton::set_events(long mask)
     connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
-void LabelButton::realize(Window parent_arg, int x, int y)
-{
-    Button::realize(parent_arg, x, y);
-}
-
 void LabelButton::set_text(const std::string& text_arg)
 {
     this->text = text_arg;

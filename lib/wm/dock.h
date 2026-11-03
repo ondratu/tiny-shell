@@ -28,7 +28,7 @@ class DockButton : public tiny::Widget {
 
 class DockIcon : public DockButton {
   public:
-    DockIcon(Window* task);
+    explicit DockIcon(Window* task);
     ~DockIcon() override;
 
   protected:

@@ -332,9 +332,9 @@ class Window {
     void get_wm_states(std::vector<Atom>& atoms);
     void publish_wm_states();
 
-    std::string get_wm_name() const { return wm_name; }
+    const std::string& get_wm_name() const { return wm_name; }
 
-    std::string get_wm_icon_name() const { return wm_icon_name; }
+    const std::string& get_wm_icon_name() const { return wm_icon_name; }
 
     /* @short Return icon scaled to tiny::theme.wm_icon size.
          *

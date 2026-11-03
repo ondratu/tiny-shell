@@ -690,6 +690,7 @@ void Client::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
     }
 }
 
+// cppcheck-suppress constParameterPointer ; the signature of a handler
 void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 {
     auto mask = static_cast<uint16_t>(reinterpret_cast<size_t>(data));
