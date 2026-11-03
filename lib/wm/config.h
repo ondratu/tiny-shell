@@ -18,6 +18,9 @@ namespace tiny::wm {
  * reboot = sudo reboot
  * poweroff = doas poweroff
  * terminal = xterm -e
+ *
+ * [dock]
+ * favorites = firefox.desktop;org.gnome.Nautilus.desktop
  * ```
  */
 struct Config {
@@ -25,6 +28,8 @@ struct Config {
     std::string reboot_command = "systemctl reboot"; //!< [commands]
     std::string poweroff_command = "systemctl poweroff"; //!< [commands]
     std::vector<std::string> terminal = {"xterm", "-e"}; //!< [commands]
+    //! [dock] favorites: ids of desktop files, `;` between them
+    std::vector<std::string> favorites;
 };
 
 /**
@@ -38,6 +43,14 @@ struct Config {
 std::vector<std::string> config_files(const char* config_home,
                                       const char* config_dirs,
                                       const char* home);
+
+/**
+ * @short The file of the user, the one that tiny-shell writes.
+ *
+ * `tiny-shell.ini` in `$XDG_CONFIG_HOME` (or `$HOME/.config`), empty when
+ * neither is known. It is the last of `config_files`.
+ */
+std::string user_config_file(const char* config_home, const char* home);
 
 //! The text of a configuration file and its name for the messages
 struct ConfigSource {
@@ -60,5 +73,17 @@ Config parse_config(const std::vector<ConfigSource>& sources,
 /// Read the files (a file that is missing is not an error), see `parse_config`.
 Config load_config(const std::vector<std::string>& files,
                    std::vector<std::string>* problems = nullptr);
+
+/**
+ * @short Write the favorite applications to the file of the user.
+ *
+ * The file is made again from the values it has (a comment is lost, a line
+ * that was wrong is gone), with `[dock] favorites` replaced. It is written to
+ * a temporary file first and renamed, so a failure leaves the old file.
+ * Returns false and tells why in `error`, when it is given.
+ */
+bool save_favorites(const std::string& file,
+                    const std::vector<std::string>& favorites,
+                    std::string* error = nullptr);
 
 } // namespace tiny::wm
