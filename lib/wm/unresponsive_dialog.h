@@ -21,6 +21,10 @@ class UnresponsiveDialog : public tiny::Container {
     //! its process go away with it
     void popup(const std::string& app, unsigned others = 0);
 
+    //! Center the dialog over the window `frame` of the application and stack
+    //! it right above, like a dialog of that window
+    void place_over(::Window frame);
+
     //! The user wants to wait, or to quit the application
     tiny::Signal on_wait;
     tiny::Signal on_quit;

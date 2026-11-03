@@ -1,5 +1,7 @@
 #include "wm/unresponsive_dialog.h"
 
+#include <algorithm>
+
 #include "theme.h"
 
 namespace tiny::wm {
@@ -86,6 +88,26 @@ void UnresponsiveDialog::realize(::Window root, int, int)
     add(&quit, 2 * spacing() + button_width(), buttons_y);
 }
 
+void UnresponsiveDialog::place_over(::Window frame)
+{
+    XWindowAttributes around;
+    XWindowAttributes root;
+    if (!XGetWindowAttributes(display, frame, &around) ||
+        !XGetWindowAttributes(display, around.root, &root)) {
+        return;
+    }
+    const int x = std::clamp(around.x + (around.width - width) / 2, 0,
+                             std::max(root.width - width, 0));
+    const int y = std::clamp(around.y + (around.height - height) / 2, 0,
+                             std::max(root.height - height, 0));
+    XMoveWindow(display, window, x, y);
+
+    XWindowChanges changes = {};
+    changes.sibling = frame;
+    changes.stack_mode = Above;
+    XConfigureWindow(display, window, CWSibling | CWStackMode, &changes);
+}
+
 void UnresponsiveDialog::popup(const std::string& app, unsigned others)
 {
     title.set_text("\"" + shorten(app) + "\" is not responding");
@@ -94,7 +116,6 @@ void UnresponsiveDialog::popup(const std::string& app, unsigned others)
                                           " more window" +
                                           (others == 1 ? "" : "s") + " of it.");
     map_all();
-    XRaiseWindow(display, window);
 }
 
 } // namespace tiny::wm

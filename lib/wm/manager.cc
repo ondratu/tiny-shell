@@ -432,7 +432,9 @@ void Manager::restack_layers()
     raise_layer([](const Window* w) { return w->is_fullscreen(); });
     XRaiseWindow(display, wm_run.get_window()); // hidden until it is needed
     XRaiseWindow(display, wm_launcher.get_window());
-    XRaiseWindow(display, wm_unresponsive.get_window());
+    if (asked) {
+        wm_unresponsive.place_over(asked->frame()); // follows its window
+    }
 }
 
 void Manager::request_frame_extents(::Window child)
@@ -583,14 +585,36 @@ void Manager::check_pings()
         it.second->expire_ping(now);
         it.second->ping_if_due(now);
     }
+    ask_next();
+}
+
+void Manager::ask_next()
+{
     if (asked) {
-        return; // one question at a time
+        return; // one question at a time, the others wait their turn
     }
-    for (const auto& it : wm_windows) {
-        if (const auto at = it.second->get_ask_time(); at && *at <= now) {
-            ask_to_quit(it.second);
+    // The longest waiting first; each is checked again right before it is
+    // shown, the situation may have changed since it was queued.
+    const auto now = Window::Clock::now();
+    for (;;) {
+        Window* next = nullptr;
+        Window::Clock::time_point next_at;
+        for (const auto& it : wm_windows) {
+            const auto at = it.second->get_ask_time();
+            if (at && *at <= now && (!next || *at < next_at)) {
+                next = it.second;
+                next_at = *at;
+            }
+        }
+        if (!next) {
             return;
         }
+        if (next->client_process_gone()) {
+            next->postpone_ask(now); // the connection is about to close
+            continue;
+        }
+        ask_to_quit(next);
+        return;
     }
 }
 
@@ -607,6 +631,7 @@ void Manager::ask_to_quit(Window* window)
         }
     }
     wm_unresponsive.popup(window->get_wm_name(), others);
+    wm_unresponsive.place_over(window->frame());
 }
 
 void Manager::close_unresponsive_dialog()
@@ -807,6 +832,9 @@ void Manager::focus_window(Window* window)
     for (Window* dialog : transients_of(target)) {
         dialog->raise(); // a dialog that is not modal stays over its parent
     }
+    if (asked) {
+        wm_unresponsive.place_over(asked->frame());
+    }
     // do not wait for FocusIn, the next Alt + Tab can come before it
     remember_active(target, XEvent());
 }
@@ -883,11 +911,7 @@ void Manager::connect_window(Window* window)
             [this, window](const XEvent& e) { on_window_focus(window, e); });
     window->on_minimize.connect(
             [this, window](const XEvent&) { on_window_minimize(window); });
-    window->on_unresponsive.connect([this, window](const XEvent&) {
-        if (!asked) {
-            ask_to_quit(window);
-        }
-    });
+    window->on_unresponsive.connect([this](const XEvent&) { ask_next(); });
     window->on_modal.connect(
             [this, window](const XEvent&) { on_window_modal(window); });
     window->on_skip_taskbar.connect(
@@ -1088,6 +1112,9 @@ void Manager::remember_active(Window* window, const XEvent& e)
 
 void Manager::on_window_minimize(Window* window)
 {
+    if (asked == window && window->get_minimized()) {
+        close_unresponsive_dialog(); // nobody looks at it, ask later
+    }
     update_dock_entry(window);
     if (window == active) {
         publish_clients(); // _NET_ACTIVE_WINDOW
