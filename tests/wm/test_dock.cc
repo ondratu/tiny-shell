@@ -801,6 +801,107 @@ TEST_F(DockFavoritesTest, a_click_without_a_handler_is_ignored)
     EXPECT_EQ(dock.get_favorites().size(), 1u);
 }
 
+// The texts of the items of the menu
+Strings menu_texts(tiny::wm::DockMenu& menu)
+{
+    Strings texts;
+    for (size_t i = 0; i < menu.count(); ++i) {
+        texts.push_back(menu.item(i).get_text());
+    }
+    return texts;
+}
+
+// A click on an item of the menu (the pointer enters it first)
+void click_item(tiny::wm::DockMenu& menu, size_t index)
+{
+    send(menu.item(index), EnterNotify);
+    send(menu.item(index), ButtonRelease);
+    pump_events();
+}
+
+TEST_F(DockFavoritesTest,
+       the_menu_starts_with_new_window_and_ends_with_the_favorite)
+{
+    set({"a.desktop"});
+
+    right_click(icon_at(0));
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "Remove from favorites"}));
+}
+
+TEST_F(DockFavoritesTest,
+       new_window_starts_the_application_again_even_when_it_runs)
+{
+    set({"a.desktop"});
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    Strings launched;
+    dock.on_launch = [&launched](const std::string& id) {
+        launched.push_back(id);
+    };
+
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 0);
+
+    EXPECT_EQ(launched, (Strings{"a.desktop"}));
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockFavoritesTest, the_actions_of_the_application_are_between_the_items)
+{
+    set({"a.desktop"});
+    dock.list_actions = [](const std::string& id) {
+        return id == "a.desktop" ? Strings{"Private", "Compose"} : Strings{};
+    };
+    std::vector<std::pair<std::string, size_t>> chosen;
+    dock.on_action = [&chosen](const std::string& id, size_t index) {
+        chosen.emplace_back(id, index);
+    };
+
+    right_click(icon_at(0));
+    ASSERT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "Private", "Compose",
+                       "Remove from favorites"}));
+    click_item(dock.get_menu(), 2);
+
+    ASSERT_EQ(chosen.size(), 1u);
+    EXPECT_EQ(chosen[0].first, "a.desktop");
+    EXPECT_EQ(chosen[0].second, 1u); // the second action
+}
+
+TEST_F(DockFavoritesTest, the_menu_is_made_again_for_every_icon)
+{
+    set({"a.desktop", "b.desktop"});
+    dock.list_actions = [](const std::string& id) {
+        return id == "a.desktop" ? Strings{"Private"} : Strings{};
+    };
+
+    right_click(icon_at(0));
+    EXPECT_EQ(dock.get_menu().count(), 3u);
+    dock.get_menu().unmap();
+    right_click(icon_at(1));
+
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "Remove from favorites"}));
+    EXPECT_EQ(attributes_of(dock.get_menu()).height,
+              2 * tiny::theme.wm_menu_item_height);
+}
+
+TEST_F(DockFavoritesTest, an_item_without_a_handler_only_closes_the_menu)
+{
+    set({"a.desktop"});
+    dock.list_actions = [](const std::string&) { return Strings{"Private"}; };
+
+    for (const size_t index : {size_t{0}, size_t{1}, size_t{2}}) {
+        right_click(icon_at(0));
+        click_item(dock.get_menu(), index);
+        EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped)
+                << index;
+    }
+}
+
 TEST_F(DockFavoritesTest, the_menu_of_a_favorite_removes_it)
 {
     set({"a.desktop"});
@@ -810,12 +911,8 @@ TEST_F(DockFavoritesTest, the_menu_of_a_favorite_removes_it)
     };
 
     right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
 
-    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
-    EXPECT_EQ(dock.get_menu().toggle.get_text(), "Remove from favorites");
-    send(dock.get_menu().toggle, EnterNotify);
-    send(dock.get_menu().toggle, ButtonRelease);
-    pump_events();
     EXPECT_EQ(toggled, (Strings{"a.desktop"}));
     EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
 }
@@ -827,18 +924,21 @@ TEST_F(DockFavoritesTest, the_menu_of_another_window_adds_it)
 
     right_click(icon_at(0));
 
-    EXPECT_EQ(dock.get_menu().toggle.get_text(), "Add to favorites");
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "Add to favorites"}));
 }
 
 TEST_F(DockFavoritesTest, the_menu_is_above_the_icon)
 {
     set({"a.desktop"});
+    dock.list_actions = [](const std::string&) { return Strings{"Private"}; };
 
     right_click(icon_at(0));
 
     const XWindowAttributes menu = attributes_of(dock.get_menu());
     // the border is a part of the menu, the icon starts at y_root - y
     EXPECT_EQ(menu.y + menu.height + 2 * menu.border_width, 500 - 10);
+    EXPECT_EQ(menu.height, 3 * tiny::theme.wm_menu_item_height);
 }
 
 TEST_F(DockFavoritesTest, a_window_of_unknown_application_has_no_menu)
@@ -849,18 +949,7 @@ TEST_F(DockFavoritesTest, a_window_of_unknown_application_has_no_menu)
     right_click(icon_at(0));
 
     EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
-}
-
-TEST_F(DockFavoritesTest, the_item_of_the_menu_without_a_handler_only_closes_it)
-{
-    set({"a.desktop"});
-    right_click(icon_at(0));
-
-    send(dock.get_menu().toggle, EnterNotify);
-    send(dock.get_menu().toggle, ButtonRelease);
-    pump_events();
-
-    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+    EXPECT_EQ(dock.get_menu().count(), 0u);
 }
 
 TEST_F(DockFavoritesTest, the_icons_are_made_when_the_dock_is_realized_later)

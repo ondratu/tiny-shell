@@ -153,6 +153,12 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_dock.on_launch = [this](const std::string& id) {
         wm_launcher.launch(id);
     };
+    wm_dock.list_actions = [this](const std::string& id) {
+        return wm_launcher.action_names(id);
+    };
+    wm_dock.on_action = [this](const std::string& id, size_t index) {
+        wm_launcher.launch_action(id, index);
+    };
     wm_dock.on_toggle_favorite = [this](const std::string& id) {
         toggle_favorite(id);
     };

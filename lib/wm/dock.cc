@@ -222,19 +222,40 @@ std::vector<DockSlot> arrange_dock(const std::vector<std::string>& favorites,
 
 DockMenu::DockMenu():
     tiny::Popover(tiny::theme.wm_dock_menu_width,
-                  tiny::theme.wm_menu_item_height),
-    toggle(tiny::theme.wm_dock_menu_width, tiny::theme.wm_menu_item_height,
-           "Add to favorites")
+                  tiny::theme.wm_menu_item_height)
 {
     name = "wm_dockmenu";
 }
 
 DockMenu::~DockMenu() = default;
 
-void DockMenu::realize(::Window parent_arg, int x, int y)
+void DockMenu::set_items(const std::vector<std::string>& labels)
 {
-    tiny::Popover::realize(parent_arg, x, y);
-    push_start(&toggle);
+    if (!is_realized) {
+        return;
+    }
+    for (const auto& button : items) {
+        remove(button.get());
+    }
+    items.clear();
+
+    const int item_height = tiny::theme.wm_menu_item_height;
+    for (size_t i = 0; i < labels.size(); ++i) {
+        auto button = std::make_unique<tiny::LabelButton>(
+                tiny::theme.wm_dock_menu_width, item_height, labels[i]);
+        add(button.get(), 0, static_cast<int>(i) * item_height);
+        button->on_click.connect([this, i](const XEvent&) {
+            if (on_item) {
+                on_item(i);
+            }
+        });
+        if (is_maped) {
+            button->map_all();
+        }
+        items.push_back(std::move(button));
+    }
+    resize(tiny::theme.wm_dock_menu_width,
+           static_cast<int>(labels.size()) * item_height);
 }
 
 Dock::Dock():
@@ -243,12 +264,24 @@ Dock::Dock():
               tiny::theme.wm_icon + tiny::theme.wm_dock_border * 2)
 {
     name = "wm_dock";
-    menu.toggle.on_click.connect([this](const XEvent&) {
+    // New Window, the actions of the application, and the favorite at last
+    menu.on_item = [this](size_t index) {
         menu.unmap();
-        if (on_toggle_favorite && !menu_app.empty()) {
+        if (menu_app.empty()) {
+            return;
+        }
+        if (index == 0) {
+            if (on_launch) {
+                on_launch(menu_app);
+            }
+        } else if (index <= menu_actions) {
+            if (on_action) {
+                on_action(menu_app, index - 1);
+            }
+        } else if (on_toggle_favorite) {
             on_toggle_favorite(menu_app);
         }
-    });
+    };
 }
 
 Dock::~Dock()
@@ -370,11 +403,22 @@ void Dock::show_menu(const DockIcon& task_icon, const XButtonEvent& be)
         return;
     }
     menu_app = task_icon.get_app_id();
-    menu.toggle.set_text(is_favorite(menu_app) ? "Remove from favorites"
-                                               : "Add to favorites");
-    // above the icon, the dock is at the bottom of the screen
+    std::vector<std::string> labels = {"New Window"};
+    if (list_actions) {
+        for (std::string& action_name : list_actions(menu_app)) {
+            labels.push_back(std::move(action_name));
+        }
+    }
+    menu_actions = labels.size() - 1;
+    labels.emplace_back(is_favorite(menu_app) ? "Remove from favorites"
+                                              : "Add to favorites");
+    menu.set_items(labels);
+    // above the icon, the dock is at the bottom of the screen; the menu is
+    // resized when the server tells, so its height is counted here
+    const int menu_height =
+            static_cast<int>(labels.size()) * tiny::theme.wm_menu_item_height;
     menu.popup(be.x_root,
-               be.y_root - be.y - menu.get_height() - 2 * menu.get_border());
+               be.y_root - be.y - menu_height - 2 * menu.get_border());
 }
 
 void Dock::resize_to_children()

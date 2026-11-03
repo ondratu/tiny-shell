@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -98,15 +99,29 @@ struct DockSlot {
 std::vector<DockSlot> arrange_dock(const std::vector<std::string>& favorites,
                                    const std::vector<std::string>& task_apps);
 
-//! The menu of an icon: add the application to the favorites or remove it
+/**
+ * @short The menu of an icon: a list of items, made again for every icon.
+ *
+ * Over the dock a click outside of the menu closes it (see `Popover`).
+ */
 class DockMenu : public tiny::Popover {
   public:
     DockMenu();
     ~DockMenu() override;
 
-    void realize(::Window parent, int x = 0, int y = 0) override;
+    /// Replace the items by new ones with these texts; the menu is as high as
+    /// they are. Does nothing before the menu is realized.
+    void set_items(const std::vector<std::string>& labels);
 
-    tiny::LabelButton toggle;
+    size_t count() const { return items.size(); }
+
+    tiny::LabelButton& item(size_t index) { return *items.at(index); }
+
+    /// A click on an item (its index)
+    std::function<void(size_t)> on_item;
+
+  private:
+    std::vector<std::unique_ptr<tiny::LabelButton>> items;
 };
 
 class Dock : public tiny::Box {
@@ -132,8 +147,16 @@ class Dock : public tiny::Box {
     /// A click on the icon of a favorite that does not run (its id)
     std::function<void(const std::string&)> on_launch;
 
-    /// The item of the menu of an icon was chosen (the id of the application)
+    /// The item of the menu to add or remove a favorite was chosen
     std::function<void(const std::string&)> on_toggle_favorite;
+
+    /// The names of the actions of an application for its menu; none when
+    /// not set
+    std::function<std::vector<std::string>(const std::string&)> list_actions;
+
+    /// An action of the menu was chosen (the id of the application and the
+    /// index in the list of its names)
+    std::function<void(const std::string&, size_t)> on_action;
 
     void realize(::Window parent, int x, int y) override;
     void resize(int width, int height) override;
@@ -167,8 +190,9 @@ class Dock : public tiny::Box {
 
     DockButton icon;
     DockMenu menu;
-    std::string menu_app; //!< the application of the open menu
-    int handling = 0;     //!< the clicks being handled: no rebuild meanwhile
+    std::string menu_app;    //!< the application of the open menu
+    size_t menu_actions = 0; //!< its actions, between New Window and the rest
+    int handling = 0;        //!< the clicks being handled: no rebuild meanwhile
     bool rebuild_later = false;
     std::vector<DockFavorite> favorites;
     std::vector<Window*> tasks;   //!< the windows with an icon, as they came

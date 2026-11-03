@@ -473,6 +473,33 @@ TEST_F(LauncherTest, an_application_that_does_not_start_is_told)
     EXPECT_NE(report.find("No such file"), std::string::npos);
 }
 
+TEST_F(LauncherTest,
+       an_action_of_an_application_is_started_with_its_own_command)
+{
+    write("gamma", "Gamma",
+          "Type=Application\nActions=one;two\n"
+          "[Desktop Action one]\nName=One\nExec=touch " +
+                  (root / "gamma-one").string() +
+                  "\n[Desktop Action two]\nName=Two\nExec=touch " +
+                  (root / "gamma-two").string() + "\n");
+
+    EXPECT_EQ(launcher.action_names("gamma.desktop"),
+              (std::vector<std::string>{"One", "Two"}));
+    EXPECT_TRUE(launcher.launch_action("gamma.desktop", 1));
+
+    EXPECT_TRUE(appears(root / "gamma-two"));
+    EXPECT_FALSE(fs::exists(root / "gamma-one"));
+    EXPECT_FALSE(fs::exists(root / "gamma"));
+}
+
+TEST_F(LauncherTest, there_is_no_action_of_an_unknown_application_or_number)
+{
+    EXPECT_TRUE(launcher.action_names("alpha.desktop").empty());
+    EXPECT_TRUE(launcher.action_names("nothing.desktop").empty());
+    EXPECT_FALSE(launcher.launch_action("alpha.desktop", 0));
+    EXPECT_FALSE(launcher.launch_action("nothing.desktop", 0));
+}
+
 TEST_F(LauncherTest, an_application_started_by_its_id_is_a_recent_one)
 {
     ASSERT_TRUE(launcher.launch("beta.desktop"));
