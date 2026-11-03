@@ -157,6 +157,11 @@ void Widget::resize(int w, int h)
     }
 }
 
+void Widget::connect(uint16_t event_type, event_function_t function)
+{
+    connect_window(event_type, window, std::move(function));
+}
+
 void Widget::connect(uint16_t event_type, event_signal_t signal, void* data)
 {
     connect_window(event_type, window, signal, data);

@@ -59,6 +59,8 @@ class Widget : public Object {
     virtual void resize(int width, int height);
 
   protected:
+    void connect(uint16_t event_type, event_function_t function);
+
     void connect(uint16_t event_type, event_signal_t signal,
                  void* data = nullptr);
 

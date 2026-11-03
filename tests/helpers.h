@@ -44,7 +44,7 @@ inline tiny::Rect screen_area()
 // Calls the handler registered for `type` on `window`, like the main loop.
 inline void send(::Window window, const XEvent& e)
 {
-    tiny::handlers.call_hanlder({e.type, window}, e);
+    tiny::handlers.call_handler({e.type, window}, e);
 }
 
 inline void send(const tiny::Widget& w, int type)
@@ -290,7 +290,7 @@ inline void pump_events()
         const std::pair<uint16_t, ::Window> key(e.type,
                                                 tiny::window_of_event(e));
         if (tiny::handlers.count(key)) {
-            tiny::handlers.call_hanlder(key, e);
+            tiny::handlers.call_handler(key, e);
         }
     }
 }

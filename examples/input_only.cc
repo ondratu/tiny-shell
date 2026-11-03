@@ -51,7 +51,7 @@ class Demo : public tiny::wm::BackWindow {
 
             // call manager handlers first
             if (tiny::handlers.count(signal_id)) {
-                tiny::handlers.call_hanlder(signal_id, event);
+                tiny::handlers.call_handler(signal_id, event);
                 continue;
             }
             //printf("Unhandled event %s (%d)\n",

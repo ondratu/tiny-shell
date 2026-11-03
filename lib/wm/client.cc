@@ -63,7 +63,7 @@ Client::~Client()
         XSetErrorHandler(old);
     }
 
-    tiny::Container::disconnect_window(PropertyNotify, child);
+    window_events.disconnect(PropertyNotify, child);
 
     XUngrabButton(display, Button1, AnyModifier, window);
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F4), Mod1Mask,
@@ -165,45 +165,45 @@ void Client::set_events(long mask)
 */
 
     header.get_title_box()->on_drag_begin.connect(
-            reinterpret_cast<tiny::Object*>(this),
-            reinterpret_cast<tiny::object_signal_t>(
-                    &Client::on_window_drag_begin));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_window_drag_begin(o, e, d);
+            });
     header.get_title_box()->on_drag_motion.connect(
-            reinterpret_cast<tiny::Object*>(this),
-            reinterpret_cast<tiny::object_signal_t>(
-                    &Client::on_window_drag_motion));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_window_drag_motion(o, e, d);
+            });
 
     header.get_title_box()->on_drag_end.connect(
-            reinterpret_cast<tiny::Object*>(this),
-            reinterpret_cast<tiny::object_signal_t>(
-                    &Client::on_window_drag_end));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_window_drag_end(o, e, d);
+            });
 
-    min_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
-                             reinterpret_cast<tiny::object_signal_t>(
-                                     &Client::on_minimize_click));
+    min_btn.on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        on_minimize_click(o, e, d);
+    });
 
-    cls_btn.on_click.connect(
-            reinterpret_cast<tiny::Object*>(this),
-            reinterpret_cast<tiny::object_signal_t>(&Client::on_close_click));
+    cls_btn.on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        on_close_click(o, e, d);
+    });
 
     if (is_resizable()) {
         shadow.on_move_resize_begin.connect(
-                reinterpret_cast<tiny::Object*>(this),
-                reinterpret_cast<tiny::object_signal_t>(
-                        &Client::on_move_resize_begin));
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_move_resize_begin(o, e, d);
+                });
         shadow.on_move_resize_motion.connect(
-                reinterpret_cast<tiny::Object*>(this),
-                reinterpret_cast<tiny::object_signal_t>(
-                        &Client::on_move_resize_motion));
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_move_resize_motion(o, e, d);
+                });
         shadow.on_move_resize_end.connect(
-                reinterpret_cast<tiny::Object*>(this),
-                reinterpret_cast<tiny::object_signal_t>(
-                        &Client::on_move_resize_end));
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_move_resize_end(o, e, d);
+                });
     }
     // the button can come later with the hints
-    max_btn.on_click.connect(reinterpret_cast<tiny::Object*>(this),
-                             reinterpret_cast<tiny::object_signal_t>(
-                                     &Client::on_maximize_click));
+    max_btn.on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        on_maximize_click(o, e, d);
+    });
 }
 
 void Client::map_all()
@@ -312,7 +312,7 @@ void Client::on_motif_hints_changed(unsigned long new_decorations)
 {
     shade(false); // the sizes below are of the whole window
     if (!new_decorations) {
-        on_reframe(static_cast<Window*>(this),
+        on_reframe(nullptr,
                    XEvent()); // a window without a frame is another kind
         return;
     }

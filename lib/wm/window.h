@@ -178,7 +178,7 @@ std::pair<int, int> gravity_shift(int gravity, int dw, int dh);
 /// The gravity of the hints, `NorthWestGravity` when they have none.
 int window_gravity(const XSizeHints& hints);
 
-class Window : public tiny::Object {
+class Window {
   public:
     enum class WMType {
         DESKTOP,
@@ -209,7 +209,7 @@ class Window : public tiny::Object {
 
     Window(::Window child, ::Window root, unsigned long functions,
            const tiny::Rect& area);
-    ~Window() override;
+    virtual ~Window();
 
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
@@ -560,6 +560,9 @@ class Window : public tiny::Object {
     tiny::Signal on_modifier_drag;
 
   protected:
+    //! Handlers of the events of the client window, removed with the window
+    tiny::EventConnections window_events;
+
     /* event handlers */
     virtual void on_client_message(const XEvent& e, void* data);
 

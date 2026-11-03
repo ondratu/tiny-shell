@@ -58,7 +58,8 @@ TEST(HandlersTest, set_and_unset)
     tiny::Handlers handlers;
     Receiver r;
 
-    handlers.set_handler(KeyPress, 42, &r, r.event_slot(), nullptr);
+    handlers.set_handler(KeyPress, 42,
+                         [&r](const XEvent& e) { r.on_event(e, nullptr); });
     EXPECT_EQ(handlers.count(std::make_pair<uint16_t, ::Window>(KeyPress, 42)),
               1u);
 
@@ -72,11 +73,15 @@ TEST(HandlersTest, set_replaces_existing_handler)
     Receiver first;
     Receiver second;
 
-    handlers.set_handler(KeyPress, 42, &first, first.event_slot(), nullptr);
-    handlers.set_handler(KeyPress, 42, &second, second.event_slot(), nullptr);
+    handlers.set_handler(KeyPress, 42, [&first](const XEvent& e) {
+        first.on_event(e, nullptr);
+    });
+    handlers.set_handler(KeyPress, 42, [&second](const XEvent& e) {
+        second.on_event(e, nullptr);
+    });
     EXPECT_EQ(handlers.size(), 1u);
 
-    handlers.call_hanlder({KeyPress, 42}, make_event(KeyPress));
+    handlers.call_handler({KeyPress, 42}, make_event(KeyPress));
     EXPECT_EQ(first.event_calls, 0);
     EXPECT_EQ(second.event_calls, 1);
 }
@@ -95,8 +100,10 @@ TEST(HandlersTest, call_passes_event_and_data)
     Receiver r;
     int payload = 0;
 
-    handlers.set_handler(ButtonPress, 7, &r, r.event_slot(), &payload);
-    handlers.call_hanlder({ButtonPress, 7}, make_event(ButtonPress));
+    handlers.set_handler(ButtonPress, 7, [&r, &payload](const XEvent& e) {
+        r.on_event(e, &payload);
+    });
+    handlers.call_handler({ButtonPress, 7}, make_event(ButtonPress));
 
     EXPECT_EQ(r.event_calls, 1);
     EXPECT_EQ(r.last_event_type, ButtonPress);
@@ -109,9 +116,11 @@ TEST(HandlersTest, handlers_are_keyed_by_type_and_window)
     Receiver a;
     Receiver b;
 
-    handlers.set_handler(KeyPress, 1, &a, a.event_slot(), nullptr);
-    handlers.set_handler(KeyPress, 2, &b, b.event_slot(), nullptr);
-    handlers.call_hanlder({KeyPress, 2}, make_event(KeyPress));
+    handlers.set_handler(KeyPress, 1,
+                         [&a](const XEvent& e) { a.on_event(e, nullptr); });
+    handlers.set_handler(KeyPress, 2,
+                         [&b](const XEvent& e) { b.on_event(e, nullptr); });
+    handlers.call_handler({KeyPress, 2}, make_event(KeyPress));
 
     EXPECT_EQ(a.event_calls, 0);
     EXPECT_EQ(b.event_calls, 1);
@@ -209,7 +218,7 @@ TEST(ObjectTest, connect_window_registers_global_handler)
     r.connect_window(KeyPress, 1001, r.event_slot());
     EXPECT_EQ(tiny::handlers.count({KeyPress, 1001}), 1u);
 
-    tiny::handlers.call_hanlder({KeyPress, 1001}, make_event(KeyPress));
+    tiny::handlers.call_handler({KeyPress, 1001}, make_event(KeyPress));
     EXPECT_EQ(r.event_calls, 1);
 
     r.disconnect_window(KeyPress, 1001);
@@ -266,4 +275,93 @@ TEST(LogTest, log_prints_function_and_message)
 
     EXPECT_NE(out.find("hello 1"), std::string::npos);
     EXPECT_NE(out.find("TestBody"), std::string::npos);
+}
+
+TEST(HandlersTest, a_missing_handler_is_ignored_and_not_created)
+{
+    tiny::Handlers handlers;
+
+    handlers.call_handler({KeyPress, 42}, make_event(KeyPress));
+    EXPECT_TRUE(handlers.empty());
+}
+
+TEST(HandlersTest, a_handler_can_remove_itself)
+{
+    tiny::Handlers handlers;
+    int calls = 0;
+
+    handlers.set_handler(KeyPress, 42, [&](const XEvent&) {
+        ++calls;
+        handlers.unset_handler(KeyPress, 42);
+    });
+    handlers.call_handler({KeyPress, 42}, make_event(KeyPress));
+
+    EXPECT_EQ(calls, 1);
+    EXPECT_TRUE(handlers.empty());
+}
+
+TEST(SignalTest, function_gets_the_owner_the_event_and_the_data)
+{
+    tiny::Signal signal;
+    int payload = 0;
+    tiny::Object owner;
+    tiny::Object* got_owner = nullptr;
+    void* got_data = nullptr;
+    int got_type = 0;
+
+    signal.connect([&](tiny::Object* o, const XEvent& e, void* d) {
+        got_owner = o;
+        got_type = e.type;
+        got_data = d;
+    });
+    EXPECT_TRUE(signal);
+    signal(&owner, make_event(KeyPress), &payload);
+
+    EXPECT_EQ(got_owner, &owner);
+    EXPECT_EQ(got_type, KeyPress);
+    EXPECT_EQ(got_data, &payload);
+}
+
+TEST(SignalTest, the_last_connection_wins_over_a_function_with_owner)
+{
+    tiny::Signal signal;
+    Receiver r;
+    int calls = 0;
+
+    signal.connect([&](tiny::Object*, const XEvent&, void*) { ++calls; });
+    signal.connect(&r, r.signal_slot());
+    signal(&r, make_event(KeyPress));
+
+    EXPECT_EQ(calls, 0);
+    EXPECT_EQ(r.signal_calls, 1);
+}
+
+// Two bases that are both an Object, like Client (Container and Window): the
+// function knows its object, a cast pointer to a member does not.
+namespace {
+class FirstBase : public tiny::Object {};
+
+class SecondBase : public tiny::Object {
+  public:
+    int calls = 0;
+};
+
+class Both : public FirstBase, public SecondBase {
+  public:
+    void listen(::Window w)
+    {
+        SecondBase::connect_window(KeyPress, w,
+                                   [this](const XEvent&) { ++calls; });
+    }
+};
+} // namespace
+
+TEST(ObjectTest, a_lambda_works_in_the_class_with_two_object_bases)
+{
+    Both both;
+    both.listen(77);
+
+    tiny::handlers.call_handler({KeyPress, 77}, make_event(KeyPress));
+
+    EXPECT_EQ(both.calls, 1);
 }

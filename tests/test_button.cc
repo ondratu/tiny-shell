@@ -43,7 +43,7 @@ class ButtonTest : public ::testing::Test {
 
     void send(const tiny::Widget& w, int type)
     {
-        tiny::handlers.call_hanlder({type, w.get_window()}, make_event(type));
+        tiny::handlers.call_handler({type, w.get_window()}, make_event(type));
     }
 
     // Drawing needs a font; theme.widget is not initialized by default.
@@ -263,7 +263,7 @@ class MenuButtonTest : public ButtonTest {
     void click(const tiny::Widget& w, const XEvent& e)
     {
         send(w, EnterNotify);
-        tiny::handlers.call_hanlder({ButtonRelease, w.get_window()}, e);
+        tiny::handlers.call_handler({ButtonRelease, w.get_window()}, e);
     }
 };
 

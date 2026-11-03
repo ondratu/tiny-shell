@@ -256,7 +256,7 @@ TEST_F(WidgetTest, resize_after_realize_waits_for_configure_notify)
     e.type = ConfigureNotify;
     e.xconfigure.width = 50;
     e.xconfigure.height = 40;
-    tiny::handlers.call_hanlder({ConfigureNotify, w.get_window()}, e);
+    tiny::handlers.call_handler({ConfigureNotify, w.get_window()}, e);
 
     EXPECT_EQ(w.get_width(), 50u);
     EXPECT_EQ(w.get_height(), 40u);

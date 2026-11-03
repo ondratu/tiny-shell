@@ -67,7 +67,7 @@ class Demo : public tiny::Box {
 
             // call manager handlers first
             if (tiny::handlers.count(signal_id)) {
-                tiny::handlers.call_hanlder(signal_id, event);
+                tiny::handlers.call_handler(signal_id, event);
                 continue;
             }
             printf("Unhalded event: %s\n", tiny::event_to_string(event));
