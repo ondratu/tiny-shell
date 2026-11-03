@@ -49,20 +49,24 @@ Launcher::Launcher():
     next_page(1, 1, ">")
 {
     name = "launcher";
-    entry.on_change.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::search));
-    entry.on_activate.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::run));
-    entry.on_cancel.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::close));
-    entry.on_key.connect(this,
-                         static_cast<tiny::object_signal_t>(&Launcher::move));
-    grid.on_activate.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::run));
-    prev_page.on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::turn));
-    next_page.on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Launcher::turn));
+    entry.on_change.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        search(o, e, d);
+    });
+    entry.on_activate.connect([this](tiny::Object* o, const XEvent& e,
+                                     void* d) { run(o, e, d); });
+    entry.on_cancel.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        close(o, e, d);
+    });
+    entry.on_key.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        move(o, e, d);
+    });
+    grid.on_activate.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        run(o, e, d);
+    });
+    prev_page.on_click.connect([this](tiny::Object* o, const XEvent& e,
+                                      void* d) { turn(o, e, d); });
+    next_page.on_click.connect([this](tiny::Object* o, const XEvent& e,
+                                      void* d) { turn(o, e, d); });
 }
 
 Launcher::~Launcher()

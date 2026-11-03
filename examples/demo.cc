@@ -46,10 +46,12 @@ class Demo : public tiny::Container {
 
         buttons.push_back(&close_btn);
 
-        close_btn.on_click.connect(this, static_cast<tiny::object_signal_t>(
-                                                 &Demo::on_button_click));
-        x_btn.on_click.connect(this, static_cast<tiny::object_signal_t>(
-                                             &Demo::on_button_click));
+        close_btn.on_click.connect(
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_button_click(o, e, d);
+                });
+        x_btn.on_click.connect([this](tiny::Object* o, const XEvent& e,
+                                      void* d) { on_button_click(o, e, d); });
 
         // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall): nothing derives from Demo
         set_events();
@@ -64,7 +66,7 @@ class Demo : public tiny::Container {
         XSetWMProtocols(display, window, &wm_delete_window, 1);
 
         connect(ClientMessage,
-                static_cast<tiny::event_signal_t>(&Demo::on_client_message));
+                [this](const XEvent& e) { on_client_message(e, nullptr); });
     }
 
     void on_client_message(const XEvent& e, void*)

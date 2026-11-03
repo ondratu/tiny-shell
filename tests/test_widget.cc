@@ -27,9 +27,9 @@ class Receiver : public tiny::Object {
 
     void on_event(const XEvent&, void*) {}
 
-    tiny::event_signal_t slot()
+    tiny::event_function_t slot()
     {
-        return static_cast<tiny::event_signal_t>(&Receiver::on_event);
+        return [this](const XEvent& e) { on_event(e, nullptr); };
     }
 };
 

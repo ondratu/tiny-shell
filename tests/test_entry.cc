@@ -13,10 +13,10 @@ class EntryTest : public ::testing::Test {
 
     void SetUp() override
     {
-        entry.on_change.connect(&changed, changed.slot());
-        entry.on_activate.connect(&activated, activated.slot());
-        entry.on_cancel.connect(&cancelled, cancelled.slot());
-        entry.on_key.connect(&keyed, keyed.slot());
+        entry.on_change.connect(changed.slot());
+        entry.on_activate.connect(activated.slot());
+        entry.on_cancel.connect(cancelled.slot());
+        entry.on_key.connect(keyed.slot());
         entry.realize(root_window(), 0, 0);
         entry.set_events();
     }

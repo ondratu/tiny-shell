@@ -55,7 +55,7 @@ class IconGridTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
-        grid.on_activate.connect(&activated, activated.slot());
+        grid.on_activate.connect(activated.slot());
         grid.realize(root_window(), 0, 0);
         grid.map();
         grid.set_items(20, numbered());

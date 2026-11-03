@@ -63,9 +63,11 @@ class Recorder : public tiny::Object {
         last_data = data;
     }
 
-    tiny::object_signal_t slot()
+    tiny::Signal::Function slot()
     {
-        return static_cast<tiny::object_signal_t>(&Recorder::on_signal);
+        return [this](tiny::Object* o, const XEvent& e, void* d) {
+            on_signal(o, e, d);
+        };
     }
 
     int calls = 0;

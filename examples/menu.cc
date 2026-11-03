@@ -43,7 +43,7 @@ class Demo : public tiny::Box {
         XSetWMProtocols(display, window, &wm_delete_window, 1);
 
         connect(ClientMessage,
-                static_cast<tiny::event_signal_t>(&Demo::on_client_message));
+                [this](const XEvent& e) { on_client_message(e, nullptr); });
     }
 
     void on_client_message(const XEvent& e, void*)

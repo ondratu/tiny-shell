@@ -194,7 +194,7 @@ void Popover::realize(::Window root, int x, int y)
 
 void Popover::set_events(long mask)
 {
-    connect(FocusOut, static_cast<event_signal_t>(&Popover::on_focus_out));
+    connect(FocusOut, [this](const XEvent& e) { on_focus_out(e, nullptr); });
 
     Box::set_events(mask | FocusChangeMask);
 }

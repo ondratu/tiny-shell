@@ -906,7 +906,7 @@ TEST_F(ClientTest, focus_in_signals_on_focus)
 {
     build();
     Recorder r;
-    win->on_focus.connect(&r, r.slot());
+    win->on_focus.connect(r.slot());
 
     send(client.window, make_event(FocusIn));
 

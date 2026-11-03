@@ -24,9 +24,9 @@ TEST(TitleBoxTest, drag_signals_follow_pointer_events)
     Recorder begin;
     Recorder end;
     Recorder motion;
-    box.on_drag_begin.connect(&begin, begin.slot());
-    box.on_drag_end.connect(&end, end.slot());
-    box.on_drag_motion.connect(&motion, motion.slot());
+    box.on_drag_begin.connect(begin.slot());
+    box.on_drag_end.connect(end.slot());
+    box.on_drag_motion.connect(motion.slot());
     box.realize(root_window(), 0, 0);
 
     send(box, ButtonPress);
@@ -301,7 +301,7 @@ TEST_F(HeaderTest, title_box_signals_are_reachable_through_the_header)
 {
     tiny::wm::Header h(300, 25);
     Recorder begin;
-    h.get_title_box()->on_drag_begin.connect(&begin, begin.slot());
+    h.get_title_box()->on_drag_begin.connect(begin.slot());
     h.realize(root_window(), 0, 0);
 
     send(*h.get_title_box(), ButtonPress);

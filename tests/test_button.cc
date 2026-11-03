@@ -21,9 +21,11 @@ class Recorder : public tiny::Object {
         last_owner = owner;
     }
 
-    tiny::object_signal_t slot()
+    tiny::Signal::Function slot()
     {
-        return static_cast<tiny::object_signal_t>(&Recorder::on_signal);
+        return [this](tiny::Object* o, const XEvent& e, void* d) {
+            on_signal(o, e, d);
+        };
     }
 
     int calls = 0;
@@ -95,8 +97,8 @@ TEST_F(ButtonTest, enter_and_leave_emit_signals)
     tiny::Button b(50, 20);
     Recorder enter;
     Recorder leave;
-    b.on_enter.connect(&enter, enter.slot());
-    b.on_leave.connect(&leave, leave.slot());
+    b.on_enter.connect(enter.slot());
+    b.on_leave.connect(leave.slot());
     b.realize(root(), 0, 0);
 
     send(b, EnterNotify);
@@ -112,7 +114,7 @@ TEST_F(ButtonTest, click_is_emitted_only_while_hovering)
 {
     tiny::Button b(50, 20);
     Recorder click;
-    b.on_click.connect(&click, click.slot());
+    b.on_click.connect(click.slot());
     b.realize(root(), 0, 0);
 
     send(b, ButtonRelease);

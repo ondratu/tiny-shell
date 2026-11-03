@@ -35,9 +35,9 @@ TEST(EdgeTest, drag_signals_follow_pointer_events)
     Recorder begin;
     Recorder end;
     Recorder motion;
-    edge.on_drag_begin.connect(&begin, begin.slot());
-    edge.on_drag_end.connect(&end, end.slot());
-    edge.on_drag_motion.connect(&motion, motion.slot());
+    edge.on_drag_begin.connect(begin.slot());
+    edge.on_drag_end.connect(end.slot());
+    edge.on_drag_motion.connect(motion.slot());
     edge.realize(root_window(), 0, 0);
 
     send(edge, ButtonPress);
@@ -254,8 +254,8 @@ TEST_F(BackWindowTest, edge_drag_is_reported_with_the_edge_mask)
 {
     Recorder begin;
     Recorder motion;
-    bw->on_move_resize_begin.connect(&begin, begin.slot());
-    bw->on_move_resize_motion.connect(&motion, motion.slot());
+    bw->on_move_resize_begin.connect(begin.slot());
+    bw->on_move_resize_motion.connect(motion.slot());
     bw->realize(root_window(), 50, 60);
     const ::Window top_right = child_at(bw->get_window(), 200, 0);
     ASSERT_NE(top_right, 0u);
@@ -278,7 +278,7 @@ TEST_F(BackWindowTest, edge_drag_is_reported_with_the_edge_mask)
 TEST_F(BackWindowTest, every_edge_reports_its_own_mask)
 {
     Recorder motion;
-    bw->on_move_resize_motion.connect(&motion, motion.slot());
+    bw->on_move_resize_motion.connect(motion.slot());
     bw->realize(root_window(), 50, 60);
     const ::Window w = bw->get_window();
 

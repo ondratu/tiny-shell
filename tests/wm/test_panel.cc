@@ -49,7 +49,7 @@ TEST(UserMenuTest, logout_click_is_signalled)
     const WidgetFont font;
     tiny::wm::UserMenu menu;
     Recorder recorder;
-    menu.logout.on_click.connect(&recorder, recorder.slot());
+    menu.logout.on_click.connect(recorder.slot());
     menu.realize(root_window());
 
     send(menu.logout, EnterNotify); // a click counts only on hover

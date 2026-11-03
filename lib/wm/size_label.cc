@@ -20,7 +20,7 @@ void SizeLabel::set_events(long mask)
 {
     Widget::set_events(ExposureMask | mask);
 
-    connect(Expose, static_cast<tiny::event_signal_t>(&SizeLabel::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void SizeLabel::set_area(int w, int h, int y)
