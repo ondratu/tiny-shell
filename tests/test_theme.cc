@@ -241,6 +241,7 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
     EXPECT_EQ(t.entry.padding_width, 12u);
     EXPECT_EQ(t.entry.border_width, 2u);
     EXPECT_EQ(t.list.padding_width, 12);
+    EXPECT_EQ(t.wm_dock_menu_width, 360);
     EXPECT_EQ(t.wm_launcher_cell_width, 128);
     EXPECT_EQ(t.wm_launcher_label, 80);
     EXPECT_EQ(t.wm_launcher_icon, 96);

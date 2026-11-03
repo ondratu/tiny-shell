@@ -90,6 +90,21 @@ class Launcher : public tiny::Popover {
     const Icon& application_icon(std::string_view instance,
                                  std::string_view class_name);
 
+    /// The application of a window by its `WM_CLASS`, null when none matches.
+    const xdg::Application* find_application(std::string_view instance,
+                                             std::string_view class_name);
+
+    /// The installed application with a desktop file id, null when none.
+    const xdg::Application* find_application(const std::string& id);
+
+    /// The icon of an application in the size of the dock, see
+    /// `application_icon`.
+    const Icon& application_icon(const xdg::Application& app);
+
+    /// Start the application with a desktop file id, like Return does in the
+    /// launcher. False when it is not installed or does not start.
+    bool launch(const std::string& id);
+
   private:
     std::vector<std::string> terminal = Config().terminal;
 
@@ -105,6 +120,8 @@ class Launcher : public tiny::Popover {
     static void free_icons(::Display* x_display,
                            std::map<std::string, Icon>& list);
     void remember(const std::string& id);
+    //! Start an application and remember it; why it did not start goes to stderr
+    bool start(const xdg::Application& app);
 
     tiny::Entry entry;
     tiny::IconGrid grid;

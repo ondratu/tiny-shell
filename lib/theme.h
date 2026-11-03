@@ -34,6 +34,7 @@ class Theme {
     int wm_panel_login_width = 120;
     int wm_menu_width = 120;
     int wm_menu_item_height = 20;
+    int wm_dock_menu_width = 180; //!< the menu of an icon of the dock
     int wm_launcher_columns = 8;
     int wm_launcher_rows = 4;
     int wm_launcher_cell_width = 64; // the narrowest cell

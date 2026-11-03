@@ -150,6 +150,12 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_panel.map_all();
     wm_dock.map_all();
 
+    wm_dock.on_launch = [this](const std::string& id) {
+        wm_launcher.launch(id);
+    };
+    wm_dock.on_toggle_favorite = [this](const std::string& id) {
+        toggle_favorite(id);
+    };
     wm_dock.get_menu_button().on_click.connect(
             [this](tiny::Object* o, const XEvent& e, void* d) {
                 on_launcher(o, e, d);
@@ -931,10 +937,52 @@ void Manager::set_application_icon(Window* window)
         window->get_wm_class_instance().empty()) {
         return;
     }
-    const Launcher::Icon& icon = wm_launcher.application_icon(
+    const xdg::Application* app = wm_launcher.find_application(
             window->get_wm_class_instance(), window->get_wm_class());
+    if (app == nullptr) {
+        return;
+    }
+    window->set_app_id(app->id);
+    const Launcher::Icon& icon = wm_launcher.application_icon(*app);
     if (icon.picture != None) {
         window->set_app_icon({icon.picture, icon.width, icon.height});
+    }
+}
+
+void Manager::set_favorites(
+        std::vector<std::string> ids,
+        std::function<void(const std::vector<std::string>&)> changed)
+{
+    favorites = std::move(ids);
+    favorites_changed = std::move(changed);
+    update_favorites();
+}
+
+void Manager::update_favorites()
+{
+    std::vector<DockFavorite> shown;
+    for (const std::string& id : favorites) {
+        const xdg::Application* app = wm_launcher.find_application(id);
+        if (app == nullptr) { // not installed (now), it stays in the list
+            continue;
+        }
+        const Launcher::Icon& icon = wm_launcher.application_icon(*app);
+        shown.push_back({id, {icon.picture, icon.width, icon.height}});
+    }
+    wm_dock.set_favorites(std::move(shown));
+}
+
+void Manager::toggle_favorite(const std::string& id)
+{
+    const auto it = std::find(favorites.begin(), favorites.end(), id);
+    if (it == favorites.end()) {
+        favorites.push_back(id);
+    } else {
+        favorites.erase(it);
+    }
+    update_favorites();
+    if (favorites_changed) {
+        favorites_changed(favorites);
     }
 }
 

@@ -435,6 +435,57 @@ TEST_F(LauncherTest, the_application_of_a_window_gives_its_icon)
     EXPECT_EQ(launcher.application_icon("alpha", "Alpha").picture, None);
 }
 
+TEST_F(LauncherTest,
+       an_application_is_found_by_its_id_or_by_the_class_of_a_window)
+{
+    const auto* by_id = launcher.find_application("alpha.desktop");
+    ASSERT_NE(by_id, nullptr);
+    EXPECT_EQ(by_id->entry.name, "Alpha");
+
+    EXPECT_EQ(launcher.find_application("alpha", "Alpha"), by_id);
+    EXPECT_EQ(launcher.find_application("nothing.desktop"), nullptr);
+    EXPECT_EQ(launcher.find_application("nothing", "Nothing"), nullptr);
+}
+
+TEST_F(LauncherTest, an_application_is_started_by_its_id)
+{
+    EXPECT_TRUE(launcher.launch("beta.desktop"));
+
+    EXPECT_TRUE(appears(root / "beta"));
+}
+
+TEST_F(LauncherTest, an_application_that_is_not_installed_is_not_started)
+{
+    EXPECT_FALSE(launcher.launch("nothing.desktop"));
+}
+
+TEST_F(LauncherTest, an_application_that_does_not_start_is_told)
+{
+    std::ofstream(root / "applications" / "broken.desktop")
+            << "[Desktop Entry]\nName=Broken\nType=Application\n"
+               "Exec=/nonexistent/program\n";
+
+    testing::internal::CaptureStderr();
+    EXPECT_FALSE(launcher.launch("broken.desktop"));
+    const std::string report = testing::internal::GetCapturedStderr();
+
+    EXPECT_NE(report.find("Broken (/nonexistent/program)"), std::string::npos);
+    EXPECT_NE(report.find("No such file"), std::string::npos);
+}
+
+TEST_F(LauncherTest, an_application_started_by_its_id_is_a_recent_one)
+{
+    ASSERT_TRUE(launcher.launch("beta.desktop"));
+    ASSERT_TRUE(appears(root / "beta"));
+    fs::remove(root / "beta");
+
+    launcher.popup(); // Alpha sorts first, but Beta was used
+    type_key(entry(), XK_Return);
+
+    EXPECT_TRUE(appears(root / "beta"));
+    EXPECT_FALSE(fs::exists(root / "alpha"));
+}
+
 TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
 {
     fs::create_directories(root / "pixmaps");

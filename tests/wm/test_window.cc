@@ -314,6 +314,16 @@ TEST_F(WindowTest, wm_class_is_read)
     EXPECT_EQ(window->get_wm_class(), "Reto");
 }
 
+TEST_F(WindowTest, the_application_id_is_set_by_the_manager)
+{
+    auto window = manage();
+    EXPECT_EQ(window->get_app_id(), "");
+
+    window->set_app_id("reto.desktop");
+
+    EXPECT_EQ(window->get_app_id(), "reto.desktop");
+}
+
 TEST_F(WindowTest, window_without_wm_class_has_empty_names)
 {
     auto window = manage();

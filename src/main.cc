@@ -166,6 +166,22 @@ int main(int argc, char** argv)
         manager.set_power_commands(config.reboot_command,
                                    config.poweroff_command);
         manager.set_terminal(config.terminal);
+        const std::string user_file = tiny::wm::user_config_file(
+                getenv("XDG_CONFIG_HOME"), getenv("HOME"));
+        manager.set_favorites(
+                config.favorites,
+                [argv0 = std::string(argv[0]),
+                 user_file](const std::vector<std::string>& list) {
+                    std::string error;
+                    if (user_file.empty()) {
+                        error = "neither XDG_CONFIG_HOME nor HOME is set";
+                    } else if (tiny::wm::save_favorites(user_file, list,
+                                                        &error)) {
+                        return;
+                    }
+                    fprintf(stderr, "%s: the favorites are not saved: %s\n",
+                            argv0.c_str(), error.c_str());
+                });
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {
