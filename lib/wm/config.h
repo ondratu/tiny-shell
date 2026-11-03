@@ -30,7 +30,7 @@ struct Config {
 /**
  * @short The files to read, the one with the lowest priority first.
  *
- * `tiny-shell/config` in every directory of the XDG configuration directories
+ * `tiny-shell.ini` in every directory of the XDG configuration directories
  * (`$XDG_CONFIG_DIRS`, `/etc/xdg` by default), then the one of the user
  * (`$XDG_CONFIG_HOME`, `~/.config` by default). Pass the values of the
  * variables, null or empty means unset.

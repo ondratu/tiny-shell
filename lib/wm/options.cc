@@ -75,7 +75,7 @@ std::string usage_text(const std::string& program)
            "another window manager can take over from it with its own\n"
            "--replace.\n"
            "\n"
-           "The settings are read from tiny-shell/config in $XDG_CONFIG_DIRS\n"
+           "The settings are read from tiny-shell.ini in $XDG_CONFIG_DIRS\n"
            "(/etc/xdg) and in $XDG_CONFIG_HOME (~/.config), the second one\n"
            "wins; see --info.\n";
 }

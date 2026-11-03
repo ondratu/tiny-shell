@@ -23,7 +23,7 @@ std::vector<std::string> config_files(const char* config_home,
     const auto dirs = xdg::config_dir_list(config_home, config_dirs, home);
     // the list starts with the user, the files are read from the other end
     for (auto it = dirs.rbegin(); it != dirs.rend(); ++it) {
-        files.push_back(*it + (*it == "/" ? "" : "/") + "tiny-shell/config");
+        files.push_back(*it + (*it == "/" ? "" : "/") + "tiny-shell.ini");
     }
     return files;
 }
