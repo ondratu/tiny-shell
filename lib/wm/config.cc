@@ -1,8 +1,14 @@
 #include "wm/config.h"
 
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <cerrno>
+#include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <sstream>
+#include <cstring>
+#include <optional>
 
 #include "ini.h"
 #include "xdg/application_launch.h"
@@ -13,6 +19,24 @@ namespace tiny::wm {
 namespace {
 
 constexpr double max_scale = 16;
+
+//! The content of a file, nothing when it can't be opened
+std::optional<std::string> read_file(const std::string& file)
+{
+    FILE* in = fopen(file.c_str(), "r");
+    if (in == nullptr) {
+        return std::nullopt;
+    }
+    std::string text;
+    char buffer[4096];
+    size_t count;
+    do { // a short read is the end (or an error)
+        count = fread(buffer, 1, sizeof buffer, in);
+        text.append(buffer, count);
+    } while (count == sizeof buffer);
+    fclose(in);
+    return text;
+}
 
 } // namespace
 
@@ -28,7 +52,39 @@ std::vector<std::string> config_files(const char* config_home,
     return files;
 }
 
+std::string user_config_file(const char* config_home, const char* home)
+{
+    const auto absolute = [](const char* dir) {
+        return dir != nullptr && dir[0] == '/';
+    };
+    std::string dir;
+    if (absolute(config_home)) {
+        dir = config_home;
+    } else if (absolute(home)) {
+        dir = std::string(home) + "/.config";
+    } else {
+        return {};
+    }
+    return dir + (dir.back() == '/' ? "" : "/") + "tiny-shell.ini";
+}
+
 namespace {
+
+//! The ids of a list like `a.desktop;b.desktop`, with no blanks and repeats
+std::vector<std::string> split_ids(std::string_view list)
+{
+    std::vector<std::string> ids;
+    while (!list.empty()) {
+        const auto semicolon = list.find(';');
+        const std::string id(trim(list.substr(0, semicolon)));
+        list.remove_prefix(semicolon == std::string_view::npos ? list.size()
+                                                               : semicolon + 1);
+        if (!id.empty() && std::find(ids.begin(), ids.end(), id) == ids.end()) {
+            ids.push_back(id);
+        }
+    }
+    return ids;
+}
 
 //! Set what `ini` has on `config`; a wrong value is told and left as it was
 void apply(const Ini& ini, const std::string& name, Config& config,
@@ -72,6 +128,9 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.terminal = std::move(terminal);
         }
     }
+    if (const auto value = ini.get("dock", "favorites")) {
+        config.favorites = split_ids(*value);
+    }
 }
 
 } // namespace
@@ -99,15 +158,95 @@ Config load_config(const std::vector<std::string>& files,
 {
     std::vector<ConfigSource> sources;
     for (const std::string& file : files) {
-        const std::ifstream in(file);
-        if (!in) {
-            continue;
+        if (auto text = read_file(file)) {
+            sources.push_back({file, std::move(*text)});
         }
-        std::ostringstream text;
-        text << in.rdbuf();
-        sources.push_back({file, text.str()});
     }
     return parse_config(sources, problems);
+}
+
+namespace {
+
+bool fail(std::string* error, const std::string& what)
+{
+    if (error) {
+        *error = what + ": " + strerror(errno);
+    }
+    return false;
+}
+
+} // namespace
+
+bool save_favorites(const std::string& file,
+                    const std::vector<std::string>& favorites,
+                    std::string* error)
+{
+    std::string list;
+    for (const std::string& id : favorites) {
+        // the characters that would end the value or the list
+        if (id.empty() || id.find_first_of(";\r\n") != std::string::npos) {
+            if (error) {
+                *error = "wrong id of an application: " + id;
+            }
+            return false;
+        }
+        list += (list.empty() ? "" : ";") + id;
+    }
+
+    Ini ini;
+    ini.parse(read_file(file).value_or(""));
+    ini.set("dock", "favorites", list);
+
+    // the directory of a new file; its parent is the one of the session
+    const auto slash = file.rfind('/');
+    if (slash != std::string::npos && slash > 0 &&
+        mkdir(file.substr(0, slash).c_str(), 0777) != 0 && errno != EEXIST) {
+        return fail(error, "can't make the directory of " + file);
+    }
+
+    // a symbolic link is followed, so the file it points to is the one that
+    // changes, and a file keeps its permissions
+    std::string target = file;
+    mode_t mode = 0666;
+    char* real = realpath(file.c_str(), nullptr);
+    if (real != nullptr) {
+        target = real;
+        free(real);
+        struct stat info;
+        if (stat(target.c_str(), &info) == 0) {
+            mode = info.st_mode & 07777;
+        }
+    }
+
+    const std::string temporary =
+            target + "." + std::to_string(getpid()) + ".tmp";
+    FILE* out = fopen(temporary.c_str(), "w");
+    if (out == nullptr) {
+        return fail(error, "can't write " + temporary);
+    }
+    const std::string text =
+            "# tiny-shell configuration, written by tiny-shell: a comment is "
+            "not kept\n\n" +
+            ini.dump();
+    // fclose writes what is buffered; fsync makes the data safe before the
+    // rename shows them as the file
+    const bool written =
+            fwrite(text.data(), 1, text.size(), out) == text.size() &&
+            fflush(out) == 0 && fchmod(fileno(out), mode) == 0 &&
+            fsync(fileno(out)) == 0;
+    if (fclose(out) != 0 || !written) {
+        const int saved = errno;
+        std::remove(temporary.c_str());
+        errno = saved;
+        return fail(error, "can't write " + temporary);
+    }
+    if (std::rename(temporary.c_str(), target.c_str()) != 0) {
+        const int saved = errno;
+        std::remove(temporary.c_str());
+        errno = saved;
+        return fail(error, "can't replace " + target);
+    }
+    return true;
 }
 
 } // namespace tiny::wm
