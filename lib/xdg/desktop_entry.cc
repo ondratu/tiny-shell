@@ -129,6 +129,9 @@ bool is_localized(std::string_view key)
            key == "Keywords" || key == "Icon";
 }
 
+constexpr std::string_view action_group = "Desktop Action ";
+constexpr char action_separator = '\x1f'; // can't be in an id of an action
+
 } // namespace
 
 bool DesktopEntry::visible() const
@@ -146,14 +149,17 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
         size_t rank = 0;
         std::string text;
     };
+    // the keys of an action are written with the id of the action and
+    // `action_separator` before them
     std::map<std::string, Value, std::less<>> values;
+    bool in_group = false; // of the entry or of an action
+    std::string prefix;    // of the keys of the action
 
     constexpr std::string_view BOM = "\xEF\xBB\xBF";
     if (text.substr(0, BOM.size()) == BOM) {
         text.remove_prefix(BOM.size());
     }
 
-    bool in_entry = false;
     while (!text.empty()) {
         const auto end = text.find('\n');
         const std::string_view line = trim(text.substr(0, end));
@@ -163,11 +169,20 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
             continue;
         }
         if (line[0] == '[') {
-            in_entry = line == "[Desktop Entry]";
+            const std::string_view group = line.substr(1, line.size() - 2);
+            const bool closed = line.back() == ']';
+            prefix.clear();
+            in_group = closed && group == "Desktop Entry";
+            if (closed &&
+                group.substr(0, action_group.size()) == action_group) {
+                in_group = true;
+                prefix = std::string(group.substr(action_group.size())) +
+                         action_separator;
+            }
             continue;
         }
         const auto equal = line.find('=');
-        if (!in_entry || equal == std::string_view::npos) {
+        if (!in_group || equal == std::string_view::npos) {
             continue;
         }
 
@@ -190,16 +205,19 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
             rank = static_cast<size_t>(found - candidates.begin());
         }
 
-        const auto it = values.find(key);
+        const std::string full =
+                prefix.empty() ? "" : prefix + std::string(key);
+        const std::string_view name = prefix.empty() ? key : full;
+        const auto it = values.find(name);
         if (it == values.end()) {
-            values.emplace(std::string(key), Value{rank, std::string(value)});
+            values.emplace(std::string(name), Value{rank, std::string(value)});
         } else if (rank < it->second.rank) {
             it->second = Value{rank, std::string(value)};
         }
     }
 
-    const auto get = [&](const char* key) -> std::string_view {
-        const auto it = values.find(std::string_view(key));
+    const auto get = [&](std::string_view key) -> std::string_view {
+        const auto it = values.find(key);
         return it == values.end() ? std::string_view() : it->second.text;
     };
 
@@ -218,6 +236,21 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.terminal = get("Terminal") == "true";
     entry.no_display = get("NoDisplay") == "true";
     entry.hidden = get("Hidden") == "true";
+    for (const std::string& id : split_list(get("Actions"))) {
+        const auto same = [&id](const DesktopAction& other) {
+            return other.id == id;
+        };
+        if (std::any_of(entry.actions.begin(), entry.actions.end(), same)) {
+            continue; // listed twice
+        }
+        const auto field = [&](const char* key) {
+            return unescape(get(id + action_separator + key));
+        };
+        DesktopAction action{id, field("Name"), field("Exec")};
+        if (!action.name.empty() && !action.exec.empty()) {
+            entry.actions.push_back(std::move(action));
+        }
+    }
     return entry;
 }
 

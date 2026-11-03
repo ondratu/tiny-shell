@@ -47,6 +47,17 @@ std::filesystem::path temp_path(const char* name)
 
 } // namespace
 
+TEST(ExpandExecTest,
+     the_command_of_an_action_replaces_the_exec_of_the_application)
+{
+    const auto application = app("alpha %U");
+
+    EXPECT_EQ(tiny::xdg::expand_exec(application, {"x"}, "alpha --new %c"),
+              (Args{"alpha", "--new", "Alpha"}));
+    EXPECT_EQ(tiny::xdg::expand_exec(application, {"x"}, ""),
+              (Args{"alpha", "x"}));
+}
+
 TEST(ExpandExecTest, plain_command_is_split)
 {
     EXPECT_EQ(tiny::xdg::expand_exec(app("prog -a \"b c\""), {}),
