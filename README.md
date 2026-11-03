@@ -186,11 +186,15 @@ stderr and leaves the old file as it was. The file says so at the top.
 The dock shows an icon for every window and, before them, the favorite
 applications. Click the icon of a favorite that does not run to start it; when
 it runs, its first window takes the place of the icon and the icon comes back
-when the last window is closed. Click the right button on an icon and choose
-**Add to favorites** or **Remove from favorites**; that works for every
-window whose application has a `.desktop` file (it is found by `WM_CLASS`,
-see below). The favorites are saved at once to `[dock] favorites`. An id of
-an application that is not installed is kept in the file but not shown.
+when the last window is closed. Click the right button on an icon to open its
+menu, for every window whose application has a `.desktop` file (it is found by
+`WM_CLASS`, see below). The first item is always **New Window**, which starts the application again, also
+when it runs. Then come the other actions of the desktop file
+(`[Desktop Action ...]`, for example "New Private Window"), and last
+**Add to favorites** or **Remove from favorites**. A click anywhere outside
+of the menu closes it (the click does not reach the window below). The
+favorites are saved at once to `[dock] favorites`. An id of an application
+that is not installed is kept in the file but not shown.
 
 ### Command line
 
