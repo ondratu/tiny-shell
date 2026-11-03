@@ -1,7 +1,7 @@
 // Plain Xlib program to try how a window manager treats an application that
 // does not respond.
 //
-// The button freezes the program for 20 seconds: it does not read its events,
+// The button freezes the program for 30 seconds: it does not read its events,
 // so it does not answer `_NET_WM_PING` (EWMH) either. Watch the title bar
 // ("not responding"), try to close the window and choose "Wait" or
 // "Force quit" in the dialog of the manager. The program tells its process id
@@ -25,7 +25,7 @@ constexpr int BUTTON_X = 20;
 constexpr int BUTTON_Y = 40;
 constexpr int BUTTON_WIDTH = 280;
 constexpr int BUTTON_HEIGHT = 36;
-constexpr unsigned FREEZE_SECONDS = 20;
+constexpr unsigned FREEZE_SECONDS = 30;
 
 class Freeze {
   public:
@@ -104,6 +104,7 @@ class Freeze {
   private:
     void redraw()
     {
+        XClearWindow(display, window);
         GC gc = XCreateGC(display, window, 0, nullptr);
         XSetForeground(display, gc,
                        BlackPixel(display, DefaultScreen(display)));
@@ -111,7 +112,7 @@ class Freeze {
                     static_cast<int>(strlen(status)));
         XDrawRectangle(display, window, gc, BUTTON_X, BUTTON_Y, BUTTON_WIDTH,
                        BUTTON_HEIGHT);
-        const char* text = "Freeze for 20 seconds";
+        const char* text = "Freeze for 30 seconds";
         XDrawString(display, window, gc, BUTTON_X + 10, BUTTON_Y + 23, text,
                     static_cast<int>(strlen(text)));
         XFreeGC(display, gc);
@@ -123,7 +124,11 @@ class Freeze {
             e.y > BUTTON_Y + BUTTON_HEIGHT) {
             return;
         }
-        // no event is read meanwhile: no ping is answered, nothing is drawn
+        // say it before the freeze, nothing is drawn meanwhile
+        status = "Freezing...";
+        redraw();
+        XFlush(display);
+        // no event is read meanwhile: no ping is answered
         sleep(FREEZE_SECONDS);
         status = "Alive again";
         redraw();
