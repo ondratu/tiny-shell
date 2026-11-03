@@ -56,8 +56,10 @@ Implemented:
 - **Shell:** top panel with an application menu and a user menu, a dock with
   the icons of running windows, a run dialog (Alt+F2), a full screen launcher
   with search (Super).
-- **Other:** taking over from another window manager (`--replace`) and
-  handing over to one, Super + mouse moves a window, scaling of the whole theme for
+- **Other:** one `poll()` event loop for X events, signals and timers
+  (finished children are collected by a `SIGCHLD` handler), commands of Restart and
+  Shutdown (`--restart-command`, `--shutdown-command`), taking over from
+  another window manager (`--replace`) and handing over to one, Super + mouse moves a window, scaling of the whole theme for
   high-DPI screens (`TINY_SCALE_FACTOR`), unit tests of the toolkit and the
   window manager against Xvfb.
 
@@ -65,8 +67,8 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] An event loop that can wait for timers and child processes as well as
-      for X events, without zombie processes
+- [ ] Geometry details: the work area follows a dock that appears later, a
+      window that starts maximized keeps its aspect ratio
 
 ### Should: what people expect from a desktop
 
@@ -140,7 +142,8 @@ to scale the theme on a high-DPI screen.
 ### Command line
 
 ```
-tiny-shell [--replace] [--info] [--version] [--help]
+tiny-shell [--replace] [--restart-command=CMD] [--shutdown-command=CMD]
+           [--info] [--version] [--help]
 ```
 
 `--replace` takes over from a window manager that is already running, the way
@@ -149,6 +152,10 @@ tiny-shell starts when it has gone. Another window manager started with its
 own `--replace` takes over from tiny-shell in the same way. Window managers
 that do not use the selection (for example twm) have to be stopped first.
 `--info` prints what tiny-shell is and which settings it uses.
+`--restart-command` and `--shutdown-command` set the commands of Restart and
+Shutdown in the user menu (`systemctl reboot` and `systemctl poweroff` by
+default; use `sudo reboot`, `doas poweroff` or similar where there is no
+systemd).
 
 ### Where the launcher looks for applications
 
