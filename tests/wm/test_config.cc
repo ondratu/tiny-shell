@@ -113,13 +113,12 @@ TEST(ConfigTest, problems_may_be_ignored)
 
 TEST(ConfigTest, the_files_go_from_the_lowest_priority_to_the_user)
 {
+    EXPECT_EQ(tiny::wm::config_files("/h/.config", "/etc/xdg:/usr/etc", "/h"),
+              (Strings{"/usr/etc/tiny-shell.ini", "/etc/xdg/tiny-shell.ini",
+                       "/h/.config/tiny-shell.ini"}));
     EXPECT_EQ(
-            tiny::wm::config_files("/h/.config", "/etc/xdg:/usr/etc", "/h"),
-            (Strings{"/usr/etc/tiny-shell/config", "/etc/xdg/tiny-shell/config",
-                     "/h/.config/tiny-shell/config"}));
-    EXPECT_EQ(tiny::wm::config_files(nullptr, nullptr, "/h"),
-              (Strings{"/etc/xdg/tiny-shell/config",
-                       "/h/.config/tiny-shell/config"}));
+            tiny::wm::config_files(nullptr, nullptr, "/h"),
+            (Strings{"/etc/xdg/tiny-shell.ini", "/h/.config/tiny-shell.ini"}));
 }
 
 class ConfigFilesTest : public ::testing::Test {

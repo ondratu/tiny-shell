@@ -140,7 +140,7 @@ configuration file to scale the theme on a high-DPI screen.
 
 ### Configuration
 
-The settings are in an ini file, `tiny-shell/config`, read from two places
+The settings are in an ini file, `tiny-shell.ini`, read from two places
 and layered: the global one in `$XDG_CONFIG_DIRS` (`/etc/xdg` by default;
 set the variable to `/usr/local/etc/xdg` where the system keeps its files
 there, e.g. on the BSDs) and then the one of the user in `$XDG_CONFIG_HOME`
@@ -164,8 +164,8 @@ poweroff = systemctl poweroff
 terminal = xterm -e
 ```
 
-[examples/config](examples/config) is a file to start with. Use `sudo reboot`,
-`doas poweroff` or similar where there is no systemd. Nothing rewrites the
+[examples/tiny-shell.ini](examples/tiny-shell.ini) is a file to start with.
+Use `sudo reboot`, `doas poweroff` or similar where there is no systemd. Nothing rewrites the
 file now, but a settings program may do it later, together with your
 comments; the file says so at the top.
 

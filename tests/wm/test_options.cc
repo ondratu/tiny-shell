@@ -94,12 +94,12 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     config.reboot_command = "my-reboot";
     config.poweroff_command = "my-poweroff";
     const std::string text = tiny::wm::info_text(
-            config, {"/etc/xdg/tiny-shell/config"}, {"/a/applications"});
+            config, {"/etc/xdg/tiny-shell.ini"}, {"/a/applications"});
 
     EXPECT_NE(text.find("1.5"), std::string::npos);
     EXPECT_NE(text.find("my-reboot"), std::string::npos);
     EXPECT_NE(text.find("my-poweroff"), std::string::npos);
-    EXPECT_NE(text.find("/etc/xdg/tiny-shell/config"), std::string::npos);
+    EXPECT_NE(text.find("/etc/xdg/tiny-shell.ini"), std::string::npos);
     EXPECT_NE(text.find("/a/applications"), std::string::npos);
     EXPECT_NE(text.find(tiny::wm::version_text()), std::string::npos);
 }
