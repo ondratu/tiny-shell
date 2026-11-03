@@ -167,10 +167,34 @@ void Box::remove(Widget* widget)
     }
 }
 
+ClickCatcher::ClickCatcher(): Widget(Type::Input, 1, 1)
+{
+    name = "click_catcher";
+}
+
+ClickCatcher::~ClickCatcher()
+{
+    if (event_done) {
+        disconnect(ButtonPress);
+    }
+}
+
+void ClickCatcher::set_events(long mask)
+{
+    Widget::set_events(ButtonPressMask | mask);
+
+    connect(ButtonPress, [this](const XEvent& e) { on_press(this, e); });
+}
+
 Popover::Popover(Box::Type type_arg, int w, int h):
     Box(type_arg, w, h), time_from_unmap(0)
 {
     name = "popover";
+    catcher.on_press.connect([this](const XEvent& e) {
+        if (e.xbutton.button <= Button3) { // the wheel does not close it
+            unmap();
+        }
+    });
 }
 
 Popover::Popover(int w, int h): Popover(Box::Type::Vertical, w, h) {}
@@ -189,6 +213,16 @@ void Popover::realize(::Window root, int x, int y)
     attrs.override_redirect = true;
 
     XChangeWindowAttributes(display, window, CWOverrideRedirect, &attrs);
+
+    catcher.realize(root, 0, 0);
+    XChangeWindowAttributes(display, catcher.get_window(), CWOverrideRedirect,
+                            &attrs);
+}
+
+void Popover::unmap()
+{
+    catcher.unmap();
+    Box::unmap();
 }
 
 void Popover::set_events(long mask)
@@ -213,8 +247,15 @@ void Popover::popup(int x, int y)
 
     x -= width / 2; // center the popover under x
 
+    XWindowAttributes root_attrs;
+    if (is_realized && XGetWindowAttributes(display, parent, &root_attrs)) {
+        catcher.resize(root_attrs.width, root_attrs.height);
+        catcher.map();
+        XRaiseWindow(display, catcher.get_window());
+    }
     XMoveWindow(display, window, x, y);
     map_all();
+    XRaiseWindow(display, window); // over the catcher
     XSetInputFocus(display, window, RevertToPointerRoot, CurrentTime);
 }
 
