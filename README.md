@@ -12,8 +12,8 @@ much as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog and an application launcher. A clock, a task bar
-> and a configuration file are still missing, see below.
+> dialog and an application launcher. A clock, a task bar and a
+> configuration file are still missing, see below.
 
 ## What it is
 
@@ -58,17 +58,15 @@ Implemented:
   the icons of running windows, a run dialog (Alt+F2), a full screen launcher
   with search (Super).
 - **Other:** one `poll()` event loop for X events, signals and timers
-  (finished children are collected by a `SIGCHLD` handler), commands of Restart and
-  Shutdown (`--restart-command`, `--shutdown-command`), taking over from
-  another window manager (`--replace`) and handing over to one, Super + mouse moves a window, scaling of the whole theme for
-  high-DPI screens (`TINY_SCALE_FACTOR`), unit tests of the toolkit and the
-  window manager against Xvfb.
+  (finished children are collected by a `SIGCHLD` handler), commands of
+  Restart and Shutdown (`--restart-command`, `--shutdown-command`), taking
+  over from another window manager (`--replace`) and handing over to one,
+  Super + mouse moves a window, scaling of the whole theme for high-DPI
+  screens (`TINY_SCALE_FACTOR`), unit tests of the toolkit and the window
+  manager against Xvfb.
 
-Planned, grouped by importance:
-
-### Must: a window manager other programs can rely on
-
-Nothing is left here at the moment.
+Planned, grouped by importance (what a window manager must do for other
+programs is done, so there is no "must" list):
 
 ### Should: what people expect from a desktop
 
