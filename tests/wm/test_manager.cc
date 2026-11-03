@@ -1142,8 +1142,13 @@ TEST_F(ManagerTest, a_window_of_a_dead_process_is_not_asked_about)
     if (pid == 0) {
         _exit(0);
     }
+    // the manager may reap its children itself, then there is nothing to wait
+    // for; either way the process must be gone
     int status = 0;
-    ASSERT_EQ(waitpid(pid, &status, 0), pid);
+    for (int i = 0; i < 200 && waitpid(pid, &status, WNOHANG) == 0; ++i) {
+        usleep(10000);
+    }
+    ASSERT_EQ(kill(pid, 0), -1);
     c.set_cardinals(dsp()._NET_WM_PID, {pid});
     std::string host = tiny::wm::local_host_name();
     char* names[] = {host.data()};
