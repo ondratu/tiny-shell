@@ -172,10 +172,10 @@ class Manager : public tiny::Object {
     void update_work_area();
 
     //! Focus stealing prevention: may a window that was just mapped have it
-    bool may_take_focus(Window* window) const;
+    bool may_take_focus(const Window* window) const;
 
     //! May an application activate the window with a request of that time
-    bool may_activate(Window* window, unsigned long time) const;
+    bool may_activate(const Window* window, unsigned long time) const;
 
     //! Remember `_NET_WM_USER_TIME` of the window as the time of the user
     void note_user_time(const Window* window);
@@ -268,8 +268,8 @@ class Manager : public tiny::Object {
     //! The unmaps of this window in the serials [first, last) are our own
     struct {
         ::Window window;
-        unsigned long first;
-        unsigned long last;
+        unsigned long first = 0;
+        unsigned long last = 0;
     } reframed = {None, 0, 0};
 
     tiny::Timers timers;

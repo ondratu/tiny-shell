@@ -31,13 +31,11 @@ class LabelButton : public Button {
 
     ~LabelButton() override;
 
-    void realize(Window parent, int x, int y) override;
-
     void set_events(long mask = 0) override;
 
     void set_text(const std::string& text);
 
-    std::string get_text() const { return text; }
+    const std::string& get_text() const { return text; }
 
   protected:
     void on_enter_notify(const XEvent& e, void* data) override;

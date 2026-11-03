@@ -9,11 +9,6 @@ AppMenu::AppMenu(): tiny::Popover(10, 10)
 
 AppMenu::~AppMenu() = default;
 
-void AppMenu::realize(::Window parent_arg, int x, int y)
-{
-    tiny::Popover::realize(parent_arg, x, y);
-}
-
 UserMenu::UserMenu():
     tiny::Popover(tiny::theme.wm_menu_width,
                   tiny::theme.wm_menu_item_height * 3),

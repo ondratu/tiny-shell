@@ -245,6 +245,7 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
     close(o, e, data);
 }
 
+// cppcheck-suppress constParameterPointer ; the signature of a handler
 void Launcher::turn(Object* o, const XEvent&, void*)
 {
     grid.select_page(o == &next_page);

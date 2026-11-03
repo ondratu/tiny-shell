@@ -38,6 +38,7 @@ std::string lower(std::string_view text)
 }
 
 struct Scanner {
+    // cppcheck-suppress uninitMemberVarNoCtor ; set by the aggregate initializer
     std::vector<Application>& apps;
     std::string_view locale;
     std::string_view path;

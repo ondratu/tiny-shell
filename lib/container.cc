@@ -129,7 +129,6 @@ void Box::push_back(Widget* widget, int x_spacing, int y_spacing, int gravity)
 
 void Box::remove(Widget* widget)
 {
-    int offset = 0;
     auto it = offsets.find(widget);
 
     Container::remove(widget);
@@ -142,7 +141,7 @@ void Box::remove(Widget* widget)
         if (it->second.start) {
             start_offset -= (it->second.x + widget->get_width());
             offsets.erase(it);
-            offset = 0;
+            int offset = 0;
             for (auto ch : offsets) {
                 if (ch.second.start) {
                     XMoveWindow(display, ch.first->get_window(),
@@ -153,7 +152,7 @@ void Box::remove(Widget* widget)
         } else { // end_offset
             end_offset += (it->second.x + widget->get_width());
             offsets.erase(it);
-            offset = width - 1;
+            int offset = width - 1;
             for (auto ch : offsets) {
                 if (!ch.second.start) {
                     offset -= ch.second.x + ch.first->get_width();

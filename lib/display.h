@@ -6,7 +6,7 @@ namespace tiny {
 
 class Display {
   public:
-    Display(::Display* display);
+    explicit Display(::Display* display);
 
     ~Display();
 

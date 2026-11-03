@@ -151,7 +151,7 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
 
     // the lower the rank, the better; a key without a locale is the worst
     struct Value {
-        size_t rank;
+        size_t rank = 0;
         std::string text;
     };
     std::map<std::string, Value, std::less<>> values;

@@ -312,8 +312,8 @@ void Manager::publish_desktops()
     const long viewport[] = {0, 0};
     const struct {
         Atom property;
-        const long* values;
-        int count;
+        const long* values = nullptr;
+        int count = 0;
     } properties[] = {{dsp._NET_NUMBER_OF_DESKTOPS, &one, 1},
                       {dsp._NET_CURRENT_DESKTOP, &first, 1},
                       {dsp._NET_DESKTOP_GEOMETRY, geometry, 2},
@@ -1511,7 +1511,7 @@ void Manager::on_map_request(const XMapRequestEvent& e)
     }
 }
 
-bool Manager::may_take_focus(Window* window) const
+bool Manager::may_take_focus(const Window* window) const
 {
     if (!active || active->get_minimized() || parent_of(window) == active) {
         return true; // nothing to steal, or a dialog of the window in use
@@ -1521,7 +1521,7 @@ bool Manager::may_take_focus(Window* window) const
     return takes_focus(has_time, time, has_user_time, last_user_time);
 }
 
-bool Manager::may_activate(Window* window, unsigned long time) const
+bool Manager::may_activate(const Window* window, unsigned long time) const
 {
     if (!active || active->get_minimized() || window == active ||
         parent_of(window) == active) {

@@ -277,7 +277,7 @@ static bool read_user_time_window(::Window window, ::Window& named);
 static unsigned long motif_allowed(unsigned long value, unsigned long all,
                                    unsigned long everything)
 {
-    return value & all ? everything & ~value : value & everything;
+    return (value & all) ? everything & ~value : value & everything;
 }
 
 void resolve_motif_hints(const unsigned long* data, unsigned long nitems,
@@ -1492,7 +1492,6 @@ void Window::update_wm_icon()
         // Find best size
         std::map<unsigned long, size_t> icons;
         size_t pos = 0;
-        size_t icon_size = 0;
         unsigned long width = 0;
         unsigned long height = 0;
         // Yes, it can really be 64bit (unsigned long) not 32bit!
@@ -1500,9 +1499,8 @@ void Window::update_wm_icon()
         while (pos < nitems) {
             width = words[pos];
             height = words[pos + 1];
-            icon_size = width * height;
             icons[width] = pos;
-            pos += 2 + icon_size; // width+height+icon_size
+            pos += 2 + width * height; // width+height+pixels
         }
 
         for (auto it : icons) { // Find the best icon size
@@ -1534,13 +1532,13 @@ void Window::update_wm_icon()
         XSetForeground(dsp, gc_mask, 1);
 
         pos += 2; //!< shift pos to starting data
-        uint32_t color;
-        uint8_t* pixel;
         // format is RGBA + 4 zeros on 64bit
         for (size_t y = 0; y < height; y++) {
             for (size_t x = 0; x < width; x++) {
-                pixel = reinterpret_cast<uint8_t*>(&words[pos + y * width + x]);
-                color = static_cast<uint32_t>(pixel[0] * pixel[3] / 255) << 0;
+                const auto* pixel = reinterpret_cast<const uint8_t*>(
+                        &words[pos + y * width + x]);
+                uint32_t color =
+                        static_cast<uint32_t>(pixel[0] * pixel[3] / 255) << 0;
                 color |= static_cast<uint32_t>(pixel[1] * pixel[3] / 255) << 8;
                 color |= static_cast<uint32_t>(pixel[2] * pixel[3] / 255) << 16;
 

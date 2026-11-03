@@ -67,6 +67,7 @@ class Box : public Container {
         int y;
     };
 
+    // cppcheck-suppress duplInheritedMember
     Type type;
 
     int start_offset;
