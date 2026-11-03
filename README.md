@@ -50,9 +50,10 @@ Implemented:
   given back when it exits, applications that stop responding are found by
   `_NET_WM_PING` and the user chooses to wait or to force them to quit.
 - **Standards:** ICCCM, EWMH (window states, types, layers, struts and the
-  work area, active window, focus stealing prevention, frame extents, the
-  client lists), `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry
-  and the Icon Theme specification (PNG, SVG, XPM).
+  work area that follows docks coming and going, active window, focus
+  stealing prevention, frame extents, the client lists), `_MOTIF_WM_HINTS`
+  (functions and decorations), Desktop Entry and the Icon Theme specification
+  (PNG, SVG, XPM).
 - **Shell:** top panel with an application menu and a user menu, a dock with
   the icons of running windows, a run dialog (Alt+F2), a full screen launcher
   with search (Super).
@@ -67,8 +68,7 @@ Planned, grouped by importance:
 
 ### Must: a window manager other programs can rely on
 
-- [ ] Geometry details: the work area follows a dock that appears later, a
-      window that starts maximized keeps its aspect ratio
+Nothing is left here at the moment.
 
 ### Should: what people expect from a desktop
 
