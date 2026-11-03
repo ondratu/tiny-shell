@@ -36,6 +36,19 @@ class Ini {
     std::optional<std::string> get(const std::string& section,
                                    const std::string& key) const;
 
+    //! Set a value; the key and the section are made if they are not there
+    void set(const std::string& section, const std::string& key,
+             std::string value);
+
+    /**
+     * @short The text of a file with all the values.
+     *
+     * Only the values are written (a comment is not stored), the keys before
+     * the first section first, then the sections in the order of their
+     * names; `parse` of the text gives the same values back.
+     */
+    std::string dump() const;
+
     bool empty() const { return values.empty(); }
 
   private:

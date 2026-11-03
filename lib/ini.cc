@@ -1,5 +1,7 @@
 #include "ini.h"
 
+#include <utility>
+
 namespace tiny {
 
 std::string_view trim(std::string_view text)
@@ -74,6 +76,28 @@ std::optional<std::string> Ini::get(const std::string& section,
         return std::nullopt;
     }
     return it->second;
+}
+
+void Ini::set(const std::string& section, const std::string& key,
+              std::string value)
+{
+    values[{section, key}] = std::move(value);
+}
+
+std::string Ini::dump() const
+{
+    std::string text;
+    const std::string* section = nullptr;
+    for (const auto& [name, value] : values) {
+        if (section == nullptr || *section != name.first) {
+            section = &name.first;
+            if (!section->empty()) {
+                text += (text.empty() ? "[" : "\n[") + *section + "]\n";
+            }
+        }
+        text += name.second + " = " + value + "\n";
+    }
+    return text;
 }
 
 } // namespace tiny

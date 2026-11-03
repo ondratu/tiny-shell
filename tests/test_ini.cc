@@ -137,3 +137,43 @@ TEST(IniTest, trim_drops_the_blanks)
     EXPECT_EQ(tiny::trim(" \t"), "");
     EXPECT_EQ(tiny::trim(""), "");
 }
+
+TEST(IniTest, set_adds_and_replaces_a_value)
+{
+    Ini ini;
+    ini.set("s", "a", "1");
+    ini.set("s", "a", "2");
+    ini.set("t", "b", "3");
+
+    EXPECT_EQ(ini.get("s", "a"), "2");
+    EXPECT_EQ(ini.get("t", "b"), "3");
+}
+
+TEST(IniTest, dump_writes_the_sections_in_order_after_the_keys_without_one)
+{
+    Ini ini;
+    ini.parse("[b]\nx = 1\n[a]\ny = 2 # not a comment\n");
+    ini.set("", "top", "0");
+
+    EXPECT_EQ(ini.dump(),
+              "top = 0\n\n[a]\ny = 2 # not a comment\n\n[b]\nx = 1\n");
+}
+
+TEST(IniTest, dump_of_nothing_is_empty)
+{
+    EXPECT_EQ(Ini().dump(), "");
+}
+
+TEST(IniTest, the_dump_is_read_back_the_same)
+{
+    Ini ini;
+    ini.parse("a = 1\n[s]\nk = v;w\nempty =\n[t]\nk = x = y\n");
+
+    Ini again;
+    again.parse(ini.dump());
+
+    EXPECT_EQ(again.dump(), ini.dump());
+    EXPECT_EQ(again.get("s", "empty"), "");
+    EXPECT_EQ(again.get("t", "k"), "x = y");
+    EXPECT_EQ(again.get("", "a"), "1");
+}
