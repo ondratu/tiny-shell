@@ -2522,6 +2522,136 @@ TEST_F(ManagerTest, a_window_gets_the_icon_of_its_desktop_entry)
     fs::remove_all(root);
 }
 
+// Two applications in a temporary XDG data directory: Epsilon and Eta
+class ManagerFavoritesTest : public ManagerTest {
+  protected:
+    void SetUp() override
+    {
+        std::filesystem::remove_all(root);
+        std::filesystem::create_directories(root / "applications");
+        for (const char* name : {"epsilon", "eta"}) {
+            std::ofstream(root / "applications" /
+                          (std::string(name) + ".desktop"))
+                    << "[Desktop Entry]\nName=" << name
+                    << "\nType=Application\nExec=touch "
+                    << (root / name).string() << "\n";
+        }
+    }
+
+    void TearDown() override { std::filesystem::remove_all(root); }
+
+    // The icons of the dock, without the dots
+    size_t icons()
+    {
+        return children_of(manager->wm_dock.get_window()).size() - 1;
+    }
+
+    std::filesystem::path root =
+            std::filesystem::temp_directory_path() /
+            ("tiny-manager-fav-" + std::to_string(getpid()));
+    EnvVar data_home{"XDG_DATA_HOME", "/nonexistent"};
+    EnvVar data_dirs{"XDG_DATA_DIRS", root.string()};
+};
+
+TEST_F(ManagerFavoritesTest, a_favorite_that_does_not_run_has_an_icon)
+{
+    start();
+
+    manager->set_favorites({"epsilon.desktop", "eta.desktop"});
+
+    EXPECT_EQ(icons(), 2u);
+}
+
+TEST_F(ManagerFavoritesTest, a_favorite_that_is_not_installed_has_no_icon)
+{
+    start();
+
+    manager->set_favorites({"epsilon.desktop", "gone.desktop"});
+
+    EXPECT_EQ(icons(), 1u);
+}
+
+TEST_F(ManagerFavoritesTest, a_window_of_a_favorite_takes_its_place_in_the_dock)
+{
+    FakeClient& client = add_client();
+    client.set_class("epsilon", "Epsilon");
+    start();
+    manager->set_favorites({"epsilon.desktop"});
+
+    EXPECT_EQ(icons(), 1u);
+    EXPECT_EQ(manager->wm_windows.at(client.window)->get_app_id(),
+              "epsilon.desktop");
+}
+
+TEST_F(ManagerFavoritesTest,
+       a_window_without_a_desktop_entry_has_no_application)
+{
+    FakeClient& client = add_client();
+    client.set_class("zeta", "Zeta");
+    start();
+
+    EXPECT_EQ(manager->wm_windows.at(client.window)->get_app_id(), "");
+}
+
+TEST_F(ManagerFavoritesTest, a_click_on_a_favorite_starts_the_application)
+{
+    start();
+    manager->set_favorites({"epsilon.desktop"});
+
+    manager->wm_dock.on_launch("epsilon.desktop");
+
+    for (int i = 0; i < 200 && !std::filesystem::exists(root / "epsilon");
+         ++i) {
+        usleep(10 * 1000);
+    }
+    EXPECT_TRUE(std::filesystem::exists(root / "epsilon"));
+}
+
+TEST_F(ManagerFavoritesTest, the_menu_adds_and_removes_a_favorite_and_tells_it)
+{
+    start();
+    std::vector<std::vector<std::string>> saved;
+    manager->set_favorites({}, [&saved](const std::vector<std::string>& list) {
+        saved.push_back(list);
+    });
+
+    manager->wm_dock.on_toggle_favorite("epsilon.desktop");
+    manager->wm_dock.on_toggle_favorite("eta.desktop");
+    EXPECT_EQ(icons(), 2u);
+    manager->wm_dock.on_toggle_favorite("epsilon.desktop");
+
+    EXPECT_EQ(icons(), 1u);
+    ASSERT_EQ(saved.size(), 3u);
+    EXPECT_EQ(saved[0], (std::vector<std::string>{"epsilon.desktop"}));
+    EXPECT_EQ(saved[1],
+              (std::vector<std::string>{"epsilon.desktop", "eta.desktop"}));
+    EXPECT_EQ(saved[2], (std::vector<std::string>{"eta.desktop"}));
+}
+
+TEST_F(ManagerFavoritesTest, a_favorite_that_is_not_installed_stays_in_the_list)
+{
+    start();
+    std::vector<std::string> saved;
+    manager->set_favorites(
+            {"gone.desktop"},
+            [&saved](const std::vector<std::string>& list) { saved = list; });
+
+    manager->wm_dock.on_toggle_favorite("epsilon.desktop");
+
+    EXPECT_EQ(saved,
+              (std::vector<std::string>{"gone.desktop", "epsilon.desktop"}));
+}
+
+TEST_F(ManagerFavoritesTest, changes_are_fine_without_anybody_to_save_them)
+{
+    start();
+    manager->set_favorites({});
+
+    manager->wm_dock.on_toggle_favorite("epsilon.desktop");
+
+    EXPECT_EQ(icons(), 1u);
+}
+
 TEST_F(ManagerTest, other_keys_are_not_handled_on_press)
 {
     start();

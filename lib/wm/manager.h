@@ -44,6 +44,17 @@ class Manager : public tiny::Object {
         wm_launcher.set_terminal(std::move(command));
     }
 
+    /**
+     * @short The favorite applications of the dock, the ids of desktop files.
+     *
+     * Their icons stay in the dock when they do not run. An id that is not an
+     * installed application is kept but not shown. `changed` is called with
+     * the whole list when the user adds or removes a favorite (to save it).
+     */
+    void set_favorites(
+            std::vector<std::string> ids,
+            std::function<void(const std::vector<std::string>&)> changed = {});
+
     //! Timers of the main loop (a clock, delays); they run in the loop, so
     //! the functions must be short
     tiny::Timers& get_timers() { return timers; }
@@ -126,8 +137,14 @@ class Manager : public tiny::Object {
     //! The window before `window` that is not minimized, null if none
     Window* previous_shown(const Window* window) const;
 
-    //! The icon of the desktop entry of the window, for the dock
+    //! The application of the window (the id, the icon) for the dock
     void set_application_icon(Window* window);
+
+    //! Give the dock the favorites that are installed
+    void update_favorites();
+
+    //! Add the application to the favorites, or remove it when it is one
+    void toggle_favorite(const std::string& id);
 
     //! Start a command of the user menu; an empty one does nothing
     void run_system_command(const std::string& command);
@@ -281,6 +298,9 @@ class Manager : public tiny::Object {
     } reframed = {None, 0, 0};
 
     tiny::Timers timers;
+
+    std::vector<std::string> favorites; //!< ids of desktop files
+    std::function<void(const std::vector<std::string>&)> favorites_changed;
 
     // until there is a configuration the commands are the systemd ones
     std::string restart_command = Config().reboot_command;

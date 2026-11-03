@@ -232,8 +232,14 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
     }
     const xdg::Application& app =
             index.applications()[found[grid.get_selected()]];
+    if (start(app)) {
+        close(o, e, data);
+    } // else keep the launcher and the text, so the user can try again
+}
+
+bool Launcher::start(const xdg::Application& app)
+{
     if (xdg::launch(app, {}, terminal) < 0) {
-        // keep the launcher and the text, so the user can try again
         const int error = errno;
         auto argv = xdg::expand_exec(app, {});
         if (app.entry.terminal && !terminal.empty()) {
@@ -242,10 +248,16 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
         tiny::error("Can't start %s (%s): %s", app.entry.name.c_str(),
                     argv.empty() ? "no command" : argv[0].c_str(),
                     strerror(error));
-        return;
+        return false;
     }
     remember(app.id);
-    close(o, e, data);
+    return true;
+}
+
+bool Launcher::launch(const std::string& id)
+{
+    const xdg::Application* app = find_application(id);
+    return app != nullptr && start(*app);
 }
 
 // cppcheck-suppress constParameterPointer ; the signature of a handler
@@ -305,25 +317,44 @@ const Launcher::Icon& Launcher::icon_of(const xdg::Application& app)
     return it->second;
 }
 
-const Launcher::Icon& Launcher::application_icon(std::string_view instance,
-                                                 std::string_view class_name)
+const xdg::Application* Launcher::find_application(std::string_view instance,
+                                                   std::string_view class_name)
 {
-    static const Icon no_icon;
     load();
     const auto& apps = index.applications();
     const size_t app =
             xdg::find_application_of_window(apps, instance, class_name);
-    if (app == apps.size()) {
-        return no_icon;
-    }
-    auto it = window_icons.find(apps[app].id);
+    return app == apps.size() ? nullptr : &apps[app];
+}
+
+const xdg::Application* Launcher::find_application(const std::string& id)
+{
+    load();
+    const auto& apps = index.applications();
+    const auto it = std::find_if(
+            apps.begin(), apps.end(),
+            [&id](const xdg::Application& app) { return app.id == id; });
+    return it == apps.end() ? nullptr : &*it;
+}
+
+const Launcher::Icon& Launcher::application_icon(const xdg::Application& app)
+{
+    auto it = window_icons.find(app.id);
     if (it == window_icons.end()) {
         it = window_icons
-                     .emplace(apps[app].id, load_icon(apps[app].entry.icon,
-                                                      tiny::theme.wm_icon))
+                     .emplace(app.id,
+                              load_icon(app.entry.icon, tiny::theme.wm_icon))
                      .first;
     }
     return it->second;
+}
+
+const Launcher::Icon& Launcher::application_icon(std::string_view instance,
+                                                 std::string_view class_name)
+{
+    static const Icon no_icon;
+    const xdg::Application* app = find_application(instance, class_name);
+    return app == nullptr ? no_icon : application_icon(*app);
 }
 
 Launcher::Icon Launcher::load_icon(const std::string& icon_name, int size) const

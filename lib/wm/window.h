@@ -352,6 +352,11 @@ class Window {
     const AppIcon& get_app_icon() const { return app_icon; }
     void set_app_icon(const AppIcon& value) { app_icon = value; }
 
+    //! The desktop file id of the application the window belongs to, empty
+    //! when none is known
+    const std::string& get_app_id() const { return app_id; }
+    void set_app_id(std::string value) { app_id = std::move(value); }
+
     //! WM_CLASS of the client, empty when it has none
     const std::string& get_wm_class_instance() const { return wm_class[0]; }
     const std::string& get_wm_class() const { return wm_class[1]; }
@@ -639,6 +644,7 @@ class Window {
 
     Pixmap icon = 0;
     AppIcon app_icon;
+    std::string app_id;
     std::string wm_class[2]; //!< instance, class
     Pixmap icon_mask = 0;
 
