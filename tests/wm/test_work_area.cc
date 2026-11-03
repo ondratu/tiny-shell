@@ -134,3 +134,19 @@ TEST(ReadStrutsTest, a_negative_strut_is_zero)
 
     EXPECT_EQ(read_struts(c.window).left, 0);
 }
+
+TEST(WorkAreaTest, inner_area_leaves_room_for_the_borders)
+{
+    const tiny::Rect r = tiny::wm::inner_area({0, 30, 1000, 700}, 2);
+    EXPECT_EQ(r.x, 2);
+    EXPECT_EQ(r.y, 32);
+    EXPECT_EQ(r.width, 996);
+    EXPECT_EQ(r.height, 696);
+}
+
+TEST(WorkAreaTest, inner_area_of_a_tiny_area_is_not_empty)
+{
+    const tiny::Rect r = tiny::wm::inner_area({0, 0, 2, 2}, 5);
+    EXPECT_EQ(r.width, 1);
+    EXPECT_EQ(r.height, 1);
+}

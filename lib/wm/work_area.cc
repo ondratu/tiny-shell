@@ -67,6 +67,13 @@ tiny::Rect compute_work_area(int screen_width, int screen_height,
             screen_height - top - bottom};
 }
 
+tiny::Rect inner_area(const tiny::Rect& area, int border)
+{
+    return {area.x + border, area.y + border,
+            std::max(area.width - 2 * border, 1),
+            std::max(area.height - 2 * border, 1)};
+}
+
 tiny::Rect fit_in_area(tiny::Rect frame, const tiny::Rect& area)
 {
     frame.width = std::min(frame.width, area.width);

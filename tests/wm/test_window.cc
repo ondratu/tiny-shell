@@ -1719,6 +1719,33 @@ TEST_F(WindowTest, maximized_window_with_aspect_ratio_still_gets_a_size)
     EXPECT_EQ(window.restore_size().width, screen().width / 3 * 2);
 }
 
+TEST_F(WindowTest, a_dock_that_comes_later_pushes_a_normal_window_away)
+{
+    WmWindow window(client.window, root_window(), 0xFFFF, screen_area());
+    XMoveWindow(client.display, client.window, 10, 0);
+    client.sync();
+
+    window.set_work_area({0, 40, screen_area().width, screen_area().height});
+
+    EXPECT_GE(client.attrs().y, 41);
+}
+
+TEST_F(WindowTest, maximized_window_with_aspect_ratio_gets_its_ratio)
+{
+    XSizeHints hints = {};
+    hints.flags = PAspect;
+    hints.min_aspect = {2, 1};
+    hints.max_aspect = {2, 1};
+    client.set_normal_hints(hints);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+
+    const SizedWindow window(client.window, root_window(), 0xFFFF,
+                             screen_area());
+
+    EXPECT_EQ(window.restore_size().width, 2 * window.restore_size().height);
+}
+
 // ---- create ----
 
 TEST_F(WindowTest, create_maps_and_prepares_the_client)
@@ -1802,6 +1829,8 @@ TEST_F(WindowTest, set_maximized_updates_state_and_property)
 TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 {
     client.map();
+    XMoveWindow(client.display, client.window, 10, tiny::theme.wm_panel + 20);
+    client.sync();
     auto window = manage();
 
     window->maximize();
@@ -1817,7 +1846,7 @@ TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 
     const XWindowAttributes restored = client.attrs();
     EXPECT_EQ(restored.x, 10);
-    EXPECT_EQ(restored.y, 20);
+    EXPECT_EQ(restored.y, tiny::theme.wm_panel + 20);
     EXPECT_EQ(restored.width, 200);
     EXPECT_EQ(restored.height, 100);
     EXPECT_FALSE(window->get_maximized());

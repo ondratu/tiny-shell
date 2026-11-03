@@ -583,6 +583,119 @@ TEST_F(ClientTest, a_maximized_window_follows_a_changed_work_area)
     EXPECT_EQ(child().height, 600 - header_height());
 }
 
+TEST_F(ClientTest, a_window_that_starts_maximized_returns_in_its_ratio)
+{
+    XSizeHints hints = {};
+    hints.flags = PAspect;
+    hints.min_aspect = {2, 1};
+    hints.max_aspect = {2, 1};
+    client.set_normal_hints(hints);
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+    build();
+    win->apply_initial_state();
+    ASSERT_TRUE(win->get_maximized());
+
+    win->restore(0, 0);
+
+    EXPECT_EQ(child().width, 2 * child().height);
+    EXPECT_LE(frame().width, screen_area().width);
+    EXPECT_LE(frame().height, screen_area().height);
+}
+
+TEST_F(ClientTest, a_window_that_starts_maximized_returns_to_two_thirds)
+{
+    client.set_state({dsp()._NET_WM_STATE_MAXIMIZED_VERT,
+                      dsp()._NET_WM_STATE_MAXIMIZED_HORZ});
+    build();
+    win->apply_initial_state();
+
+    win->restore(0, 0);
+
+    EXPECT_EQ(frame().width, screen_area().width / 3 * 2);
+    EXPECT_EQ(frame().height, screen_area().height / 3 * 2);
+}
+
+TEST_F(ClientTest, a_dock_that_comes_later_pushes_a_normal_window_away)
+{
+    build();
+    win->move_to(10, 0);
+    const tiny::Rect area = screen_area();
+
+    win->set_work_area({area.x, area.y + 40, area.width, area.height - 40});
+
+    EXPECT_GE(frame().y, area.y + 40 + frame().border_width);
+}
+
+TEST_F(ClientTest, a_dock_that_comes_later_shrinks_a_window_that_does_not_fit)
+{
+    build();
+    win->set_work_area({0, 0, 100, 80});
+
+    EXPECT_LE(frame().width, 100);
+    EXPECT_LE(frame().height, 80);
+    EXPECT_EQ(child().height, frame().height - header_height());
+}
+
+TEST_F(ClientTest, restore_after_a_dock_came_keeps_the_window_out_of_it)
+{
+    build();
+    win->move_to(10, 0);
+    win->maximize();
+    const tiny::Rect area = screen_area();
+    win->set_work_area({area.x, area.y + 40, area.width, area.height - 40});
+
+    win->restore(0, 0);
+
+    EXPECT_GE(frame().y, area.y + 40 + frame().border_width);
+}
+
+TEST_F(ClientTest, a_new_work_area_leaves_a_window_inside_of_it_where_it_is)
+{
+    build();
+    const XWindowAttributes before = frame();
+
+    win->set_work_area({0, 0, 2000, 2000});
+
+    EXPECT_EQ(frame().x, before.x);
+    EXPECT_EQ(frame().y, before.y);
+}
+
+TEST_F(ClientTest, a_new_work_area_does_not_move_a_fullscreen_window)
+{
+    build();
+    win->fullscreen(true);
+
+    win->set_work_area({50, 50, 300, 300});
+
+    EXPECT_EQ(frame().x, 0);
+    EXPECT_EQ(frame().y, 0);
+}
+
+TEST_F(ClientTest, a_new_work_area_does_not_unroll_a_shaded_window)
+{
+    build();
+    win->shade(true);
+
+    win->set_work_area({0, 0, 100, 80});
+
+    EXPECT_EQ(frame().height, header_height());
+    EXPECT_LE(frame().width, 100);
+}
+
+TEST_F(ClientTest, a_dock_that_comes_later_pushes_a_shaded_window_away)
+{
+    build();
+    win->move_to(10, 0);
+    win->shade(true);
+    const tiny::Rect area = screen_area();
+
+    win->set_work_area({area.x, area.y + 40, area.width, area.height - 40});
+
+    EXPECT_GE(frame().y, area.y + 40 + frame().border_width);
+    EXPECT_EQ(frame().height, header_height());
+}
+
 TEST_F(ClientTest, leaving_fullscreen_of_a_maximized_window_uses_the_new_area)
 {
     build();
@@ -773,6 +886,8 @@ TEST_F(ClientTest, fullscreen_twice_changes_nothing)
 TEST_F(ClientTest, maximize_button_restores_a_maximized_window)
 {
     build();
+    win->move_to(10, screen_area().y + 20);
+    const int y = frame().y;
     click(win->max_btn);
 
     click(win->max_btn);
@@ -780,7 +895,7 @@ TEST_F(ClientTest, maximize_button_restores_a_maximized_window)
     auto f = frame();
     EXPECT_FALSE(win->get_maximized());
     EXPECT_EQ(f.x, 10);
-    EXPECT_EQ(f.y, 20);
+    EXPECT_EQ(f.y, y);
     EXPECT_EQ(f.width, 200);
     EXPECT_EQ(f.height, (100 + header_height()));
     EXPECT_EQ(child().width, 200);

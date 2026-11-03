@@ -130,6 +130,8 @@ class Client : public tiny::Container, public Window {
 
     void place_maximized() override;
 
+    void keep_in_work_area() override;
+
     //! Show the size of the client in units (e.g. columns and rows)
     void show_size_units(int client_width, int client_height);
 
