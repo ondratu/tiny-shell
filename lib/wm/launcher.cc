@@ -232,10 +232,13 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
     }
     const xdg::Application& app =
             index.applications()[found[grid.get_selected()]];
-    if (xdg::launch(app) < 0) {
+    if (xdg::launch(app, {}, terminal) < 0) {
         // keep the launcher and the text, so the user can try again
         const int error = errno;
-        const auto argv = xdg::expand_exec(app, {});
+        auto argv = xdg::expand_exec(app, {});
+        if (app.entry.terminal && !terminal.empty()) {
+            argv = terminal; // the program that did not start
+        }
         tiny::error("Can't start %s (%s): %s", app.entry.name.c_str(),
                     argv.empty() ? "no command" : argv[0].c_str(),
                     strerror(error));

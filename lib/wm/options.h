@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "wm/config.h"
+
 namespace tiny::wm {
 
 //! What the command line asks tiny-shell to do
@@ -10,10 +12,8 @@ struct Options {
     enum class Action { Run, Help, Version, Info, Error };
 
     Action action = Action::Run;
-    bool replace = false;         //!< take over from the running window manager
-    std::string restart_command;  //!< empty: the default of the manager
-    std::string shutdown_command; //!< empty: the default of the manager
-    std::string error;            //!< what is wrong, for Action::Error
+    bool replace = false; //!< take over from the running window manager
+    std::string error;    //!< what is wrong, for Action::Error
 };
 
 /**
@@ -34,9 +34,11 @@ std::string usage_text(const std::string& program);
 /**
  * @short What tiny-shell is and what it is going to use.
  *
- * `scale` is the factor of the theme (`TINY_SCALE_FACTOR`) and `app_dirs`
- * the `applications` directories of the launcher.
+ * `config` is the settings, `files` the configuration files that were read
+ * and `app_dirs` the `applications` directories of the launcher.
  */
-std::string info_text(double scale, const std::vector<std::string>& app_dirs);
+std::string info_text(const Config& config,
+                      const std::vector<std::string>& files,
+                      const std::vector<std::string>& app_dirs);
 
 } // namespace tiny::wm

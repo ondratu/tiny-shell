@@ -11,6 +11,7 @@
 
 #include "object.h"
 #include "theme.h"
+#include "wm/config.h"
 #include "wm/manager.h"
 #include "wm/options.h"
 #include "wm/selection.h"
@@ -34,7 +35,9 @@ int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
 //! What the options ask to print, for the actions that do not need X; the
 //! exit code, or nothing when tiny-shell is to run
 std::optional<int> print_and_exit(const tiny::wm::Options& options,
-                                  const char* program)
+                                  const char* program,
+                                  const tiny::wm::Config& config,
+                                  const std::vector<std::string>& files)
 {
     using Action = tiny::wm::Options::Action;
     switch (options.action) {
@@ -48,7 +51,7 @@ std::optional<int> print_and_exit(const tiny::wm::Options& options,
             const char* data_dirs = getenv("XDG_DATA_DIRS");
             const std::string with_local = tiny::xdg::data_dirs_with(
                     data_dirs, tiny::xdg::local_share_dir);
-            fputs(tiny::wm::info_text(tiny::Theme::env_scale_factor(),
+            fputs(tiny::wm::info_text(config, files,
                                       tiny::xdg::application_dirs(
                                               getenv("XDG_DATA_HOME"),
                                               with_local.empty()
@@ -88,7 +91,24 @@ int main(int argc, char** argv)
 {
     const tiny::wm::Options options = tiny::wm::parse_options(
             std::vector<std::string>(argv + 1, argv + argc));
-    if (const auto rv = print_and_exit(options, argv[0])) {
+
+    // The settings of the files (only --info and running need them); a
+    // problem is only reported, the defaults work
+    std::vector<std::string> files;
+    tiny::wm::Config config;
+    if (options.action == tiny::wm::Options::Action::Run ||
+        options.action == tiny::wm::Options::Action::Info) {
+        files = tiny::wm::config_files(getenv("XDG_CONFIG_HOME"),
+                                       getenv("XDG_CONFIG_DIRS"),
+                                       getenv("HOME"));
+        std::vector<std::string> problems;
+        config = tiny::wm::load_config(files, &problems);
+        for (const std::string& problem : problems) {
+            fprintf(stderr, "%s: %s\n", argv[0], problem.c_str());
+        }
+    }
+
+    if (const auto rv = print_and_exit(options, argv[0], config, files)) {
         return *rv;
     }
 
@@ -101,6 +121,7 @@ int main(int argc, char** argv)
         ::Display* display = tiny::get_display();
 
         // The theme needs the display (the fonts are opened here)
+        tiny::theme.scale(config.scale);
         tiny::theme.init();
 
         const ::Window root = XDefaultRootWindow(display);
@@ -142,8 +163,9 @@ int main(int argc, char** argv)
 
         tiny::wm::Manager manager(display, root);
         manager.set_selection(&selection);
-        manager.set_power_commands(options.restart_command,
-                                   options.shutdown_command);
+        manager.set_power_commands(config.reboot_command,
+                                   config.poweroff_command);
+        manager.set_terminal(config.terminal);
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {

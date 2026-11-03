@@ -128,7 +128,7 @@ TEST(PanelTest, login_button_click_opens_the_user_menu)
     EXPECT_EQ(attributes_of(panel.menu_user).map_state, IsViewable);
 }
 
-// ---- scaling (TINY_SCALE_FACTOR) ----
+// ---- scaling (the scale of the theme) ----
 
 class PanelScaledTest : public ::testing::Test {
   protected:

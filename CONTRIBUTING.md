@@ -118,7 +118,7 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   not the opposite.
 - Behavior is configured, not themed: a small configuration file for key
   bindings and layout is fine, a theme engine is not.
-- One look, scalable for high-DPI (`TINY_SCALE_FACTOR`). Every size in code
+- One look, scalable for high-DPI (`scale` in the configuration). Every size in code
   comes from the theme, never from a literal number.
 - Robustness: a misbehaving client must not crash the window manager.
 

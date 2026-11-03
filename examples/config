@@ -1,0 +1,20 @@
+# tiny-shell configuration. Copy it to ~/.config/tiny-shell/config (or to
+# /etc/xdg/tiny-shell/config for all users; the file of the user wins, key by
+# key). Every key is optional, the values here are the defaults.
+#
+# A settings program may rewrite this file and then your comments are lost.
+#
+# A comment is a whole line that starts with # or ;
+
+[theme]
+# The scale of the whole theme, a number above 0, up to 16 (2 for high-DPI)
+scale = 1
+
+[commands]
+# Restart and Shutdown in the user menu; use "sudo reboot", "doas poweroff"
+# or similar where there is no systemd
+reboot = systemctl reboot
+poweroff = systemctl poweroff
+# The program that runs the applications with Terminal=true; the command of
+# the application follows it
+terminal = xterm -e

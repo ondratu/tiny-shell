@@ -315,6 +315,22 @@ TEST_F(LauncherTest, nothing_found_keeps_the_launcher_open)
     EXPECT_TRUE(shown());
 }
 
+TEST_F(LauncherTest, a_terminal_application_runs_in_the_configured_terminal)
+{
+    write("alpha", "Alpha", "Type=Application\nTerminal=true\n");
+    // the "terminal" leaves a mark and runs the command it is given
+    launcher.set_terminal(
+            {"sh", "-c",
+             "touch '" + (root / "terminal").string() + "'; exec \"$@\"",
+             "sh"});
+    launcher.popup();
+
+    type_key(entry(), XK_Return);
+
+    EXPECT_TRUE(appears(root / "terminal"));
+    EXPECT_TRUE(appears(root / "alpha"));
+}
+
 TEST_F(LauncherTest, an_application_that_does_not_start_keeps_the_launcher)
 {
     std::ofstream(root / "applications" / "alpha.desktop")
@@ -329,6 +345,20 @@ TEST_F(LauncherTest, an_application_that_does_not_start_keeps_the_launcher)
     EXPECT_TRUE(shown());
     EXPECT_NE(report.find("Alpha (/nonexistent/program)"), std::string::npos);
     EXPECT_NE(report.find("No such file"), std::string::npos);
+}
+
+TEST_F(LauncherTest, a_missing_terminal_is_the_program_that_is_reported)
+{
+    write("alpha", "Alpha", "Type=Application\nTerminal=true\n");
+    launcher.set_terminal({"/nonexistent/terminal", "-e"});
+    launcher.popup();
+
+    testing::internal::CaptureStderr();
+    type_key(entry(), XK_Return);
+    const std::string report = testing::internal::GetCapturedStderr();
+
+    EXPECT_TRUE(shown());
+    EXPECT_NE(report.find("Alpha (/nonexistent/terminal)"), std::string::npos);
 }
 
 TEST_F(LauncherTest, escape_closes_the_launcher_and_forgets_the_search)

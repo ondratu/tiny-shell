@@ -8,7 +8,7 @@
 
 namespace tiny::wm {
 
-// Symbol geometry is designed for scale 1 and follows TINY_SCALE_FACTOR
+// Symbol geometry is designed for scale 1 and follows the scale of the theme
 static double sc(double value)
 {
     return value * tiny::theme.scale_factor;

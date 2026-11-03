@@ -5,12 +5,14 @@
 #include <set>
 #include <list>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "object.h"
 #include "timers.h"
 #include "wm/window.h"
 #include "wm/panel.h"
+#include "wm/config.h"
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/unresponsive_dialog.h"
@@ -35,6 +37,12 @@ class Manager : public tiny::Object {
     //! the current command
     void set_power_commands(const std::string& restart,
                             const std::string& shutdown);
+
+    //! The terminal of the applications that need one, e.g. `{"xterm", "-e"}`
+    void set_terminal(std::vector<std::string> command)
+    {
+        wm_launcher.set_terminal(std::move(command));
+    }
 
     //! Timers of the main loop (a clock, delays); they run in the loop, so
     //! the functions must be short
@@ -275,8 +283,8 @@ class Manager : public tiny::Object {
     tiny::Timers timers;
 
     // until there is a configuration the commands are the systemd ones
-    std::string restart_command = "systemctl reboot";
-    std::string shutdown_command = "systemctl poweroff";
+    std::string restart_command = Config().reboot_command;
+    std::string shutdown_command = Config().poweroff_command;
 };
 
 } // namespace tiny::wm
