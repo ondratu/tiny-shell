@@ -370,20 +370,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
         update_normal_hints();
     }
 
-    if (Window::get_maximized() && (state.width == 0 || state.height == 0)) {
-        if (hints->flags & PMinSize) {
-            state.width = hints->min_width;
-            state.height = hints->min_height;
-        }
-
-        state.width = std::max(state.width, work_area.width / 3 * 2);
-        state.height = std::max(state.height, work_area.height / 3 * 2);
-
-        if (hints->flags & PMaxSize) {
-            state.width = std::min(state.width, hints->max_width);
-            state.height = std::min(state.height, hints->max_height);
-        }
-    }
+    init_restore_size(0); // a Client, which has a title bar, does it again
 
     update_wm_name();
     update_wm_class();
@@ -417,6 +404,27 @@ Window::~Window()
     }
 }
 
+void Window::init_restore_size(int title)
+{
+    if (!Window::get_maximized()) {
+        return;
+    }
+    // two thirds of the work area, inside the limits and the ratio of the hints
+    int width = work_area.width / 3 * 2;
+    int height = work_area.height / 3 * 2 - title;
+    if (hints->flags & PMinSize) {
+        width = std::max(width, hints->min_width);
+        height = std::max(height, hints->min_height);
+    }
+    if (hints->flags & PMaxSize) {
+        width = std::min(width, hints->max_width);
+        height = std::min(height, hints->max_height);
+    }
+    fit_aspect(*hints, width, height, true);
+    state.width = width;
+    state.height = height + title;
+}
+
 Window* Window::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
                        const tiny::Rect& area)
@@ -425,10 +433,8 @@ Window* Window::create(::Window root, ::Window child,
     auto* win = new Window(child, root, functions, area);
 
     // inside of the work area, the border is outside of the window
-    const tiny::Rect place =
-            fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height},
-                        {area.x + 1, area.y + 1, std::max(area.width - 2, 1),
-                         std::max(area.height - 2, 1)});
+    const tiny::Rect place = fit_in_area(
+            {attrs.x, attrs.y, attrs.width, attrs.height}, inner_area(area, 1));
     XMoveResizeWindow(display, child, place.x, place.y,
                       tiny::x_dim(place.width), tiny::x_dim(place.height));
     XMapWindow(display, child);
@@ -1072,8 +1078,30 @@ void Window::place_maximized()
 void Window::set_work_area(const tiny::Rect& area)
 {
     work_area = area;
-    if (get_maximized() && !is_fullscreen()) {
+    if (is_fullscreen()) {
+        return;
+    }
+    if (get_maximized()) {
         place_maximized();
+    } else {
+        keep_in_work_area();
+    }
+}
+
+void Window::keep_in_work_area()
+{
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(dsp, child, &attrs)) {
+        return;
+    }
+    // the border is outside of the window
+    const tiny::Rect place =
+            fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height},
+                        inner_area(work_area, 1));
+    if (place.x != attrs.x || place.y != attrs.y ||
+        place.width != attrs.width || place.height != attrs.height) {
+        XMoveResizeWindow(dsp, child, place.x, place.y,
+                          tiny::x_dim(place.width), tiny::x_dim(place.height));
     }
 }
 
@@ -1109,8 +1137,15 @@ void Window::apply_initial_state()
     const bool maximized = get_maximized();
     const bool fullscreen_state = is_fullscreen();
     if (maximized) {
+        // the window is not on screen in any other size: what it returns to is
+        // the size chosen in the constructor, not the size it is created with
+        const tiny::Rect size = state;
         set_maximized(false);
         maximize();
+        if (size.width > 0 && size.height > 0) {
+            state.width = size.width; // restore() puts it inside the area
+            state.height = size.height;
+        }
     }
     if (fullscreen_state) {
         set_fullscreen(false);
@@ -1125,12 +1160,18 @@ void Window::apply_initial_state()
 void Window::restore(int x, int y)
 {
     if (get_maximized()) {
-        // TODO: stay in desktop
-        x = x ? (x - state.width / 2) : state.x;
-        y = y ? (y - state.height / 2) : state.y;
+        // the window returns inside of the work area, which may have changed
+        const tiny::Rect place =
+                fit_in_area({x ? (x - state.width / 2) : state.x,
+                             y ? (y - state.height / 2) : state.y, state.width,
+                             state.height},
+                            inner_area(work_area, 1));
+        state.width = place.width;
+        state.height = place.height;
 
-        XMoveResizeWindow(dsp, child, x, y, tiny::x_uint(state.width),
-                          tiny::x_uint(state.height));
+        XMoveResizeWindow(dsp, child, place.x, place.y,
+                          tiny::x_uint(place.width),
+                          tiny::x_uint(place.height));
         XSetWindowBorderWidth(dsp, child, 1);
         set_maximized(false);
     } else {

@@ -25,6 +25,9 @@ Struts read_struts(::Window window);
 tiny::Rect compute_work_area(int screen_width, int screen_height,
                              const std::vector<Struts>& docks);
 
+//! The area for the frames whose borders are drawn outside of them
+tiny::Rect inner_area(const tiny::Rect& area, int border);
+
 //! Shrink the frame to the area and move it inside
 tiny::Rect fit_in_area(tiny::Rect frame, const tiny::Rect& area);
 

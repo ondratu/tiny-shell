@@ -611,6 +611,13 @@ class Window {
     //! Cover the work area (a maximized window)
     virtual void place_maximized();
 
+    //! A dock that came later does not cover a normal window
+    virtual void keep_in_work_area();
+
+    //! The size to restore to of a window that starts maximized; `title` is
+    //! the height of the frame above the client
+    void init_restore_size(int title);
+
     ::Window child;
     ::Window root;
     tiny::Display& dsp;

@@ -43,7 +43,10 @@ Client::Client(::Window child_arg, ::Window root_arg, int w, int h,
     decorations(decorations_arg),
     header(w, tiny::theme.wm_win_header),
     shadow(w, h + header_height_for(decorations_arg))
-{}
+{
+    state = {0, 0, 0, 0}; // the size of the base class had no title bar
+    init_restore_size(header_height_for(decorations_arg));
+}
 
 static int ignore_x_error(::Display*, XErrorEvent*)
 {
@@ -93,10 +96,8 @@ static tiny::Rect first_place(const XWindowAttributes& attrs,
                                         Client::frame_extents_for(decorations));
     }
     // the border is drawn outside of the window, so it is not over the panel
-    const tiny::Rect inner = {area.x + border, area.y + border,
-                              std::max(area.width - 2 * border, 1),
-                              std::max(area.height - 2 * border, 1)};
-    return fit_in_area({x, y, attrs.width, attrs.height + header}, inner);
+    return fit_in_area({x, y, attrs.width, attrs.height + header},
+                       inner_area(area, border));
 }
 
 Window* Client::create(::Window root, ::Window child,
@@ -462,6 +463,43 @@ void Client::place_maximized()
     send_configure_notify();
 }
 
+void Client::keep_in_work_area()
+{
+    XWindowAttributes frame;
+    if (!XGetWindowAttributes(display, window, &frame)) {
+        return;
+    }
+    const tiny::Rect area = inner_area(work_area, get_border());
+    tiny::Rect place;
+    if (is_shaded()) {
+        // only the title bar is left, it must not stay under a dock; the
+        // height comes back with unshade
+        place = fit_in_area({frame.x, frame.y, frame.width, frame.height},
+                            area);
+        place.height = frame.height;
+        place.y = std::clamp(frame.y, area.y,
+                             area.y + std::max(area.height - frame.height, 0));
+    } else {
+        place = fit_in_area({frame.x, frame.y, frame.width, frame.height},
+                            area);
+    }
+    if (place.x == frame.x && place.y == frame.y &&
+        place.width == frame.width && place.height == frame.height) {
+        return;
+    }
+    if (place.width != frame.width || place.height != frame.height) {
+        XResizeWindow(display, child, tiny::x_dim(place.width),
+                      tiny::x_dim(place.height - header_height()));
+        header.resize(place.width, tiny::theme.wm_win_header);
+    }
+    XMoveResizeWindow(display, window, place.x, place.y,
+                      tiny::x_dim(place.width), tiny::x_dim(place.height));
+    if (is_resizable() && !is_shaded()) {
+        shadow.move_resize(place.x, place.y, place.width, place.height);
+    }
+    send_configure_notify();
+}
+
 void Client::fullscreen(bool on)
 {
     if (on == is_fullscreen()) {
@@ -577,9 +615,19 @@ void Client::configure_request(const XConfigureRequestEvent& e)
 void Client::restore(int x, int y)
 {
     if (get_maximized()) {
-        // TODO: stay in desktop
-        x = x ? (x - state.width / 2) : state.x;
-        y = y ? (y - state.height / 2) : state.y;
+        // the window returns inside of the work area, which may have changed
+        const int border = get_border();
+        const tiny::Rect place =
+                fit_in_area({x ? (x - state.width / 2) : state.x,
+                             y ? (y - state.height / 2) : state.y, state.width,
+                             state.height},
+                            {work_area.x + border, work_area.y + border,
+                             std::max(work_area.width - 2 * border, 1),
+                             std::max(work_area.height - 2 * border, 1)});
+        x = place.x;
+        y = place.y;
+        state.width = place.width;
+        state.height = place.height;
 
         if (is_resizable()) {
             shadow.move_resize(x, y, state.width, state.height);
