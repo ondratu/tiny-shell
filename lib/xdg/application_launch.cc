@@ -51,10 +51,11 @@ std::optional<std::string> expand_word(const Application& app,
 } // namespace
 
 std::vector<std::string> expand_exec(const Application& app,
-                                     const std::vector<std::string>& files)
+                                     const std::vector<std::string>& files,
+                                     std::string_view exec)
 {
     std::vector<std::string> argv;
-    for (const auto& arg : split_exec(app.entry.exec)) {
+    for (const auto& arg : split_exec(exec.empty() ? app.entry.exec : exec)) {
         if (arg == "%F" || arg == "%U") {
             argv.insert(argv.end(), files.begin(), files.end());
         } else if (arg == "%i") {
@@ -73,9 +74,9 @@ std::vector<std::string> expand_exec(const Application& app,
 }
 
 pid_t launch(const Application& app, const std::vector<std::string>& files,
-             const std::vector<std::string>& terminal)
+             const std::vector<std::string>& terminal, std::string_view exec)
 {
-    auto argv = expand_exec(app, files);
+    auto argv = expand_exec(app, files, exec);
     if (argv.empty()) {
         errno = EINVAL;
         return -1;

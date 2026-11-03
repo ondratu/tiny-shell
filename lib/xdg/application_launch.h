@@ -3,6 +3,7 @@
 #include <sys/types.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "xdg/application_index.h"
@@ -17,9 +18,12 @@ namespace tiny::xdg {
  * them, `%i` is `--icon` and the Icon, `%c` the Name, `%k` the path of the
  * .desktop file and `%%` a percent sign. A code that is not known (also the
  * deprecated ones) and a code of a file without a file are dropped.
+ * A non-empty `exec` is used instead of the Exec of the application (the
+ * command of one of its actions).
  */
 std::vector<std::string> expand_exec(const Application& app,
-                                     const std::vector<std::string>& files);
+                                     const std::vector<std::string>& files,
+                                     std::string_view exec = {});
 
 /**
  * @short Start an application, in its `Path` directory.
@@ -31,6 +35,7 @@ std::vector<std::string> expand_exec(const Application& app,
  * with no usable Exec).
  */
 pid_t launch(const Application& app, const std::vector<std::string>& files = {},
-             const std::vector<std::string>& terminal = {"xterm", "-e"});
+             const std::vector<std::string>& terminal = {"xterm", "-e"},
+             std::string_view exec = {});
 
 } // namespace tiny::xdg

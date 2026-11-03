@@ -75,6 +75,63 @@ TEST(DesktopEntryParseTest, ignores_other_groups)
     EXPECT_EQ(e.exec, "");
 }
 
+TEST(DesktopEntryParseTest, reads_the_actions_in_the_order_of_the_list)
+{
+    const auto entry = parse_desktop_entry(
+            "[Desktop Entry]\nName=App\nExec=app\n"
+            "Actions=second;first;\n"
+            "[Desktop Action first]\nName=First\nExec=app --first\n"
+            "[Desktop Action second]\nName=Second\nName[cs]=Druha\n"
+            "Exec=app --second %u\n",
+            "cs_CZ.UTF-8");
+
+    ASSERT_EQ(entry.actions.size(), 2u);
+    EXPECT_EQ(entry.actions[0].id, "second");
+    EXPECT_EQ(entry.actions[0].name, "Druha");
+    EXPECT_EQ(entry.actions[0].exec, "app --second %u");
+    EXPECT_EQ(entry.actions[1].id, "first");
+    EXPECT_EQ(entry.actions[1].name, "First");
+}
+
+TEST(DesktopEntryParseTest,
+     an_action_needs_a_name_an_exec_and_a_place_in_the_list)
+{
+    const auto entry = parse_desktop_entry(
+            "[Desktop Entry]\nName=App\nExec=app\n"
+            "Actions=noname;noexec;missing;ok\n"
+            "[Desktop Action noname]\nExec=app --a\n"
+            "[Desktop Action noexec]\nName=No exec\n"
+            "[Desktop Action unlisted]\nName=Unlisted\nExec=app --u\n"
+            "[Desktop Action ok]\nName=Ok\nExec=app --ok\n"
+            "[Other Group]\nName=Other\n[Broken\nName=Broken\n");
+
+    ASSERT_EQ(entry.actions.size(), 1u);
+    EXPECT_EQ(entry.actions[0].id, "ok");
+    EXPECT_EQ(entry.name, "App"); // the actions do not change the entry
+    EXPECT_EQ(entry.exec, "app");
+}
+
+TEST(DesktopEntryParseTest, an_action_listed_twice_is_one_action)
+{
+    const auto entry = parse_desktop_entry(
+            "[Desktop Entry]\nName=App\nExec=app\nActions=a;b;a\n"
+            "[Desktop Action a]\nName=A\nExec=app --a\n"
+            "[Desktop Action b]\nName=B\nExec=app --b\n");
+
+    ASSERT_EQ(entry.actions.size(), 2u);
+    EXPECT_EQ(entry.actions[0].id, "a");
+    EXPECT_EQ(entry.actions[1].id, "b");
+}
+
+TEST(DesktopEntryParseTest, no_actions_without_the_list)
+{
+    const auto entry =
+            parse_desktop_entry("[Desktop Entry]\nName=App\nExec=app\n"
+                                "[Desktop Action a]\nName=A\nExec=app --a\n");
+
+    EXPECT_TRUE(entry.actions.empty());
+}
+
 TEST(DesktopEntryParseTest, keys_before_the_group_are_ignored)
 {
     const DesktopEntry e = parse_desktop_entry("Name=Early\n");

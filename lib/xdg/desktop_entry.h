@@ -7,10 +7,18 @@
 
 namespace tiny::xdg {
 
+//! An extra way to start an application (`[Desktop Action <id>]`)
+struct DesktopAction {
+    std::string id;
+    std::string name;
+    std::string exec;
+};
+
 /**
  * @short The part of a freedesktop .desktop file that a launcher needs.
  *
- * Only the [Desktop Entry] group is read, other groups (actions) are skipped.
+ * The [Desktop Entry] group and the groups of the actions it lists in
+ * `Actions` are read, other groups are skipped.
  */
 struct DesktopEntry {
     std::string type;
@@ -24,6 +32,8 @@ struct DesktopEntry {
     std::string startup_wm_class; //!< WM_CLASS of the windows (StartupWMClass)
     std::vector<std::string> categories;
     std::vector<std::string> keywords;
+    //! In the order of `Actions`; an action with no Name or Exec is dropped
+    std::vector<DesktopAction> actions;
     bool terminal = false;
     bool no_display = false;
     bool hidden = false;
