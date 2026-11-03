@@ -75,6 +75,22 @@ class Box : public Container {
     std::map<Widget*, Offset> offsets;
 };
 
+/**
+ * @short An invisible window over the whole screen that sees a click.
+ *
+ * A popover puts it under itself, so a click anywhere else closes the popover
+ * and does not reach the window below.
+ */
+class ClickCatcher : public Widget {
+  public:
+    ClickCatcher();
+    ~ClickCatcher() override;
+
+    void set_events(long mask = 0) override;
+
+    Signal on_press;
+};
+
 class Popover : public Box {
   public:
     Popover(Box::Type type, int width, int height);
@@ -86,6 +102,10 @@ class Popover : public Box {
 
     void set_events(long mask = 0) override;
 
+    //! Also hides the window that catches the clicks outside
+    void unmap() override;
+
+    //! Show the popover; a click outside of it closes it
     void popup(int x, int y);
     void popup(const XButtonEvent& be);
 
@@ -96,6 +116,7 @@ class Popover : public Box {
     bool has_focus_inside() const;
     bool is_inside(::Window focus) const;
 
+    ClickCatcher catcher;
     long int time_from_unmap;
 };
 

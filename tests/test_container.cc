@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <chrono>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <X11/cursorfont.h>
 
@@ -460,6 +462,138 @@ TEST_F(PopoverTest, popup_from_button_event_uses_root_coordinates)
     const XWindowAttributes attrs = attributes_of(p);
     EXPECT_EQ(attrs.x, 300);
     EXPECT_EQ(attrs.y, 70);
+}
+
+namespace {
+
+XWindowAttributes window_attributes(::Window w)
+{
+    XWindowAttributes attrs = {};
+    XGetWindowAttributes(tiny::get_display(), w, &attrs);
+    return attrs;
+}
+
+// The windows on the root, the lowest first
+std::vector<::Window> root_children()
+{
+    ::Window root_return;
+    ::Window parent;
+    ::Window* kids = nullptr;
+    unsigned int count = 0;
+    XSync(tiny::get_display(), False);
+    XQueryTree(tiny::get_display(), XDefaultRootWindow(tiny::get_display()),
+               &root_return, &parent, &kids, &count);
+    std::vector<::Window> out(kids, kids + count);
+    if (kids) {
+        XFree(kids);
+    }
+    return out;
+}
+
+// The window that catches the clicks outside is right under the popover
+::Window catcher_of(const tiny::Popover& p)
+{
+    const std::vector<::Window> stack = root_children();
+    const auto it = std::find(stack.begin(), stack.end(), p.get_window());
+    return it == stack.begin() || it == stack.end() ? None : *(it - 1);
+}
+
+void press(::Window w, unsigned int button = Button1)
+{
+    XEvent e = {};
+    e.type = ButtonPress;
+    e.xbutton.button = button;
+    tiny::handlers.call_handler({ButtonPress, w}, e);
+    XSync(tiny::get_display(), False);
+}
+
+} // namespace
+
+TEST_F(PopoverTest, popup_puts_a_window_that_sees_clicks_under_the_popover)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+
+    p.popup(300, 50);
+
+    const ::Window catcher = catcher_of(p);
+    ASSERT_NE(catcher, None);
+    const XWindowAttributes attrs = window_attributes(catcher);
+    const XWindowAttributes screen = window_attributes(root());
+    EXPECT_EQ(attrs.map_state, IsViewable);
+    EXPECT_EQ(attrs.c_class, InputOnly);
+    EXPECT_TRUE(attrs.override_redirect);
+    EXPECT_EQ(attrs.width, screen.width);
+    EXPECT_EQ(attrs.height, screen.height);
+}
+
+TEST_F(PopoverTest, a_click_outside_closes_the_popover)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    const ::Window catcher = catcher_of(p);
+    ASSERT_NE(catcher, None);
+
+    press(catcher);
+
+    EXPECT_FALSE(p.get_maped());
+    EXPECT_EQ(attributes_of(p).map_state, IsUnmapped);
+    EXPECT_EQ(window_attributes(catcher).map_state, IsUnmapped);
+}
+
+TEST_F(PopoverTest, the_wheel_outside_does_not_close_the_popover)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+
+    press(catcher_of(p), Button4);
+    press(catcher_of(p), Button5);
+    EXPECT_TRUE(p.get_maped());
+
+    press(catcher_of(p), Button3); // the right button does
+    EXPECT_FALSE(p.get_maped());
+}
+
+TEST_F(PopoverTest, a_click_outside_does_not_block_the_next_popup)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    press(catcher_of(p));
+
+    p.popup(300, 50);
+
+    EXPECT_TRUE(p.get_maped());
+    EXPECT_EQ(window_attributes(catcher_of(p)).map_state, IsViewable);
+}
+
+TEST_F(PopoverTest, focus_out_hides_the_catcher_too)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    const ::Window catcher = catcher_of(p);
+
+    focus_out(p);
+
+    EXPECT_EQ(window_attributes(catcher).map_state, IsUnmapped);
+}
+
+TEST_F(PopoverTest, the_catcher_is_gone_with_the_popover)
+{
+    ::Window catcher = None;
+    {
+        tiny::Popover p(200, 100);
+        p.realize(root(), 0, 0);
+        p.popup(300, 50);
+        catcher = catcher_of(p);
+        ASSERT_NE(catcher, None);
+    }
+
+    const std::vector<::Window> stack = root_children();
+    EXPECT_EQ(std::find(stack.begin(), stack.end(), catcher), stack.end());
 }
 
 TEST_F(PopoverTest, focus_out_unmaps_popover)
