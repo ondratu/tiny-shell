@@ -6,19 +6,11 @@
 #include <map>
 #include <sstream>
 
+#include "ini.h"
+
 namespace tiny::xdg {
 
 namespace {
-
-std::string_view trim(std::string_view text)
-{
-    const char* const blanks = " \t\r\n";
-    const auto first = text.find_first_not_of(blanks);
-    if (first == std::string_view::npos) {
-        return {};
-    }
-    return text.substr(first, text.find_last_not_of(blanks) - first + 1);
-}
 
 // \s \n \t \r \\ of the string values
 std::string unescape(std::string_view value)

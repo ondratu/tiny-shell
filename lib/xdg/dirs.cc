@@ -41,8 +41,13 @@ std::vector<std::string> split_path_list(std::string_view paths)
     return out;
 }
 
-std::vector<std::string> data_dir_list(const char* data_home,
-                                       const char* data_dirs, const char* home)
+namespace {
+
+// The user directory first (`user` when it is an absolute path, otherwise
+// `$HOME/<fallback>`), then the directories of `system` without repeats
+std::vector<std::string> dir_list(const char* user, const char* home,
+                                  const char* fallback, const char* system,
+                                  const char* default_system)
 {
     std::vector<std::string> dirs;
     const auto add = [&](std::string_view dir) {
@@ -53,20 +58,35 @@ std::vector<std::string> data_dir_list(const char* data_home,
         }
     };
 
-    if (data_home != nullptr && !absolute_dir(data_home).empty()) {
-        add(data_home);
+    if (user != nullptr && !absolute_dir(user).empty()) {
+        add(user);
     } else if (home != nullptr && *home != '\0') {
-        add(std::string(home) + "/.local/share");
+        add(std::string(home) + fallback);
     }
 
-    const std::string_view system =
-            (data_dirs != nullptr && *data_dirs != '\0')
-                    ? std::string_view(data_dirs)
-                    : std::string_view("/usr/local/share:/usr/share");
-    for (const auto& dir : split_path_list(system)) {
+    const std::string_view list = (system != nullptr && *system != '\0')
+                                          ? std::string_view(system)
+                                          : std::string_view(default_system);
+    for (const auto& dir : split_path_list(list)) {
         add(dir);
     }
     return dirs;
+}
+
+} // namespace
+
+std::vector<std::string> data_dir_list(const char* data_home,
+                                       const char* data_dirs, const char* home)
+{
+    return dir_list(data_home, home, "/.local/share", data_dirs,
+                    "/usr/local/share:/usr/share");
+}
+
+std::vector<std::string> config_dir_list(const char* config_home,
+                                         const char* config_dirs,
+                                         const char* home)
+{
+    return dir_list(config_home, home, "/.config", config_dirs, "/etc/xdg");
 }
 
 } // namespace tiny::xdg

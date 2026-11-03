@@ -20,4 +20,14 @@ std::vector<std::string> split_path_list(std::string_view paths);
 std::vector<std::string> data_dir_list(const char* data_home,
                                        const char* data_dirs, const char* home);
 
+/**
+ * @short The XDG configuration directories in the order of priority.
+ *
+ * `$XDG_CONFIG_HOME` (or `$HOME/.config`) first, then `$XDG_CONFIG_DIRS` (or
+ * `/etc/xdg`), the same rules as `data_dir_list`.
+ */
+std::vector<std::string> config_dir_list(const char* config_home,
+                                         const char* config_dirs,
+                                         const char* home);
+
 } // namespace tiny::xdg
