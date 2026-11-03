@@ -42,6 +42,15 @@ jobs:
           sudo apt-get install -y clang-tidy-22 $DEPS
       - run: make lint CLANG_TIDY=clang-tidy-22
 
+  cppcheck:
+    name: cppcheck
+    needs: pre-commit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y cppcheck $DEPS
+      - run: make cppcheck
+
   build:
     name: ${{ matrix.name }}
     needs: pre-commit

@@ -52,6 +52,13 @@ repos:
         pass_filenames: false
         types_or: [c++, c]
         stages: [pre-push]
+      - id: cppcheck
+        name: make cppcheck
+        entry: make cppcheck
+        language: system
+        pass_filenames: false
+        types_or: [c++, c]
+        stages: [pre-push]
       - id: tests
         name: make check
         entry: make check
