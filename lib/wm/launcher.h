@@ -105,6 +105,13 @@ class Launcher : public tiny::Popover {
     /// launcher. False when it is not installed or does not start.
     bool launch(const std::string& id);
 
+    /// The names of the actions of the application (empty when it has none or
+    /// is not installed), in the order of the desktop file.
+    std::vector<std::string> action_names(const std::string& id);
+
+    /// Start an action of the application (a position in `action_names`).
+    bool launch_action(const std::string& id, size_t number);
+
   private:
     std::vector<std::string> terminal = Config().terminal;
 
@@ -120,8 +127,9 @@ class Launcher : public tiny::Popover {
     static void free_icons(::Display* x_display,
                            std::map<std::string, Icon>& list);
     void remember(const std::string& id);
-    //! Start an application and remember it; why it did not start goes to stderr
-    bool start(const xdg::Application& app);
+    //! Start an application (with the command `exec` when it is not empty,
+    //! see `xdg::launch`) and remember it; why it did not start goes to stderr
+    bool start(const xdg::Application& app, std::string_view exec = {});
 
     tiny::Entry entry;
     tiny::IconGrid grid;

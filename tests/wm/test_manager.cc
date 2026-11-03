@@ -2628,6 +2628,28 @@ TEST_F(ManagerFavoritesTest, the_menu_adds_and_removes_a_favorite_and_tells_it)
     EXPECT_EQ(saved[2], (std::vector<std::string>{"eta.desktop"}));
 }
 
+TEST_F(ManagerFavoritesTest,
+       the_menu_of_the_dock_knows_the_actions_of_the_application)
+{
+    std::ofstream(root / "applications" / "theta.desktop")
+            << "[Desktop Entry]\nName=Theta\nType=Application\nExec=true\n"
+               "Actions=mark\n[Desktop Action mark]\nName=Mark\nExec=touch "
+            << (root / "theta-mark").string() << "\n";
+    start();
+
+    EXPECT_EQ(manager->wm_dock.list_actions("theta.desktop"),
+              (std::vector<std::string>{"Mark"}));
+    EXPECT_TRUE(manager->wm_dock.list_actions("epsilon.desktop").empty());
+
+    manager->wm_dock.on_action("theta.desktop", 0);
+
+    for (int i = 0; i < 200 && !std::filesystem::exists(root / "theta-mark");
+         ++i) {
+        usleep(10 * 1000);
+    }
+    EXPECT_TRUE(std::filesystem::exists(root / "theta-mark"));
+}
+
 TEST_F(ManagerFavoritesTest, a_favorite_that_is_not_installed_stays_in_the_list)
 {
     start();

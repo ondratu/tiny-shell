@@ -237,11 +237,11 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
     } // else keep the launcher and the text, so the user can try again
 }
 
-bool Launcher::start(const xdg::Application& app)
+bool Launcher::start(const xdg::Application& app, std::string_view exec)
 {
-    if (xdg::launch(app, {}, terminal) < 0) {
+    if (xdg::launch(app, {}, terminal, exec) < 0) {
         const int error = errno;
-        auto argv = xdg::expand_exec(app, {});
+        auto argv = xdg::expand_exec(app, {}, exec);
         if (app.entry.terminal && !terminal.empty()) {
             argv = terminal; // the program that did not start
         }
@@ -258,6 +258,26 @@ bool Launcher::launch(const std::string& id)
 {
     const xdg::Application* app = find_application(id);
     return app != nullptr && start(*app);
+}
+
+std::vector<std::string> Launcher::action_names(const std::string& id)
+{
+    std::vector<std::string> names;
+    if (const xdg::Application* app = find_application(id)) {
+        for (const xdg::DesktopAction& action : app->entry.actions) {
+            names.push_back(action.name);
+        }
+    }
+    return names;
+}
+
+bool Launcher::launch_action(const std::string& id, size_t number)
+{
+    const xdg::Application* app = find_application(id);
+    if (app == nullptr || number >= app->entry.actions.size()) {
+        return false;
+    }
+    return start(*app, app->entry.actions[number].exec);
 }
 
 // cppcheck-suppress constParameterPointer ; the signature of a handler
