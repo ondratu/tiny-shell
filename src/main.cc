@@ -142,6 +142,8 @@ int main(int argc, char** argv)
 
         tiny::wm::Manager manager(display, root);
         manager.set_selection(&selection);
+        manager.set_power_commands(options.restart_command,
+                                   options.shutdown_command);
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {

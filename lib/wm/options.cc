@@ -17,6 +17,20 @@ std::string number_text(double value)
     return text;
 }
 
+//! `--name=value` sets `value`; `--name` alone is left for the caller
+bool command_option(const std::string& arg, const std::string& name,
+                    std::string& value)
+{
+    if (arg == name) {
+        return true;
+    }
+    if (arg.rfind(name + "=", 0) == 0) {
+        value = arg.substr(name.size() + 1);
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
 Options parse_options(const std::vector<std::string>& args)
@@ -24,8 +38,33 @@ Options parse_options(const std::vector<std::string>& args)
     Options rv;
     Options::Action asked = Options::Action::Run;
 
-    for (const std::string& arg : args) {
-        if (arg == "--replace") {
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string& arg = args[i];
+        std::string* command = nullptr;
+        std::string name;
+        if (command_option(arg, "--restart-command", rv.restart_command)) {
+            command = &rv.restart_command;
+            name = "--restart-command";
+        } else if (command_option(arg, "--shutdown-command",
+                                  rv.shutdown_command)) {
+            command = &rv.shutdown_command;
+            name = "--shutdown-command";
+        }
+        if (command) {
+            if (arg == name) { // the value is the next argument
+                if (i + 1 >= args.size() || args[i + 1].rfind('-', 0) == 0) {
+                    rv.action = Options::Action::Error;
+                    rv.error = "option '" + name + "' needs a command";
+                    return rv;
+                }
+                *command = args[++i];
+            }
+            if (command->empty()) {
+                rv.action = Options::Action::Error;
+                rv.error = "option '" + name + "' needs a command";
+                return rv;
+            }
+        } else if (arg == "--replace") {
             rv.replace = true;
         } else if (arg == "--help" || arg == "-h") {
             asked = Options::Action::Help;
@@ -67,6 +106,10 @@ std::string usage_text(const std::string& program)
            "                 running now (it has to support the WM_Sn\n"
            "                 selection of ICCCM); without it tiny-shell\n"
            "                 stops when another window manager runs\n"
+           "      --restart-command=CMD   the command of Restart in the user\n"
+           "                 menu (default: systemctl reboot)\n"
+           "      --shutdown-command=CMD  the command of Shutdown in the\n"
+           "                 user menu (default: systemctl poweroff)\n"
            "      --info     describe tiny-shell and its settings\n"
            "  -V, --version  print the version\n"
            "  -h, --help     print this help\n"

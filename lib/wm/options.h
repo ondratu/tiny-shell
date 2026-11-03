@@ -10,8 +10,10 @@ struct Options {
     enum class Action { Run, Help, Version, Info, Error };
 
     Action action = Action::Run;
-    bool replace = false; //!< take over from the running window manager
-    std::string error;    //!< what is wrong, for Action::Error
+    bool replace = false;         //!< take over from the running window manager
+    std::string restart_command;  //!< empty: the default of the manager
+    std::string shutdown_command; //!< empty: the default of the manager
+    std::string error;            //!< what is wrong, for Action::Error
 };
 
 /**
