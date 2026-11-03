@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <climits>
+#include <cerrno>
 #include <csignal>
 #include <memory>
 #include <new>
@@ -926,6 +927,12 @@ pid_t Window::get_killable_pid() const
         XFree(text.value);
     }
     return killable_pid(pid, machine, local_host_name());
+}
+
+bool Window::client_process_gone() const
+{
+    const pid_t pid = get_killable_pid();
+    return pid && kill(pid, 0) < 0 && errno == ESRCH;
 }
 
 void Window::kill_client()

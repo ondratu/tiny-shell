@@ -1032,22 +1032,131 @@ TEST_F(ManagerTest, one_client_is_asked_about_at_a_time)
     EXPECT_NE(manager->asked, shown);
 }
 
-TEST_F(ManagerTest, the_dialog_is_above_the_windows)
+TEST_F(ManagerTest, the_dialog_belongs_to_the_window_it_asks_about)
 {
     start();
-    const FakeClient& c = add_client();
+    FakeClient& c = add_client();
+    const FakeClient& d = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
     run_loop();
     pump_events();
-    manager->restack_layers();
+    manager->wm_windows[d.window]->raise(); // over the one that is asked about
+    manager->asked = nullptr;
+    make_unresponsive(manager->wm_windows[c.window]);
 
+    manager->check_pings();
+
+    ASSERT_EQ(manager->asked, manager->wm_windows[c.window]);
     const auto order = children_of(root_window());
     const auto dialog = std::find(order.begin(), order.end(),
                                   manager->wm_unresponsive.get_window());
     const auto frame =
             std::find(order.begin(), order.end(), parent_of(c.window));
+    const auto other =
+            std::find(order.begin(), order.end(), parent_of(d.window));
     ASSERT_NE(dialog, order.end());
     ASSERT_NE(frame, order.end());
-    EXPECT_GT(dialog, frame);
+    ASSERT_NE(other, order.end());
+    EXPECT_GT(dialog, frame); // right over its window ...
+    EXPECT_LT(dialog, other); // ... not over the others
+    const XWindowAttributes f = attributes_of(parent_of(c.window));
+    const XWindowAttributes w = attributes_of(manager->wm_unresponsive);
+    // centered, but on the screen
+    EXPECT_EQ(w.x, std::max(0, f.x + (f.width - w.width) / 2));
+    EXPECT_EQ(w.y, std::max(0, f.y + (f.height - w.height) / 2));
+}
+
+TEST_F(ManagerTest, a_window_that_answered_meanwhile_is_not_asked_about)
+{
+    start();
+    FakeClient& c = add_client();
+    FakeClient& d = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    d.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    WmWindow* first = make_unresponsive(manager->wm_windows[c.window]);
+    WmWindow* second = make_unresponsive(manager->wm_windows[d.window]);
+    first->postpone_ask(WmWindow::Clock::now() - WmWindow::wait_delay -
+                        std::chrono::seconds(5)); // waits the longest
+    manager->check_pings();
+    ASSERT_EQ(manager->asked, first);
+
+    second->pong(); // it lives again before its turn
+    click_dialog_button(manager->wm_unresponsive.get_window(), 2);
+    manager->check_pings();
+
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_EQ(attributes_of(manager->wm_unresponsive).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, a_minimized_window_is_not_asked_about)
+{
+    start();
+    FakeClient& c = add_client();
+    FakeClient& d = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    d.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    WmWindow* first = make_unresponsive(manager->wm_windows[c.window]);
+    WmWindow* second = make_unresponsive(manager->wm_windows[d.window]);
+    first->postpone_ask(WmWindow::Clock::now() - WmWindow::wait_delay -
+                        std::chrono::seconds(5));
+    manager->check_pings();
+    ASSERT_EQ(manager->asked, first);
+
+    second->minimize(); // while the first one is asked about
+    click_dialog_button(manager->wm_unresponsive.get_window(), 2);
+    manager->check_pings();
+
+    EXPECT_EQ(manager->asked, nullptr);
+}
+
+TEST_F(ManagerTest, the_dialog_goes_when_its_window_is_minimized)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    WmWindow* window = make_unresponsive(manager->wm_windows[c.window]);
+    manager->check_pings();
+    ASSERT_EQ(manager->asked, window);
+
+    window->minimize();
+
+    EXPECT_EQ(manager->asked, nullptr);
+}
+
+TEST_F(ManagerTest, a_window_of_a_dead_process_is_not_asked_about)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp()._NET_WM_PING});
+    run_loop();
+    pump_events();
+    const WmWindow* window = make_unresponsive(manager->wm_windows[c.window]);
+    const pid_t pid = fork();
+    ASSERT_GE(pid, 0);
+    if (pid == 0) {
+        _exit(0);
+    }
+    int status = 0;
+    ASSERT_EQ(waitpid(pid, &status, 0), pid);
+    c.set_cardinals(dsp()._NET_WM_PID, {pid});
+    std::string host = tiny::wm::local_host_name();
+    char* names[] = {host.data()};
+    XTextProperty text;
+    ASSERT_NE(XStringListToTextProperty(names, 1, &text), 0);
+    XSetWMClientMachine(c.display, c.window, &text);
+    XFree(text.value);
+    c.sync();
+
+    manager->check_pings();
+
+    EXPECT_EQ(manager->asked, nullptr);
+    EXPECT_GT(ask_time(*window), WmWindow::Clock::now()); // asked later
 }
 
 namespace {

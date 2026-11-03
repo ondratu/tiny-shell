@@ -52,6 +52,9 @@ class Manager : public tiny::Object {
     //! Show the dialog for a window that does not respond
     void ask_to_quit(Window* window);
 
+    //! Ask about the window that waits the longest, if it is still worth it
+    void ask_next();
+
     //! Hide the dialog; the window answered, is gone or the user chose
     void close_unresponsive_dialog();
 

@@ -444,6 +444,9 @@ class Window : public tiny::Object {
     //! 0 if there is none
     pid_t get_killable_pid() const;
 
+    //! The process of the client is known and does not exist any more
+    bool client_process_gone() const;
+
     //! Kill the process of the client, when there is one to kill, and its
     //! connection to the X server
     void kill_client();
