@@ -151,13 +151,21 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_dock.map_all();
 
     wm_dock.get_menu_button().on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Manager::on_launcher));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_launcher(o, e, d);
+            });
     wm_panel.menu_user.restart.on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Manager::on_restart));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_restart(o, e, d);
+            });
     wm_panel.menu_user.shutdown.on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Manager::on_shutdown));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_shutdown(o, e, d);
+            });
     wm_panel.menu_user.logout.on_click.connect(
-            this, static_cast<tiny::object_signal_t>(&Manager::on_logout));
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_logout(o, e, d);
+            });
 
     XClearWindow(display_arg, root_arg);
     set_events();

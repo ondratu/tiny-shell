@@ -27,10 +27,12 @@ void Button::set_events(long mask)
     XGrabButton(display, Button1, AnyModifier, window, false, ButtonReleaseMask,
                 GrabModeAsync, GrabModeAsync, None, None);
 
-    connect(EnterNotify, static_cast<event_signal_t>(&Button::on_enter_notify));
-    connect(LeaveNotify, static_cast<event_signal_t>(&Button::on_leave_notify));
+    connect(EnterNotify,
+            [this](const XEvent& e) { on_enter_notify(e, nullptr); });
+    connect(LeaveNotify,
+            [this](const XEvent& e) { on_leave_notify(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<event_signal_t>(&Button::on_button_release));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
 }
 
 void Button::on_enter_notify(const XEvent& e, void* data)
@@ -69,7 +71,7 @@ void LabelButton::set_events(long mask)
 {
     Button::set_events(ExposureMask | mask);
 
-    connect(Expose, static_cast<event_signal_t>(&LabelButton::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void LabelButton::realize(Window parent_arg, int x, int y)
@@ -140,7 +142,9 @@ MenuButton::~MenuButton() = default;
 
 void MenuButton::set_events(long mask)
 {
-    on_click.connect(this, static_cast<object_signal_t>(&MenuButton::do_popup));
+    on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        do_popup(o, e, d);
+    });
     LabelButton::set_events(mask);
 }
 

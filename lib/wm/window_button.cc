@@ -41,8 +41,7 @@ void WindowButton::set_events(long mask)
 {
     tiny::Button::set_events(ExposureMask | mask);
 
-    connect(Expose,
-            static_cast<tiny::event_signal_t>(&WindowButton::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void WindowButton::on_enter_notify(const XEvent& e, void* data)

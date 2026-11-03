@@ -75,13 +75,13 @@ void IconGrid::set_events(long mask)
     Widget::set_events(mask | ExposureMask | PointerMotionMask |
                        ButtonPressMask | ButtonReleaseMask);
 
-    connect(Expose, static_cast<event_signal_t>(&IconGrid::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
     connect(MotionNotify,
-            static_cast<event_signal_t>(&IconGrid::on_motion_notify));
+            [this](const XEvent& e) { on_motion_notify(e, nullptr); });
     connect(ButtonPress,
-            static_cast<event_signal_t>(&IconGrid::on_button_press));
+            [this](const XEvent& e) { on_button_press(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<event_signal_t>(&IconGrid::on_button_release));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
 }
 
 void IconGrid::set_geometry(int cols, int rows_arg, int cell_w, int cell_h,

@@ -31,46 +31,22 @@ void Handlers::call_handler(std::pair<uint16_t, Window> key, const XEvent& e)
     function(e);
 }
 
-Signal::Signal(): object(nullptr), method(nullptr), data(nullptr) {}
-
-void Signal::operator()(Object* owner, const XEvent& e, void* event_data)
+void Signal::operator()(Object* owner, const XEvent& e, void* data)
 {
-    if (owner_callback) {
-        owner_callback(owner, e, (event_data ? event_data : this->data));
-    } else if (callback) {
-        callback(e);
-    } else if (object && method) {
-        (object->*method)(owner, e, (event_data ? event_data : this->data));
+    if (callback) {
+        callback(owner, e, data);
     }
+}
+
+void Signal::connect(Function function)
+{
+    callback = std::move(function);
 }
 
 void Signal::connect(std::function<void(const XEvent& e)> function)
 {
-    object = nullptr;
-    method = nullptr;
-    data = nullptr;
-    owner_callback = nullptr;
-    callback = std::move(function);
-}
-
-void Signal::connect(
-        std::function<void(Object*, const XEvent&, void*)> function)
-{
-    object = nullptr;
-    method = nullptr;
-    data = nullptr;
-    callback = nullptr;
-    owner_callback = std::move(function);
-}
-
-void Signal::connect(Object* object_arg, object_signal_t method_arg,
-                     void* data_arg)
-{
-    callback = nullptr;
-    owner_callback = nullptr;
-    this->object = object_arg;
-    this->method = method_arg;
-    this->data = data_arg;
+    callback = [function = std::move(function)](Object*, const XEvent& e,
+                                                void*) { function(e); };
 }
 
 EventConnections::~EventConnections()
@@ -100,14 +76,6 @@ void Object::connect_window(uint16_t event_type, Window window,
                             event_function_t function)
 {
     connections.connect(event_type, window, std::move(function));
-}
-
-void Object::connect_window(uint16_t event_type, Window window,
-                            event_signal_t signal, void* data)
-{
-    connect_window(event_type, window, [this, signal, data](const XEvent& e) {
-        (this->*signal)(e, data);
-    });
 }
 
 void Object::disconnect_window(uint16_t event_type, Window window)

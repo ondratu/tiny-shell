@@ -33,7 +33,7 @@ class ListBoxTest : public ::testing::Test {
   protected:
     void SetUp() override
     {
-        list.on_activate.connect(&activated, activated.slot());
+        list.on_activate.connect(activated.slot());
         list.realize(root_window(), 0, 0);
         list.map();
         list.set_items(12, numbered());

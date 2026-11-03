@@ -19,7 +19,7 @@ void Label::set_events(long mask)
 {
     Widget::set_events(mask | ExposureMask);
 
-    connect(Expose, static_cast<event_signal_t>(&Label::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void Label::set_text(const std::string& text_arg)

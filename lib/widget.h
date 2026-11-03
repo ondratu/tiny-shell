@@ -61,9 +61,6 @@ class Widget : public Object {
   protected:
     void connect(uint16_t event_type, event_function_t function);
 
-    void connect(uint16_t event_type, event_signal_t signal,
-                 void* data = nullptr);
-
     void disconnect(uint16_t event_type);
 
     virtual void on_configure_notify(const XEvent& e, void*);

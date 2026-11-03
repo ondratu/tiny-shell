@@ -48,10 +48,10 @@ void Entry::set_events(long mask)
 {
     Widget::set_events(mask | ExposureMask | KeyPressMask | FocusChangeMask);
 
-    connect(Expose, static_cast<event_signal_t>(&Entry::on_expose));
-    connect(KeyPress, static_cast<event_signal_t>(&Entry::on_key_press));
-    connect(FocusIn, static_cast<event_signal_t>(&Entry::on_focus_in));
-    connect(FocusOut, static_cast<event_signal_t>(&Entry::on_focus_out));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
+    connect(KeyPress, [this](const XEvent& e) { on_key_press(e, nullptr); });
+    connect(FocusIn, [this](const XEvent& e) { on_focus_in(e, nullptr); });
+    connect(FocusOut, [this](const XEvent& e) { on_focus_out(e, nullptr); });
 }
 
 void Entry::set_focus()

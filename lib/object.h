@@ -13,8 +13,6 @@ namespace tiny {
 
 class Object;
 
-using event_signal_t = void (Object::*)(const XEvent& e, void* data);
-
 using event_function_t = std::function<void(const XEvent& e)>;
 
 class Handlers
@@ -29,38 +27,25 @@ class Handlers
     void call_handler(std::pair<uint16_t, ::Window> key, const XEvent& e);
 };
 
-using object_signal_t = void (Object::*)(Object* o, const XEvent& e,
-                                         void* data);
-
 //! `owner` is the object that fires the signal; a signal of a class that is
 //! not an Object (like `wm::Window`) passes nullptr.
 class Signal {
   public:
-    Signal();
+    using Function =
+            std::function<void(Object* owner, const XEvent& e, void* data)>;
 
     void operator()(Object* owner, const XEvent& e, void* data = nullptr);
 
-    operator bool() const
-    {
-        return (object && method) || callback || owner_callback;
-    }
-
-    void connect(Object* object, object_signal_t method, void* data = nullptr);
-
-    //! Call the function instead of a method of an object
-    void connect(std::function<void(const XEvent& e)> function);
+    operator bool() const { return static_cast<bool>(callback); }
 
     //! Call the function with the owner of the signal and the user data
-    void connect(std::function<void(Object* owner, const XEvent& e, void* data)>
-                         function);
+    void connect(Function function);
+
+    //! Call the function with the event only
+    void connect(std::function<void(const XEvent& e)> function);
 
   private:
-    Object* object;         // method owner
-    object_signal_t method; // method to call
-    void* data;             // user data to send
-    std::function<void(const XEvent& e)> callback;
-    std::function<void(Object* owner, const XEvent& e, void* data)>
-            owner_callback;
+    Function callback;
 };
 
 /**
@@ -95,11 +80,6 @@ class Object {
   protected:
     void connect_window(uint16_t event_type, ::Window window,
                         event_function_t function);
-
-    //! The method of this object (a cast of a pointer to a member of a
-    //! derived class is not safe with several bases, prefer a lambda)
-    void connect_window(uint16_t event_type, ::Window window,
-                        event_signal_t signal, void* data = nullptr);
 
     void disconnect_window(uint16_t event_type, ::Window window);
 

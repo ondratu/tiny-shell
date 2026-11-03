@@ -37,13 +37,13 @@ void ListBox::set_events(long mask)
     Widget::set_events(mask | ExposureMask | PointerMotionMask |
                        ButtonPressMask | ButtonReleaseMask);
 
-    connect(Expose, static_cast<event_signal_t>(&ListBox::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
     connect(MotionNotify,
-            static_cast<event_signal_t>(&ListBox::on_motion_notify));
+            [this](const XEvent& e) { on_motion_notify(e, nullptr); });
     connect(ButtonPress,
-            static_cast<event_signal_t>(&ListBox::on_button_press));
+            [this](const XEvent& e) { on_button_press(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<event_signal_t>(&ListBox::on_button_release));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
 }
 
 void ListBox::set_items(size_t count_arg, ItemFn item_of_arg)

@@ -35,12 +35,12 @@ void DockButton::set_events(long mask)
                 GrabModeAsync, GrabModeAsync, None, None);
 
     connect(EnterNotify,
-            static_cast<tiny::event_signal_t>(&DockButton::on_enter_notify));
+            [this](const XEvent& e) { on_enter_notify(e, nullptr); });
     connect(LeaveNotify,
-            static_cast<tiny::event_signal_t>(&DockButton::on_leave_notify));
+            [this](const XEvent& e) { on_leave_notify(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<tiny::event_signal_t>(&DockButton::on_button_release));
-    connect(Expose, static_cast<tiny::event_signal_t>(&DockButton::on_expose));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void DockButton::on_enter_notify(const XEvent& e, void*)

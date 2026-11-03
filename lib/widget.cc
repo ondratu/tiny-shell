@@ -66,7 +66,7 @@ void Widget::set_events(long mask)
     XSelectInput(display, window, event_mask);
 
     connect(ConfigureNotify,
-            static_cast<tiny::event_signal_t>(&Widget::on_configure_notify));
+            [this](const XEvent& e) { on_configure_notify(e, nullptr); });
     event_done = true;
 }
 
@@ -160,11 +160,6 @@ void Widget::resize(int w, int h)
 void Widget::connect(uint16_t event_type, event_function_t function)
 {
     connect_window(event_type, window, std::move(function));
-}
-
-void Widget::connect(uint16_t event_type, event_signal_t signal, void* data)
-{
-    connect_window(event_type, window, signal, data);
 }
 
 void Widget::disconnect(uint16_t event_type)

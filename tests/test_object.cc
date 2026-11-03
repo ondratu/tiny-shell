@@ -29,14 +29,16 @@ class Receiver : public tiny::Object {
         last_data = data;
     }
 
-    tiny::event_signal_t event_slot()
+    tiny::event_function_t event_slot()
     {
-        return static_cast<tiny::event_signal_t>(&Receiver::on_event);
+        return [this](const XEvent& e) { on_event(e, nullptr); };
     }
 
-    tiny::object_signal_t signal_slot()
+    tiny::Signal::Function signal_slot()
     {
-        return static_cast<tiny::object_signal_t>(&Receiver::on_signal);
+        return [this](tiny::Object* o, const XEvent& e, void* d) {
+            on_signal(o, e, d);
+        };
     }
 
     int event_calls = 0;
@@ -135,13 +137,13 @@ TEST(SignalTest, unconnected_signal_is_false_and_noop)
     signal(&owner, make_event(ButtonPress)); // must not crash
 }
 
-TEST(SignalTest, connected_signal_calls_method)
+TEST(SignalTest, connected_signal_calls_the_function)
 {
     tiny::Signal signal;
     Receiver r;
     Receiver owner;
 
-    signal.connect(&r, r.signal_slot());
+    signal.connect(r.signal_slot());
     EXPECT_TRUE(signal);
 
     signal(&owner, make_event(ButtonPress));
@@ -166,7 +168,7 @@ TEST(SignalTest, connected_function_is_called_with_the_event)
     EXPECT_EQ(type, KeyPress);
 }
 
-TEST(SignalTest, connecting_a_method_replaces_the_function)
+TEST(SignalTest, connecting_again_replaces_the_function)
 {
     tiny::Signal signal;
     Receiver r;
@@ -174,27 +176,25 @@ TEST(SignalTest, connecting_a_method_replaces_the_function)
     int calls = 0;
 
     signal.connect([&calls](const XEvent&) { ++calls; });
-    signal.connect(&r, r.signal_slot());
+    signal.connect(r.signal_slot());
     signal(&owner, make_event(ButtonPress));
 
     EXPECT_EQ(calls, 0);
     EXPECT_EQ(r.signal_calls, 1);
 }
 
-TEST(SignalTest, connect_data_is_default_and_call_data_overrides)
+TEST(SignalTest, the_data_of_the_call_is_passed)
 {
     tiny::Signal signal;
     Receiver r;
-    int connected = 0;
-    int override_data = 0;
+    int data = 0;
 
-    signal.connect(&r, r.signal_slot(), &connected);
+    signal.connect(r.signal_slot());
+    signal(&r, make_event(ButtonPress), &data);
+    EXPECT_EQ(r.last_data, &data);
 
     signal(&r, make_event(ButtonPress));
-    EXPECT_EQ(r.last_data, &connected);
-
-    signal(&r, make_event(ButtonPress), &override_data);
-    EXPECT_EQ(r.last_data, &override_data);
+    EXPECT_EQ(r.last_data, nullptr);
 }
 
 TEST(SignalTest, reconnect_replaces_target)
@@ -203,8 +203,8 @@ TEST(SignalTest, reconnect_replaces_target)
     Receiver first;
     Receiver second;
 
-    signal.connect(&first, first.signal_slot());
-    signal.connect(&second, second.signal_slot());
+    signal.connect(first.signal_slot());
+    signal.connect(second.signal_slot());
     signal(&first, make_event(ButtonPress));
 
     EXPECT_EQ(first.signal_calls, 0);
@@ -329,7 +329,7 @@ TEST(SignalTest, the_last_connection_wins_over_a_function_with_owner)
     int calls = 0;
 
     signal.connect([&](tiny::Object*, const XEvent&, void*) { ++calls; });
-    signal.connect(&r, r.signal_slot());
+    signal.connect(r.signal_slot());
     signal(&r, make_event(KeyPress));
 
     EXPECT_EQ(calls, 0);

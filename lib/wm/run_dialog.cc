@@ -42,10 +42,11 @@ RunDialog::RunDialog():
           entry_height())
 {
     name = "run-dialog";
-    entry.on_activate.connect(
-            this, static_cast<tiny::object_signal_t>(&RunDialog::run));
-    entry.on_cancel.connect(
-            this, static_cast<tiny::object_signal_t>(&RunDialog::popover));
+    entry.on_activate.connect([this](tiny::Object* o, const XEvent& e,
+                                     void* d) { run(o, e, d); });
+    entry.on_cancel.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        popover(o, e, d);
+    });
 }
 
 RunDialog::~RunDialog() = default;

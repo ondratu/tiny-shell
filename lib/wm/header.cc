@@ -32,11 +32,11 @@ void TitleBox::set_events(long mask)
             None, XCreateFontCursor(display, XC_hand1));
 
     connect(ButtonPress,
-            static_cast<tiny::event_signal_t>(&TitleBox::on_button_press));
+            [this](const XEvent& e) { on_button_press(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<tiny::event_signal_t>(&TitleBox::on_button_release));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
     connect(MotionNotify,
-            static_cast<tiny::event_signal_t>(&TitleBox::on_motion_notify));
+            [this](const XEvent& e) { on_motion_notify(e, nullptr); });
 }
 
 void TitleBox::on_button_press(const XEvent& e, void*)
@@ -80,7 +80,7 @@ void Header::set_events(long mask)
 {
     Box::set_events(ExposureMask | mask);
 
-    connect(Expose, static_cast<tiny::event_signal_t>(&Header::on_expose));
+    connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
 void Header::realize(Window parent_arg, int x, int y)

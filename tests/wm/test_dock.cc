@@ -60,7 +60,7 @@ TEST_F(DockButtonTest, connects_its_events)
 TEST_F(DockButtonTest, button_release_emits_click)
 {
     Recorder r;
-    button.on_click.connect(&r, r.slot());
+    button.on_click.connect(r.slot());
 
     send(button, ButtonRelease);
 
@@ -154,7 +154,7 @@ TEST_F(DockIconTest, click_focuses_the_task)
 {
     ASSERT_FALSE(task->is_focused());
     Recorder r;
-    icon->on_click.connect(&r, r.slot());
+    icon->on_click.connect(r.slot());
 
     send(*icon, ButtonRelease);
 

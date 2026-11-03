@@ -183,16 +183,16 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
-        # size (398 kB of code, with the launcher, the icon grid, the work area,
-        # the dialogs, the image decoders, the EWMH policies, shading, the
+        # size with -flto (382 kB of code, with the launcher, the icon grid,
+        # the work area, the dialogs, the image decoders, the EWMH policies, shading, the
         # layers, the command line with the WM_Sn selection and the question
         # about applications that do not respond, the timers and the
         # functions of the event handlers) with a reserve; change it on
         # purpose.
         run: |
-          max=404000
-          make CXX=clang++-19 CXXFLAGS="-Os -ffunction-sections -fdata-sections" \
-              LDFLAGS="-s -Wl,--gc-sections" build/tiny-shell
+          max=392000
+          make CXX=clang++-19 CXXFLAGS="-Os -flto -ffunction-sections -fdata-sections" \
+              LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell
           size build/tiny-shell | tee size.txt
           text=$(awk 'NR==2 {print $1}' size.txt)
           echo "code ${text} B (limit ${max} B)" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -39,11 +39,11 @@ void Edge::set_events(long mask_arg)
                 GrabModeAsync, None, XCreateFontCursor(display, XC_hand1));
 
     connect(ButtonPress,
-            static_cast<tiny::event_signal_t>(&Edge::on_button_press));
+            [this](const XEvent& e) { on_button_press(e, nullptr); });
     connect(ButtonRelease,
-            static_cast<tiny::event_signal_t>(&Edge::on_button_release));
+            [this](const XEvent& e) { on_button_release(e, nullptr); });
     connect(MotionNotify,
-            static_cast<tiny::event_signal_t>(&Edge::on_motion_notify));
+            [this](const XEvent& e) { on_motion_notify(e, nullptr); });
 }
 
 void Edge::on_button_press(const XEvent& e, void*)
@@ -101,67 +101,21 @@ void BackWindow::set_events(long mask)
 {
     tiny::Container::set_events(mask);
 
-    corner_right_top.on_drag_begin.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_begin));
-    corner_right_top.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    corner_right_bottom.on_drag_begin.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_begin));
-    corner_right_bottom.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    corner_left_top.on_drag_begin.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_begin));
-    corner_left_top.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    corner_left_bottom.on_drag_begin.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_begin));
-    corner_left_bottom.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    edge_top.on_drag_begin.connect(this,
-                                   static_cast<tiny::object_signal_t>(
-                                           &BackWindow::on_edge_drag_begin));
-    edge_top.on_drag_motion.connect(this,
-                                    static_cast<tiny::object_signal_t>(
-                                            &BackWindow::on_edge_drag_motion));
-
-    edge_right.on_drag_begin.connect(this,
-                                     static_cast<tiny::object_signal_t>(
-                                             &BackWindow::on_edge_drag_begin));
-    edge_right.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    edge_bottom.on_drag_begin.connect(this,
-                                      static_cast<tiny::object_signal_t>(
-                                              &BackWindow::on_edge_drag_begin));
-    edge_bottom.on_drag_motion.connect(
-            this, static_cast<tiny::object_signal_t>(
-                          &BackWindow::on_edge_drag_motion));
-
-    edge_left.on_drag_begin.connect(this,
-                                    static_cast<tiny::object_signal_t>(
-                                            &BackWindow::on_edge_drag_begin));
-    edge_left.on_drag_motion.connect(this,
-                                     static_cast<tiny::object_signal_t>(
-                                             &BackWindow::on_edge_drag_motion));
-
     for (Edge* edge : {&corner_right_top, &corner_right_bottom,
                        &corner_left_top, &corner_left_bottom, &edge_top,
                        &edge_right, &edge_bottom, &edge_left}) {
-        edge->on_drag_end.connect(this, static_cast<tiny::object_signal_t>(
-                                                &BackWindow::on_edge_drag_end));
+        edge->on_drag_begin.connect(
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_edge_drag_begin(o, e, d);
+                });
+        edge->on_drag_motion.connect(
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_edge_drag_motion(o, e, d);
+                });
+        edge->on_drag_end.connect(
+                [this](tiny::Object* o, const XEvent& e, void* d) {
+                    on_edge_drag_end(o, e, d);
+                });
     }
 }
 

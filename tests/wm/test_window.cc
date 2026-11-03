@@ -1098,7 +1098,7 @@ TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)
 {
     auto window = manage();
     Recorder recorder;
-    window->on_move_resize_request.connect(&recorder, recorder.slot());
+    window->on_move_resize_request.connect(recorder.slot());
     window->set_events();
 
     send(client.window, client_message(client.window, dsp()._NET_WM_MOVERESIZE,
@@ -2006,7 +2006,7 @@ TEST_F(WindowTest, focus_in_signals_on_focus)
     auto window = manage();
     window->set_events();
     Recorder recorder;
-    window->on_focus.connect(&recorder, recorder.slot());
+    window->on_focus.connect(recorder.slot());
 
     send(client.window, make_event(FocusIn));
 
@@ -2018,7 +2018,7 @@ TEST_F(WindowTest, focus_in_of_a_grab_or_of_the_pointer_is_not_a_focus_change)
     auto window = manage();
     window->set_events();
     Recorder recorder;
-    window->on_focus.connect(&recorder, recorder.slot());
+    window->on_focus.connect(recorder.slot());
 
     // what the Alt + Tab grab of the window manager makes the server report
     XEvent grab = make_event(FocusIn);
@@ -2269,8 +2269,8 @@ TEST_F(WindowTest, the_layer_and_taskbar_changes_are_reported_only_once)
     auto window = manage();
     Recorder layer;
     Recorder taskbar;
-    window->on_layer.connect(&layer, layer.slot());
-    window->on_skip_taskbar.connect(&taskbar, taskbar.slot());
+    window->on_layer.connect(layer.slot());
+    window->on_skip_taskbar.connect(taskbar.slot());
 
     window->set_above(true);
     window->set_above(true);
@@ -2529,7 +2529,7 @@ TEST_F(WindowTest, plain_click_focuses_the_window_without_dragging)
     auto window = manage();
     window->set_events();
     Recorder dragged;
-    window->on_drag_begin.connect(&dragged, dragged.slot());
+    window->on_drag_begin.connect(dragged.slot());
     XEvent e = make_event(ButtonPress);
     e.xbutton.time = CurrentTime;
 
@@ -2569,7 +2569,7 @@ TEST_F(WindowTest, super_click_moves_the_window_like_alt_click)
     auto window = manage();
     window->set_events();
     Recorder dragged;
-    window->on_modifier_drag.connect(&dragged, dragged.slot());
+    window->on_modifier_drag.connect(dragged.slot());
     XEvent press = make_event(ButtonPress);
     press.xbutton.state = Mod4Mask;
     press.xbutton.x_root = 100;

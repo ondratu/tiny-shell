@@ -119,8 +119,8 @@ TEST_F(WindowButtonTest, enter_and_leave_signals_stay_free_for_users)
     tiny::wm::CloseButton b;
     Recorder enter;
     Recorder leave;
-    b.on_enter.connect(&enter, enter.slot());
-    b.on_leave.connect(&leave, leave.slot());
+    b.on_enter.connect(enter.slot());
+    b.on_leave.connect(leave.slot());
     b.realize(root_window(), 0, 0);
     b.map();
     send(b, Expose);
@@ -138,7 +138,7 @@ TEST_F(WindowButtonTest, click_emits_signal_while_hovering)
 {
     tiny::wm::MinimizeButton b;
     Recorder click;
-    b.on_click.connect(&click, click.slot());
+    b.on_click.connect(click.slot());
     b.realize(root_window(), 0, 0);
     b.map();
 
