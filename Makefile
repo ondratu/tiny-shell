@@ -83,7 +83,7 @@ help:
 	@echo "make coverage   run the tests and print the coverage table"
 	@echo "make asan       run the tests with AddressSanitizer and UBSan"
 	@echo "make lint       static analysis with clang-tidy"
-	@echo "make cppcheck  second opinion on the sources (only reports, not in CI)"
+	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
 	@echo "Variables: CXX, CXXFLAGS, BUILD, STRICT=1 (warnings are errors),"
@@ -221,15 +221,23 @@ lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS) -I./tests
 
-# A second opinion next to clang-tidy. It only reports: the findings are not
-# triaged yet, so it is not a part of CI or the git hooks. The tests are left
-# out (cppcheck does not know the googletest macros).
+# A second opinion next to clang-tidy, part of CI and of the pre-push hook.
+# The tests are left out (cppcheck does not know the googletest macros) and so
+# are the examples (each one is a program of its own, the same class names
+# look like a violation of the one definition rule to it). Suppressed on
+# purpose, project wide:
+#   useStlAlgorithm       raw loops are clearer for the readers learning Xlib
+#   shadowFunction        names like `frame` and `error` are the natural ones
+#   functionStatic        members stay members to keep the interface uniform
+#   constParameterCallback  Xlib callbacks have a fixed signature
 CPPCHECK ?= cppcheck
 CPPCHECK_FLAGS = --enable=warning,style,performance,portability --std=c++17 \
-    -I lib --inline-suppr --quiet
+    -I lib --inline-suppr --quiet --error-exitcode=1 \
+    --suppress=useStlAlgorithm --suppress=shadowFunction \
+    --suppress=functionStatic --suppress=constParameterCallback
 
 cppcheck:
-	$(CPPCHECK) $(CPPCHECK_FLAGS) lib src examples
+	$(CPPCHECK) $(CPPCHECK_FLAGS) lib src
 
 # Run all the tests with AddressSanitizer and UndefinedBehaviorSanitizer, built
 # into build-asan. Leaks that are accepted for now are in tools/lsan.supp.
