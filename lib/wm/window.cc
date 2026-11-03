@@ -566,7 +566,7 @@ void Window::set_minimized(bool minimized)
 
     set_wm_state(minimized ? IconicState : NormalState);
     publish_wm_states();
-    on_minimize(this, XEvent());
+    on_minimize(nullptr, XEvent());
 }
 
 void Window::set_maximized(bool maximized)
@@ -616,7 +616,7 @@ void Window::set_skip_taskbar(bool skip)
 {
     if (change_state(wm_states, WMState::SKIP_TASKBAR, skip)) {
         publish_wm_states();
-        on_skip_taskbar(this, XEvent());
+        on_skip_taskbar(nullptr, XEvent());
     }
 }
 
@@ -715,7 +715,7 @@ void Window::set_above(bool above)
     }
     if (changed) {
         publish_wm_states();
-        on_layer(this, XEvent());
+        on_layer(nullptr, XEvent());
     }
 }
 
@@ -727,7 +727,7 @@ void Window::set_below(bool below)
     }
     if (changed) {
         publish_wm_states();
-        on_layer(this, XEvent());
+        on_layer(nullptr, XEvent());
     }
 }
 
@@ -738,7 +738,7 @@ void Window::set_demands_attention(bool demands)
     }
     if (change_state(wm_states, WMState::DEMANDS_ATTENTION, demands)) {
         publish_wm_states();
-        on_attention(this, XEvent());
+        on_attention(nullptr, XEvent());
     }
 }
 
@@ -750,7 +750,7 @@ void Window::set_modal(bool modal)
         wm_states &= static_cast<unsigned long>(~WMState::MODAL);
     }
     publish_wm_states();
-    on_modal(this, XEvent());
+    on_modal(nullptr, XEvent());
 }
 
 void Window::publish_wm_states()
@@ -893,7 +893,7 @@ void Window::close()
     if (!responding) {
         // the user decides, the next ping may even bring the client back
         ask_at = Clock::now();
-        on_unresponsive(this, XEvent());
+        on_unresponsive(nullptr, XEvent());
         return;
     }
     if (!ask_to_close()) {
@@ -1593,14 +1593,14 @@ void Window::on_button_press(const XEvent& e, void*)
     set_focus(); // set_focus is not important :-)
 
     if (e.xbutton.state & (Mod1Mask | Mod4Mask)) { // Alt or Super
-        on_modifier_drag(this, e);
+        on_modifier_drag(nullptr, e);
         // unblock the pointer, but not send to child
         XAllowEvents(dsp, AsyncPointer, e.xbutton.time);
         XGrabPointer(dsp, child, false,
                      ButtonPressMask | ButtonReleaseMask | Button1MotionMask,
                      GrabModeAsync, GrabModeAsync, None,
                      XCreateFontCursor(dsp, XC_hand1), CurrentTime);
-        on_drag_begin(this, e);
+        on_drag_begin(nullptr, e);
         return;
     }
 
@@ -1686,7 +1686,7 @@ void Window::on_client_message(const XEvent& e, void*)
     }
 
     if (e.xclient.message_type == dsp._NET_WM_MOVERESIZE) {
-        on_move_resize_request(this, e);
+        on_move_resize_request(nullptr, e);
         return;
     }
 
@@ -1706,7 +1706,7 @@ void Window::on_client_message(const XEvent& e, void*)
 
 void Window::on_motion_notify(const XEvent& e, void*)
 {
-    on_drag_motion(this, e);
+    on_drag_motion(nullptr, e);
 }
 
 bool Window::is_focus_change(const XEvent& e)
@@ -1725,7 +1725,7 @@ void Window::on_focus_in(const XEvent& e, void*)
     if (!is_focus_change(e)) {
         return;
     }
-    on_focus(this, e, nullptr);
+    on_focus(nullptr, e, nullptr);
 }
 
 void Window::on_focus_out(const XEvent&, void*) {}
@@ -1801,13 +1801,13 @@ void Window::on_property_notify(const XEvent& e, void*)
     }
 
     if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
-        on_user_time(this, XEvent()); // with every key press
+        on_user_time(nullptr, XEvent()); // with every key press
         return;
     }
 
     if (e.xproperty.atom == dsp._NET_WM_USER_TIME_WINDOW) {
         watch_user_time_window();
-        on_user_time(this, XEvent());
+        on_user_time(nullptr, XEvent());
         return;
     }
 
@@ -1819,14 +1819,14 @@ void Window::on_property_notify(const XEvent& e, void*)
 void Window::on_motif_hints_changed(unsigned long new_decorations)
 {
     if (new_decorations) {
-        on_reframe(this, XEvent()); // it is a window without a frame now
+        on_reframe(nullptr, XEvent()); // it is a window without a frame now
     }
 }
 
 void Window::on_user_time_window_notify(const XEvent& e, void*)
 {
     if (e.xproperty.atom == dsp._NET_WM_USER_TIME) {
-        on_user_time(this, XEvent());
+        on_user_time(nullptr, XEvent());
     }
 }
 
@@ -1843,7 +1843,7 @@ void Window::watch_user_time_window()
         return;
     }
     if (user_time_window != None) {
-        disconnect_window(PropertyNotify, user_time_window);
+        window_events.disconnect(PropertyNotify, user_time_window);
     }
     user_time_window = named;
     if (named != None) {
@@ -1853,9 +1853,9 @@ void Window::watch_user_time_window()
             mask |= attrs.your_event_mask; // the window may be ours already
         }
         XSelectInput(dsp, named, mask);
-        connect_window(PropertyNotify, named,
-                       reinterpret_cast<tiny::event_signal_t>(
-                               &Window::on_user_time_window_notify));
+        window_events.connect(PropertyNotify, named, [this](const XEvent& e) {
+            on_user_time_window_notify(e, nullptr);
+        });
     }
 }
 
@@ -1878,38 +1878,37 @@ void Window::set_events()
 
     watch_user_time_window();
 
-    connect_window(
-            FocusIn, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_focus_in));
-    connect_window(
-            FocusOut, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_focus_out));
+    window_events.connect(FocusIn, child,
+                          [this](const XEvent& e) { on_focus_in(e, nullptr); });
+    window_events.connect(FocusOut, child, [this](const XEvent& e) {
+        on_focus_out(e, nullptr);
+    });
 
-    connect_window(
-            ClientMessage, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_client_message));
-    connect_window(PropertyNotify, child,
-                   reinterpret_cast<tiny::event_signal_t>(
-                           &Window::on_property_notify));
-    connect_window(
-            KeyRelease, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_key_release));
-    connect_window(
-            ButtonPress, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_button_press));
-    connect_window(
-            ButtonRelease, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_button_release));
-    connect_window(
-            MotionNotify, child,
-            reinterpret_cast<tiny::event_signal_t>(&Window::on_motion_notify));
+    window_events.connect(ClientMessage, child, [this](const XEvent& e) {
+        on_client_message(e, nullptr);
+    });
+    window_events.connect(PropertyNotify, child, [this](const XEvent& e) {
+        on_property_notify(e, nullptr);
+    });
+    window_events.connect(KeyRelease, child, [this](const XEvent& e) {
+        on_key_release(e, nullptr);
+    });
+    window_events.connect(ButtonPress, child, [this](const XEvent& e) {
+        on_button_press(e, nullptr);
+    });
+    window_events.connect(ButtonRelease, child, [this](const XEvent& e) {
+        on_button_release(e, nullptr);
+    });
+    window_events.connect(MotionNotify, child, [this](const XEvent& e) {
+        on_motion_notify(e, nullptr);
+    });
 
-    on_drag_begin.connect(reinterpret_cast<tiny::Object*>(this),
-                          reinterpret_cast<tiny::object_signal_t>(
-                                  &Window::on_window_drag_begin));
-    on_drag_motion.connect(reinterpret_cast<tiny::Object*>(this),
-                           reinterpret_cast<tiny::object_signal_t>(
-                                   &Window::on_window_drag_motion));
+    on_drag_begin.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        on_window_drag_begin(o, e, d);
+    });
+    on_drag_motion.connect([this](tiny::Object* o, const XEvent& e, void* d) {
+        on_window_drag_motion(o, e, d);
+    });
 }
 
 int Window::get_properties(::Window window, std::set<Atom>& properties)

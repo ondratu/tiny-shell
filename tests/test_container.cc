@@ -386,7 +386,7 @@ class PopoverTest : public ::testing::Test {
     {
         XEvent e = {};
         e.type = FocusOut;
-        tiny::handlers.call_hanlder({FocusOut, p.get_window()}, e);
+        tiny::handlers.call_handler({FocusOut, p.get_window()}, e);
     }
 };
 

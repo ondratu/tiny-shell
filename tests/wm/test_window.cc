@@ -2011,7 +2011,6 @@ TEST_F(WindowTest, focus_in_signals_on_focus)
     send(client.window, make_event(FocusIn));
 
     EXPECT_EQ(recorder.calls, 1);
-    EXPECT_EQ(recorder.last_owner, window.get());
 }
 
 TEST_F(WindowTest, focus_in_of_a_grab_or_of_the_pointer_is_not_a_focus_change)

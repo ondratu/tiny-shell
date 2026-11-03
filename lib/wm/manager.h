@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "object.h"
+#include "timers.h"
 #include "wm/window.h"
 #include "wm/panel.h"
 #include "wm/launcher.h"
@@ -30,6 +31,15 @@ class Manager : public tiny::Object {
     //! The manager ends when another one takes this selection (`--replace`)
     void set_selection(const Selection* owned) { selection = owned; }
 
+    //! Commands of Restart and Shutdown in the user menu; an empty one keeps
+    //! the current command
+    void set_power_commands(const std::string& restart,
+                            const std::string& shutdown);
+
+    //! Timers of the main loop (a clock, delays); they run in the loop, so
+    //! the functions must be short
+    tiny::Timers& get_timers() { return timers; }
+
   private:
     void set_events();
 
@@ -38,12 +48,16 @@ class Manager : public tiny::Object {
 
     void release_quit_signals();
 
-    //! Block until an event is queued; false when a signal asks to quit
+    //! Block until an event is queued; false when a signal or a timer asks to
+    //! quit (the events that are queued then are not handled)
     bool wait_for_event();
 
     //! Milliseconds to the next ping, its deadline or the question to the
     //! user, -1 when nothing waits
     int ping_timeout_ms() const;
+
+    //! Milliseconds the loop may sleep: the pings and the timers
+    int next_timeout_ms() const;
 
     //! Ping the windows, mark those that did not answer in time and ask the
     //! user about the ones that do not respond for long
@@ -257,6 +271,8 @@ class Manager : public tiny::Object {
         unsigned long first;
         unsigned long last;
     } reframed = {None, 0, 0};
+
+    tiny::Timers timers;
 
     // until there is a configuration the commands are the systemd ones
     std::string restart_command = "systemctl reboot";

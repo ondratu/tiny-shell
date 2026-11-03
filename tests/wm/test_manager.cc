@@ -51,11 +51,6 @@ class Stopper : public tiny::Object {
 
     void on_event(const XEvent&, void*) { *running = false; }
 
-    tiny::event_signal_t slot()
-    {
-        return static_cast<tiny::event_signal_t>(&Stopper::on_event);
-    }
-
   private:
     bool* running;
 };
@@ -98,8 +93,9 @@ class ManagerTest : public ::testing::Test {
         const ::Window sentinel =
                 XCreateSimpleWindow(dsp(), root_window(), 0, 0, 1, 1, 0, 0, 0);
         Stopper stopper(&manager->running);
-        tiny::handlers.set_handler(CreateNotify, sentinel, &stopper,
-                                   stopper.slot(), nullptr);
+        tiny::handlers.set_handler(
+                CreateNotify, sentinel,
+                [&stopper](const XEvent& e) { stopper.on_event(e, nullptr); });
         XSync(dsp(), False);
         manager->main_loop();
         tiny::handlers.unset_handler(CreateNotify, sentinel);
@@ -2412,7 +2408,7 @@ TEST_F(ManagerTest, focus_moves_the_active_window)
     first->set_focus();
     ASSERT_TRUE(first->is_focused());
 
-    second->on_focus(second, make_event(FocusIn));
+    second->on_focus(nullptr, make_event(FocusIn));
 
     EXPECT_EQ(manager->active, second);
     EXPECT_FALSE(first->is_focused());
@@ -2461,7 +2457,7 @@ TEST_F(ManagerTest, super_used_to_move_a_window_does_not_open_the_launcher)
     auto* window = manager->wm_tops.front();
 
     manager->on_key_press(key(XK_Super_L));
-    window->on_modifier_drag(window, XEvent());
+    window->on_modifier_drag(nullptr, XEvent());
     manager->on_key_release(key(XK_Super_L));
     XSync(dsp(), False);
 
@@ -4096,4 +4092,50 @@ TEST_F(ManagerTest, a_manager_without_selection_ignores_the_clear)
     manager->on_selection_clear(e);
 
     EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, the_loop_sleeps_until_the_next_timer)
+{
+    start();
+    EXPECT_EQ(manager->next_timeout_ms(), -1);
+    manager->get_timers().after(std::chrono::seconds(60), [] {});
+    const int ms = manager->next_timeout_ms();
+    EXPECT_GT(ms, 0);
+    EXPECT_LE(ms, 60000);
+}
+
+TEST_F(ManagerTest, the_sooner_of_a_ping_and_a_timer_wins)
+{
+    start();
+    manager->get_timers().after(std::chrono::hours(1), [] {});
+    EXPECT_LE(manager->next_timeout_ms(), 3600000);
+    manager->get_timers().after(std::chrono::milliseconds(0), [] {});
+    EXPECT_EQ(manager->next_timeout_ms(), 0);
+}
+
+TEST_F(ManagerTest, the_main_loop_runs_the_timers)
+{
+    start();
+    int calls = 0;
+    manager->get_timers().after(std::chrono::milliseconds(20), [&] {
+        ++calls;
+        manager->running = false;
+    });
+
+    manager->main_loop(); // sleeps in poll() until the timer
+
+    EXPECT_EQ(calls, 1);
+    EXPECT_TRUE(manager->get_timers().empty());
+}
+
+TEST_F(ManagerTest, the_commands_of_the_user_menu_can_be_set)
+{
+    start();
+    manager->set_power_commands("my-restart", "");
+    EXPECT_EQ(manager->restart_command, "my-restart");
+    EXPECT_EQ(manager->shutdown_command, "systemctl poweroff");
+
+    manager->set_power_commands("", "my-shutdown");
+    EXPECT_EQ(manager->restart_command, "my-restart");
+    EXPECT_EQ(manager->shutdown_command, "my-shutdown");
 }

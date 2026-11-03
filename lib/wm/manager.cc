@@ -578,6 +578,27 @@ int Manager::ping_timeout_ms() const
     return rv;
 }
 
+void Manager::set_power_commands(const std::string& restart,
+                                 const std::string& shutdown)
+{
+    if (!restart.empty()) {
+        restart_command = restart;
+    }
+    if (!shutdown.empty()) {
+        shutdown_command = shutdown;
+    }
+}
+
+int Manager::next_timeout_ms() const
+{
+    const int pings = ping_timeout_ms();
+    const int others = timers.timeout_ms();
+    if (pings < 0 || others < 0) {
+        return std::max(pings, others);
+    }
+    return std::min(pings, others);
+}
+
 void Manager::check_pings()
 {
     const auto now = Window::Clock::now();
@@ -646,10 +667,14 @@ bool Manager::wait_for_event()
     for (bool wait = XPending(display) == 0;; wait = true) {
         struct pollfd fds[2] = {{ConnectionNumber(display), POLLIN, 0},
                                 {quit_pipe[0], POLLIN, 0}};
-        if (poll(fds, 2, wait ? ping_timeout_ms() : 0) < 0 && errno != EINTR) {
+        if (poll(fds, 2, wait ? next_timeout_ms() : 0) < 0 && errno != EINTR) {
             return false;
         }
         check_pings();
+        timers.run_due();
+        if (!running) {
+            return false; // a timer asked to end the loop
+        }
         if (fds[1].revents & POLLIN) {
             char drain[16];
             while (read(quit_pipe[0], drain, sizeof(drain)) > 0) {}
@@ -695,7 +720,7 @@ void Manager::main_loop()
 
         // call manager handlers first
         if (tiny::handlers.count(signal_id)) {
-            tiny::handlers.call_hanlder(signal_id, event);
+            tiny::handlers.call_handler(signal_id, event);
             continue;
         }
 

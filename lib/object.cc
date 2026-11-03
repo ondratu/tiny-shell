@@ -9,33 +9,35 @@ namespace tiny {
 
 Handlers handlers;
 
-void Handlers::set_handler(uint16_t event_type, Window window, Object* o,
-                           event_signal_t signal, void* data)
+void Handlers::set_handler(uint16_t event_type, Window window,
+                           event_function_t function)
 {
-    auto key = std::make_pair(event_type, window);
-    auto val = std::make_tuple(o, signal, data);
-    (*this)[key] = val;
+    (*this)[std::make_pair(event_type, window)] = std::move(function);
 }
 
 void Handlers::unset_handler(uint16_t event_type, Window window)
 {
-    auto key = std::make_pair(event_type, window);
-    this->erase(key);
+    this->erase(std::make_pair(event_type, window));
 }
 
-void Handlers::call_hanlder(std::pair<uint16_t, Window> key, const XEvent& e)
+void Handlers::call_handler(std::pair<uint16_t, Window> key, const XEvent& e)
 {
-    auto val = (*this)[key];
-    Object* o = std::get<0>(val);
-    const event_signal_t signal = std::get<1>(val);
-    (o->*signal)(e, std::get<2>(val));
+    const auto it = this->find(key);
+    if (it == this->end()) {
+        return;
+    }
+    // a copy: the handler may unregister itself
+    const event_function_t function = it->second;
+    function(e);
 }
 
 Signal::Signal(): object(nullptr), method(nullptr), data(nullptr) {}
 
 void Signal::operator()(Object* owner, const XEvent& e, void* event_data)
 {
-    if (callback) {
+    if (owner_callback) {
+        owner_callback(owner, e, (event_data ? event_data : this->data));
+    } else if (callback) {
         callback(e);
     } else if (object && method) {
         (object->*method)(owner, e, (event_data ? event_data : this->data));
@@ -47,38 +49,70 @@ void Signal::connect(std::function<void(const XEvent& e)> function)
     object = nullptr;
     method = nullptr;
     data = nullptr;
+    owner_callback = nullptr;
     callback = std::move(function);
+}
+
+void Signal::connect(
+        std::function<void(Object*, const XEvent&, void*)> function)
+{
+    object = nullptr;
+    method = nullptr;
+    data = nullptr;
+    callback = nullptr;
+    owner_callback = std::move(function);
 }
 
 void Signal::connect(Object* object_arg, object_signal_t method_arg,
                      void* data_arg)
 {
     callback = nullptr;
+    owner_callback = nullptr;
     this->object = object_arg;
     this->method = method_arg;
     this->data = data_arg;
 }
 
-Object::~Object()
+EventConnections::~EventConnections()
 {
     while (!connected_events.empty()) {
         const auto key = connected_events.crbegin();
-        disconnect_window(key->first, key->second);
+        disconnect(key->first, key->second);
     }
-    connected_events.clear();
+}
+
+void EventConnections::connect(uint16_t event_type, Window window,
+                               event_function_t function)
+{
+    handlers.set_handler(event_type, window, std::move(function));
+    connected_events.insert(std::make_pair(event_type, window));
+}
+
+void EventConnections::disconnect(uint16_t event_type, Window window)
+{
+    handlers.unset_handler(event_type, window);
+    connected_events.erase(std::make_pair(event_type, window));
+}
+
+Object::~Object() = default;
+
+void Object::connect_window(uint16_t event_type, Window window,
+                            event_function_t function)
+{
+    connections.connect(event_type, window, std::move(function));
 }
 
 void Object::connect_window(uint16_t event_type, Window window,
                             event_signal_t signal, void* data)
 {
-    handlers.set_handler(event_type, window, this, signal, data);
-    connected_events.insert(std::make_pair(event_type, window));
+    connect_window(event_type, window, [this, signal, data](const XEvent& e) {
+        (this->*signal)(e, data);
+    });
 }
 
 void Object::disconnect_window(uint16_t event_type, Window window)
 {
-    handlers.unset_handler(event_type, window);
-    connected_events.erase(std::make_pair(event_type, window));
+    connections.disconnect(event_type, window);
 }
 
 void log(const char* file, const char* function, uint32_t line,
