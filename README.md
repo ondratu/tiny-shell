@@ -12,8 +12,8 @@ much as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog and an application launcher. A clock, a task bar and a
-> configuration file are still missing, see below.
+> dialog and an application launcher. A clock and a task bar are still
+> missing, see below.
 
 ## What it is
 
@@ -55,11 +55,13 @@ Implemented:
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
 - **Shell:** top panel with an application menu and a user menu, a dock with
-  the icons of running windows, a run dialog (Alt+F2), a full screen launcher
+  the icons of running windows and of the favorite applications (which stay
+  there when they do not run), a run dialog (Alt+F2), a full screen launcher
   with search (Super).
 - **Other:** one `poll()` event loop for X events, signals and timers
   (finished children are collected by a `SIGCHLD` handler), commands of
-  Restart and Shutdown, a configuration file (scale, commands), taking
+  Restart and Shutdown, a configuration file (scale, commands, favorites of
+  the dock), taking
   over from another window manager (`--replace`) and handing over to one,
   Super + mouse moves a window, scaling of the whole theme for high-DPI
   screens, unit tests of the toolkit and the window
@@ -162,12 +164,33 @@ reboot = systemctl reboot
 poweroff = systemctl poweroff
 # Runs the applications with Terminal=true; the command follows it
 terminal = xterm -e
+
+[dock]
+# Applications that stay in the dock when they do not run: the ids of their
+# desktop files, separated by ;. The menu of the dock writes it (see below)
+favorites = firefox.desktop;org.gnome.Nautilus.desktop
 ```
 
 [examples/tiny-shell.ini](examples/tiny-shell.ini) is a file to start with.
-Use `sudo reboot`, `doas poweroff` or similar where there is no systemd. Nothing rewrites the
-file now, but a settings program may do it later, together with your
-comments; the file says so at the top.
+Use `sudo reboot`, `doas poweroff` or similar where there is no systemd.
+
+tiny-shell writes the file of the user (never the global one) when you change
+the favorites of the dock. It makes the whole file again from the values that
+were in it, so **your comments are lost** and the sections come in the order
+of their names; the values of the global file are not copied into it. The
+new file replaces the old one in one step, and a failure is reported on
+stderr and leaves the old file as it was. The file says so at the top.
+
+### The dock and the favorite applications
+
+The dock shows an icon for every window and, before them, the favorite
+applications. Click the icon of a favorite that does not run to start it; when
+it runs, its first window takes the place of the icon and the icon comes back
+when the last window is closed. Click the right button on an icon and choose
+**Add to favorites** or **Remove from favorites**; that works for every
+window whose application has a `.desktop` file (it is found by `WM_CLASS`,
+see below). The favorites are saved at once to `[dock] favorites`. An id of
+an application that is not installed is kept in the file but not shown.
 
 ### Command line
 
