@@ -272,20 +272,11 @@ TEST(ThemeScaleTest, scaled_theme_opens_fonts)
     EXPECT_NE(t.wm_header.get_font(), nullptr);
 }
 
-TEST(ThemeScaleTest, env_scale_factor_parsing)
+TEST(ThemeScaleTest, the_scale_is_one_until_it_is_set)
 {
-    unsetenv("TINY_SCALE_FACTOR");
-    EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.0);
+    tiny::Theme t;
 
-    setenv("TINY_SCALE_FACTOR", "2", 1);
-    EXPECT_EQ(tiny::Theme::env_scale_factor(), 2.0);
-
-    setenv("TINY_SCALE_FACTOR", "1.5", 1);
-    EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.5);
-
-    for (const char* bad : {"", "abc", "0", "-2", "2x", "1000"}) {
-        setenv("TINY_SCALE_FACTOR", bad, 1);
-        EXPECT_EQ(tiny::Theme::env_scale_factor(), 1.0) << bad;
-    }
-    unsetenv("TINY_SCALE_FACTOR");
+    EXPECT_EQ(t.scale_factor, 1.0);
+    t.scale(2);
+    EXPECT_EQ(t.scale_factor, 2.0);
 }

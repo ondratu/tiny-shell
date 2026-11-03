@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "wm/config.h"
 #include "wm/options.h"
 
 using tiny::wm::Options;
@@ -81,48 +82,32 @@ TEST(OptionsTest, usage_lists_every_option)
 
     EXPECT_EQ(text.rfind("Usage: tiny ", 0), 0u);
     for (const char* option :
-         {"--replace", "--info", "--version", "--help", "-V", "-h",
-          "--restart-command", "--shutdown-command"}) {
+         {"--replace", "--info", "--version", "--help", "-V", "-h"}) {
         EXPECT_NE(text.find(option), std::string::npos) << option;
     }
 }
 
-TEST(OptionsTest, info_has_the_scale_and_the_directories)
+TEST(OptionsTest, info_has_the_settings_and_the_directories)
 {
-    const std::string text = tiny::wm::info_text(1.5, {"/a/applications"});
+    tiny::wm::Config config;
+    config.scale = 1.5;
+    config.reboot_command = "my-reboot";
+    config.poweroff_command = "my-poweroff";
+    const std::string text = tiny::wm::info_text(
+            config, {"/etc/xdg/tiny-shell/config"}, {"/a/applications"});
 
     EXPECT_NE(text.find("1.5"), std::string::npos);
+    EXPECT_NE(text.find("my-reboot"), std::string::npos);
+    EXPECT_NE(text.find("my-poweroff"), std::string::npos);
+    EXPECT_NE(text.find("/etc/xdg/tiny-shell/config"), std::string::npos);
     EXPECT_NE(text.find("/a/applications"), std::string::npos);
     EXPECT_NE(text.find(tiny::wm::version_text()), std::string::npos);
 }
 
-TEST(OptionsTest, the_commands_of_the_user_menu_have_no_default_here)
+TEST(OptionsTest, the_removed_command_options_are_unknown)
 {
-    const Options o = parse_options({});
-
-    EXPECT_TRUE(o.restart_command.empty());
-    EXPECT_TRUE(o.shutdown_command.empty());
-}
-
-TEST(OptionsTest, the_commands_come_after_equals_or_as_the_next_argument)
-{
-    const Options o = parse_options(
-            {"--restart-command=sudo reboot", "--shutdown-command", "halt -p"});
-
-    EXPECT_EQ(o.action, Options::Action::Run);
-    EXPECT_EQ(o.restart_command, "sudo reboot");
-    EXPECT_EQ(o.shutdown_command, "halt -p");
-}
-
-TEST(OptionsTest, a_command_option_without_a_command_is_an_error)
-{
-    for (const auto& args :
-         {std::vector<std::string>{"--restart-command"},
-          std::vector<std::string>{"--shutdown-command="},
-          std::vector<std::string>{"--shutdown-command"},
-          std::vector<std::string>{"--restart-command", "--replace"}}) {
-        const Options o = parse_options(args);
-        EXPECT_EQ(o.action, Options::Action::Error) << args[0];
-        EXPECT_NE(o.error.find("needs a command"), std::string::npos);
+    for (const char* option : {"--restart-command=x", "--shutdown-command=x"}) {
+        EXPECT_EQ(parse_options({option}).action, Options::Action::Error)
+                << option;
     }
 }

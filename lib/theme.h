@@ -9,7 +9,7 @@ namespace tiny {
 
 class Theme {
   public:
-    // Scale factor is read from TINY_SCALE_FACTOR (default 1)
+    // The scale is 1 until scale() is called (the configuration sets it)
     Theme();
     ~Theme() = default;
 
@@ -17,9 +17,6 @@ class Theme {
 
     // Scale all metrics and fonts (relative to the default theme)
     void scale(double factor);
-
-    // Parse TINY_SCALE_FACTOR; invalid or non-positive value gives 1
-    static double env_scale_factor();
 
     uint32_t root_background = 0x729FCF;
     int wm_win_header = 25;

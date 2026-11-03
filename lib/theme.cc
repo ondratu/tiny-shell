@@ -13,22 +13,7 @@ Theme theme; // default_theme
 
 Theme::Theme()
 {
-    scale(env_scale_factor());
-}
-
-double Theme::env_scale_factor()
-{
-    const char* env = getenv("TINY_SCALE_FACTOR");
-    if (!env) {
-        return 1;
-    }
-
-    char* end = nullptr;
-    const double factor = strtod(env, &end);
-    if (end == env || *end != '\0' || !(factor > 0) || factor > 16) {
-        return 1;
-    }
-    return factor;
+    scale(1);
 }
 
 void Theme::scale(double factor)

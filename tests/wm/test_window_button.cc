@@ -187,7 +187,7 @@ TEST_F(WindowButtonTest, destroying_unrealized_button_causes_no_x_error)
     EXPECT_EQ(x.errors(), 0);
 }
 
-// ---- scaling (TINY_SCALE_FACTOR) ----
+// ---- scaling (the scale of the theme) ----
 
 class WindowButtonScaledTest : public WindowButtonTest {
   protected:

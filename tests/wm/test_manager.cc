@@ -4128,6 +4128,12 @@ TEST_F(ManagerTest, the_main_loop_runs_the_timers)
     EXPECT_TRUE(manager->get_timers().empty());
 }
 
+TEST_F(ManagerTest, the_terminal_goes_to_the_launcher)
+{
+    start();
+    manager->set_terminal({"foot", "-e"}); // nothing to see, it must not fail
+}
+
 TEST_F(ManagerTest, the_commands_of_the_user_menu_can_be_set)
 {
     start();

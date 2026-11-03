@@ -17,20 +17,6 @@ std::string number_text(double value)
     return text;
 }
 
-//! `--name=value` sets `value`; `--name` alone is left for the caller
-bool command_option(const std::string& arg, const std::string& name,
-                    std::string& value)
-{
-    if (arg == name) {
-        return true;
-    }
-    if (arg.rfind(name + "=", 0) == 0) {
-        value = arg.substr(name.size() + 1);
-        return true;
-    }
-    return false;
-}
-
 } // namespace
 
 Options parse_options(const std::vector<std::string>& args)
@@ -38,33 +24,8 @@ Options parse_options(const std::vector<std::string>& args)
     Options rv;
     Options::Action asked = Options::Action::Run;
 
-    for (size_t i = 0; i < args.size(); ++i) {
-        const std::string& arg = args[i];
-        std::string* command = nullptr;
-        std::string name;
-        if (command_option(arg, "--restart-command", rv.restart_command)) {
-            command = &rv.restart_command;
-            name = "--restart-command";
-        } else if (command_option(arg, "--shutdown-command",
-                                  rv.shutdown_command)) {
-            command = &rv.shutdown_command;
-            name = "--shutdown-command";
-        }
-        if (command) {
-            if (arg == name) { // the value is the next argument
-                if (i + 1 >= args.size() || args[i + 1].rfind('-', 0) == 0) {
-                    rv.action = Options::Action::Error;
-                    rv.error = "option '" + name + "' needs a command";
-                    return rv;
-                }
-                *command = args[++i];
-            }
-            if (command->empty()) {
-                rv.action = Options::Action::Error;
-                rv.error = "option '" + name + "' needs a command";
-                return rv;
-            }
-        } else if (arg == "--replace") {
+    for (const std::string& arg : args) {
+        if (arg == "--replace") {
             rv.replace = true;
         } else if (arg == "--help" || arg == "-h") {
             asked = Options::Action::Help;
@@ -106,20 +67,22 @@ std::string usage_text(const std::string& program)
            "                 running now (it has to support the WM_Sn\n"
            "                 selection of ICCCM); without it tiny-shell\n"
            "                 stops when another window manager runs\n"
-           "      --restart-command=CMD   the command of Restart in the user\n"
-           "                 menu (default: systemctl reboot)\n"
-           "      --shutdown-command=CMD  the command of Shutdown in the\n"
-           "                 user menu (default: systemctl poweroff)\n"
            "      --info     describe tiny-shell and its settings\n"
            "  -V, --version  print the version\n"
            "  -h, --help     print this help\n"
            "\n"
            "tiny-shell is stopped by SIGTERM, SIGHUP or SIGINT, and\n"
            "another window manager can take over from it with its own\n"
-           "--replace.\n";
+           "--replace.\n"
+           "\n"
+           "The settings are read from tiny-shell/config in $XDG_CONFIG_DIRS\n"
+           "(/etc/xdg) and in $XDG_CONFIG_HOME (~/.config), the second one\n"
+           "wins; see --info.\n";
 }
 
-std::string info_text(double scale, const std::vector<std::string>& app_dirs)
+std::string info_text(const Config& config,
+                      const std::vector<std::string>& files,
+                      const std::vector<std::string>& app_dirs)
 {
     std::string rv = version_text() +
                      "\n"
@@ -127,10 +90,19 @@ std::string info_text(double scale, const std::vector<std::string>& app_dirs)
                      "written directly on top of Xlib (BSD 2-Clause License).\n"
                      "https://github.com/ondratu/tiny-shell\n"
                      "\n"
-                     "Scale of the theme (TINY_SCALE_FACTOR): " +
-                     number_text(scale) +
-                     "\n"
-                     "Applications are read from:\n";
+                     "Configuration files (the last one wins):\n";
+    for (const std::string& file : files) {
+        rv += "  " + file + "\n";
+    }
+    rv += "Scale of the theme: " + number_text(config.scale) +
+          "\n"
+          "Reboot command: " +
+          config.reboot_command +
+          "\n"
+          "Poweroff command: " +
+          config.poweroff_command +
+          "\n"
+          "Applications are read from:\n";
     for (const std::string& dir : app_dirs) {
         rv += "  " + dir + "\n";
     }

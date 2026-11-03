@@ -4,12 +4,14 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "button.h"
 #include "container.h"
 #include "entry.h"
 #include "icon_grid.h"
+#include "wm/config.h"
 #include "wm/launcher_layout.h"
 #include "xdg/application_index.h"
 #include "xdg/icon_theme.h"
@@ -48,6 +50,13 @@ class Launcher : public tiny::Popover {
     /// variable does not list it (e.g. "/usr/pkg/share:/usr/share" on NetBSD).
     void set_local_share(std::string dir) { local_share = std::move(dir); }
 
+    /// The program (and arguments) that runs the applications with
+    /// `Terminal=true`, the command follows it.
+    void set_terminal(std::vector<std::string> command)
+    {
+        terminal = std::move(command);
+    }
+
     void toggle();
 
     /// Close the launcher and forget the search.
@@ -82,6 +91,8 @@ class Launcher : public tiny::Popover {
                                  std::string_view class_name);
 
   private:
+    std::vector<std::string> terminal = Config().terminal;
+
     void relayout();
     void arrange(const LauncherLayout& next);
     void update_buttons();
