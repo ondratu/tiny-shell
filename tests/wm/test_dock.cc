@@ -1,5 +1,6 @@
 #include "fake_client.h"
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <memory>
 
@@ -12,12 +13,12 @@ namespace {
 
 int icon_size()
 {
-    return tiny::theme.wm_icon;
+    return tiny::wm::shell_theme.icon;
 }
 
 int border()
 {
-    return tiny::theme.wm_dock_border;
+    return tiny::wm::shell_theme.dock_border;
 }
 
 uint32_t widget_bg(tiny::Style::State state)
@@ -80,7 +81,7 @@ TEST_F(DockButtonTest, draws_grid_of_dots)
 
 TEST(DockButtonScaleTest, dots_are_scaled)
 {
-    tiny::theme.scale(2);
+    tiny::wm::shell_theme.scale(2);
     {
         tiny::wm::DockButton button;
         button.realize(root_window(), 0, 0);
@@ -98,7 +99,7 @@ TEST(DockButtonScaleTest, dots_are_scaled)
         EXPECT_EQ(img.at(origin + 5, origin + 8), fg);
         EXPECT_EQ(img.at(origin + 8, origin + 5), fg);
     }
-    tiny::theme.scale(1);
+    tiny::wm::shell_theme.scale(1);
 }
 
 TEST_F(DockButtonTest, hover_changes_background)
@@ -247,9 +248,9 @@ TEST_F(DockIconTest, a_window_that_demands_attention_gets_a_bar)
     const Image after(icon->get_window(), icon_size(), icon_size());
 
     EXPECT_NE(before.at(icon_size() / 2, icon_size() - 1),
-              tiny::theme.wm_dock.attention);
+              tiny::wm::shell_theme.dock.attention);
     EXPECT_EQ(after.at(icon_size() / 2, icon_size() - 1),
-              tiny::theme.wm_dock.attention);
+              tiny::wm::shell_theme.dock.attention);
 }
 
 class DockIconFavoriteTest : public ::testing::Test {
@@ -394,7 +395,7 @@ class DockIconWindowsTest : public ::testing::Test {
     // The color of the middle of the dot `index` of `count`
     uint32_t dot_color(int index, int count) const
     {
-        const int dot = tiny::theme.wm_dock_dot;
+        const int dot = tiny::wm::shell_theme.dock_dot;
         const int left = (icon_size() - (count * 2 * dot - dot)) / 2;
         const int top = icon_size() + std::max(0, border() - dot - 1);
         const Image img(icon->get_window(), icon->get_width(),
@@ -420,8 +421,8 @@ TEST_F(DockIconWindowsTest, has_a_dot_for_every_window)
     const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
     send(*icon, Expose);
 
-    EXPECT_EQ(dot_color(0, 2), tiny::theme.wm_dock.get_fg(normal));
-    EXPECT_EQ(dot_color(1, 2), tiny::theme.wm_dock.get_fg(normal));
+    EXPECT_EQ(dot_color(0, 2), tiny::wm::shell_theme.dock.get_fg(normal));
+    EXPECT_EQ(dot_color(1, 2), tiny::wm::shell_theme.dock.get_fg(normal));
     EXPECT_EQ(icon->get_windows().size(), 2u);
 }
 
@@ -434,8 +435,8 @@ TEST_F(DockIconWindowsTest, the_dot_of_the_focused_window_is_brighter)
 
     send(*icon, Expose);
 
-    EXPECT_EQ(dot_color(0, 2), tiny::theme.wm_dock.get_fg(normal));
-    EXPECT_EQ(dot_color(1, 2), tiny::theme.wm_dock.get_fg(hover));
+    EXPECT_EQ(dot_color(0, 2), tiny::wm::shell_theme.dock.get_fg(normal));
+    EXPECT_EQ(dot_color(1, 2), tiny::wm::shell_theme.dock.get_fg(hover));
 }
 
 TEST_F(DockIconWindowsTest, the_icon_of_a_focused_window_is_selected)
@@ -554,7 +555,7 @@ class DockIconDragTest : public DockIconFavoriteTest {
 TEST_F(DockIconDragTest, a_small_move_is_not_a_drag)
 {
     press(100);
-    move(100 + tiny::theme.wm_dock_drag - 1);
+    move(100 + tiny::wm::shell_theme.dock_drag - 1);
 
     EXPECT_FALSE(icon->is_dragging());
     EXPECT_TRUE(dragged.empty());
@@ -563,11 +564,12 @@ TEST_F(DockIconDragTest, a_small_move_is_not_a_drag)
 TEST_F(DockIconDragTest, a_longer_move_starts_the_drag_and_tells_every_move)
 {
     press(100);
-    move(100 + tiny::theme.wm_dock_drag);
+    move(100 + tiny::wm::shell_theme.dock_drag);
     move(140);
 
     EXPECT_TRUE(icon->is_dragging());
-    EXPECT_EQ(dragged, (std::vector<int>{100 + tiny::theme.wm_dock_drag, 140}));
+    EXPECT_EQ(dragged,
+              (std::vector<int>{100 + tiny::wm::shell_theme.dock_drag, 140}));
 }
 
 TEST_F(DockIconDragTest, a_move_to_the_left_drags_too)
@@ -1031,7 +1033,7 @@ class DockFavoritesTest : public DockTest {
     {
         return child_at(dock.get_window(),
                         border() + favorites * (icon_size() + border()) +
-                                border() + tiny::theme.wm_dock_line,
+                                border() + tiny::wm::shell_theme.dock_line,
                         border());
     }
 
@@ -1277,7 +1279,7 @@ TEST_F(DockFavoritesTest, the_menu_is_made_again_for_every_icon)
     EXPECT_EQ(menu_texts(dock.get_menu()),
               (Strings{"New Window", "Remove from Favorites"}));
     EXPECT_EQ(attributes_of(dock.get_menu()).height,
-              2 * tiny::theme.wm_popup_item_height);
+              2 * tiny::wm::shell_theme.popup_item_height);
 }
 
 TEST_F(DockFavoritesTest, an_item_without_a_handler_only_closes_the_menu)
@@ -1330,7 +1332,7 @@ TEST_F(DockFavoritesTest, the_menu_is_above_the_icon)
     const XWindowAttributes menu = attributes_of(dock.get_menu());
     // the border is a part of the menu, the icon starts at y_root - y
     EXPECT_EQ(menu.y + menu.height + 2 * menu.border_width, 500 - 10);
-    EXPECT_EQ(menu.height, 3 * tiny::theme.wm_popup_item_height);
+    EXPECT_EQ(menu.height, 3 * tiny::wm::shell_theme.popup_item_height);
 }
 
 TEST_F(DockFavoritesTest, a_window_of_unknown_application_has_no_launcher_items)
@@ -1369,7 +1371,7 @@ class DockGroupsTest : public DockFavoritesTest {
         for (size_t i = 0; i < menu.count(); ++i) {
             text = std::max(text, menu.item(i).text_width());
         }
-        return text + 2 * tiny::theme.wm_menu_padding;
+        return text + 2 * tiny::wm::shell_theme.menu_padding;
     }
 
     // The root x of the middle of the favorite icon `index`
@@ -1450,12 +1452,12 @@ TEST_F(DockGroupsTest, a_line_divides_the_favorites_from_the_other_applications)
             dock.get_window(), 2 * border() + icon_size(), border() + inset);
     ASSERT_NE(line, 0u);
     const XWindowAttributes attrs = attributes_of(line);
-    EXPECT_EQ(attrs.width, tiny::theme.wm_dock_line);
+    EXPECT_EQ(attrs.width, tiny::wm::shell_theme.dock_line);
     // it does not touch the edges of the icons
     EXPECT_EQ(attrs.height, icon_size() - 2 * inset);
     EXPECT_LT(attrs.height, icon_size());
     EXPECT_EQ(dock.get_width(),
-              task_width(2) + border() + tiny::theme.wm_dock_line);
+              task_width(2) + border() + tiny::wm::shell_theme.dock_line);
 }
 
 TEST_F(DockGroupsTest, the_line_has_the_color_of_the_theme)
@@ -1467,10 +1469,10 @@ TEST_F(DockGroupsTest, the_line_has_the_color_of_the_theme)
     const ::Window line =
             child_at(dock.get_window(), 2 * border() + icon_size(),
                      border() + icon_size() / 6);
-    const Image img(line, tiny::theme.wm_dock_line, 1);
+    const Image img(line, tiny::wm::shell_theme.dock_line, 1);
 
     EXPECT_EQ(img.at(0, 0),
-              tiny::theme.wm_dock_separator.get_bg(
+              tiny::wm::shell_theme.dock_separator.get_bg(
                       static_cast<uint8_t>(tiny::Style::State::Normal)));
 }
 
@@ -1532,7 +1534,7 @@ TEST_F(DockGroupsTest, the_menu_is_as_wide_as_its_longest_text_and_a_margin)
               width_of_menu(dock.get_menu()));
     EXPECT_GT(attributes_of(dock.get_menu()).width,
               dock.get_menu().item(0).text_width() +
-                      2 * tiny::theme.wm_menu_padding);
+                      2 * tiny::wm::shell_theme.menu_padding);
 }
 
 TEST_F(DockGroupsTest, a_short_menu_is_narrow)
@@ -1558,10 +1560,11 @@ TEST_F(DockGroupsTest, the_items_have_room_around_the_text)
 
     right_click(icon_at(0));
 
-    EXPECT_GE(tiny::theme.wm_popup_item_height, tiny::theme.wm_panel);
+    EXPECT_GE(tiny::wm::shell_theme.popup_item_height,
+              tiny::wm::shell_theme.panel);
     const XWindowAttributes item = attributes_of(dock.get_menu().item(1));
-    EXPECT_EQ(item.height, tiny::theme.wm_popup_item_height);
-    EXPECT_EQ(item.y, tiny::theme.wm_popup_item_height);
+    EXPECT_EQ(item.height, tiny::wm::shell_theme.popup_item_height);
+    EXPECT_EQ(item.y, tiny::wm::shell_theme.popup_item_height);
     EXPECT_EQ(item.width, dock.get_menu().content_width());
 }
 
@@ -1612,7 +1615,7 @@ TEST_F(DockGroupsTest, the_submenu_is_next_to_the_item)
     const XWindowAttributes menu = attributes_of(dock.get_menu());
     const XWindowAttributes sub = attributes_of(dock.get_windows_menu());
     EXPECT_EQ(sub.x, menu.x + menu.width + 2 * menu.border_width);
-    EXPECT_EQ(sub.y, menu.y + tiny::theme.wm_popup_item_height);
+    EXPECT_EQ(sub.y, menu.y + tiny::wm::shell_theme.popup_item_height);
 }
 
 TEST_F(DockGroupsTest, the_submenu_opens_to_the_left_at_the_edge_of_the_screen)
@@ -1810,11 +1813,12 @@ TEST_F(DockGroupsTest, a_dragged_favorite_shows_where_it_would_go)
 
     const XWindowAttributes mark = attributes_of(dock.get_mark());
     EXPECT_EQ(mark.map_state, IsViewable);
-    EXPECT_EQ(mark.width, tiny::theme.wm_dock_marker);
+    EXPECT_EQ(mark.width, tiny::wm::shell_theme.dock_marker);
     EXPECT_EQ(mark.height, icon_size());
     // in the gap behind the icon c
     const int end_of_c = border() + 3 * (icon_size() + border()) - border();
-    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2, end_of_c + border() / 2);
+    EXPECT_EQ(mark.x + tiny::wm::shell_theme.dock_marker / 2,
+              end_of_c + border() / 2);
 }
 
 TEST_F(DockGroupsTest, the_mark_before_the_first_favorite)
@@ -1827,7 +1831,8 @@ TEST_F(DockGroupsTest, the_mark_before_the_first_favorite)
 
     const XWindowAttributes mark = attributes_of(dock.get_mark());
     EXPECT_EQ(mark.map_state, IsViewable);
-    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2, border() - border() / 2);
+    EXPECT_EQ(mark.x + tiny::wm::shell_theme.dock_marker / 2,
+              border() - border() / 2);
 }
 
 TEST_F(DockGroupsTest, the_mark_between_two_favorites)
@@ -1842,7 +1847,7 @@ TEST_F(DockGroupsTest, the_mark_between_two_favorites)
     const XWindowAttributes mark = attributes_of(dock.get_mark());
     const int end_of_b = border() + 2 * (icon_size() + border()) - border();
     const int start_of_c = border() + 2 * (icon_size() + border());
-    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2,
+    EXPECT_EQ(mark.x + tiny::wm::shell_theme.dock_marker / 2,
               (end_of_b + start_of_c) / 2);
 }
 
@@ -1887,8 +1892,8 @@ TEST_F(DockGroupsTest, a_drop_at_the_old_place_changes_nothing)
     const ::Window first = icon_at(0);
 
     press(first, center_of(0));
-    move(first, center_of(0) + 2 * tiny::theme.wm_dock_drag);
-    release(first, center_of(0) + 2 * tiny::theme.wm_dock_drag);
+    move(first, center_of(0) + 2 * tiny::wm::shell_theme.dock_drag);
+    release(first, center_of(0) + 2 * tiny::wm::shell_theme.dock_drag);
 
     EXPECT_EQ(moved, 0);
 }

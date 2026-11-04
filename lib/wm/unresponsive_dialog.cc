@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "theme.h"
+#include "wm/shell_theme.h"
 
 namespace tiny::wm {
 
@@ -12,7 +13,7 @@ constexpr int max_name = 48; //!< bytes of the name of the application
 
 int dialog_width()
 {
-    return 20 * tiny::theme.wm_menu_item_height;
+    return 20 * shell_theme.menu_item_height;
 }
 
 // The name is the client's, so it may be anything: cut it on a character
@@ -30,17 +31,17 @@ std::string shorten(const std::string& name)
 
 int spacing()
 {
-    return tiny::theme.wm_win_border;
+    return shell_theme.win_border;
 }
 
 int line_height()
 {
-    return tiny::theme.wm_menu_item_height;
+    return shell_theme.menu_item_height;
 }
 
 int button_height()
 {
-    return tiny::theme.wm_win_header;
+    return shell_theme.win_header;
 }
 
 int button_width()

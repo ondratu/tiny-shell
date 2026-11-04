@@ -28,6 +28,14 @@ std::string xft_name(const std::string& family, double size,
  */
 std::string xft_style(const std::string& style);
 
+//! The colors of a theme: the shell has two, `Dark` is the default
+enum class Variant : uint8_t { Dark, Light };
+
+//! "dark" or "light" (any case) to the variant; false for any other name
+bool variant_from_name(const std::string& name, Variant& variant);
+
+const char* variant_name(Variant variant);
+
 class Style {
     /* State heredity
      * Invisible - widget is not visible (out of allowed drawing area)
@@ -60,10 +68,14 @@ class Style {
     static constexpr uint32_t GRAY50 = 0x808080;
     static constexpr uint32_t GRAY75 = 0xc0c0c0;
 
-    Style() = default;
+    Style() { Style::colorize(Variant::Dark); }
     virtual ~Style();
 
     void init();
+
+    //! Set all the colors for the variant; the metrics and the font stay, so
+    //! a style can change its look while widgets use it
+    virtual void colorize(Variant variant);
 
     // Multiply border, padding and font size of the base values by factor
     void scale(double factor);
@@ -90,18 +102,18 @@ class Style {
     std::string get_xft_fg(uint8_t state) const;
 
     // Normal state
-    uint32_t normal_bg = BLACK;
-    uint32_t normal_fg = 0xA8A8A8;
-    uint32_t normal_br = 0x2E3436;
+    uint32_t normal_bg = 0;
+    uint32_t normal_fg = 0;
+    uint32_t normal_br = 0;
 
     // Disable
     uint32_t disable_bg = INHERITED;
-    uint32_t disable_fg = 0x555753;
+    uint32_t disable_fg = 0;
     uint32_t disable_br = INHERITED;
 
     // Active (on mouse hover)
-    uint32_t hover_bg = 0x2E3436;
-    uint32_t hover_fg = 0xF3F3F3;
+    uint32_t hover_bg = 0;
+    uint32_t hover_fg = 0;
     uint32_t hover_br = INHERITED;
 
     // Focus (on keyboard cursor)
@@ -115,7 +127,7 @@ class Style {
     uint32_t pressed_br = INHERITED;
 
     // Selected
-    uint32_t selected_bg = 0x3E4446;
+    uint32_t selected_bg = 0;
     uint32_t selected_fg = INHERITED;
     uint32_t selected_br = INHERITED;
 
@@ -136,34 +148,29 @@ class Style {
 
 }; // Style
 
-// Text entry: a dark gray field that gets a light border while it has focus
+// Text entry: a field that gets a light border while it has focus
 class EntryStyle : public Style {
   public:
     EntryStyle()
     {
-        normal_bg = 0x2E3436;
-        normal_fg = 0xF3F3F3;
-        normal_br = 0x555753;
-
-        disable_fg = 0x8B8E8F;
-
-        focus_br = 0x729FCF;
-
         padding_width = 6;
+        EntryStyle::colorize(Variant::Dark);
     }
+
+    void colorize(Variant variant) override;
 }; // EntryStyle
 
-// List of rows: no border, the selected row is lighter than the others
+// List of rows: no border, the selected row differs from the others
 class ListStyle : public Style {
   public:
     ListStyle()
     {
-        selected_bg = 0x3E4446;
-        selected_fg = 0xF3F3F3;
-
         border_width = 0;
         padding_width = 6;
+        ListStyle::colorize(Variant::Dark);
     }
+
+    void colorize(Variant variant) override;
 }; // ListStyle
 
 } // namespace tiny

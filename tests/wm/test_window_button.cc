@@ -1,12 +1,13 @@
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include "wm/window_button.h"
 
 class WindowButtonTest : public ::testing::Test {
   protected:
-    uint32_t bg() const { return tiny::theme.wm_button.normal_bg; }
-    uint32_t fg() const { return tiny::theme.wm_button.normal_fg; }
-    int icon() const { return tiny::theme.wm_win_icon; }
+    uint32_t bg() const { return tiny::wm::shell_theme.button.normal_bg; }
+    uint32_t fg() const { return tiny::wm::shell_theme.button.normal_fg; }
+    int icon() const { return tiny::wm::shell_theme.win_icon; }
 
     Image image_of(const tiny::Widget& w)
     {
@@ -25,7 +26,7 @@ TEST_F(WindowButtonTest, buttons_are_square_icons)
                                   static_cast<tiny::Widget*>(&minimize)}) {
         EXPECT_EQ(b->get_width(), icon());
         EXPECT_EQ(b->get_height(), icon());
-        EXPECT_EQ(&b->get_style(), &tiny::theme.wm_button);
+        EXPECT_EQ(&b->get_style(), &tiny::wm::shell_theme.button);
     }
 }
 
@@ -106,9 +107,9 @@ TEST_F(WindowButtonTest, hover_inverts_colors)
     EXPECT_EQ(image_of(b).at(0, 0), bg());
 
     send(b, EnterNotify);
-    EXPECT_EQ(image_of(b).at(0, 0), tiny::theme.wm_button.hover_bg);
+    EXPECT_EQ(image_of(b).at(0, 0), tiny::wm::shell_theme.button.hover_bg);
     EXPECT_EQ(image_of(b).at(icon() / 2, icon() / 2),
-              tiny::theme.wm_button.hover_fg);
+              tiny::wm::shell_theme.button.hover_fg);
 
     send(b, LeaveNotify);
     EXPECT_EQ(image_of(b).at(0, 0), bg());
@@ -127,7 +128,7 @@ TEST_F(WindowButtonTest, enter_and_leave_signals_stay_free_for_users)
 
     send(b, EnterNotify);
     EXPECT_EQ(enter.calls, 1);
-    EXPECT_EQ(image_of(b).at(0, 0), tiny::theme.wm_button.hover_bg);
+    EXPECT_EQ(image_of(b).at(0, 0), tiny::wm::shell_theme.button.hover_bg);
 
     send(b, LeaveNotify);
     EXPECT_EQ(leave.calls, 1);
@@ -191,9 +192,9 @@ TEST_F(WindowButtonTest, destroying_unrealized_button_causes_no_x_error)
 
 class WindowButtonScaledTest : public WindowButtonTest {
   protected:
-    void SetUp() override { tiny::theme.scale(2); }
+    void SetUp() override { tiny::wm::shell_theme.scale(2); }
 
-    void TearDown() override { tiny::theme.scale(1); }
+    void TearDown() override { tiny::wm::shell_theme.scale(1); }
 
     int mid() const { return icon() / 2; }
 };

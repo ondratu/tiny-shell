@@ -3,6 +3,7 @@
 
 #include "container.h"
 #include "theme.h"
+#include "wm/shell_theme.h"
 
 namespace tiny::wm {
 
@@ -44,10 +45,7 @@ class Header : public tiny::Box {
 
     void set_disable(bool disable);
 
-    const tiny::Style& get_style() const override
-    {
-        return tiny::theme.wm_header;
-    }
+    const tiny::Style& get_style() const override { return shell_theme.header; }
 
   protected:
     void on_expose(const XEvent& e, void* data);

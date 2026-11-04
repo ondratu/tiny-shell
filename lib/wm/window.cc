@@ -14,6 +14,7 @@
 #include <memory>
 #include <new>
 
+#include "wm/shell_theme.h"
 #include "object.h"
 #include "wm/process.h"
 #include "wm/window.h"
@@ -380,10 +381,10 @@ Window::Window(::Window child_arg, ::Window root_arg,
     }
     if (not icon && properties.count(dsp.WM_HINTS)) {
         XIconSize* icon_size = XAllocIconSize();
-        icon_size->min_width = tiny::theme.wm_icon;
-        icon_size->min_height = tiny::theme.wm_icon;
-        icon_size->max_width = tiny::theme.wm_icon;
-        icon_size->max_height = tiny::theme.wm_icon;
+        icon_size->min_width = shell_theme.icon;
+        icon_size->min_height = shell_theme.icon;
+        icon_size->max_width = shell_theme.icon;
+        icon_size->max_height = shell_theme.icon;
         // Request the best icon
         XSetIconSizes(dsp, child_arg, icon_size, 1);
         XFree(icon_size);
@@ -1275,46 +1276,44 @@ void Window::update_wm_hints()
         icon_mask = 0;
     }
 
-    if (iw == tiny::theme.wm_icon || ih == tiny::theme.wm_icon) {
-        icon = XCreatePixmap(dsp, geo_root, tiny::x_uint(tiny::theme.wm_icon),
-                             tiny::x_uint(tiny::theme.wm_icon),
+    if (iw == shell_theme.icon || ih == shell_theme.icon) {
+        icon = XCreatePixmap(dsp, geo_root, tiny::x_uint(shell_theme.icon),
+                             tiny::x_uint(shell_theme.icon),
                              tiny::x_uint(XDefaultDepth(
                                      dsp, 0))); // TODO: Screen instead of 0
 
         GC gc = XCreateGC(dsp, icon, 0, nullptr);
         XCopyArea(dsp, wm_hints->icon_pixmap, icon, gc, ib + wm_hints->icon_x,
-                  ib + wm_hints->icon_y, tiny::x_uint(tiny::theme.wm_icon),
-                  tiny::x_uint(tiny::theme.wm_icon),
-                  tiny::theme.wm_icon / 2 - iw / 2,
-                  tiny::theme.wm_icon / 2 - ih / 2);
+                  ib + wm_hints->icon_y, tiny::x_uint(shell_theme.icon),
+                  tiny::x_uint(shell_theme.icon), shell_theme.icon / 2 - iw / 2,
+                  shell_theme.icon / 2 - ih / 2);
         XFreeGC(dsp, gc);
 
         if (wm_hints->flags & IconMaskHint) {
-            icon_mask = XCreatePixmap(dsp, geo_root,
-                                      tiny::x_uint(tiny::theme.wm_icon),
-                                      tiny::x_uint(tiny::theme.wm_icon), 1);
+            icon_mask =
+                    XCreatePixmap(dsp, geo_root, tiny::x_uint(shell_theme.icon),
+                                  tiny::x_uint(shell_theme.icon), 1);
 
             GC mask_gc = XCreateGC(dsp, icon_mask, 0, nullptr);
             XCopyArea(dsp, wm_hints->icon_mask, icon_mask, mask_gc,
                       ib + wm_hints->icon_x, ib + wm_hints->icon_y,
-                      tiny::x_uint(tiny::theme.wm_icon),
-                      tiny::x_uint(tiny::theme.wm_icon),
-                      tiny::theme.wm_icon / 2 - iw / 2,
-                      tiny::theme.wm_icon / 2 - ih / 2);
+                      tiny::x_uint(shell_theme.icon),
+                      tiny::x_uint(shell_theme.icon),
+                      shell_theme.icon / 2 - iw / 2,
+                      shell_theme.icon / 2 - ih / 2);
             XFreeGC(dsp, mask_gc);
         }
 
     } else {
-        icon = image::resize_pixmap(dsp, geo_root, wm_hints->icon_pixmap,
-                                    icon_width, icon_height,
-                                    tiny::x_uint(tiny::theme.wm_icon),
-                                    tiny::x_uint(tiny::theme.wm_icon),
-                                    tiny::x_uint(XDefaultDepth(dsp, 0)));
+        icon = image::resize_pixmap(
+                dsp, geo_root, wm_hints->icon_pixmap, icon_width, icon_height,
+                tiny::x_uint(shell_theme.icon), tiny::x_uint(shell_theme.icon),
+                tiny::x_uint(XDefaultDepth(dsp, 0)));
         if (wm_hints->flags & IconMaskHint) {
-            icon_mask = image::resize_pixmap(
-                    dsp, geo_root, wm_hints->icon_mask, icon_width, icon_height,
-                    tiny::x_uint(tiny::theme.wm_icon),
-                    tiny::x_uint(tiny::theme.wm_icon), 1);
+            icon_mask = image::resize_pixmap(dsp, geo_root, wm_hints->icon_mask,
+                                             icon_width, icon_height,
+                                             tiny::x_uint(shell_theme.icon),
+                                             tiny::x_uint(shell_theme.icon), 1);
         }
     }
 
@@ -1505,7 +1504,7 @@ void Window::update_wm_icon()
 
         for (auto it : icons) { // Find the best icon size
             pos = it.second;
-            if (it.first >= static_cast<unsigned long>(tiny::theme.wm_icon)) {
+            if (it.first >= static_cast<unsigned long>(shell_theme.icon)) {
                 break;
             }
         }
@@ -1552,23 +1551,23 @@ void Window::update_wm_icon()
             }
         }
 
-        const auto icon_px = static_cast<unsigned long>(tiny::theme.wm_icon);
+        const auto icon_px = static_cast<unsigned long>(shell_theme.icon);
         if ((width != icon_px) && (height != icon_px)) {
             Pixmap orig = icon;
             icon = image::resize_pixmap(dsp, root, orig,
                                         static_cast<unsigned>(width),
                                         static_cast<unsigned>(height),
-                                        tiny::x_uint(tiny::theme.wm_icon),
-                                        tiny::x_uint(tiny::theme.wm_icon),
+                                        tiny::x_uint(shell_theme.icon),
+                                        tiny::x_uint(shell_theme.icon),
                                         tiny::x_uint(XDefaultDepth(dsp, 0)));
             XFreePixmap(dsp, orig);
 
             orig = icon_mask;
-            icon_mask = image::resize_pixmap(
-                    dsp, root, orig, static_cast<unsigned>(width),
-                    static_cast<unsigned>(height),
-                    tiny::x_uint(tiny::theme.wm_icon),
-                    tiny::x_uint(tiny::theme.wm_icon), 1);
+            icon_mask = image::resize_pixmap(dsp, root, orig,
+                                             static_cast<unsigned>(width),
+                                             static_cast<unsigned>(height),
+                                             tiny::x_uint(shell_theme.icon),
+                                             tiny::x_uint(shell_theme.icon), 1);
             XFreePixmap(dsp, orig);
         }
 

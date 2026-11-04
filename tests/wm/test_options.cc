@@ -95,10 +95,12 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     config.poweroff_command = "my-poweroff";
     config.font = "My Font";
     config.terminal_line = "my-term -e";
+    config.style = tiny::Variant::Light;
     const std::string text = tiny::wm::info_text(
             config, {"/etc/xdg/tiny-shell.ini"}, {"/a/applications"});
 
     EXPECT_NE(text.find("1.5"), std::string::npos);
+    EXPECT_NE(text.find("Colors of the theme: light"), std::string::npos);
     EXPECT_NE(text.find("my-reboot"), std::string::npos);
     EXPECT_NE(text.find("My Font"), std::string::npos);
     EXPECT_NE(text.find("my-term -e"), std::string::npos);

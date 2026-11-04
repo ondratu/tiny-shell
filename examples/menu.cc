@@ -1,3 +1,4 @@
+#include "wm/shell_theme.h"
 #include "container.h"
 #include "button.h"
 #include "x_util.h"
@@ -83,7 +84,7 @@ class Demo : public tiny::Box {
 int main(int, char*[])
 {
     tiny::Display::init();
-    tiny::theme.init();
+    tiny::wm::shell_theme.init();
     Demo demo;
     demo.main_loop();
     return 0;

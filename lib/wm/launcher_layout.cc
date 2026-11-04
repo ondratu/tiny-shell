@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iterator>
 
+#include "wm/shell_theme.h"
 #include "icon_grid.h"
 #include "wm/launcher_layout.h"
 
@@ -27,10 +28,10 @@ int nearest_size(int icon)
 
 } // namespace
 
-int LauncherLayout::band(const Theme& theme)
+int LauncherLayout::band(const ShellTheme& theme)
 {
-    return theme.wm_panel + theme.wm_win_header + 2 * theme.entry.border_width +
-           2 * theme.wm_win_border;
+    return theme.panel + theme.win_header +
+           2 * theme.toolkit.entry.border_width + 2 * theme.win_border;
 }
 
 bool LauncherLayout::operator==(const LauncherLayout& other) const
@@ -47,13 +48,13 @@ bool LauncherLayout::operator==(const LauncherLayout& other) const
 }
 
 LauncherLayout LauncherLayout::compute(int screen_width, int screen_height,
-                                       const Theme& theme)
+                                       const ShellTheme& theme)
 {
     const bool high = screen_height > screen_width;
-    const int max_columns = std::max(1, high ? theme.wm_launcher_rows
-                                             : theme.wm_launcher_columns);
-    const int max_rows = std::max(1, high ? theme.wm_launcher_columns
-                                          : theme.wm_launcher_rows);
+    const int max_columns =
+            std::max(1, high ? theme.launcher_rows : theme.launcher_columns);
+    const int max_rows =
+            std::max(1, high ? theme.launcher_columns : theme.launcher_rows);
     const int area_width = screen_width * 3 / 4;
     const int area_height =
             std::min(screen_height * 3 / 4, screen_height - 2 * band(theme));
@@ -61,14 +62,14 @@ LauncherLayout LauncherLayout::compute(int screen_width, int screen_height,
     const auto with_icon = [&](int index) {
         LauncherLayout l;
         l.icon = icon_sizes[index];
-        l.cell_width = std::max(2 * l.icon, theme.wm_launcher_cell_width);
-        l.cell_height = l.icon + theme.wm_launcher_label;
+        l.cell_width = std::max(2 * l.icon, theme.launcher_cell_width);
+        l.cell_height = l.icon + theme.launcher_label;
         l.columns = std::clamp(area_width / l.cell_width, 1, max_columns);
         l.rows = std::clamp(area_height / l.cell_height, 1, max_rows);
         return l;
     };
 
-    int index = nearest_size(theme.wm_launcher_icon);
+    int index = nearest_size(theme.launcher_icon);
     while (index > 0) {
         const LauncherLayout l = with_icon(index);
         if (l.columns >= (high ? min_rows : min_columns) &&
@@ -91,20 +92,19 @@ LauncherLayout LauncherLayout::compute(int screen_width, int screen_height,
 
     const int cells_width = l.columns * l.cell_width;
     const int cells_height = l.rows * l.cell_height;
-    l.grid = {
-            (screen_width - cells_width) / 2,
-            (screen_height - cells_height) / 2, cells_width,
-            IconGrid::height_of(l.rows, l.cell_height, theme.wm_launcher_dot)};
+    l.grid = {(screen_width - cells_width) / 2,
+              (screen_height - cells_height) / 2, cells_width,
+              IconGrid::height_of(l.rows, l.cell_height, theme.launcher_dot)};
 
     // a third of the screen, but not too short on a small one
-    const int border = theme.entry.border_width;
-    const int entry_width = std::max(
-            screen_width / 3, std::min(screen_width - 2 * border,
-                                       4 * theme.wm_launcher_cell_width));
-    const int entry_outer = theme.wm_win_header + 2 * border;
+    const int border = theme.toolkit.entry.border_width;
+    const int entry_width =
+            std::max(screen_width / 3, std::min(screen_width - 2 * border,
+                                                4 * theme.launcher_cell_width));
+    const int entry_outer = theme.win_header + 2 * border;
     l.entry = {(screen_width - entry_width) / 2,
-               theme.wm_panel + (l.grid.y - theme.wm_panel - entry_outer) / 2,
-               entry_width - 2 * border, theme.wm_win_header};
+               theme.panel + (l.grid.y - theme.panel - entry_outer) / 2,
+               entry_width - 2 * border, theme.win_header};
 
     // squares in the middle of the free space at the sides of the cells
     const int free_left = l.grid.x;

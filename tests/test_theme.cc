@@ -170,19 +170,8 @@ TEST(ThemeTest, init_opens_fonts_of_all_styles)
     theme.init();
 
     EXPECT_NE(theme.widget.get_font(), nullptr);
-    EXPECT_NE(theme.wm_button.get_font(), nullptr);
-    EXPECT_NE(theme.wm_header.get_font(), nullptr);
     EXPECT_NE(theme.entry.get_font(), nullptr);
     EXPECT_NE(theme.list.get_font(), nullptr);
-}
-
-TEST(ThemeTest, default_window_metrics)
-{
-    const tiny::Theme& t = tiny::theme;
-
-    EXPECT_EQ(t.wm_win_header, 25u);
-    EXPECT_EQ(t.wm_win_corner, 2 * t.wm_win_border);
-    EXPECT_EQ(t.wm_win_min_height, 10 + t.wm_win_header);
 }
 
 TEST(ThemeTest, widget_style_defaults)
@@ -190,14 +179,6 @@ TEST(ThemeTest, widget_style_defaults)
     EXPECT_EQ(tiny::theme.widget.border_width, 1u);
     EXPECT_EQ(tiny::theme.widget.padding_width, 1u);
     EXPECT_EQ(tiny::theme.widget.normal_bg, Style::BLACK);
-}
-
-TEST(ThemeTest, wm_styles_override_widget_defaults)
-{
-    EXPECT_EQ(tiny::theme.wm_button.border_width, 0u);
-    EXPECT_EQ(tiny::theme.wm_button.normal_bg, 0xF8F8F8u);
-    EXPECT_EQ(tiny::theme.wm_header.padding_width, 2u);
-    EXPECT_EQ(tiny::theme.wm_dock.padding_width, 5u);
 }
 
 TEST(ThemeTest, entry_style_is_dark_gray_with_a_highlighted_focus)
@@ -231,30 +212,10 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
 
     t.scale(2);
 
-    EXPECT_EQ(t.wm_win_header, 50u);
-    EXPECT_EQ(t.wm_icon, 96u);
-    EXPECT_EQ(t.wm_win_corner, 2 * t.wm_win_border);
-    EXPECT_EQ(t.wm_win_min_height, 20 + t.wm_win_header);
     EXPECT_EQ(t.widget.border_width, 2u);
-    EXPECT_EQ(t.wm_header.padding_width, 4u);
-    EXPECT_EQ(t.wm_dock.padding_width, 10u);
     EXPECT_EQ(t.entry.padding_width, 12u);
     EXPECT_EQ(t.entry.border_width, 2u);
     EXPECT_EQ(t.list.padding_width, 12);
-    EXPECT_EQ(t.wm_menu_item_height, 40);
-    EXPECT_EQ(t.wm_menu_separator, 16);
-    EXPECT_EQ(t.wm_popup_item_height, 60);
-    EXPECT_EQ(t.wm_menu_padding, 24);
-    EXPECT_EQ(t.wm_dock_dot, 8);
-    EXPECT_EQ(t.wm_dock_line, 2);
-    EXPECT_EQ(t.wm_dock_marker, 6);
-    EXPECT_EQ(t.wm_dock_drag, 12);
-    EXPECT_EQ(t.wm_launcher_cell_width, 128);
-    EXPECT_EQ(t.wm_launcher_label, 80);
-    EXPECT_EQ(t.wm_launcher_icon, 96);
-    EXPECT_EQ(t.wm_launcher_dot, 16);
-    EXPECT_EQ(t.wm_launcher_columns, 8); // a count is not scaled
-    EXPECT_EQ(t.wm_launcher_rows, 4);
 }
 
 TEST(ThemeScaleTest, scale_is_relative_to_defaults_not_cumulative)
@@ -264,9 +225,7 @@ TEST(ThemeScaleTest, scale_is_relative_to_defaults_not_cumulative)
     t.scale(2);
     t.scale(1);
 
-    EXPECT_EQ(t.wm_win_header, 25u);
     EXPECT_EQ(t.widget.padding_width, 1u);
-    EXPECT_EQ(t.wm_header.padding_width, 2u);
 }
 
 TEST(ThemeScaleTest, scaled_theme_opens_fonts)
@@ -277,7 +236,6 @@ TEST(ThemeScaleTest, scaled_theme_opens_fonts)
     t.init();
 
     EXPECT_NE(t.widget.get_font(), nullptr);
-    EXPECT_NE(t.wm_header.get_font(), nullptr);
 }
 
 TEST(ThemeScaleTest, the_scale_is_one_until_it_is_set)
@@ -313,8 +271,6 @@ TEST(ThemeFontTest, the_font_of_the_theme_is_set_before_init)
     EXPECT_NE(t.widget.get_font(), nullptr);
     EXPECT_NE(t.entry.get_font(), nullptr);
     EXPECT_NE(t.list.get_font(), nullptr);
-    EXPECT_NE(t.wm_button.get_font(), nullptr);
-    EXPECT_NE(t.wm_header.get_font(), nullptr);
 }
 
 TEST(ThemeFontTest, a_family_with_special_characters_still_opens_a_font)
@@ -352,7 +308,7 @@ TEST(ThemeFontTest, the_size_of_the_font_is_set_before_the_scale)
     EXPECT_GT(t.widget.get_font()->height, small.widget.get_font()->height);
 }
 
-TEST(ThemeFontTest, the_style_is_for_all_the_styles_but_the_header)
+TEST(ThemeFontTest, the_style_is_for_all_the_styles)
 {
     tiny::Theme t;
 
@@ -362,6 +318,61 @@ TEST(ThemeFontTest, the_style_is_for_all_the_styles_but_the_header)
     EXPECT_NE(t.widget.get_font(), nullptr);
     EXPECT_NE(t.entry.get_font(), nullptr);
     EXPECT_NE(t.list.get_font(), nullptr);
-    EXPECT_NE(t.wm_button.get_font(), nullptr);
-    EXPECT_NE(t.wm_header.get_font(), nullptr);
+}
+
+TEST(ThemeVariantTest, names_of_the_variants_are_read_in_any_case)
+{
+    tiny::Variant v = tiny::Variant::Dark;
+
+    EXPECT_TRUE(tiny::variant_from_name("Light", v));
+    EXPECT_EQ(v, tiny::Variant::Light);
+    EXPECT_TRUE(tiny::variant_from_name("DARK", v));
+    EXPECT_EQ(v, tiny::Variant::Dark);
+    EXPECT_FALSE(tiny::variant_from_name("blue", v));
+    EXPECT_FALSE(tiny::variant_from_name("", v));
+    EXPECT_EQ(v, tiny::Variant::Dark) << "a wrong name leaves it as it was";
+    EXPECT_STREQ(tiny::variant_name(tiny::Variant::Light), "light");
+    EXPECT_STREQ(tiny::variant_name(tiny::Variant::Dark), "dark");
+}
+
+TEST(ThemeVariantTest, the_theme_is_dark_until_it_is_changed)
+{
+    tiny::Theme t;
+
+    EXPECT_EQ(t.get_variant(), tiny::Variant::Dark);
+    EXPECT_EQ(t.widget.normal_bg, Style::BLACK);
+}
+
+TEST(ThemeVariantTest, the_light_variant_has_light_widgets)
+{
+    tiny::Theme t;
+    t.scale(2);
+
+    t.set_variant(tiny::Variant::Light);
+
+    EXPECT_EQ(t.get_variant(), tiny::Variant::Light);
+    EXPECT_GT(t.widget.normal_bg, 0xF0F0F0u);
+    EXPECT_LT(t.widget.normal_fg, 0x404040u);
+    EXPECT_EQ(t.entry.normal_bg, 0xFFFFFFu);
+    EXPECT_EQ(t.entry.focus_br, 0x729FCFu);
+    EXPECT_GT(t.list.selected_bg, 0xC0C0C0u);
+    // the metrics stay
+    EXPECT_EQ(t.widget.border_width, 2u);
+    EXPECT_EQ(t.entry.padding_width, 12u);
+}
+
+TEST(ThemeVariantTest, going_back_to_dark_restores_the_colors)
+{
+    tiny::Theme t;
+    const Style original = t.widget;
+    const tiny::EntryStyle entry = t.entry;
+
+    t.set_variant(tiny::Variant::Light);
+    t.set_variant(tiny::Variant::Dark);
+
+    EXPECT_EQ(t.widget.normal_bg, original.normal_bg);
+    EXPECT_EQ(t.widget.hover_fg, original.hover_fg);
+    EXPECT_EQ(t.widget.selected_bg, original.selected_bg);
+    EXPECT_EQ(t.entry.normal_bg, entry.normal_bg);
+    EXPECT_EQ(t.entry.normal_br, entry.normal_br);
 }

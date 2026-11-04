@@ -1,3 +1,4 @@
+#include "wm/shell_theme.h"
 #include "X11/Xatom.h"
 
 #include "container.h"
@@ -17,7 +18,7 @@ class Demo : public tiny::Container {
     Demo():
         tiny::Container(300, 200),
         vbox(tiny::Box::Type::Vertical, 300 - 2, 200 - 2),
-        header(300 - 2, tiny::theme.wm_win_header),
+        header(300 - 2, tiny::wm::shell_theme.win_header),
         buttons(tiny::Box::Type::Horizontal, 300 - 4, 30),
         close_btn(80, 27, "Close")
     {

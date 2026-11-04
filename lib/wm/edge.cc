@@ -1,5 +1,6 @@
 #include <X11/cursorfont.h>
 
+#include "wm/shell_theme.h"
 #include "x_util.h"
 #include "wm/edge.h"
 
@@ -72,24 +73,23 @@ void Edge::on_motion_notify(const XEvent& e, void*)
 }
 
 BackWindow::BackWindow(int w, int h):
-    tiny::Container(tiny::Widget::Type::Input,
-                    w + 2 * tiny::theme.wm_win_border,
-                    h + 2 * tiny::theme.wm_win_border),
-    corner_right_top(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
+    tiny::Container(tiny::Widget::Type::Input, w + 2 * shell_theme.win_border,
+                    h + 2 * shell_theme.win_border),
+    corner_right_top(shell_theme.win_corner, shell_theme.win_corner,
                      tiny::Position::Right | tiny::Position::Top),
-    corner_right_bottom(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
+    corner_right_bottom(shell_theme.win_corner, shell_theme.win_corner,
                         tiny::Position::Right | tiny::Position::Bottom),
-    corner_left_top(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
+    corner_left_top(shell_theme.win_corner, shell_theme.win_corner,
                     tiny::Position::Left | tiny::Position::Top),
-    corner_left_bottom(tiny::theme.wm_win_corner, tiny::theme.wm_win_corner,
+    corner_left_bottom(shell_theme.win_corner, shell_theme.win_corner,
                        tiny::Position::Left | tiny::Position::Bottom),
-    edge_top(w - tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
+    edge_top(w - shell_theme.win_corner, shell_theme.win_border,
              tiny::Position::Top),
-    edge_right(tiny::theme.wm_win_border, h - tiny::theme.wm_win_corner,
+    edge_right(shell_theme.win_border, h - shell_theme.win_corner,
                tiny::Position::Right),
-    edge_bottom(w - tiny::theme.wm_win_corner, tiny::theme.wm_win_border,
+    edge_bottom(w - shell_theme.win_corner, shell_theme.win_border,
                 tiny::Position::Bottom),
-    edge_left(tiny::theme.wm_win_border, h - tiny::theme.wm_win_corner,
+    edge_left(shell_theme.win_border, h - shell_theme.win_corner,
               tiny::Position::Left)
 {
     name = "wm_backwindow";
@@ -121,46 +121,45 @@ void BackWindow::set_events(long mask)
 
 void BackWindow::realize(Window parent_arg, int x, int y)
 {
-    Container::realize(parent_arg, x - tiny::theme.wm_win_border,
-                       y - tiny::theme.wm_win_border);
+    Container::realize(parent_arg, x - shell_theme.win_border,
+                       y - shell_theme.win_border);
 
-    add(&corner_right_top, width - tiny::theme.wm_win_corner, 0,
-        NorthEastGravity);
-    add(&corner_right_bottom, width - tiny::theme.wm_win_corner,
-        height - tiny::theme.wm_win_corner, SouthEastGravity);
+    add(&corner_right_top, width - shell_theme.win_corner, 0, NorthEastGravity);
+    add(&corner_right_bottom, width - shell_theme.win_corner,
+        height - shell_theme.win_corner, SouthEastGravity);
     add(&corner_left_top, 0, 0, NorthWestGravity);
-    add(&corner_left_bottom, 0, height - tiny::theme.wm_win_corner,
+    add(&corner_left_bottom, 0, height - shell_theme.win_corner,
         SouthWestGravity);
 
-    add(&edge_top, tiny::theme.wm_win_corner, 0, NorthGravity);
-    add(&edge_right, width - tiny::theme.wm_win_border,
-        tiny::theme.wm_win_corner, EastGravity);
-    add(&edge_bottom, tiny::theme.wm_win_corner,
-        height - tiny::theme.wm_win_border, SouthGravity);
-    add(&edge_left, 0, tiny::theme.wm_win_corner, WestGravity);
+    add(&edge_top, shell_theme.win_corner, 0, NorthGravity);
+    add(&edge_right, width - shell_theme.win_border, shell_theme.win_corner,
+        EastGravity);
+    add(&edge_bottom, shell_theme.win_corner, height - shell_theme.win_border,
+        SouthGravity);
+    add(&edge_left, 0, shell_theme.win_corner, WestGravity);
 }
 
 void BackWindow::resize(int w, int h)
 {
-    tiny::Container::resize(w + 2 * tiny::theme.wm_win_border,
-                            h + 2 * tiny::theme.wm_win_border);
+    tiny::Container::resize(w + 2 * shell_theme.win_border,
+                            h + 2 * shell_theme.win_border);
 }
 
 void BackWindow::move(int x, int y)
 {
     if (is_realized) {
-        XMoveWindow(display, window, x - tiny::theme.wm_win_border,
-                    y - tiny::theme.wm_win_border);
+        XMoveWindow(display, window, x - shell_theme.win_border,
+                    y - shell_theme.win_border);
     }
 }
 
 void BackWindow::move_resize(int x, int y, int w, int h)
 {
     if (is_realized) {
-        XMoveResizeWindow(display, window, x - tiny::theme.wm_win_border,
-                          y - tiny::theme.wm_win_border,
-                          tiny::x_uint(w + 2 * tiny::theme.wm_win_border),
-                          tiny::x_uint(h + 2 * tiny::theme.wm_win_border));
+        XMoveResizeWindow(display, window, x - shell_theme.win_border,
+                          y - shell_theme.win_border,
+                          tiny::x_uint(w + 2 * shell_theme.win_border),
+                          tiny::x_uint(h + 2 * shell_theme.win_border));
     }
 }
 
@@ -193,23 +192,23 @@ void BackWindow::on_configure_notify(const XEvent& e, void* data)
     tiny::Container::on_configure_notify(event, data);
     if (width != old_width || height != old_height) {
         XMoveResizeWindow(display, edge_top.get_window(),
-                          tiny::theme.wm_win_corner, 0,
-                          tiny::x_uint(width - 2 * tiny::theme.wm_win_corner),
-                          tiny::x_uint(tiny::theme.wm_win_border));
+                          shell_theme.win_corner, 0,
+                          tiny::x_uint(width - 2 * shell_theme.win_corner),
+                          tiny::x_uint(shell_theme.win_border));
         XMoveResizeWindow(display, edge_right.get_window(),
-                          width - tiny::theme.wm_win_border,
-                          tiny::theme.wm_win_corner,
-                          tiny::x_uint(tiny::theme.wm_win_border),
-                          tiny::x_uint(height - 2 * tiny::theme.wm_win_corner));
+                          width - shell_theme.win_border,
+                          shell_theme.win_corner,
+                          tiny::x_uint(shell_theme.win_border),
+                          tiny::x_uint(height - 2 * shell_theme.win_corner));
         XMoveResizeWindow(display, edge_bottom.get_window(),
-                          tiny::theme.wm_win_corner,
-                          height - tiny::theme.wm_win_border,
-                          tiny::x_uint(width - 2 * tiny::theme.wm_win_corner),
-                          tiny::x_uint(tiny::theme.wm_win_border));
+                          shell_theme.win_corner,
+                          height - shell_theme.win_border,
+                          tiny::x_uint(width - 2 * shell_theme.win_corner),
+                          tiny::x_uint(shell_theme.win_border));
         XMoveResizeWindow(display, edge_left.get_window(), 0,
-                          tiny::theme.wm_win_corner,
-                          tiny::x_uint(tiny::theme.wm_win_border),
-                          tiny::x_uint(height - 2 * tiny::theme.wm_win_corner));
+                          shell_theme.win_corner,
+                          tiny::x_uint(shell_theme.win_border),
+                          tiny::x_uint(height - 2 * shell_theme.win_corner));
     }
 }
 

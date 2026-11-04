@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "wm/shell_theme.h"
 #include "button.h"
 #include "container.h"
 #include "entry.h"
@@ -96,7 +97,7 @@ class Launcher : public tiny::Popover {
      * @short The icon of the application a window belongs to.
      *
      * The window is matched by its `WM_CLASS` (see
-     * `xdg::find_application_of_window`), the size is `theme.wm_icon`. The
+     * `xdg::find_application_of_window`), the size is `shell_theme.icon`. The
      * icon has no picture when no application or no icon is found. It lives
      * as long as the launcher.
      */

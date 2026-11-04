@@ -7,6 +7,7 @@
 
 #include "object.h"
 #include "theme.h"
+#include "wm/shell_theme.h"
 #include "wm/window.h"
 #include "wm/client.h"
 #include "wm/work_area.h"
@@ -25,7 +26,7 @@ static bool has_title(unsigned long decorations)
 
 static int header_height_for(unsigned long decorations)
 {
-    return has_title(decorations) ? tiny::theme.wm_win_header : 0;
+    return has_title(decorations) ? shell_theme.win_header : 0;
 }
 
 static int border_for(unsigned long decorations)
@@ -41,7 +42,7 @@ Client::Client(::Window child_arg, ::Window root_arg, int w, int h,
     tiny::Container(w, h + header_height_for(decorations_arg), "wm_window"),
     Window(child_arg, root_arg, functions_arg, area),
     decorations(decorations_arg),
-    header(w, tiny::theme.wm_win_header),
+    header(w, shell_theme.win_header),
     shadow(w, h + header_height_for(decorations_arg))
 {
     state = {0, 0, 0, 0}; // the size of the base class had no title bar
@@ -459,7 +460,7 @@ void Client::place_maximized()
     if (is_resizable()) {
         shadow.move_resize(area.x, area.y, area.width, area.height);
     }
-    header.resize(area.width, tiny::theme.wm_win_header);
+    header.resize(area.width, shell_theme.win_header);
     send_configure_notify();
 }
 
@@ -490,7 +491,7 @@ void Client::keep_in_work_area()
     if (place.width != frame.width || place.height != frame.height) {
         XResizeWindow(display, child, tiny::x_dim(place.width),
                       tiny::x_dim(place.height - header_height()));
-        header.resize(place.width, tiny::theme.wm_win_header);
+        header.resize(place.width, shell_theme.win_header);
     }
     XMoveResizeWindow(display, window, place.x, place.y,
                       tiny::x_dim(place.width), tiny::x_dim(place.height));
@@ -602,7 +603,7 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     if (is_resizable()) {
         shadow.move_resize(x, y, new_width, new_height);
     }
-    header.resize(new_width, tiny::theme.wm_win_header);
+    header.resize(new_width, shell_theme.win_header);
     if ((e.value_mask & CWStackMode) && e.detail == Above) {
         if (is_resizable()) {
             XRaiseWindow(display, shadow.get_window());
@@ -632,7 +633,7 @@ void Client::restore(int x, int y)
         if (is_resizable()) {
             shadow.move_resize(x, y, state.width, state.height);
         }
-        header.resize(state.width, tiny::theme.wm_win_header);
+        header.resize(state.width, shell_theme.win_header);
         XResizeWindow(display, child, tiny::x_uint(state.width),
                       tiny::x_uint(state.height - header_height()));
         XMoveResizeWindow(display, window, x, y, tiny::x_uint(state.width),
@@ -701,7 +702,7 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
              start_attrs.height},
             mask, e.xbutton.x_root - start_event.xbutton.x_root,
             e.xbutton.y_root - start_event.xbutton.y_root, title,
-            tiny::theme.wm_win_min_width, tiny::theme.wm_win_min_height);
+            shell_theme.win_min_width, shell_theme.win_min_height);
     const int x = frame.x;
     const int y = frame.y;
     const int new_width = frame.width;
@@ -719,7 +720,7 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 
     XResizeWindow(display, child, tiny::x_uint(new_width),
                   tiny::x_dim(new_height - title));
-    header.resize(new_width, tiny::theme.wm_win_header);
+    header.resize(new_width, shell_theme.win_header);
     if (size_label) {
         show_size_units(new_width, new_height - title);
     }

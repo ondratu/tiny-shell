@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <chrono>
 #include <filesystem>
@@ -73,7 +74,7 @@ class LauncherTest : public ::testing::Test {
     {
         const XWindowAttributes root_attrs = attributes_of(root_window());
         return tiny::wm::LauncherLayout::compute(
-                root_attrs.width, root_attrs.height, tiny::theme);
+                root_attrs.width, root_attrs.height, tiny::wm::shell_theme);
     }
 
     size_t per_page() const
@@ -149,7 +150,7 @@ TEST_F(LauncherTest, the_entry_is_centered_between_the_panel_and_the_cells)
     const int border = tiny::theme.entry.border_width;
 
     EXPECT_EQ(attrs.x * 2 + attrs.width + 2 * border, root_attrs.width);
-    EXPECT_GT(attrs.y, tiny::theme.wm_panel);
+    EXPECT_GT(attrs.y, tiny::wm::shell_theme.panel);
     EXPECT_LT(attrs.y + attrs.height, attributes_of(grid()).y);
 }
 
@@ -428,7 +429,7 @@ TEST_F(LauncherTest, the_application_of_a_window_gives_its_icon)
 
     const auto& icon = launcher.application_icon("delta", "Delta");
     EXPECT_NE(icon.picture, None);
-    EXPECT_EQ(icon.width, tiny::theme.wm_icon);
+    EXPECT_EQ(icon.width, tiny::wm::shell_theme.icon);
     EXPECT_EQ(&launcher.application_icon("delta", "Delta"), &icon); // cached
 
     EXPECT_EQ(launcher.application_icon("nothing", "Nothing").picture, None);
@@ -616,7 +617,7 @@ TEST_F(LauncherTest, the_cells_take_at_most_the_three_quarters_of_the_screen)
 
     EXPECT_LE(attributes_of(grid()).width, root_attrs.width * 3 / 4);
     EXPECT_LE(attributes_of(grid()).width,
-              tiny::theme.wm_launcher_columns * layout().cell_width);
+              tiny::wm::shell_theme.launcher_columns * layout().cell_width);
 }
 
 TEST_F(LauncherTest, the_buttons_of_the_pages_are_hidden_for_one_page)

@@ -2,6 +2,7 @@
 
 // gtest must be included before Xlib: X.h defines the None macro
 #include <gtest/gtest.h>
+#include "wm/shell_theme.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -38,7 +39,8 @@ inline tiny::Rect screen_area()
 {
     XWindowAttributes a;
     XGetWindowAttributes(tiny::get_display(), root_window(), &a);
-    return {0, tiny::theme.wm_panel, a.width, a.height - tiny::theme.wm_panel};
+    return {0, tiny::wm::shell_theme.panel, a.width,
+            a.height - tiny::wm::shell_theme.panel};
 }
 
 // Calls the handler registered for `type` on `window`, like the main loop.
@@ -297,16 +299,16 @@ inline void pump_events()
     }
 }
 
-// Same as WidgetFont for theme.wm_header.
+// Same as WidgetFont for wm::shell_theme.header.
 class HeaderFont {
   public:
-    HeaderFont(): original(tiny::theme.wm_header), with_font(original)
+    HeaderFont(): original(tiny::wm::shell_theme.header), with_font(original)
     {
         with_font.init();
-        tiny::theme.wm_header = with_font;
+        tiny::wm::shell_theme.header = with_font;
     }
 
-    ~HeaderFont() { tiny::theme.wm_header = original; }
+    ~HeaderFont() { tiny::wm::shell_theme.header = original; }
 
   private:
     tiny::wm::HeaderStyle original;

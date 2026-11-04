@@ -1,5 +1,6 @@
 #pragma once
 
+#include "wm/shell_theme.h"
 #include "button.h"
 
 namespace tiny::wm {
@@ -12,10 +13,7 @@ class WindowButton : public tiny::Button {
 
     void set_events(long mask = 0) override;
 
-    const tiny::Style& get_style() const override
-    {
-        return tiny::theme.wm_button;
-    }
+    const tiny::Style& get_style() const override { return shell_theme.button; }
 
   protected:
     void on_enter_notify(const XEvent& e, void* data) override;

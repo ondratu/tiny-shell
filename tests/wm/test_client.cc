@@ -1,5 +1,6 @@
 #include "fake_client.h"
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <memory>
 
@@ -31,12 +32,12 @@ class Probe : public tiny::wm::Client {
 // Sets the minimum width of a frame for the lifetime of the object.
 class FrameMinWidth {
   public:
-    explicit FrameMinWidth(int width): old(tiny::theme.wm_win_min_width)
+    explicit FrameMinWidth(int width): old(tiny::wm::shell_theme.win_min_width)
     {
-        tiny::theme.wm_win_min_width = width;
+        tiny::wm::shell_theme.win_min_width = width;
     }
 
-    ~FrameMinWidth() { tiny::theme.wm_win_min_width = old; }
+    ~FrameMinWidth() { tiny::wm::shell_theme.win_min_width = old; }
 
   private:
     int old;
@@ -65,7 +66,7 @@ class ClientTest : public ::testing::Test {
 
     XWindowAttributes screen() { return attributes_of(root_window()); }
 
-    int header_height() const { return tiny::theme.wm_win_header; }
+    int header_height() const { return tiny::wm::shell_theme.win_header; }
 
     // Click on a button of the header.
     void click(tiny::Button& button)
@@ -446,7 +447,7 @@ TEST_F(ClientTest, create_places_a_window_under_the_panel)
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
     EXPECT_EQ(f.x, 10);
-    EXPECT_EQ(f.y, tiny::theme.wm_panel + f.border_width);
+    EXPECT_EQ(f.y, tiny::wm::shell_theme.panel + f.border_width);
 }
 
 namespace {
@@ -813,7 +814,7 @@ TEST_F(ClientTest, maximize_button_fills_the_screen_under_the_panel)
     auto s = screen();
     auto f = frame();
     EXPECT_TRUE(win->get_maximized());
-    const int panel = tiny::theme.wm_panel;
+    const int panel = tiny::wm::shell_theme.panel;
     EXPECT_EQ(f.x, 0);
     EXPECT_EQ(f.y, panel);
     EXPECT_EQ(f.width, s.width);
@@ -980,9 +981,9 @@ TEST_F(ClientTest, focus_events_enable_and_disable_the_header)
     client.set_title("title");
     build();
     // only the text color differs
-    ASSERT_NE(tiny::theme.wm_header.get_fg(
+    ASSERT_NE(tiny::wm::shell_theme.header.get_fg(
                       static_cast<uint8_t>(tiny::Style::State::Normal)),
-              tiny::theme.wm_header.get_fg(
+              tiny::wm::shell_theme.header.get_fg(
                       static_cast<uint8_t>(tiny::Style::State::Disabled)));
     auto header_image = [this] {
         send(win->header, Expose);
@@ -1322,8 +1323,8 @@ TEST_F(ClientTest, resizing_is_limited_by_the_size_hints)
 
     win->on_move_resize_motion(nullptr, pointer(-5000, -5000, MotionNotify),
                                mask);
-    EXPECT_GE(frame().width, tiny::theme.wm_win_min_width);
-    EXPECT_GE(frame().height, tiny::theme.wm_win_min_height);
+    EXPECT_GE(frame().width, tiny::wm::shell_theme.win_min_width);
+    EXPECT_GE(frame().height, tiny::wm::shell_theme.win_min_height);
 }
 
 TEST_F(ClientTest, resizing_snaps_to_the_resize_increment)
@@ -1618,9 +1619,9 @@ TEST_F(ClientTest, configure_request_moves_and_resizes_the_frame)
     EXPECT_EQ(child().y, header_height());
     EXPECT_EQ(attributes_of(win->header).width, 320);
     EXPECT_EQ(attributes_of(win->shadow).x,
-              frame().x - tiny::theme.wm_win_border);
+              frame().x - tiny::wm::shell_theme.win_border);
     EXPECT_EQ(attributes_of(win->shadow).height,
-              210 + header_height() + 2 * tiny::theme.wm_win_border);
+              210 + header_height() + 2 * tiny::wm::shell_theme.win_border);
 }
 
 TEST_F(ClientTest, configure_request_to_raise_raises_the_frame)
@@ -1645,7 +1646,7 @@ TEST_F(ClientTest, configure_request_keeps_the_header_under_the_panel)
 
     win->configure_request(configure_request(client.window, CWY, 0, 0, 0, 0));
 
-    EXPECT_EQ(frame().y, tiny::theme.wm_panel + frame().border_width);
+    EXPECT_EQ(frame().y, tiny::wm::shell_theme.panel + frame().border_width);
 }
 
 TEST_F(ClientTest, configure_request_keeps_what_it_does_not_ask_for)
@@ -1794,8 +1795,8 @@ TEST_F(ClientTest, the_client_is_told_its_place_after_maximize_and_restore)
 
     win->maximize();
     ASSERT_TRUE(client.synthetic_configure(notify));
-    EXPECT_EQ(notify.y,
-              tiny::theme.wm_panel + header_height() + frame().border_width);
+    EXPECT_EQ(notify.y, tiny::wm::shell_theme.panel + header_height() +
+                                frame().border_width);
 
     win->restore();
     ASSERT_TRUE(client.synthetic_configure(notify));

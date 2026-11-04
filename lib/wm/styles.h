@@ -4,11 +4,19 @@
 
 namespace tiny::wm {
 
+// The buttons and the title bar of the windows are light in both variants,
+// like the windows of most applications
 class ButtonStyle : public tiny::Style {
   public:
     ButtonStyle()
     {
-        // Normal state
+        border_width = 0;
+        ButtonStyle::colorize(Variant::Dark);
+    }
+
+    void colorize(Variant variant) override
+    {
+        Style::colorize(variant);
         normal_bg = 0xF8F8F8;
         normal_fg = 0x2E3436;
 
@@ -16,8 +24,6 @@ class ButtonStyle : public tiny::Style {
 
         hover_bg = 0x2E3436;
         hover_fg = 0xF8F8F8;
-
-        border_width = 0;
     }
 }; // ButtonStyle
 
@@ -25,15 +31,20 @@ class HeaderStyle : public tiny::Style {
   public:
     HeaderStyle()
     {
-        normal_bg = 0xF8F8F8;
-        normal_fg = 0x0E1416;
-
-        disable_fg = 0x6E7476;
-
         border_width = 0;
         padding_width = 2;
 
         font_style = ":bold";
+        HeaderStyle::colorize(Variant::Dark);
+    }
+
+    void colorize(Variant variant) override
+    {
+        Style::colorize(variant);
+        normal_bg = 0xF8F8F8;
+        normal_fg = 0x0E1416;
+
+        disable_fg = 0x6E7476;
     }
 
 }; // HeaderStyle
@@ -54,12 +65,23 @@ class DockStyle : public tiny::Style {
 //! A flat colored area without a border (a line, a mark)
 class PlainStyle : public tiny::Style {
   public:
-    explicit PlainStyle(uint32_t color)
+    PlainStyle(uint32_t dark_color, uint32_t light_color):
+        dark(dark_color), light(light_color)
     {
-        normal_bg = color;
         border_width = 0;
         padding_width = 0;
+        PlainStyle::colorize(Variant::Dark);
     }
+
+    void colorize(Variant variant) override
+    {
+        Style::colorize(variant);
+        normal_bg = variant == Variant::Dark ? dark : light;
+    }
+
+  private:
+    uint32_t dark;
+    uint32_t light;
 }; // PlainStyle
 
 } // namespace tiny::wm

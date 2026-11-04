@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "wm/shell_theme.h"
 #include "container.h"
 #include "button.h"
 #include "wm/window.h"
@@ -263,10 +264,7 @@ class Dock : public tiny::Box {
     void realize(::Window parent, int x, int y) override;
     void resize(int width, int height) override;
 
-    const tiny::Style& get_style() const override
-    {
-        return tiny::theme.wm_dock;
-    }
+    const tiny::Style& get_style() const override { return shell_theme.dock; }
 
     /// The button with the dots at the end of the dock (the launcher).
     DockButton& get_menu_button() { return icon; }
