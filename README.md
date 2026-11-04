@@ -55,9 +55,10 @@ Implemented:
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
 - **Shell:** top panel with an application menu and a user menu, a dock with
-  the icons of running windows and of the favorite applications (which stay
-  there when they do not run), a run dialog (Alt+F2), a full screen launcher
-  with search (Super).
+  one icon for every application (a dot under it for every window) and the
+  favorite applications, which stay there when they do not run and can be moved
+  by the mouse, a run dialog (Alt+F2), a full screen launcher with search
+  (Super).
 - **Other:** one `poll()` event loop for X events, signals and timers
   (finished children are collected by a `SIGCHLD` handler), commands of
   Restart and Shutdown, a configuration file (scale, commands, favorites of
@@ -183,18 +184,36 @@ stderr and leaves the old file as it was. The file says so at the top.
 
 ### The dock and the favorite applications
 
-The dock shows an icon for every window and, before them, the favorite
-applications. Click the icon of a favorite that does not run to start it; when
-it runs, its first window takes the place of the icon and the icon comes back
-when the last window is closed. Click the right button on an icon to open its
-menu, for every window whose application has a `.desktop` file (it is found by
-`WM_CLASS`, see below). The first item is always **New Window**, which starts the application again, also
-when it runs. Then come the other actions of the desktop file
-(`[Desktop Action ...]`, for example "New Private Window"), and last
-**Add to favorites** or **Remove from favorites**. A click anywhere outside
-of the menu closes it (the click does not reach the window below). The
-favorites are saved at once to `[dock] favorites`. An id of an application
-that is not installed is kept in the file but not shown.
+The dock has one icon for every application. All the windows of an application
+(it is found by `WM_CLASS`, see below; windows of an unknown application are
+grouped by their class) share the icon, and a small dot under it stands for
+every window; the dot of the window that has the focus is brighter. The
+favorite applications come first, a thin line separates them from the other
+running applications, and they stay in the dock when they do not run.
+
+Click the icon of a favorite that does not run to start it. Click the icon of
+an application that runs to focus its window; when it has more windows, every
+next click goes to the next one. Drag the icon of a favorite to move it: a mark
+shows where it will be put, the icon is drawn smaller meanwhile, and the new
+order is saved.
+
+Click the right button on an icon to open its menu:
+
+- **New Window** starts the application again, also when it runs.
+- The other actions of the desktop file (`[Desktop Action ...]`, for example
+  "New Private Window").
+- **All Windows ›** (when it runs) opens a submenu with the titles of its
+  windows; a click focuses the window.
+- **Add to Favorites** or **Remove from Favorites**.
+- **Close Window**, or **Close All Windows** when there are more (when it
+  runs), as if you clicked the close button of the windows.
+
+The menu is as wide as its longest text. A click anywhere outside of the menu
+closes it (the click does not reach the window below). In the launcher the right
+button on an application opens the same menu, so you can put an application in
+the dock without starting it. The favorites are saved at once to
+`[dock] favorites`. An id of an application that is not installed is kept in the
+file but not shown.
 
 ### Command line
 
