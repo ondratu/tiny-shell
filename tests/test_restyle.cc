@@ -28,7 +28,7 @@ TEST(RestyleTest, a_shown_widget_takes_the_new_colors)
     ASSERT_EQ(pixel_of(w), tiny::theme.widget.normal_bg);
     const uint32_t dark = tiny::theme.widget.normal_bg;
 
-    Light light;
+    const Light light;
     w.restyle();
     XSync(tiny::get_display(), False);
 
@@ -41,7 +41,7 @@ TEST(RestyleTest, a_widget_that_is_not_shown_takes_them_when_it_is_mapped)
     tiny::Widget w(40, 40);
     w.realize(root_window(), 0, 0);
 
-    Light light;
+    const Light light;
     w.map();
 
     EXPECT_EQ(pixel_of(w), tiny::theme.widget.normal_bg);
@@ -64,7 +64,7 @@ TEST(RestyleTest, a_container_restyles_its_children)
     box.add(&child, 10, 10);
     box.map_all();
 
-    Light light;
+    const Light light;
     box.restyle();
     XSync(tiny::get_display(), False);
 
@@ -78,7 +78,7 @@ TEST(RestyleTest, an_input_only_widget_has_no_colors_to_change)
     w.realize(root_window(), 0, 0);
     w.map();
 
-    Light light;
+    const Light light;
     w.restyle();
     w.unmap();
     w.map(); // would be a BadMatch for a window with colors set

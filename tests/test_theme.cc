@@ -337,7 +337,7 @@ TEST(ThemeVariantTest, names_of_the_variants_are_read_in_any_case)
 
 TEST(ThemeVariantTest, the_theme_is_dark_until_it_is_changed)
 {
-    tiny::Theme t;
+    const tiny::Theme t;
 
     EXPECT_EQ(t.get_variant(), tiny::Variant::Dark);
     EXPECT_EQ(t.widget.normal_bg, Style::BLACK);

@@ -33,8 +33,8 @@ XftWindow::~XftWindow()
     close_fonts();
     Visual* visual = DefaultVisual(display, screen);
     const Colormap colormap = DefaultColormap(display, screen);
-    for (XftColor& color : colors) {
-        XftColorFree(display, visual, colormap, &color);
+    for (const auto& color : colors) {
+        XftColorFree(display, visual, colormap, color.get());
     }
     if (draw != nullptr) {
         XftDrawDestroy(draw);
@@ -182,7 +182,7 @@ XftColor& XftWindow::alloc_color(unsigned red, unsigned green, unsigned blue)
                                 static_cast<unsigned short>(green * 0x101),
                                 static_cast<unsigned short>(blue * 0x101),
                                 0xffff};
-    XftColor& color = colors.emplace_back();
+    XftColor& color = *colors.emplace_back(std::make_unique<XftColor>());
     XftColorAllocValue(display, DefaultVisual(display, screen),
                        DefaultColormap(display, screen), &value, &color);
     return color;
@@ -190,7 +190,7 @@ XftColor& XftWindow::alloc_color(unsigned red, unsigned green, unsigned blue)
 
 XftFont* XftWindow::font(const std::string& family, int pixel_size)
 {
-    const std::string key = "f" + std::to_string(pixel_size) + ":" + family;
+    const auto key = std::make_pair(family, pixel_size);
     const auto found = fonts.find(key);
     if (found != fonts.end()) {
         return found->second;
@@ -204,7 +204,7 @@ XftFont* XftWindow::font(const std::string& family, int pixel_size)
 
 XftFont* XftWindow::font_by_name(const std::string& xft_name)
 {
-    const std::string key = "n" + xft_name;
+    const auto key = std::make_pair(xft_name, 0);
     const auto found = fonts.find(key);
     if (found != fonts.end()) {
         return found->second;

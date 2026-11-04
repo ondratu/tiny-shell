@@ -98,6 +98,7 @@ class SettingsApp : public tiny::XftWindow {
                 number_text(config.font_size), config.font_style,
                 config.xft_antialias, config.xft_hinting, config.xft_rgba},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
+        ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
         field(alloc_color(0xff, 0xff, 0xff)),
         text_color(alloc_color(0x2e, 0x34, 0x36)),
@@ -108,7 +109,6 @@ class SettingsApp : public tiny::XftWindow {
         error(alloc_color(0xc0, 0x1c, 0x28))
     {
         // the font of the shell, when it can be opened, else any sans
-        ui_family = config.font;
         ui_font = text_font(ui_family);
         if (ui_font == nullptr) {
             ui_family = "sans";
@@ -130,7 +130,7 @@ class SettingsApp : public tiny::XftWindow {
                 true});
     }
 
-  private:
+  protected:
     void on_resize(int w, int h) override { form.resize(w, h); }
 
     void on_button_release(const XButtonEvent& e) override
@@ -472,8 +472,8 @@ class SettingsApp : public tiny::XftWindow {
     SettingsForm::Metrics metrics;
     SettingsForm::Values initial; //!< what the files say now
     SettingsForm form;
-    XftFont* ui_font = nullptr;
     std::string ui_family; //!< the family of `ui_font`
+    XftFont* ui_font = nullptr;
     XftColor& background;
     XftColor& field;
     XftColor& text_color;

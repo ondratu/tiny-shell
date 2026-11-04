@@ -78,7 +78,7 @@ class FontsApp : public tiny::XftWindow {
         }
     }
 
-  private:
+  protected:
     void on_resize(int w, int h) override { browser.resize(w, h); }
 
     void on_button_release(const XButtonEvent& e) override
