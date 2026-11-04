@@ -11,6 +11,7 @@
 
 #include <X11/Xutil.h>
 
+#include "wm/shell_theme.h"
 #include "object.h"
 #include "container.h"
 #include "widget.h"
@@ -336,7 +337,7 @@ class Window {
 
     const std::string& get_wm_icon_name() const { return wm_icon_name; }
 
-    /* @short Return icon scaled to tiny::theme.wm_icon size.
+    /* @short Return icon scaled to shell_theme.icon size.
          *
          * Pixmap will be destroyed in Window destructor if it set, otherwise
          * zero is returned.
@@ -376,6 +377,9 @@ class Window {
     virtual ::Window frame() const { return child; }
 
     //! Put the frame above its siblings
+    //! The theme changed its colors: repaint the decorations
+    virtual void restyle_frame() {}
+
     virtual void raise();
 
     //! Put the frame under its siblings

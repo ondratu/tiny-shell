@@ -35,6 +35,8 @@ class Client : public tiny::Container, public Window {
 
     ::Window frame() const override { return window; }
 
+    void restyle_frame() override { Container::restyle(); }
+
     void raise() override;
 
     void lower() override;

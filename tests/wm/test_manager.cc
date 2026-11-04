@@ -1,5 +1,6 @@
 #include "fake_client.h"
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <X11/keysym.h>
 
@@ -41,7 +42,7 @@ namespace {
 
 int border()
 {
-    return tiny::theme.wm_dock_border;
+    return tiny::wm::shell_theme.dock_border;
 }
 
 // Stops the main loop: the loop reaches it after all earlier events.
@@ -190,6 +191,107 @@ TEST_F(ManagerTest, connects_logout_of_the_main_menu)
     logout.on_click(&logout, make_event(ButtonRelease));
 
     EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, the_actions_of_the_shell_are_registered_by_name)
+{
+    start();
+
+    const std::vector<std::string> names = manager->get_actions().names();
+    for (const char* name :
+         {"settings", "terminal", "force-quit", "restart", "shutdown", "logout",
+          "applications", "launcher", "run-dialog", "next-window",
+          "prev-window", "theme-dark", "theme-light", "theme-toggle"}) {
+        EXPECT_NE(std::find(names.begin(), names.end(), name), names.end())
+                << name;
+    }
+}
+
+TEST_F(ManagerTest, an_action_can_end_the_manager_and_open_a_dialog)
+{
+    start();
+
+    EXPECT_TRUE(manager->get_actions().run("run-dialog"));
+    EXPECT_TRUE(manager->wm_run.get_maped());
+
+    EXPECT_TRUE(manager->get_actions().run("logout"));
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
+{
+    start();
+
+    manager->get_actions().run("launcher");
+    EXPECT_TRUE(manager->wm_launcher.is_open());
+    manager->get_actions().run("applications");
+    EXPECT_TRUE(manager->wm_launcher.is_open());
+    manager->get_actions().run("launcher");
+    EXPECT_FALSE(manager->wm_launcher.is_open());
+}
+
+TEST_F(ManagerTest, the_window_actions_walk_through_the_windows)
+{
+    manage_three();
+    WmWindow* first = manager->active;
+
+    manager->get_actions().run("next-window");
+    EXPECT_NE(manager->active, first);
+
+    manager->get_actions().run("prev-window");
+    EXPECT_EQ(manager->active, first);
+}
+
+namespace {
+
+// Puts the dark variant back, whatever a test did
+class VariantGuard {
+  public:
+    ~VariantGuard() { tiny::wm::shell_theme.set_variant(tiny::Variant::Dark); }
+};
+
+} // namespace
+
+TEST_F(ManagerTest, the_theme_actions_change_the_colors_of_the_shown_widgets)
+{
+    VariantGuard guard;
+    start();
+    const uint32_t dark = tiny::theme.widget.normal_bg;
+    run_loop();
+    ASSERT_EQ(Image(manager->wm_panel.get_window(), 20, 5).at(2, 2), dark);
+
+    manager->get_actions().run("theme-light");
+    run_loop();
+
+    EXPECT_EQ(tiny::theme.get_variant(), tiny::Variant::Light);
+    EXPECT_NE(tiny::theme.widget.normal_bg, dark);
+    EXPECT_EQ(Image(manager->wm_panel.get_window(), 20, 5).at(2, 2),
+              tiny::theme.widget.normal_bg);
+
+    manager->get_actions().run("theme-toggle");
+    run_loop();
+
+    EXPECT_EQ(tiny::theme.get_variant(), tiny::Variant::Dark);
+    EXPECT_EQ(Image(manager->wm_panel.get_window(), 20, 5).at(2, 2), dark);
+
+    manager->get_actions().run("theme-dark");
+    EXPECT_EQ(tiny::theme.get_variant(), tiny::Variant::Dark);
+}
+
+TEST_F(ManagerTest, the_frames_of_the_windows_follow_the_variant)
+{
+    VariantGuard guard;
+    add_client();
+    start();
+    run_loop();
+    ASSERT_EQ(manager->wm_tops.size(), 1u);
+
+    manager->set_variant(tiny::Variant::Light);
+    run_loop();
+
+    // the frame is repainted without an error, and the panel got the colors
+    EXPECT_EQ(tiny::theme.get_variant(), tiny::Variant::Light);
+    EXPECT_EQ(manager->wm_tops.size(), 1u);
 }
 
 namespace {
@@ -1999,7 +2101,7 @@ TEST_F(ManagerTest, the_work_area_is_published_on_the_root)
     ASSERT_NE(data, nullptr);
     const auto* v = reinterpret_cast<const long*>(data);
     EXPECT_EQ(count, 4u);
-    EXPECT_EQ(v[1], tiny::theme.wm_panel);
+    EXPECT_EQ(v[1], tiny::wm::shell_theme.panel);
     EXPECT_EQ(v[2], screen_area().width);
     XFree(data);
 }
@@ -2126,7 +2228,7 @@ TEST_F(ManagerTest, a_new_window_is_placed_in_the_work_area)
 
     const XWindowAttributes f = attributes_of(parent_of(c.window));
     EXPECT_GE(f.x, 50);
-    EXPECT_GE(f.y, tiny::theme.wm_panel);
+    EXPECT_GE(f.y, tiny::wm::shell_theme.panel);
 }
 
 TEST_F(ManagerTest, window_without_decorations_is_managed_on_map_request)
@@ -2207,13 +2309,13 @@ TEST_F(ManagerTest, configure_request_of_a_framed_window_moves_the_frame)
 
     const auto f = attributes_of(frame);
     EXPECT_EQ(f.x, 70 - f.border_width);
-    EXPECT_EQ(f.y, 120 - tiny::theme.wm_win_header - f.border_width);
+    EXPECT_EQ(f.y, 120 - tiny::wm::shell_theme.win_header - f.border_width);
     EXPECT_EQ(f.width, 320);
-    EXPECT_EQ(f.height, 210 + tiny::theme.wm_win_header);
+    EXPECT_EQ(f.height, 210 + tiny::wm::shell_theme.win_header);
     EXPECT_EQ(parent_of(c.window), frame);
     const auto a = c.attrs();
     EXPECT_EQ(a.x, 0);
-    EXPECT_EQ(a.y, tiny::theme.wm_win_header);
+    EXPECT_EQ(a.y, tiny::wm::shell_theme.win_header);
     EXPECT_EQ(a.width, 320);
     EXPECT_EQ(a.height, 210);
     XConfigureEvent notify = {};
@@ -3921,7 +4023,7 @@ TEST_F(ManagerTest, a_framed_window_gets_its_frame_extents)
             manager->wm_windows[c.window]->frame_extents();
     EXPECT_EQ(frame_extents_of(c),
               (std::vector<long>{e.left, e.right, e.top, e.bottom}));
-    EXPECT_EQ(e.top, tiny::theme.wm_win_header + e.bottom);
+    EXPECT_EQ(e.top, tiny::wm::shell_theme.win_header + e.bottom);
 }
 
 TEST_F(ManagerTest, a_window_without_a_frame_has_no_extents)
@@ -3958,7 +4060,7 @@ TEST_F(ManagerTest, the_frame_extents_follow_maximize_and_restore)
 
     manager->wm_windows[c.window]->maximize();
     EXPECT_EQ(frame_extents_of(c),
-              (std::vector<long>{0, 0, tiny::theme.wm_win_header, 0}));
+              (std::vector<long>{0, 0, tiny::wm::shell_theme.win_header, 0}));
 
     manager->wm_windows[c.window]->restore(0, 0);
     EXPECT_EQ(frame_extents_of(c), normal);
@@ -3987,7 +4089,7 @@ TEST_F(ManagerTest, the_frame_extents_ask_for_the_decorations_of_the_hints)
     run_loop();
 
     EXPECT_EQ(frame_extents_of(c),
-              (std::vector<long>{0, 0, tiny::theme.wm_win_header, 0}));
+              (std::vector<long>{0, 0, tiny::wm::shell_theme.win_header, 0}));
 }
 
 TEST_F(ManagerTest, a_window_without_a_frame_gets_one_when_the_hints_change)
@@ -4124,9 +4226,11 @@ TEST_F(ManagerTest, a_window_that_starts_shaded_is_rolled_up)
 
     auto* window = manager->wm_windows[c.window];
     EXPECT_TRUE(window->is_shaded());
-    EXPECT_EQ(attributes_of(window->frame()).height, tiny::theme.wm_win_header);
+    EXPECT_EQ(attributes_of(window->frame()).height,
+              tiny::wm::shell_theme.win_header);
     window->shade(false);
-    EXPECT_GT(attributes_of(window->frame()).height, tiny::theme.wm_win_header);
+    EXPECT_GT(attributes_of(window->frame()).height,
+              tiny::wm::shell_theme.win_header);
 }
 
 TEST_F(ManagerTest, a_utility_window_has_no_icon_in_the_dock)

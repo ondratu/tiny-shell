@@ -1,5 +1,7 @@
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
+#include "label.h"
 #include "wm/panel.h"
 
 // ---- MainMenu ----
@@ -10,8 +12,8 @@ TEST(MainMenuTest, realize_stacks_the_items_in_groups_with_lines_between)
 
     menu.realize(root_window());
 
-    const int item = tiny::theme.wm_popup_item_height;
-    const int gap = tiny::theme.wm_menu_separator;
+    const int item = tiny::wm::shell_theme.popup_item_height;
+    const int gap = tiny::wm::shell_theme.menu_separator;
     const ::Window win = menu.get_window();
     EXPECT_EQ(child_at(win, 0, 0), menu.settings.get_window());
     EXPECT_EQ(child_at(win, 0, item + gap), menu.applications.get_window());
@@ -31,9 +33,9 @@ TEST(MainMenuTest, is_as_high_as_the_items_and_the_gaps)
     menu.realize(root_window());
 
     EXPECT_EQ(attributes_of(menu).height,
-              7 * tiny::theme.wm_popup_item_height +
-                      4 * tiny::theme.wm_menu_separator);
-    EXPECT_EQ(attributes_of(menu).width, tiny::theme.wm_menu_width);
+              7 * tiny::wm::shell_theme.popup_item_height +
+                      4 * tiny::wm::shell_theme.menu_separator);
+    EXPECT_EQ(attributes_of(menu).width, tiny::wm::shell_theme.menu_width);
 }
 
 TEST(MainMenuTest, realize_twice_keeps_one_set_of_lines)
@@ -54,7 +56,8 @@ TEST(MainMenuTest, items_have_no_border)
 
     EXPECT_EQ(attributes_of(menu.settings).border_width, 0);
     EXPECT_EQ(attributes_of(menu.logout).border_width, 0);
-    EXPECT_EQ(attributes_of(menu.logout).width, tiny::theme.wm_menu_width);
+    EXPECT_EQ(attributes_of(menu.logout).width,
+              tiny::wm::shell_theme.menu_width);
 }
 
 TEST(MainMenuTest, buttons_have_labels)
@@ -96,7 +99,7 @@ TEST(PanelTest, realize_stretches_panel_over_the_root_window)
     const XWindowAttributes root = attributes_of(root_window());
     const XWindowAttributes attrs = attributes_of(panel);
     EXPECT_EQ(attrs.width, root.width);
-    EXPECT_EQ(attrs.height, tiny::theme.wm_panel);
+    EXPECT_EQ(attrs.height, tiny::wm::shell_theme.panel);
 }
 
 TEST(PanelTest, realize_puts_the_main_menu_button_to_the_left)
@@ -145,13 +148,77 @@ TEST(PanelTest, main_menu_button_click_opens_the_main_menu)
     EXPECT_EQ(attributes_of(panel.menu_main).map_state, IsViewable);
 }
 
+// ---- applets ----
+
+TEST(PanelAppletTest, an_applet_at_the_right_is_at_the_right_edge)
+{
+    tiny::wm::Panel panel;
+    panel.realize(root_window(), 0, 0);
+    tiny::Label clock(80, 20, "12:00");
+
+    panel.add_applet(&clock);
+
+    EXPECT_TRUE(clock.get_realized());
+    EXPECT_EQ(clock.get_parent_window(), panel.get_window());
+    // a box ends one pixel before its width
+    EXPECT_EQ(attributes_of(clock).x + 80 + 1, attributes_of(panel).width);
+}
+
+TEST(PanelAppletTest, the_next_applet_is_beside_the_first_one)
+{
+    tiny::wm::Panel panel;
+    panel.realize(root_window(), 0, 0);
+    tiny::Label first(80, 20);
+    tiny::Label second(50, 20);
+
+    panel.add_applet(&first);
+    panel.add_applet(&second);
+
+    EXPECT_EQ(attributes_of(first).x + 80 + 1, attributes_of(panel).width);
+    EXPECT_EQ(attributes_of(second).x + 50, attributes_of(first).x);
+}
+
+TEST(PanelAppletTest, an_applet_at_the_left_is_after_the_main_menu_button)
+{
+    const WidgetFont font;
+    tiny::wm::Panel panel;
+    panel.realize(root_window(), 0, 0);
+    tiny::Label label(60, 20);
+
+    panel.add_applet(&label, tiny::wm::Panel::Side::Left);
+
+    EXPECT_EQ(attributes_of(label).x, tiny::wm::shell_theme.panel_app_width);
+}
+
+TEST(PanelAppletTest, an_applet_of_a_shown_panel_is_shown)
+{
+    tiny::wm::Panel panel;
+    panel.realize(root_window(), 0, 0);
+    panel.map_all();
+    tiny::Label label(60, 20);
+
+    panel.add_applet(&label);
+
+    EXPECT_EQ(attributes_of(label).map_state, IsViewable);
+}
+
+TEST(PanelAppletTest, an_applet_needs_a_realized_panel)
+{
+    tiny::wm::Panel panel;
+    tiny::Label label(60, 20);
+
+    panel.add_applet(&label);
+
+    EXPECT_FALSE(label.get_realized());
+}
+
 // ---- scaling (the scale of the theme) ----
 
 class PanelScaledTest : public ::testing::Test {
   protected:
-    void SetUp() override { tiny::theme.scale(2); }
+    void SetUp() override { tiny::wm::shell_theme.scale(2); }
 
-    void TearDown() override { tiny::theme.scale(1); }
+    void TearDown() override { tiny::wm::shell_theme.scale(1); }
 };
 
 TEST_F(PanelScaledTest, main_menu_is_scaled)

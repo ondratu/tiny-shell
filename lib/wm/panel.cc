@@ -1,3 +1,4 @@
+#include "wm/shell_theme.h"
 #include "wm/panel.h"
 
 #include "wm/dock.h"
@@ -13,23 +14,18 @@ constexpr int main_menu_lines = 4;
 } // namespace
 
 MainMenu::MainMenu():
-    tiny::Popover(tiny::theme.wm_menu_width,
-                  tiny::theme.wm_popup_item_height * main_menu_items +
-                          tiny::theme.wm_menu_separator * main_menu_lines),
-    settings(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
-             "Settings"),
-    applications(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
+    tiny::Popover(shell_theme.menu_width,
+                  shell_theme.popup_item_height * main_menu_items +
+                          shell_theme.menu_separator * main_menu_lines),
+    settings(shell_theme.menu_width, shell_theme.popup_item_height, "Settings"),
+    applications(shell_theme.menu_width, shell_theme.popup_item_height,
                  "Applications"),
-    terminal(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
-             "Terminal"),
-    force_quit(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
+    terminal(shell_theme.menu_width, shell_theme.popup_item_height, "Terminal"),
+    force_quit(shell_theme.menu_width, shell_theme.popup_item_height,
                "Force Quit"),
-    restart(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
-            "Restart"),
-    shutdown(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
-             "Shutdown"),
-    logout(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
-           "Logout")
+    restart(shell_theme.menu_width, shell_theme.popup_item_height, "Restart"),
+    shutdown(shell_theme.menu_width, shell_theme.popup_item_height, "Shutdown"),
+    logout(shell_theme.menu_width, shell_theme.popup_item_height, "Logout")
 {
     name = "wm_mainmenu";
 }
@@ -48,32 +44,32 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
                                             {&force_quit, nullptr},
                                             {&restart, &shutdown},
                                             {&logout, nullptr}};
-    const int separator = tiny::theme.wm_menu_separator;
+    const int separator = shell_theme.menu_separator;
     int top = 0;
     for (const auto& group : groups) {
         if (top > 0) { // the line is in the middle of the space between
             lines.push_back(std::make_unique<DockLine>(
-                    tiny::theme.wm_dock_separator, tiny::theme.wm_menu_width,
-                    tiny::theme.wm_dock_line));
+                    shell_theme.dock_separator, shell_theme.menu_width,
+                    shell_theme.dock_line));
             add(lines.back().get(), 0,
-                top + (separator - tiny::theme.wm_dock_line) / 2);
+                top + (separator - shell_theme.dock_line) / 2);
             top += separator;
         }
         for (tiny::LabelButton* item : group) {
             if (item == nullptr) {
                 continue;
             }
-            item->set_text_padding(tiny::theme.wm_menu_padding);
+            item->set_text_padding(shell_theme.menu_padding);
             item->set_border(0);
             add(item, 0, top);
-            top += tiny::theme.wm_popup_item_height;
+            top += shell_theme.popup_item_height;
         }
     }
 }
 
 Panel::Panel():
-    tiny::Box(tiny::Box::Type::Horizontal, 0, tiny::theme.wm_panel),
-    btn_main(tiny::theme.wm_panel_app_width, tiny::theme.wm_panel, "Main Menu")
+    tiny::Box(tiny::Box::Type::Horizontal, 0, shell_theme.panel),
+    btn_main(shell_theme.panel_app_width, shell_theme.panel, "Main Menu")
 {
     name = "wm_panel";
 }
@@ -94,6 +90,21 @@ void Panel::realize(::Window root, int x, int y)
     push_start(&btn_main);
 
     btn_main.set_popover(&menu_main);
+}
+
+void Panel::add_applet(tiny::Widget* applet, Side side)
+{
+    if (!is_realized) {
+        return error("tiny::wm::Panel must be realized");
+    }
+    if (side == Side::Left) {
+        push_start(applet);
+    } else {
+        push_back(applet);
+    }
+    if (is_maped) {
+        applet->map_all();
+    }
 }
 
 } // namespace tiny::wm
