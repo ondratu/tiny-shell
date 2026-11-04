@@ -18,7 +18,7 @@ env:
   STRICT: 1
   DEBIAN_FRONTEND: noninteractive
   DEPS: build-essential pkg-config libx11-dev libxft-dev libxrender-dev
-        xvfb xauth libgtest-dev
+        libfontconfig-dev xvfb xauth libgtest-dev
 
 jobs:
   pre-commit:
@@ -95,7 +95,7 @@ jobs:
     steps:
       - run: >
           apk add --no-cache git make pkgconf clang g++ libx11-dev libxft-dev
-          libxrender-dev gtest-dev xvfb xvfb-run xauth font-dejavu
+          libxrender-dev fontconfig-dev gtest-dev xvfb xvfb-run xauth font-dejavu
       - uses: actions/checkout@v7
       - run: make CXX=clang++ all check examples
 

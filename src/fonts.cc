@@ -20,11 +20,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "display.h"
 #include "font_browser.h"
 #include "style.h"
 #include "wm/config.h"
@@ -60,10 +62,11 @@ XRectangle x_rectangle(int x, int y, int width, int height)
 
 class FontsApp {
   public:
-    FontsApp(::Display* display_arg, std::vector<std::string> families,
+    FontsApp(tiny::Display& display_arg, std::vector<std::string> families,
              double scale):
+        atoms(display_arg),
         display(display_arg),
-        screen(DefaultScreen(display_arg)),
+        screen(DefaultScreen(static_cast<::Display*>(display_arg))),
         metrics(FontBrowser::Metrics::scaled(scale)),
         browser(std::move(families), metrics)
     {
@@ -167,10 +170,8 @@ class FontsApp {
                              ButtonReleaseMask | StructureNotifyMask);
 
         XStoreName(display, window, title);
-        const Atom utf8 = XInternAtom(display, "UTF8_STRING", False);
-        XChangeProperty(display, window,
-                        XInternAtom(display, "_NET_WM_NAME", False), utf8, 8,
-                        PropModeReplace,
+        XChangeProperty(display, window, atoms._NET_WM_NAME, atoms.UTF8_STRING,
+                        8, PropModeReplace,
                         reinterpret_cast<const unsigned char*>(title),
                         static_cast<int>(std::strlen(title)));
         XClassHint class_hint = {const_cast<char*>("tiny-fonts"),
@@ -181,7 +182,7 @@ class FontsApp {
         hints.min_width = metrics.cell_width + 2 * margin;
         hints.min_height = metrics.cell_height;
         XSetWMNormalHints(display, window, &hints);
-        delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
+        delete_window = atoms.WM_DELETE_WINDOW;
         XSetWMProtocols(display, window, &delete_window, 1);
 
         new_buffer();
@@ -257,8 +258,9 @@ class FontsApp {
     //! Paint after something changed
     void update()
     {
-        if (browser.view() == FontBrowser::View::Detail &&
-            browser.family() != measured) {
+        if (browser.view() == FontBrowser::View::Overview) {
+            measured.clear(); // the specimen is measured at every opening
+        } else if (measured.empty()) {
             measure_detail();
         }
         paint();
@@ -382,7 +384,9 @@ class FontsApp {
 
     void paint()
     {
-        if (fonts.size() > font_cache_limit) {
+        // the fonts of the cells that show are never thrown away mid-paint
+        const auto [first, end] = browser.visible_cells();
+        if (fonts.size() > font_cache_limit + 2 * (end - first)) {
             close_fonts();
         }
         XftDrawRect(draw, &white, 0, 0, tiny::x_uint(width),
@@ -464,6 +468,7 @@ class FontsApp {
         unclip();
     }
 
+    tiny::Display& atoms; //!< the atoms of the standards
     ::Display* display;
     int screen;
     FontBrowser::Metrics metrics;
@@ -510,15 +515,14 @@ int main(int argc, char** argv)
         fprintf(stderr, "%s: %s\n", argv[0], problem.c_str());
     }
 
-    ::Display* display = XOpenDisplay(nullptr);
-    if (display == nullptr) {
-        fprintf(stderr, "%s: cannot open the display\n", argv[0]);
+    try {
+        tiny::Display::init();
+        FontsApp app(tiny::get_display(), tiny::xdg::font_families(),
+                     config.scale);
+        app.run();
+    } catch (const std::exception& e) {
+        fprintf(stderr, "%s: %s\n", argv[0], e.what());
         return EXIT_FAILURE;
     }
-    {
-        FontsApp app(display, tiny::xdg::font_families(), config.scale);
-        app.run();
-    }
-    XCloseDisplay(display);
     return EXIT_SUCCESS;
 }
