@@ -44,9 +44,9 @@ class Theme {
     int wm_dock_border = 5;
     int wm_dock_attention_bar = 3; //!< under the icon that demands attention
     int wm_panel_app_width = 200;
-    int wm_panel_login_width = 120;
-    int wm_menu_width = 120;
+    int wm_menu_width = 200;
     int wm_menu_item_height = 20;
+    int wm_menu_separator = 8; //!< the space of the line between item groups
     int wm_popup_item_height = 30; //!< an item of a menu: as high as the panel
     int wm_menu_padding = 12;      //!< left and right of the text of an item
     int wm_dock_dot = 4;           //!< the diameter of a dot (a window)

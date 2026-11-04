@@ -242,6 +242,7 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
     EXPECT_EQ(t.entry.border_width, 2u);
     EXPECT_EQ(t.list.padding_width, 12);
     EXPECT_EQ(t.wm_menu_item_height, 40);
+    EXPECT_EQ(t.wm_menu_separator, 16);
     EXPECT_EQ(t.wm_popup_item_height, 60);
     EXPECT_EQ(t.wm_menu_padding, 24);
     EXPECT_EQ(t.wm_dock_dot, 8);
