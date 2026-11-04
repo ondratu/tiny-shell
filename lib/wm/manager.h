@@ -12,6 +12,7 @@
 #include "timers.h"
 #include "wm/window.h"
 #include "wm/panel.h"
+#include "wm/action_registry.h"
 #include "wm/config.h"
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
@@ -74,8 +75,23 @@ class Manager : public tiny::Object {
     //! the functions must be short
     tiny::Timers& get_timers() { return timers; }
 
+    /**
+     * @short What the menus and the keys ask for, by name.
+     *
+     * The manager registers "settings", "applications", "launcher",
+     * "run-dialog", "terminal", "force-quit", "restart", "shutdown", "logout",
+     * "next-window", "prev-window", "theme-dark", "theme-light" and
+     * "theme-toggle"; more can be added (a script, the key bindings).
+     */
+    ActionRegistry& get_actions() { return actions; }
+
+    //! Change the colors of the shell and repaint what is shown
+    void set_variant(Variant variant);
+
   private:
     void set_events();
+    //! The actions of the menus and the keys
+    void register_actions();
 
     //! SIGTERM, SIGHUP and SIGINT end the main loop like the logout does
     void catch_quit_signals();
@@ -258,14 +274,6 @@ class Manager : public tiny::Object {
     void on_window_modal(const Window* dialog);
     void on_window_focus(Window* window, const XEvent& e);
     void on_window_minimize(Window* window);
-    void on_settings(tiny::Object* o, const XEvent& e, void* data);
-    void on_terminal(tiny::Object* o, const XEvent& e, void* data);
-    void on_force_quit(tiny::Object* o, const XEvent& e, void* data);
-    void on_logout(tiny::Object* o, const XEvent& e, void* data);
-    void on_restart(tiny::Object* o, const XEvent& e, void* data);
-    void on_shutdown(tiny::Object* o, const XEvent& e, void* data);
-    void on_applications(tiny::Object* o, const XEvent& e, void* data);
-    void on_launcher(tiny::Object* o, const XEvent& e, void* data);
 
     /* direct event handlers */
     void on_key_press(const XKeyEvent& xkey);
@@ -324,6 +332,7 @@ class Manager : public tiny::Object {
     } reframed = {None, 0, 0};
 
     tiny::Timers timers;
+    ActionRegistry actions;
 
     std::vector<std::string> favorites; //!< ids of desktop files
     std::function<void(const std::vector<std::string>&)> favorites_changed;

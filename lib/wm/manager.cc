@@ -13,6 +13,7 @@
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 
+#include "wm/shell_theme.h"
 #include "object.h"
 #include "spawn.h"
 #include "wm/manager.h"
@@ -57,7 +58,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 {
     tiny::reap_children();
     catch_quit_signals();
-    XSetWindowBackground(display_arg, root_arg, tiny::theme.root_background);
+    XSetWindowBackground(display_arg, root_arg, shell_theme.root_background);
     XSync(display_arg, True);
 
     XDefineCursor(display_arg, root_arg,
@@ -79,7 +80,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_dock.realize(root_arg, attrs.width / 2,
                     attrs.height - wm_dock.get_height() -
-                            tiny::theme.wm_dock_border);
+                            shell_theme.dock_border);
     wm_dock.set_events();
 
     wm_run.realize(root_arg, 0, 0);
@@ -175,26 +176,24 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_launcher.add_nested(&wm_dock.get_menu());
     wm_launcher.add_nested(&wm_dock.get_windows_menu());
     wm_dock.on_menu_closed = [this] { wm_launcher.refocus(); };
+    register_actions();
     wm_dock.get_menu_button().on_click.connect(
-            [this](tiny::Object* o, const XEvent& e, void* d) {
-                on_launcher(o, e, d);
-            });
+            [this](const XEvent&) { actions.run("launcher"); });
     // an item hides the menu first, so the launcher opens over the desktop
-    auto connect_item = [this](tiny::LabelButton& item, auto handler) {
-        item.on_click.connect(
-                [this, handler](tiny::Object* o, const XEvent& e, void* d) {
-                    wm_panel.menu_main.unmap();
-                    (this->*handler)(o, e, d);
-                });
+    auto connect_item = [this](tiny::LabelButton& item, const char* action) {
+        item.on_click.connect([this, action](const XEvent&) {
+            wm_panel.menu_main.unmap();
+            actions.run(action);
+        });
     };
     MainMenu& menu = wm_panel.menu_main;
-    connect_item(menu.settings, &Manager::on_settings);
-    connect_item(menu.applications, &Manager::on_applications);
-    connect_item(menu.terminal, &Manager::on_terminal);
-    connect_item(menu.force_quit, &Manager::on_force_quit);
-    connect_item(menu.restart, &Manager::on_restart);
-    connect_item(menu.shutdown, &Manager::on_shutdown);
-    connect_item(menu.logout, &Manager::on_logout);
+    connect_item(menu.settings, "settings");
+    connect_item(menu.applications, "applications");
+    connect_item(menu.terminal, "terminal");
+    connect_item(menu.force_quit, "force-quit");
+    connect_item(menu.restart, "restart");
+    connect_item(menu.shutdown, "shutdown");
+    connect_item(menu.logout, "logout");
 
     XClearWindow(display_arg, root_arg);
     set_events();
@@ -224,6 +223,49 @@ Manager::~Manager()
     }
     // the display belongs to the caller, only stop managing the root window
     XSelectInput(display, root, 0);
+}
+
+void Manager::register_actions()
+{
+    actions.add("settings", [this] { run_program({settings_command}); });
+    actions.add("terminal", [this] { run_program(terminal_program); });
+    actions.add("force-quit", [this] { run_program({force_quit_program}); });
+    actions.add("restart", [this] { run_system_command(restart_command); });
+    actions.add("shutdown", [this] { run_system_command(shutdown_command); });
+    actions.add("logout", [this] { running = false; });
+    actions.add("applications", [this] {
+        if (!wm_launcher.is_open()) { // the item opens it, never closes it
+            wm_launcher.popup();
+        }
+    });
+    actions.add("launcher", [this] { wm_launcher.toggle(); });
+    actions.add("run-dialog", [this] { wm_run.popup(); });
+    actions.add("next-window", [this] { activate_next_window(); });
+    actions.add("prev-window", [this] { activate_prev_window(); });
+    actions.add("theme-dark", [this] { set_variant(Variant::Dark); });
+    actions.add("theme-light", [this] { set_variant(Variant::Light); });
+    actions.add("theme-toggle", [this] {
+        set_variant(tiny::theme.get_variant() == Variant::Dark ? Variant::Light
+                                                               : Variant::Dark);
+    });
+}
+
+void Manager::set_variant(Variant variant)
+{
+    shell_theme.set_variant(variant);
+    XSetWindowBackground(display, root, shell_theme.root_background);
+    XClearWindow(display, root);
+    wm_panel.restyle();
+    wm_panel.menu_main.restyle();
+    wm_dock.restyle();
+    wm_dock.get_menu().restyle();
+    wm_dock.get_windows_menu().restyle();
+    wm_launcher.restyle();
+    wm_run.restyle();
+    wm_unresponsive.restyle();
+    for (const auto& entry : wm_windows) {
+        entry.second->restyle_frame();
+    }
 }
 
 void Manager::set_events()
@@ -1274,36 +1316,6 @@ void Manager::on_window_minimize(Window* window)
     }
 }
 
-void Manager::on_settings(tiny::Object*, const XEvent&, void*)
-{
-    run_program({settings_command});
-}
-
-void Manager::on_terminal(tiny::Object*, const XEvent&, void*)
-{
-    run_program(terminal_program);
-}
-
-void Manager::on_force_quit(tiny::Object*, const XEvent&, void*)
-{
-    run_program({force_quit_program});
-}
-
-void Manager::on_logout(tiny::Object*, const XEvent&, void*)
-{
-    running = false;
-}
-
-void Manager::on_restart(tiny::Object*, const XEvent&, void*)
-{
-    run_system_command(restart_command);
-}
-
-void Manager::on_shutdown(tiny::Object*, const XEvent&, void*)
-{
-    run_system_command(shutdown_command);
-}
-
 void Manager::run_system_command(const std::string& command)
 {
     if (command.empty()) {
@@ -1326,18 +1338,6 @@ void Manager::run_program(const std::vector<std::string>& argv)
     }
 }
 
-void Manager::on_applications(tiny::Object*, const XEvent&, void*)
-{
-    if (!wm_launcher.is_open()) { // the item opens it, never closes it
-        wm_launcher.popup();
-    }
-}
-
-void Manager::on_launcher(tiny::Object*, const XEvent&, void*)
-{
-    wm_launcher.toggle();
-}
-
 bool Manager::is_super(unsigned int keycode) const
 {
     return keycode == XKeysymToKeycode(display, XK_Super_L) ||
@@ -1348,7 +1348,7 @@ void Manager::on_key_press(const XKeyEvent& xkey)
 {
     /* Alt F2 */
     if (xkey.keycode == XKeysymToKeycode(display, XK_F2)) {
-        wm_run.popup();
+        actions.run("run-dialog");
         key_done = true;
         return;
     }
@@ -1362,11 +1362,7 @@ void Manager::on_key_press(const XKeyEvent& xkey)
      * before Tab and the release would not have the modifier any more */
     if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
         xkey.state & Mod1Mask) {
-        if (xkey.state & ShiftMask) {
-            activate_prev_window();
-        } else {
-            activate_next_window();
-        }
+        actions.run(xkey.state & ShiftMask ? "prev-window" : "next-window");
         key_done = true;
         return;
     }
@@ -1377,7 +1373,7 @@ void Manager::on_key_release(const XKeyEvent& xkey)
 {
     if (is_super(xkey.keycode)) {
         if (super_down) {
-            wm_launcher.toggle();
+            actions.run("launcher");
         }
         super_down = false;
         return;

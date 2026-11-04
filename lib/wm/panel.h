@@ -40,11 +40,25 @@ class MainMenu : public tiny::Popover {
 
 class Panel : public tiny::Box {
   public:
+    //! Where an applet goes: the left one after the main menu button
+    enum class Side { Left, Right };
+
     Panel();
 
     ~Panel() override;
 
     void realize(::Window root, int x = 0, int y = 0) override;
+
+    /**
+     * @short Put a small widget of a plugin (a clock, a monitor...) in the
+     * panel.
+     *
+     * The panel must be realized. The applet is realized by the panel and
+     * stays where it is put: the next one goes beside it, to the left from
+     * the first at the right side. The caller owns it and must remove it
+     * (`remove()`) or keep it alive as long as the panel.
+     */
+    void add_applet(tiny::Widget* applet, Side side = Side::Right);
 
   private:
     tiny::MenuButton btn_main;
