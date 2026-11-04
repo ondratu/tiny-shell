@@ -74,7 +74,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y $DEPS ${{ matrix.packages }}
       - name: Build and test
         run: |
-          make CXX=${{ matrix.cxx }} check examples
+          make CXX=${{ matrix.cxx }} all check examples
 
   asan:
     name: ASan + UBSan
@@ -97,7 +97,7 @@ jobs:
           apk add --no-cache git make pkgconf clang g++ libx11-dev libxft-dev
           libxrender-dev gtest-dev xvfb xvfb-run xauth font-dejavu
       - uses: actions/checkout@v7
-      - run: make CXX=clang++ check examples
+      - run: make CXX=clang++ all check examples
 
   netbsd:
     name: NetBSD
@@ -134,7 +134,7 @@ jobs:
           xvfb=$!
           sleep 2
           rc=0
-          DISPLAY=:99 gmake XVFB_RUN= check examples || rc=$?
+          DISPLAY=:99 gmake XVFB_RUN= all check examples || rc=$?
           kill $xvfb
           exit $rc
 
