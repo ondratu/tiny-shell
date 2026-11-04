@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <X11/Xatom.h>
+#include <X11/Xresource.h>
 
 #include <string>
 #include <vector>
@@ -106,7 +107,21 @@ void set_resource_manager(const std::string& text)
 
 } // namespace
 
-TEST(XResourcesTest, the_changes_go_to_the_property_of_the_root_window)
+//! The test of a program that gets the resources: the database that
+//! `publish_resources` gives the display is freed at the end
+class XResourcesDisplayTest : public ::testing::Test {
+  protected:
+    void TearDown() override
+    {
+        ::Display* display = tiny::get_display();
+        if (XrmDatabase db = XrmGetDatabase(display)) {
+            XrmDestroyDatabase(db);
+            XrmSetDatabase(display, nullptr);
+        }
+    }
+};
+
+TEST_F(XResourcesDisplayTest, the_changes_go_to_the_property_of_the_root_window)
 {
     const std::string before = resource_manager();
     set_resource_manager("*font: fixed\nXft.rgba: bgr\n");
@@ -124,7 +139,7 @@ TEST(XResourcesTest, the_changes_go_to_the_property_of_the_root_window)
     set_resource_manager(before);
 }
 
-TEST(XResourcesTest, a_missing_property_starts_a_new_one)
+TEST_F(XResourcesDisplayTest, a_missing_property_starts_a_new_one)
 {
     const std::string before = resource_manager();
     ::Display* display = tiny::get_display();

@@ -114,7 +114,11 @@ bool publish_resources(::Display* display,
     // Xlib read the resources when the connection was opened and Xft asks
     // that copy, so give the program its own connection the new text too
     XrmInitialize();
+    XrmDatabase old = XrmGetDatabase(display);
     XrmSetDatabase(display, XrmGetStringDatabase(merged.c_str()));
+    if (old != nullptr) {
+        XrmDestroyDatabase(old); // XrmSetDatabase does not free it
+    }
     return true;
 }
 

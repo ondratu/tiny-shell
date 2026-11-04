@@ -661,7 +661,7 @@ void SettingsForm::step_choice(Field field, int direction)
 {
     const wm::XftChoices choices = wm::xft_choices(xft_option(field));
     const auto n = static_cast<long>(choices.size());
-    const auto found = std::find_if(
+    const auto* const found = std::find_if(
             choices.begin(), choices.end(),
             [&](const wm::XftChoice& c) { return text(field) == c.value; });
     const long at = found == choices.end() ? 0 : found - choices.begin();
