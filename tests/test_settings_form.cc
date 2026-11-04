@@ -31,7 +31,7 @@ SettingsForm make(const SettingsForm::Values& values = V("Gamma", "xterm -e",
                   const Strings& list = families)
 {
     SettingsForm form(values, list, SettingsForm::Metrics());
-    form.resize(500, 400);
+    form.resize(500, 600);
     return form;
 }
 
@@ -99,7 +99,7 @@ TEST(SettingsFormTest, the_form_has_the_fields_one_under_another)
     // the buttons are at the bottom, Cancel left of Save
     EXPECT_LT(form.cancel_rect().x, form.save_rect().x);
     EXPECT_GT(form.save_rect().y, scale.y);
-    EXPECT_LE(form.save_rect().y + form.save_rect().height, 400);
+    EXPECT_LE(form.save_rect().y + form.save_rect().height, 600);
     EXPECT_GT(form.message_rect().y, scale.y);
     EXPECT_LT(form.message_rect().y + form.message_rect().height,
               form.save_rect().y + form.save_rect().height);
@@ -171,15 +171,16 @@ TEST(SettingsFormTest, tab_goes_round_the_fields_and_back_tab_the_other_way)
 {
     SettingsForm form = make();
 
-    for (const Field next : {Field::Size, Field::Style, Field::Terminal,
-                             Field::Scale, Field::Font}) {
+    for (const Field next :
+         {Field::Size, Field::Style, Field::Terminal, Field::Scale,
+          Field::Antialias, Field::Hinting, Field::Rgba, Field::Font}) {
         form.key(Key::Tab);
         EXPECT_EQ(form.focus(), next);
     }
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.focus(), Field::Rgba);
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::Terminal);
+    EXPECT_EQ(form.focus(), Field::Hinting);
 }
 
 TEST(SettingsFormTest, the_arrows_move_between_the_fields)
@@ -187,7 +188,7 @@ TEST(SettingsFormTest, the_arrows_move_between_the_fields)
     SettingsForm form = make();
 
     form.key(Key::Up); // round to the last
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.focus(), Field::Rgba);
     form.key(Key::Down); // round to the first
     EXPECT_EQ(form.focus(), Field::Font);
     EXPECT_EQ(form.view(), View::Form);
@@ -1080,4 +1081,134 @@ TEST(SettingsFormTest, the_preview_is_over_the_controls_and_under_the_list)
     list.open_picker();
     const Rect last = list.row_rect(list.first() + list.visible_rows() - 1);
     EXPECT_LE(last.y + last.height, preview.y);
+}
+
+namespace {
+
+SettingsForm::Values with_rendering(const char* antialias, const char* hinting,
+                                    const char* rgba)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.antialias = antialias;
+    v.hinting = hinting;
+    v.rgba = rgba;
+    return v;
+}
+
+//! The form with the focus on a field, reached by Tab
+void focus_on(SettingsForm& form, Field field)
+{
+    while (form.focus() != field) {
+        form.key(Key::Tab);
+    }
+}
+
+} // namespace
+
+TEST(SettingsFormTest, the_rendering_of_text_has_choices_under_the_fields)
+{
+    const SettingsForm form = make(with_rendering("yes", "slight", "rgb"));
+
+    EXPECT_TRUE(SettingsForm::is_choice(Field::Antialias));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::Hinting));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::Rgba));
+    EXPECT_FALSE(SettingsForm::is_choice(Field::Scale));
+    const auto v = form.values();
+    EXPECT_EQ(v.antialias, "yes");
+    EXPECT_EQ(v.hinting, "slight");
+    EXPECT_EQ(v.rgba, "rgb");
+    EXPECT_EQ(form.choice_label(Field::Antialias), "On");
+    EXPECT_EQ(form.choice_label(Field::Hinting), "Slight");
+    EXPECT_EQ(form.choice_label(Field::Rgba), "RGB");
+    EXPECT_EQ(form.clean_values().rgba, "rgb");
+    EXPECT_GT(form.field_rect(Field::Antialias).y,
+              form.field_rect(Field::Scale).y);
+    EXPECT_GT(form.message_rect().y, form.field_rect(Field::Rgba).y);
+    EXPECT_EQ(SettingsForm::xft_option(Field::Hinting),
+              tiny::wm::XftOption::Hinting);
+    EXPECT_EQ(SettingsForm::xft_option(Field::Antialias),
+              tiny::wm::XftOption::Antialias);
+}
+
+TEST(SettingsFormTest, a_value_that_is_not_set_is_the_default)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.choice_label(Field::Antialias), "Default");
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormTest, a_value_that_is_not_offered_is_a_problem_and_is_shown)
+{
+    const SettingsForm form = make(with_rendering("maybe", "", ""));
+
+    EXPECT_FALSE(form.problem(Field::Antialias).empty());
+    EXPECT_EQ(form.problem(), form.problem(Field::Antialias));
+    EXPECT_EQ(form.choice_label(Field::Antialias), "maybe");
+}
+
+TEST(SettingsFormTest, the_arrows_go_through_the_values_of_a_choice)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::Antialias);
+
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.text(Field::Antialias), "yes");
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.text(Field::Antialias), "no");
+    EXPECT_TRUE(form.key(Key::Right)); // round to the default
+    EXPECT_EQ(form.text(Field::Antialias), "");
+    EXPECT_TRUE(form.key(Key::Left)); // and back
+    EXPECT_EQ(form.text(Field::Antialias), "no");
+    EXPECT_EQ(form.focus(), Field::Antialias);
+}
+
+TEST(SettingsFormTest, space_goes_to_the_next_value_and_other_text_is_ignored)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::Hinting);
+
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.text(Field::Hinting), "none");
+    EXPECT_FALSE(form.type("x"));
+    EXPECT_EQ(form.text(Field::Hinting), "none");
+}
+
+TEST(SettingsFormTest, backspace_and_delete_put_a_choice_back_to_the_default)
+{
+    SettingsForm form = make(with_rendering("", "", "bgr"));
+    focus_on(form, Field::Rgba);
+
+    form.reject("Not saved: nope");
+    EXPECT_TRUE(form.key(Key::Back));
+    EXPECT_EQ(form.text(Field::Rgba), "");
+    EXPECT_TRUE(form.status().empty());
+    EXPECT_FALSE(form.key(Key::Delete)); // nothing to change
+    EXPECT_FALSE(form.key(Key::Home));
+    EXPECT_FALSE(form.key(Key::End));
+}
+
+TEST(SettingsFormTest, a_click_goes_on_in_the_right_half_and_back_in_the_left)
+{
+    SettingsForm form = make();
+    const Rect r = form.field_rect(Field::Rgba);
+
+    EXPECT_TRUE(click(form, {center_x(r), r.y, r.width / 2, r.height}));
+    EXPECT_EQ(form.focus(), Field::Rgba);
+    EXPECT_EQ(form.text(Field::Rgba), "none");
+    EXPECT_TRUE(click(form, {center_x(r), r.y, r.width / 2, r.height}));
+    EXPECT_EQ(form.text(Field::Rgba), "rgb");
+    EXPECT_TRUE(click(form, {r.x, r.y, r.width / 2, r.height}));
+    EXPECT_EQ(form.text(Field::Rgba), "none");
+}
+
+TEST(SettingsFormTest, a_choice_that_was_changed_clears_the_failed_write)
+{
+    SettingsForm form = make();
+    form.reject("Not saved: nope");
+    focus_on(form, Field::Antialias);
+
+    form.key(Key::Right);
+
+    EXPECT_TRUE(form.status().empty());
 }

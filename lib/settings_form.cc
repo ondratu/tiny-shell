@@ -62,9 +62,10 @@ std::string size_text(double size)
 }
 
 constexpr SettingsForm::Field fields[] = {
-        SettingsForm::Field::Font, SettingsForm::Field::Size,
-        SettingsForm::Field::Style, SettingsForm::Field::Terminal,
-        SettingsForm::Field::Scale};
+        SettingsForm::Field::Font,    SettingsForm::Field::Size,
+        SettingsForm::Field::Style,   SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale,   SettingsForm::Field::Antialias,
+        SettingsForm::Field::Hinting, SettingsForm::Field::Rgba};
 
 constexpr size_t field_count = std::size(fields);
 
@@ -87,9 +88,10 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
 SettingsForm::SettingsForm(const Values& initial,
                            std::vector<std::string> families,
                            const Metrics& metrics, StylesFn styles_of):
-    fields_{TextField(initial.font), TextField(initial.size),
-            TextField(initial.style), TextField(initial.terminal),
-            TextField(initial.scale)},
+    fields_{TextField(initial.font),    TextField(initial.size),
+            TextField(initial.style),   TextField(initial.terminal),
+            TextField(initial.scale),   TextField(initial.antialias),
+            TextField(initial.hinting), TextField(initial.rgba)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -117,8 +119,37 @@ int SettingsForm::form_height() const
 
 SettingsForm::Values SettingsForm::values() const
 {
-    return {text(Field::Font), text(Field::Terminal), text(Field::Scale),
-            text(Field::Size), text(Field::Style)};
+    return {text(Field::Font),    text(Field::Terminal), text(Field::Scale),
+            text(Field::Size),    text(Field::Style),    text(Field::Antialias),
+            text(Field::Hinting), text(Field::Rgba)};
+}
+
+bool SettingsForm::is_choice(Field field)
+{
+    return field >= Field::Antialias;
+}
+
+wm::XftOption SettingsForm::xft_option(Field field)
+{
+    switch (field) {
+        case Field::Antialias:
+            return wm::XftOption::Antialias;
+        case Field::Hinting:
+            return wm::XftOption::Hinting;
+        default:
+            break;
+    }
+    return wm::XftOption::Rgba;
+}
+
+std::string SettingsForm::choice_label(Field field) const
+{
+    for (const wm::XftChoice& c : wm::xft_choices(xft_option(field))) {
+        if (c.value == text(field)) {
+            return c.label;
+        }
+    }
+    return text(field);
 }
 
 const TextField& SettingsForm::field(Field field) const
@@ -151,6 +182,12 @@ std::string SettingsForm::problem(Field field) const
             return xdg::split_exec(value).empty()
                            ? "The terminal must be a program with arguments."
                            : "";
+        case Field::Antialias:
+        case Field::Hinting:
+        case Field::Rgba:
+            return wm::valid_xft(xft_option(field), value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::Scale:
             break;
     }
@@ -176,8 +213,9 @@ SettingsForm::Values SettingsForm::clean_values() const
         return std::string(trim(value));
     };
     const Values v = values();
-    return {clean(v.font), clean(v.terminal), clean(v.scale), clean(v.size),
-            clean(v.style)};
+    return {clean(v.font),    clean(v.terminal), clean(v.scale),
+            clean(v.size),    clean(v.style),    clean(v.antialias),
+            clean(v.hinting), clean(v.rgba)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -225,7 +263,7 @@ Rect SettingsForm::choose_rect() const
 
 Rect SettingsForm::message_rect() const
 {
-    const Rect last = label_rect(Field::Scale);
+    const Rect last = label_rect(Field::Rgba);
     return {metrics_.margin + metrics_.label_width,
             last.y + last.height + metrics_.row_gap,
             std::max(1, width_ - 2 * metrics_.margin - metrics_.label_width),
@@ -517,8 +555,17 @@ bool SettingsForm::act(size_t target, int x)
         case SizeField:
         case StyleField:
         case TerminalField:
-        case ScaleField: {
+        case ScaleField:
+        case AntialiasField:
+        case HintingField:
+        case RgbaField: {
             focus_ = fields[target - FontField];
+            if (is_choice(focus_)) {
+                // the left half goes back, the right half goes on
+                const Rect r = field_rect(focus_);
+                step_choice(focus_, x < r.x + r.width / 2 ? -1 : 1);
+                return true;
+            }
             put_cursor(field_ref(focus_), field_rect(focus_), x);
             return true;
         }
@@ -609,6 +656,20 @@ bool SettingsForm::edit(TextField& field, Key pressed)
     return changed;
 }
 
+//! The next (or the previous) value of a choice; the first one is the default
+void SettingsForm::step_choice(Field field, int direction)
+{
+    const auto& choices = wm::xft_choices(xft_option(field));
+    const auto n = static_cast<long>(choices.size());
+    const auto found = std::find_if(
+            choices.begin(), choices.end(),
+            [&](const wm::XftChoice& c) { return c.value == text(field); });
+    const long at = found == choices.end() ? 0 : found - choices.begin();
+    field_ref(field).set_text(
+            choices[static_cast<size_t>((at + direction + n) % n)].value);
+    status_.clear();
+}
+
 bool SettingsForm::key(Key pressed)
 {
     return view_ == View::Picker ? picker_key(pressed) : form_key(pressed);
@@ -650,6 +711,23 @@ bool SettingsForm::form_key(Key pressed)
         case Key::Back:
         case Key::Delete:
             break;
+    }
+    if (is_choice(focus_)) {
+        switch (pressed) {
+            case Key::Left:
+            case Key::Right:
+                step_choice(focus_, pressed == Key::Left ? -1 : 1);
+                return true;
+            case Key::Back:
+            case Key::Delete: { // back to the default
+                const bool set = !text(focus_).empty();
+                field_ref(focus_).set_text("");
+                status_.clear();
+                return set;
+            }
+            default:
+                return false;
+        }
     }
     return edit(field_ref(focus_), pressed);
 }
@@ -767,6 +845,13 @@ bool SettingsForm::type(const std::string& typed)
     }
     if (view_ == View::Form) {
         status_.clear();
+        if (is_choice(focus_)) { // Space goes to the next value
+            if (text != " ") {
+                return false;
+            }
+            step_choice(focus_, 1);
+            return true;
+        }
         return field_ref(focus_).insert(text);
     }
     switch (pane_) {

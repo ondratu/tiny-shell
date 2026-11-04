@@ -9,6 +9,7 @@
 
 #include "text_field.h"
 #include "widget.h"
+#include "wm/config.h"
 
 namespace tiny {
 
@@ -16,9 +17,11 @@ namespace tiny {
  * @short What the settings program shows and does, without any drawing.
  *
  * The form has text fields (the font, its size and style, the terminal, the
- * scale), a button that opens the list of fonts, and the buttons Cancel and
- * Save. The fields are edited with a cursor: the arrows, Home, End, Backspace
- * and Delete work, and a click puts the cursor where the pointer is.
+ * scale), choices (antialiasing, hinting and subpixel order of the text: the
+ * left and right arrows, Space and a click go through the values), a button
+ * that opens the list of fonts, and the buttons Cancel and Save. The fields
+ * are edited with a cursor: the arrows, Home, End, Backspace and Delete work,
+ * and a click puts the cursor where the pointer is.
  *
  * The list of fonts replaces the form: a search field above the families, one
  * family selected, and under the list the size and the style of the font and
@@ -38,7 +41,16 @@ class SettingsForm {
   public:
     enum class View { Form, Picker };
 
-    enum class Field { Font, Size, Style, Terminal, Scale };
+    enum class Field {
+        Font,
+        Size,
+        Style,
+        Terminal,
+        Scale,
+        Antialias, //!< from here a field is a choice, see `xft_option()`
+        Hinting,
+        Rgba
+    };
 
     //! What has the keyboard in the list of fonts
     enum class Pane { Search, Size, Style };
@@ -70,6 +82,10 @@ class SettingsForm {
         std::string scale;
         std::string size = "12"; //!< in points at the scale 1
         std::string style;       //!< "" is the default style of the family
+        //! The values of `[xft]` ("" is not set)
+        std::string antialias;
+        std::string hinting;
+        std::string rgba;
     };
 
     //! The sizes of the parts, at the scale 1
@@ -119,6 +135,15 @@ class SettingsForm {
 
     /// The field, with the text and the cursor.
     const TextField& field(Field field) const;
+
+    /// Whether the field is a choice of a few values (it has no cursor).
+    static bool is_choice(Field field);
+
+    /// The option of `[xft]` that a choice sets; the field must be a choice.
+    static wm::XftOption xft_option(Field field);
+
+    /// The name of the value of a choice, as the user sees it.
+    std::string choice_label(Field field) const;
 
     /// The text of a field.
     const std::string& text(Field field) const
@@ -248,6 +273,9 @@ class SettingsForm {
         StyleField,
         TerminalField,
         ScaleField,
+        AntialiasField,
+        HintingField,
+        RgbaField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -262,6 +290,7 @@ class SettingsForm {
     bool act(size_t target, int x);
     bool request_save();
     bool edit(TextField& field, Key pressed);
+    void step_choice(Field field, int direction);
     bool form_key(Key pressed);
     bool picker_key(Key pressed);
     bool list_key(Key pressed);
@@ -276,7 +305,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 5> fields_;
+    std::array<TextField, 8> fields_;
     TextField search_;
     TextField pick_size_;
     std::string pick_style_;
