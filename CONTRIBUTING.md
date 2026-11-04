@@ -165,7 +165,7 @@ costs a lot of code or memory (see the goals above).
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev xvfb libgtest-dev xserver-xephyr
+    libx11-dev libxft-dev libxrender-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr
 make                  # build
 make check            # unit tests (run against Xvfb)
 make help             # all the targets and variables

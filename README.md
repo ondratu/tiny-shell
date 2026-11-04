@@ -97,7 +97,7 @@ programs is done, so there is no "must" list):
 
 - Written in C++17, built with GNU make
 - [Xlib](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html),
-  Xft and Xrender; nothing else is needed to run it
+  Xft (with fontconfig) and Xrender; nothing else is needed to run it
 - Tests use [googletest](https://github.com/google/googletest) and Xvfb
 
 ## Platforms
@@ -115,7 +115,7 @@ files of `x11`, `xft` and `xrender`.
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev
+    libx11-dev libxft-dev libxrender-dev libfontconfig-dev
 
 make
 ```

@@ -461,3 +461,29 @@ TEST(FontBrowserTest, the_sizes_of_the_specimen_follow_the_scale)
     EXPECT_EQ(lines[3].size, 16);
     EXPECT_EQ(lines[10].size, 256);
 }
+
+TEST(FontBrowserTest, the_selected_cell_is_in_view_after_a_resize_in_the_detail)
+{
+    FontBrowser b = browser();
+    b.key(Key::End);
+    b.key(Key::Return);
+
+    b.resize(100, 120); // one column: the cell is in the tenth row
+    b.back();
+
+    const tiny::Rect cell = b.cell_rect(9);
+    EXPECT_GE(cell.y, 0);
+    EXPECT_LE(cell.y + cell.height, 120);
+}
+
+TEST(FontBrowserTest, a_family_opened_again_has_no_height_until_it_is_set)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.set_detail_height(300);
+    b.back();
+
+    b.open(1);
+
+    EXPECT_EQ(b.content_height(), 0);
+}

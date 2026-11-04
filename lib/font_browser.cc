@@ -312,6 +312,8 @@ void FontBrowser::back()
     view_ = View::Overview;
     scroll_ = 0;
     scroll_to(overview_scroll_);
+    // a resize in the detail may have moved the cell
+    move_selection(selected_);
 }
 
 } // namespace tiny
