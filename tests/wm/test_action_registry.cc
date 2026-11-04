@@ -85,3 +85,17 @@ TEST(ActionRegistryTest, exec_of_a_missing_program_is_reported_not_fatal)
 
     EXPECT_TRUE(actions.run("exec:/nonexistent/tiny-program"));
 }
+
+TEST(ActionRegistryTest, an_action_may_replace_itself_while_it_runs)
+{
+    ActionRegistry actions;
+    int later = 0;
+    actions.add("a", [&actions, &later] {
+        actions.add("a", [&later] { ++later; });
+    });
+
+    EXPECT_TRUE(actions.run("a"));
+    EXPECT_TRUE(actions.run("a"));
+
+    EXPECT_EQ(later, 1);
+}

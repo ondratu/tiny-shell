@@ -17,7 +17,8 @@ bool ActionRegistry::run(const std::string& name) const
 {
     const auto found = actions.find(name);
     if (found != actions.end()) {
-        found->second();
+        const Action action = found->second; // it may register a new `name`
+        action();
         return true;
     }
     const std::string prefix = exec_prefix;

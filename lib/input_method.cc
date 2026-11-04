@@ -20,12 +20,14 @@ std::string latin1_to_utf8(const char* bytes, int len)
     return out;
 }
 
-InputMethod::InputMethod(::Display* display, ::Window window)
+InputMethod::InputMethod(::Display* display, ::Window window, bool environment)
 {
-    if (XSupportsLocale() == False) {
-        return;
+    if (environment) {
+        if (XSupportsLocale() == False) {
+            return;
+        }
+        XSetLocaleModifiers("");
     }
-    XSetLocaleModifiers("");
     xim = XOpenIM(display, nullptr, nullptr, nullptr);
     if (xim != nullptr) {
         xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,

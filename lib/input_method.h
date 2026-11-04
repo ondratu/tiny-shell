@@ -20,7 +20,9 @@ std::string latin1_to_utf8(const char* bytes, int len);
  */
 class InputMethod {
   public:
-    InputMethod(::Display* display, ::Window window);
+    //! `environment`: use the method that `XMODIFIERS` names (the programs that
+    //! filter the events with `XFilterEvent` do); else the default one
+    InputMethod(::Display* display, ::Window window, bool environment = false);
     ~InputMethod();
     InputMethod(const InputMethod&) = delete;
     InputMethod& operator=(const InputMethod&) = delete;

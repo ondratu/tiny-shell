@@ -266,3 +266,12 @@ TEST(XftWindowTest,
     XSync(tiny::get_display(), False);
     SUCCEED();
 }
+
+TEST(XftWindowTest, a_font_of_size_zero_is_not_the_font_of_a_name)
+{
+    TestWindow w;
+
+    XftFont* named = w.font_by_name("sans-10");
+
+    EXPECT_NE(w.font("sans-10", 0), named);
+}

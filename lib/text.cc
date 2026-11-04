@@ -1,7 +1,7 @@
 #include "text.h"
 
 #include <algorithm>
-#include <cctype>
+#include <cstdio>
 
 namespace tiny {
 
@@ -37,10 +37,17 @@ std::vector<std::string> split(std::string_view list, char separator,
 std::string lower(std::string_view text)
 {
     std::string out(text);
-    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
+    std::transform(out.begin(), out.end(), out.begin(), [](char c) {
+        return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
     });
     return out;
+}
+
+std::string number_text(double value)
+{
+    char text[32];
+    snprintf(text, sizeof(text), "%g", value);
+    return text;
 }
 
 } // namespace tiny

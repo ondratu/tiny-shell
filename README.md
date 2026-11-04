@@ -69,7 +69,8 @@ Implemented:
   and shows a specimen of each one (see below).
 - **Look:** two built-in themes, dark (the default) and light, chosen by
   `[theme] style` and switchable while the shell runs (the actions
-  `theme-dark`, `theme-light` and `theme-toggle`).
+  `theme-dark`, `theme-light` and `theme-toggle`; no key or menu item is bound
+  to them yet, see the key bindings in the plan).
 - **Actions:** the menu items and the shortcuts run actions by name
   (`logout`, `run-dialog`, `launcher`, `next-window`, `exec:<command>`...),
   and the panel has slots for small widgets of plugins; this is what the

@@ -31,3 +31,15 @@ TEST(TextTest, lower_changes_the_letters_of_ascii_only)
     EXPECT_EQ(tiny::lower("\xC3\x89"), "\xC3\x89");
     EXPECT_EQ(tiny::lower(""), "");
 }
+
+TEST(TextTest, lower_ignores_the_locale)
+{
+    EXPECT_EQ(tiny::lower("LIGHT Dark"), "light dark");
+}
+
+TEST(TextTest, number_text_has_no_trailing_zeros)
+{
+    EXPECT_EQ(tiny::number_text(1.5), "1.5");
+    EXPECT_EQ(tiny::number_text(2), "2");
+    EXPECT_EQ(tiny::number_text(12.25), "12.25");
+}

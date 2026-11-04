@@ -252,3 +252,17 @@ TEST_F(PanelScaledTest, panel_height_is_scaled)
 
     EXPECT_EQ(panel.get_height(), 60u);
 }
+
+TEST(PanelAppletTest, a_null_or_added_applet_is_refused)
+{
+    tiny::wm::Panel panel;
+    panel.realize(root_window(), 0, 0);
+    tiny::Label label(60, 20);
+
+    panel.add_applet(nullptr);
+    panel.add_applet(&label);
+    const int x = attributes_of(label).x;
+    panel.add_applet(&label);
+
+    EXPECT_EQ(attributes_of(label).x, x);
+}
