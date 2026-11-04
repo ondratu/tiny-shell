@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -39,6 +40,26 @@ std::optional<std::string> read_file(const std::string& file)
 }
 
 } // namespace
+
+std::optional<double> parse_scale(const std::string& text)
+{
+    const std::string trimmed(trim(text));
+    char* end = nullptr;
+    const double scale = strtod(trimmed.c_str(), &end);
+    if (end == trimmed.c_str() || *end != '\0' || !(scale > 0) ||
+        scale > max_scale) {
+        return std::nullopt;
+    }
+    return scale;
+}
+
+bool valid_font(const std::string& text)
+{
+    const std::string_view font = trim(text);
+    return !font.empty() && std::none_of(font.begin(), font.end(), [](char c) {
+        return std::iscntrl(static_cast<unsigned char>(c)) != 0;
+    });
+}
 
 std::vector<std::string> config_files(const char* config_home,
                                       const char* config_dirs, const char* home)
@@ -97,13 +118,17 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     };
 
     if (const auto value = ini.get("theme", "scale")) {
-        char* end = nullptr;
-        const double scale = strtod(value->c_str(), &end);
-        if (end == value->c_str() || *end != '\0' || !(scale > 0) ||
-            scale > max_scale) {
-            problem("[theme] scale must be a number above 0 and up to 16");
+        if (const auto scale = parse_scale(*value)) {
+            config.scale = *scale;
         } else {
-            config.scale = scale;
+            problem("[theme] scale must be a number above 0 and up to 16");
+        }
+    }
+    if (const auto value = ini.get("theme", "font")) {
+        if (valid_font(*value)) {
+            config.font = *value;
+        } else {
+            problem("[theme] font must be the name of a font family");
         }
     }
     if (const auto value = ini.get("commands", "reboot"); value) {
@@ -126,6 +151,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[commands] terminal must be a program with arguments");
         } else {
             config.terminal = std::move(terminal);
+            config.terminal_line = *value;
         }
     }
     if (const auto value = ini.get("dock", "favorites")) {
@@ -175,6 +201,17 @@ bool fail(std::string* error, const std::string& what)
     return false;
 }
 
+//! Whether a name or a value can be written to a line of the file
+bool writable(const IniValue& v)
+{
+    const auto plain = [](const std::string& text) {
+        return text.find_first_of("\r\n") == std::string::npos;
+    };
+    return plain(v.section) && v.section.find(']') == std::string::npos &&
+           !v.key.empty() && plain(v.key) &&
+           v.key.find('=') == std::string::npos && plain(v.value);
+}
+
 } // namespace
 
 bool save_favorites(const std::string& file,
@@ -192,10 +229,26 @@ bool save_favorites(const std::string& file,
         }
         list += (list.empty() ? "" : ";") + id;
     }
+    return save_values(file, {{"dock", "favorites", list}}, error);
+}
+
+bool save_values(const std::string& file, const std::vector<IniValue>& values,
+                 std::string* error)
+{
+    for (const IniValue& v : values) {
+        if (!writable(v)) {
+            if (error) {
+                *error = "wrong setting [" + v.section + "] " + v.key;
+            }
+            return false;
+        }
+    }
 
     Ini ini;
     ini.parse(read_file(file).value_or(""));
-    ini.set("dock", "favorites", list);
+    for (const IniValue& v : values) {
+        ini.set(v.section, v.key, v.value);
+    }
 
     // the directory of a new file; its parent is the one of the session
     const auto slash = file.rfind('/');

@@ -12,6 +12,16 @@ namespace tiny {
  */
 int scaled(int value, double factor);
 
+/**
+ * @short The name of a font for Xft: `family-size:style`.
+ *
+ * The characters that the fontconfig syntax gives a meaning (`\`, `-`, `:`
+ * and `,`) are escaped in the family, so any name of an installed font opens
+ * that font. `style` is added as it is (e.g. ":bold").
+ */
+std::string xft_name(const std::string& family, double size,
+                     const std::string& style = "");
+
 class Style {
     /* State heredity
      * Invisible - widget is not visible (out of allowed drawing area)
@@ -57,6 +67,9 @@ class Style {
     uint32_t get_br(uint8_t state) const;
     XftFont* get_font() const { return font; }
 
+    //! The family of the font; takes effect at the next `init()`
+    void set_font_family(const std::string& family) { font_family = family; }
+
     std::string get_xft_fg(uint8_t state) const;
 
     // Normal state
@@ -93,8 +106,8 @@ class Style {
     int padding_width = 1;
 
   protected:
-    const char* font_family = "Cantarell";
-    const char* font_style = ""; // e.g. ":bold"
+    std::string font_family = "Cantarell";
+    std::string font_style; // e.g. ":bold"
     double font_size = 12;
     XftFont* font = nullptr;
 

@@ -54,6 +54,15 @@ void Theme::scale(double factor)
     list.scale(factor);
 }
 
+void Theme::set_font(const std::string& family)
+{
+    widget.set_font_family(family);
+    wm_button.set_font_family(family);
+    wm_header.set_font_family(family);
+    entry.set_font_family(family);
+    list.set_font_family(family);
+}
+
 void Theme::init() // TODO: screen, display, config...
 {
     widget.init();

@@ -43,6 +43,21 @@ int scaled(int value, double factor)
     return static_cast<int>(lround(value * factor));
 }
 
+std::string xft_name(const std::string& family, double size,
+                     const std::string& style)
+{
+    std::string name;
+    for (const char c : family) {
+        if (c == '\\' || c == '-' || c == ':' || c == ',') {
+            name += '\\';
+        }
+        name += c;
+    }
+    char number[32];
+    snprintf(number, sizeof number, "-%g", size);
+    return name + number + style;
+}
+
 Style::~Style()
 {
     if (font) {
@@ -69,11 +84,10 @@ void Style::scale(double factor)
 void Style::init()
 {
     const int screen = 0; // XXX: this is zero for now
-    char name[128];
-    snprintf(name, sizeof(name), "%s-%g%s", font_family, font_size, font_style);
-    font = XftFontOpenName(get_display(), screen, name);
+    const std::string name = xft_name(font_family, font_size, font_style);
+    font = XftFontOpenName(get_display(), screen, name.c_str());
     if (font == nullptr) {
-        throw std::runtime_error(std::string("Failed to load font ") + name);
+        throw std::runtime_error("Failed to load font " + name);
     }
 }
 

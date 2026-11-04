@@ -122,6 +122,7 @@ int main(int argc, char** argv)
 
         // The theme needs the display (the fonts are opened here)
         tiny::theme.scale(config.scale);
+        tiny::theme.set_font(config.font);
         tiny::theme.init();
 
         const ::Window root = XDefaultRootWindow(display);

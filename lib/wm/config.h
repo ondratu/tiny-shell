@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,7 @@ namespace tiny::wm {
  * ```
  * [theme]
  * scale = 1.5
+ * font = Cantarell
  *
  * [commands]
  * reboot = sudo reboot
@@ -28,9 +30,28 @@ struct Config {
     std::string reboot_command = "systemctl reboot"; //!< [commands]
     std::string poweroff_command = "systemctl poweroff"; //!< [commands]
     std::vector<std::string> terminal = {"xterm", "-e"}; //!< [commands]
+    std::string terminal_line = "xterm -e"; //!< the text of `terminal`
+    std::string font = "Cantarell"; //!< [theme] font, a family of fontconfig
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
+
+/**
+ * @short The scale from the text of a setting.
+ *
+ * Nothing when the text (blanks at both ends are ignored) is not a number
+ * above 0 and up to 16.
+ */
+std::optional<double> parse_scale(const std::string& text);
+
+/**
+ * @short Whether the text is a name of a font that can be saved.
+ *
+ * It is not empty (blanks at both ends are ignored) and has no control
+ * character. Whether the family is installed is not checked: fontconfig
+ * gives a font that is close when it is not.
+ */
+bool valid_font(const std::string& text);
 
 /**
  * @short The files to read, the one with the lowest priority first.
@@ -74,13 +95,30 @@ Config parse_config(const std::vector<ConfigSource>& sources,
 Config load_config(const std::vector<std::string>& files,
                    std::vector<std::string>* problems = nullptr);
 
+//! A value of the ini file to write
+struct IniValue {
+    std::string section;
+    std::string key;
+    std::string value;
+};
+
+/**
+ * @short Write values to the file of the user.
+ *
+ * The file is made again from the values it has (a comment is lost, a line
+ * that was wrong is gone), with the given ones set. It is written to a
+ * temporary file first and renamed, so a failure leaves the old file. A name
+ * or a value that would break the file (a line break, an empty key, `=` in a
+ * key, `]` in a section) is refused and nothing is written. Returns false and
+ * tells why in `error`, when it is given.
+ */
+bool save_values(const std::string& file, const std::vector<IniValue>& values,
+                 std::string* error = nullptr);
+
 /**
  * @short Write the favorite applications to the file of the user.
  *
- * The file is made again from the values it has (a comment is lost, a line
- * that was wrong is gone), with `[dock] favorites` replaced. It is written to
- * a temporary file first and renamed, so a failure leaves the old file.
- * Returns false and tells why in `error`, when it is given.
+ * Sets `[dock] favorites` the way `save_values` does.
  */
 bool save_favorites(const std::string& file,
                     const std::vector<std::string>& favorites,
