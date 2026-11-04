@@ -97,7 +97,8 @@ std::string info_text(const Config& config,
     rv += "Scale of the theme: " + number_text(config.scale) +
           "\n"
           "Font: " +
-          config.font +
+          config.font + " " + number_text(config.font_size) +
+          (config.font_style.empty() ? "" : " " + config.font_style) +
           "\n"
           "Terminal: " +
           config.terminal_line +

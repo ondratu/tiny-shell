@@ -63,6 +63,24 @@ void Theme::set_font(const std::string& family)
     list.set_font_family(family);
 }
 
+void Theme::set_font_size(double size)
+{
+    widget.set_font_size(size);
+    wm_button.set_font_size(size);
+    wm_header.set_font_size(size);
+    entry.set_font_size(size);
+    list.set_font_size(size);
+}
+
+void Theme::set_font_style(const std::string& style)
+{
+    const std::string suffix = xft_style(style);
+    widget.set_font_style(suffix);
+    wm_button.set_font_style(suffix);
+    entry.set_font_style(suffix);
+    list.set_font_style(suffix);
+}
+
 void Theme::init() // TODO: screen, display, config...
 {
     widget.init();

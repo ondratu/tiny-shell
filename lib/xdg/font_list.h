@@ -30,6 +30,24 @@ std::vector<std::string> sort_families(std::vector<std::string> names);
 std::vector<std::string> font_families();
 
 /**
+ * @short Style names ready to show: each one once, "Regular" (or "Book")
+ * first, the others sorted.
+ *
+ * The names are compared without regard to the case of ASCII letters. An empty
+ * name is dropped.
+ */
+std::vector<std::string> sort_styles(std::vector<std::string> names);
+
+/**
+ * @short The styles of a family that the system has ("Regular", "Bold
+ * Italic"...), from fontconfig, sorted by `sort_styles`.
+ *
+ * The family is matched the way fontconfig does it (the case is ignored); a
+ * family that is not installed has no styles.
+ */
+std::vector<std::string> font_styles(const std::string& family);
+
+/**
  * @short The first characters that a font has, as UTF-8.
  *
  * For a font that has no letters of the Latin alphabet (a font of kanji or

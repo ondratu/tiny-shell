@@ -475,3 +475,51 @@ TEST_F(ConfigFilesTest, save_values_refuses_what_would_break_the_file)
     // nothing was written, not even the part that was right
     EXPECT_EQ(tiny::wm::load_config({file}).scale, 2.0);
 }
+
+TEST(ConfigTest, reads_the_size_and_the_style_of_the_font)
+{
+    const Config c = parse_config(
+            {{"a", "[theme]\nfont_size = 10.5\nfont_style = Bold Italic\n"}});
+
+    EXPECT_EQ(c.font_size, 10.5);
+    EXPECT_EQ(c.font_style, "Bold Italic");
+    EXPECT_EQ(parse_config({}).font_size, 12.0);
+    EXPECT_TRUE(parse_config({}).font_style.empty());
+}
+
+TEST(ConfigTest, a_wrong_size_keeps_the_default_and_an_empty_style_is_right)
+{
+    Strings problems;
+
+    const Config c = parse_config(
+            {{"a", "[theme]\nfont_size = huge\nfont_style =\n"}}, &problems);
+
+    EXPECT_EQ(c.font_size, 12.0);
+    EXPECT_TRUE(c.font_style.empty());
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("font_size"), std::string::npos);
+}
+
+TEST(ConfigTest, the_size_of_the_font_is_a_number_from_4_to_96)
+{
+    using tiny::wm::parse_font_size;
+
+    EXPECT_EQ(parse_font_size("12"), 12.0);
+    EXPECT_EQ(parse_font_size(" 4 "), 4.0);
+    EXPECT_EQ(parse_font_size("96"), 96.0);
+    EXPECT_EQ(parse_font_size("9.5"), 9.5);
+    EXPECT_FALSE(parse_font_size(""));
+    EXPECT_FALSE(parse_font_size("3.9"));
+    EXPECT_FALSE(parse_font_size("96.1"));
+    EXPECT_FALSE(parse_font_size("12pt"));
+    EXPECT_FALSE(parse_font_size("nan"));
+}
+
+TEST(ConfigTest, a_style_is_a_name_without_control_characters)
+{
+    using tiny::wm::valid_font_style;
+
+    EXPECT_TRUE(valid_font_style(""));
+    EXPECT_TRUE(valid_font_style("Bold Italic"));
+    EXPECT_FALSE(valid_font_style("Bold\nItalic"));
+}

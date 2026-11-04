@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <memory>
+#include <utility>
 
 namespace tiny::xdg {
 
@@ -54,6 +55,61 @@ void append_utf8(std::string& out, FcChar32 c)
 }
 
 } // namespace
+
+std::vector<std::string> sort_styles(std::vector<std::string> names)
+{
+    names.erase(std::remove(names.begin(), names.end(), std::string()),
+                names.end());
+    std::sort(names.begin(), names.end(), name_less);
+    names.erase(std::unique(names.begin(), names.end()), names.end());
+    // the plain face is the one that people look for first
+    const auto plain = std::find_if(names.begin(), names.end(),
+                                    [](const std::string& name) {
+                                        return !name_less(name, "Regular") &&
+                                               !name_less("Regular", name);
+                                    });
+    const auto book = std::find_if(
+            names.begin(), names.end(), [](const std::string& name) {
+                return !name_less(name, "Book") && !name_less("Book", name);
+            });
+    const auto first = plain != names.end() ? plain : book;
+    if (first != names.end()) {
+        std::rotate(names.begin(), first, first + 1);
+    }
+    return names;
+}
+
+std::vector<std::string> font_styles(const std::string& family)
+{
+    std::vector<std::string> styles;
+    if (family.empty()) {
+        return styles;
+    }
+    const std::unique_ptr<FcPattern, decltype(&FcPatternDestroy)> pattern(
+            FcPatternCreate(), &FcPatternDestroy);
+    const std::unique_ptr<FcObjectSet, decltype(&FcObjectSetDestroy)> objects(
+            FcObjectSetBuild(FC_STYLE, nullptr), &FcObjectSetDestroy);
+    if (!pattern || !objects ||
+        !FcPatternAddString(pattern.get(), FC_FAMILY,
+                            reinterpret_cast<const FcChar8*>(family.c_str()))) {
+        return styles;
+    }
+    std::unique_ptr<FcFontSet, decltype(&FcFontSetDestroy)> fonts(
+            FcFontList(nullptr, pattern.get(), objects.get()),
+            &FcFontSetDestroy);
+    if (!fonts) {
+        return styles;
+    }
+    for (int i = 0; i < fonts->nfont; ++i) {
+        FcChar8* style = nullptr;
+        if (FcPatternGetString(fonts->fonts[i], FC_STYLE, 0, &style) ==
+                    FcResultMatch &&
+            style != nullptr) {
+            styles.emplace_back(reinterpret_cast<const char*>(style));
+        }
+    }
+    return sort_styles(std::move(styles));
+}
 
 std::string font_sample(const FcCharSet* chars, size_t skip, size_t count)
 {

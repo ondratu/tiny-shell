@@ -7,7 +7,9 @@
 
 using tiny::xdg::font_families;
 using tiny::xdg::font_sample;
+using tiny::xdg::font_styles;
 using tiny::xdg::sort_families;
+using tiny::xdg::sort_styles;
 using Names = std::vector<std::string>;
 
 TEST(FontListTest, the_families_are_sorted_without_regard_to_case)
@@ -105,4 +107,46 @@ TEST(FontSampleTest, nothing_without_a_set)
     EXPECT_EQ(font_sample(nullptr, 0, 3), "");
     const Chars none{};
     EXPECT_EQ(font_sample(none.set, 0, 3), "");
+}
+
+TEST(FontListTest, the_styles_are_sorted_with_the_regular_one_first)
+{
+    EXPECT_EQ(sort_styles({"Italic", "Bold", "Regular", "bold italic"}),
+              (Names{"Regular", "Bold", "bold italic", "Italic"}));
+    EXPECT_EQ(sort_styles({"Italic", "Book", "Bold"}),
+              (Names{"Book", "Bold", "Italic"}));
+}
+
+TEST(FontListTest, regular_is_before_book_when_a_family_has_both)
+{
+    EXPECT_EQ(sort_styles({"Book", "Regular", "Bold"}),
+              (Names{"Regular", "Bold", "Book"}));
+}
+
+TEST(FontListTest, a_style_is_listed_once_and_an_empty_one_is_dropped)
+{
+    EXPECT_EQ(sort_styles({"Bold", "", "Bold"}), (Names{"Bold"}));
+    EXPECT_TRUE(sort_styles({}).empty());
+    EXPECT_TRUE(sort_styles({""}).empty());
+}
+
+TEST(FontListTest, a_family_that_is_not_installed_has_no_styles)
+{
+    EXPECT_TRUE(font_styles("No Such Family Hopefully 12345").empty());
+    EXPECT_TRUE(font_styles("").empty());
+}
+
+TEST(FontListTest, an_installed_family_has_styles_that_are_not_empty)
+{
+    const Names families = font_families();
+    if (families.empty()) {
+        GTEST_SKIP() << "no fonts";
+    }
+
+    const Names styles = font_styles(families.front());
+
+    EXPECT_FALSE(styles.empty());
+    for (const std::string& style : styles) {
+        EXPECT_FALSE(style.empty());
+    }
 }

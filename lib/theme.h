@@ -20,6 +20,14 @@ class Theme {
     //! The family of the font of all the styles; call before `init()`
     void set_font(const std::string& family);
 
+    //! The size in points at the scale 1, of all the styles; call before
+    //! `scale()` and `init()`
+    void set_font_size(double size);
+
+    //! The style of the font (e.g. "Italic") of the styles but the header,
+    //! which is bold; empty is the default; call before `init()`
+    void set_font_style(const std::string& style);
+
     // Scale all metrics and fonts (relative to the default theme)
     void scale(double factor);
 
