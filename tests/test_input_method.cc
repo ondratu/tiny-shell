@@ -85,7 +85,7 @@ class BuiltInInputMethodTest : public ::testing::Test {
 
 TEST_F(BuiltInInputMethodTest, a_letter_is_typed_in_utf8)
 {
-    XEvent e = key_event(window, XK_a);
+    const XEvent e = key_event(window, XK_a);
     KeySym symbol = NoSymbol;
 
     EXPECT_EQ(input->lookup(e.xkey, symbol), "a");
@@ -94,7 +94,7 @@ TEST_F(BuiltInInputMethodTest, a_letter_is_typed_in_utf8)
 
 TEST_F(BuiltInInputMethodTest, a_key_without_characters_gives_only_the_symbol)
 {
-    XEvent e = key_event(window, XK_Left);
+    const XEvent e = key_event(window, XK_Left);
     KeySym symbol = NoSymbol;
 
     EXPECT_TRUE(input->lookup(e.xkey, symbol).empty());
