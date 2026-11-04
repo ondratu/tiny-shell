@@ -83,9 +83,9 @@ class SettingsForm {
         std::string size = "12"; //!< in points at the scale 1
         std::string style;       //!< "" is the default style of the family
         //! The values of `[xft]` ("" is not set)
-        std::string antialias;
-        std::string hinting;
-        std::string rgba;
+        std::string antialias = "";
+        std::string hinting = "";
+        std::string rgba = "";
     };
 
     //! The sizes of the parts, at the scale 1

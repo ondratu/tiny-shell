@@ -145,7 +145,7 @@ wm::XftOption SettingsForm::xft_option(Field field)
 std::string SettingsForm::choice_label(Field field) const
 {
     for (const wm::XftChoice& c : wm::xft_choices(xft_option(field))) {
-        if (c.value == text(field)) {
+        if (text(field) == c.value) {
             return c.label;
         }
     }
@@ -659,11 +659,11 @@ bool SettingsForm::edit(TextField& field, Key pressed)
 //! The next (or the previous) value of a choice; the first one is the default
 void SettingsForm::step_choice(Field field, int direction)
 {
-    const auto& choices = wm::xft_choices(xft_option(field));
+    const wm::XftChoices choices = wm::xft_choices(xft_option(field));
     const auto n = static_cast<long>(choices.size());
     const auto found = std::find_if(
             choices.begin(), choices.end(),
-            [&](const wm::XftChoice& c) { return c.value == text(field); });
+            [&](const wm::XftChoice& c) { return text(field) == c.value; });
     const long at = found == choices.end() ? 0 : found - choices.begin();
     field_ref(field).set_text(
             choices[static_cast<size_t>((at + direction + n) % n)].value);

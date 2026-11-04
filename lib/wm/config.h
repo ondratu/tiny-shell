@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -53,8 +54,19 @@ enum class XftOption { Antialias, Hinting, Rgba };
 
 //! A value of `[xft]` and the name that a form shows for it
 struct XftChoice {
-    std::string value;
-    std::string label;
+    const char* value;
+    const char* label;
+};
+
+//! The values of an option, to loop over
+struct XftChoices {
+    const XftChoice* first;
+    const XftChoice* last;
+
+    const XftChoice* begin() const { return first; }
+    const XftChoice* end() const { return last; }
+    size_t size() const { return static_cast<size_t>(last - first); }
+    const XftChoice& operator[](size_t i) const { return first[i]; }
 };
 
 /**
@@ -63,7 +75,7 @@ struct XftChoice {
  * The first one is always "" (not set: the programs keep what the system
  * says), shown as "Default".
  */
-const std::vector<XftChoice>& xft_choices(XftOption option);
+XftChoices xft_choices(XftOption option);
 
 //! The key of the option in `[xft]`
 const char* xft_key(XftOption option);

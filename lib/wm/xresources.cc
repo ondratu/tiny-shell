@@ -63,6 +63,23 @@ std::vector<ResourceChange> xft_resources(XftOption option,
     return {{"Xft.rgba", value}};
 }
 
+std::vector<ResourceChange> xft_resources(const Config& config)
+{
+    std::vector<ResourceChange> rv;
+    const std::string* values[] = {&config.xft_antialias, &config.xft_hinting,
+                                   &config.xft_rgba};
+    for (const XftOption option :
+         {XftOption::Antialias, XftOption::Hinting, XftOption::Rgba}) {
+        const std::string& value = *values[static_cast<size_t>(option)];
+        if (!value.empty()) {
+            for (auto& change : xft_resources(option, value)) {
+                rv.push_back(std::move(change));
+            }
+        }
+    }
+    return rv;
+}
+
 bool publish_resources(::Display* display,
                        const std::vector<ResourceChange>& changes)
 {
