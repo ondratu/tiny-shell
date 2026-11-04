@@ -3,10 +3,11 @@
 #include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
 
-#include <deque>
 #include <map>
 #include <memory>
+#include <vector>
 #include <string>
+#include <utility>
 
 #include "display.h"
 #include "input_method.h"
@@ -27,13 +28,13 @@ namespace tiny {
 class XftWindow {
   public:
     struct Spec {
-        const char* title;
-        const char* res_name;  //!< `WM_CLASS` instance
-        const char* res_class; //!< `WM_CLASS` class
-        int width;
-        int height;
-        int min_width;
-        int min_height;
+        const char* title = "";
+        const char* res_name = "";  //!< `WM_CLASS` instance
+        const char* res_class = ""; //!< `WM_CLASS` class
+        int width = 0;
+        int height = 0;
+        int min_width = 0;
+        int min_height = 0;
         long events = 0;           //!< the events on top of the common ones
         bool input_method = false; //!< ask an input method for the typing
     };
@@ -122,8 +123,9 @@ class XftWindow {
 
     Atom delete_window = None;
     std::unique_ptr<InputMethod> input;
-    std::deque<XftColor> colors; //!< a deque keeps the references valid
-    std::map<std::string, XftFont*> fonts;
+    std::vector<std::unique_ptr<XftColor>> colors; //!< the references stay
+    //! (family, pixel size), or (Xft name, 0): a pixel size is never 0
+    std::map<std::pair<std::string, int>, XftFont*> fonts;
     bool running = true;
 };
 

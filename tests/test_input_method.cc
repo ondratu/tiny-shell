@@ -1,5 +1,10 @@
 #include "helpers.h"
 
+#include <clocale>
+#include <cstdlib>
+
+#include <memory>
+
 #include "input_method.h"
 
 TEST(Latin1Test, ascii_stays_and_high_bytes_become_utf8)
@@ -22,7 +27,7 @@ class InputMethodTest : public ::testing::Test {
 
 TEST_F(InputMethodTest, a_letter_gives_its_character_and_symbol)
 {
-    XEvent e = key_event(window, XK_a);
+    const XEvent e = key_event(window, XK_a);
     KeySym symbol = NoSymbol;
 
     const std::string typed = input.lookup(e.xkey, symbol);
@@ -35,7 +40,7 @@ TEST_F(InputMethodTest, a_letter_gives_its_character_and_symbol)
 
 TEST_F(InputMethodTest, a_key_without_characters_gives_the_symbol_only)
 {
-    XEvent e = key_event(window, XK_Left);
+    const XEvent e = key_event(window, XK_Left);
     KeySym symbol = NoSymbol;
 
     EXPECT_TRUE(input.lookup(e.xkey, symbol).empty());
@@ -46,5 +51,59 @@ TEST_F(InputMethodTest, focus_can_change_with_or_without_a_method)
 {
     input.set_focus(true);
     input.set_focus(false);
+    SUCCEED();
+}
+
+// The built-in input method of Xlib ("@im=none") gives UTF-8 and needs no
+// server; where the locale is not supported the tests are skipped
+class BuiltInInputMethodTest : public ::testing::Test {
+  protected:
+    void SetUp() override
+    {
+        setenv("XMODIFIERS", "@im=none", 1);
+        setlocale(LC_CTYPE, "C.UTF-8");
+        window = XCreateSimpleWindow(tiny::get_display(), root_window(), 0, 0,
+                                     10, 10, 0, 0, 0);
+        input = std::make_unique<tiny::InputMethod>(tiny::get_display(),
+                                                    window);
+        if (!input->available()) {
+            GTEST_SKIP() << "no input method in this locale";
+        }
+    }
+
+    void TearDown() override
+    {
+        input.reset();
+        XDestroyWindow(tiny::get_display(), window);
+        unsetenv("XMODIFIERS");
+        setlocale(LC_CTYPE, "C");
+    }
+
+    ::Window window = None;
+    std::unique_ptr<tiny::InputMethod> input;
+};
+
+TEST_F(BuiltInInputMethodTest, a_letter_is_typed_in_utf8)
+{
+    XEvent e = key_event(window, XK_a);
+    KeySym symbol = NoSymbol;
+
+    EXPECT_EQ(input->lookup(e.xkey, symbol), "a");
+    EXPECT_EQ(symbol, static_cast<KeySym>(XK_a));
+}
+
+TEST_F(BuiltInInputMethodTest, a_key_without_characters_gives_only_the_symbol)
+{
+    XEvent e = key_event(window, XK_Left);
+    KeySym symbol = NoSymbol;
+
+    EXPECT_TRUE(input->lookup(e.xkey, symbol).empty());
+    EXPECT_EQ(symbol, static_cast<KeySym>(XK_Left));
+}
+
+TEST_F(BuiltInInputMethodTest, focus_goes_to_the_input_context)
+{
+    input->set_focus(true);
+    input->set_focus(false);
     SUCCEED();
 }

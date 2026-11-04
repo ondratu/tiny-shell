@@ -233,7 +233,7 @@ TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
 TEST_F(ManagerTest, the_window_actions_walk_through_the_windows)
 {
     manage_three();
-    WmWindow* first = manager->active;
+    const WmWindow* first = manager->active;
 
     manager->get_actions().run("next-window");
     EXPECT_NE(manager->active, first);
@@ -254,7 +254,7 @@ class VariantGuard {
 
 TEST_F(ManagerTest, the_theme_actions_change_the_colors_of_the_shown_widgets)
 {
-    VariantGuard guard;
+    const VariantGuard guard;
     start();
     const uint32_t dark = tiny::theme.widget.normal_bg;
     run_loop();
@@ -280,7 +280,7 @@ TEST_F(ManagerTest, the_theme_actions_change_the_colors_of_the_shown_widgets)
 
 TEST_F(ManagerTest, the_frames_of_the_windows_follow_the_variant)
 {
-    VariantGuard guard;
+    const VariantGuard guard;
     add_client();
     start();
     run_loop();

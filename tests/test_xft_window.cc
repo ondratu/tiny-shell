@@ -28,6 +28,7 @@ class TestWindow : public tiny::XftWindow {
     using XftWindow::unclip;
     using XftWindow::update;
 
+  protected:
     void paint() override
     {
         ++painted;
@@ -50,6 +51,7 @@ class TestWindow : public tiny::XftWindow {
         released = e.button;
     }
 
+  public:
     XftColor* black = nullptr;
     XftColor* white = nullptr;
     int painted = 0;
@@ -82,7 +84,7 @@ XEvent client_message(::Window window, Atom type, long data)
 
 TEST(XftWindowTest, the_window_has_the_size_and_the_hints_of_the_spec)
 {
-    TestWindow w;
+    const TestWindow w;
     ::Display* display = tiny::get_display();
 
     XWindowAttributes a;
@@ -113,7 +115,7 @@ TEST(XftWindowTest, update_paints_and_shows_the_buffer_in_the_window)
     XSync(tiny::get_display(), False);
 
     EXPECT_EQ(w.painted, 1);
-    Image image(w.get_window(), 120, 80);
+    const Image image(w.get_window(), 120, 80);
     EXPECT_EQ(image.at(15, 15), 0u);
     EXPECT_EQ(image.at(60, 60), 0xFFFFFFu);
 }
@@ -206,7 +208,7 @@ TEST(XftWindowTest, another_message_does_not_close_the_window)
 TEST(XftWindowTest, colors_are_allocated_and_stay_valid)
 {
     TestWindow w;
-    XftColor& first = w.alloc_color(255, 0, 0);
+    const XftColor& first = w.alloc_color(255, 0, 0);
     for (int i = 0; i < 20; ++i) {
         w.alloc_gray(static_cast<unsigned>(i));
     }
@@ -217,11 +219,11 @@ TEST(XftWindowTest, colors_are_allocated_and_stay_valid)
 TEST(XftWindowTest, fonts_are_cached_by_family_and_size_and_closed_together)
 {
     TestWindow w;
-    XftFont* a = w.font("sans", 12);
+    const XftFont* a = w.font("sans", 12);
     ASSERT_NE(a, nullptr);
     EXPECT_EQ(w.font("sans", 12), a);
     EXPECT_NE(w.font("sans", 20), a);
-    XftFont* named = w.font_by_name("sans-10");
+    const XftFont* named = w.font_by_name("sans-10");
     ASSERT_NE(named, nullptr);
     EXPECT_EQ(w.font_by_name("sans-10"), named);
     EXPECT_EQ(w.cached_fonts(), 3u);
@@ -255,7 +257,7 @@ TEST(XftWindowTest,
     ASSERT_NE(f, nullptr);
 
     w.text_in(nullptr, *w.black, {0, 0, 50, 20}, 0, "x"); // no font: nothing
-    w.paint();
+    w.update();
     w.text_in(f, *w.black, {0, 30, 50, 20}, 2, "Hello world", 1);
     w.frame(*w.black, {60, 30, 50, 20}, 2);
     w.clip({0, 0, 5, 5});
