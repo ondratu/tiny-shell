@@ -2760,6 +2760,11 @@ TEST_F(ManagerFavoritesTest,
     manager->wm_dock.on_launch("epsilon.desktop");
 
     EXPECT_FALSE(manager->wm_launcher.is_open());
+    // the started program must be done before the directory goes away
+    for (int i = 0; i < 200 && !std::filesystem::exists(root / "epsilon");
+         ++i) {
+        usleep(10 * 1000);
+    }
 }
 
 TEST_F(ManagerFavoritesTest,
