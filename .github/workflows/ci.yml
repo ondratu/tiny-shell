@@ -205,7 +205,8 @@ jobs:
         # purpose.
         run: |
           max=450000
-          make CXX=clang++-19 CXXFLAGS="-Os -flto -ffunction-sections -fdata-sections" \
+          make CXX=clang++-19 AR=llvm-ar-19 \
+              CXXFLAGS="-Os -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell
           size build/tiny-shell | tee size.txt
           text=$(awk 'NR==2 {print $1}' size.txt)
