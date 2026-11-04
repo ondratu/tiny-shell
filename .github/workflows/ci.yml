@@ -31,7 +31,7 @@ jobs:
       - run: pre-commit run --all-files --show-diff-on-failure
 
   lint:
-    name: clang-tidy 22
+    name: clang-tidy 22 (checks)
     needs: pre-commit
     runs-on: ubuntu-24.04
     steps:
@@ -44,7 +44,23 @@ jobs:
               sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
           sudo apt-get install -y clang-tidy-22 $DEPS
-      - run: make lint CLANG_TIDY=clang-tidy-22
+      - run: make lint-fast CLANG_TIDY=clang-tidy-22
+
+  analyze:
+    name: clang-tidy 22 (analyzer)
+    needs: pre-commit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install clang-tidy 22 and the dependencies
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key |
+              sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" |
+              sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-22 $DEPS
+      - run: make lint-analyze CLANG_TIDY=clang-tidy-22
 
   cppcheck:
     name: cppcheck
