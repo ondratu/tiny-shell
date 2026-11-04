@@ -53,6 +53,25 @@ std::optional<double> parse_scale(const std::string& text)
     return scale;
 }
 
+std::optional<double> parse_font_size(const std::string& text)
+{
+    const std::string trimmed(trim(text));
+    char* end = nullptr;
+    const double size = strtod(trimmed.c_str(), &end);
+    if (end == trimmed.c_str() || *end != '\0' || !(size >= min_font_size) ||
+        size > max_font_size) {
+        return std::nullopt;
+    }
+    return size;
+}
+
+bool valid_font_style(const std::string& text)
+{
+    return std::none_of(text.begin(), text.end(), [](char c) {
+        return std::iscntrl(static_cast<unsigned char>(c)) != 0;
+    });
+}
+
 bool valid_font(const std::string& text)
 {
     const std::string_view font = trim(text);
@@ -129,6 +148,20 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.font = *value;
         } else {
             problem("[theme] font must be the name of a font family");
+        }
+    }
+    if (const auto value = ini.get("theme", "font_size")) {
+        if (const auto size = parse_font_size(*value)) {
+            config.font_size = *size;
+        } else {
+            problem("[theme] font_size must be a number from 4 to 96");
+        }
+    }
+    if (const auto value = ini.get("theme", "font_style")) {
+        if (valid_font_style(*value)) {
+            config.font_style = *value;
+        } else {
+            problem("[theme] font_style must be the name of a style");
         }
     }
     if (const auto value = ini.get("commands", "reboot"); value) {

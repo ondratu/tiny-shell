@@ -325,3 +325,42 @@ TEST(ThemeFontTest, a_family_with_special_characters_still_opens_a_font)
 
     EXPECT_NE(t.widget.get_font(), nullptr);
 }
+
+TEST(ThemeFontTest, xft_style_asks_for_a_style_by_its_name)
+{
+    EXPECT_EQ(tiny::xft_style(""), "");
+    EXPECT_EQ(tiny::xft_style("Bold Italic"), ":style=Bold Italic");
+    EXPECT_EQ(tiny::xft_style("A-B,C"), ":style=A\\-B\\,C");
+}
+
+TEST(ThemeFontTest, the_size_of_the_font_is_set_before_the_scale)
+{
+    tiny::Theme t;
+
+    t.set_font_size(10);
+    t.scale(2);
+    t.init();
+
+    EXPECT_NE(t.widget.get_font(), nullptr);
+    // 10 points at the scale 2 is 20 points: the font is higher than the one
+    // of 10 points
+    tiny::Theme small;
+    small.set_font_size(10);
+    small.scale(1);
+    small.init();
+    EXPECT_GT(t.widget.get_font()->height, small.widget.get_font()->height);
+}
+
+TEST(ThemeFontTest, the_style_is_for_all_the_styles_but_the_header)
+{
+    tiny::Theme t;
+
+    t.set_font_style("Bold");
+    t.init();
+
+    EXPECT_NE(t.widget.get_font(), nullptr);
+    EXPECT_NE(t.entry.get_font(), nullptr);
+    EXPECT_NE(t.list.get_font(), nullptr);
+    EXPECT_NE(t.wm_button.get_font(), nullptr);
+    EXPECT_NE(t.wm_header.get_font(), nullptr);
+}

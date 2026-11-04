@@ -15,6 +15,8 @@ namespace tiny::wm {
  * [theme]
  * scale = 1.5
  * font = Cantarell
+ * font_size = 12
+ * font_style = Bold
  *
  * [commands]
  * reboot = sudo reboot
@@ -32,6 +34,8 @@ struct Config {
     std::vector<std::string> terminal = {"xterm", "-e"}; //!< [commands]
     std::string terminal_line = "xterm -e"; //!< the text of `terminal`
     std::string font = "Cantarell"; //!< [theme] font, a family of fontconfig
+    double font_size = 12;          //!< [theme] font_size, points at scale 1
+    std::string font_style;         //!< [theme] font_style, "" is the default
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
@@ -43,6 +47,26 @@ struct Config {
  * above 0 and up to 16.
  */
 std::optional<double> parse_scale(const std::string& text);
+
+//! The limits of the size of the font, in points
+constexpr double min_font_size = 4;
+constexpr double max_font_size = 96;
+
+/**
+ * @short The size of the font from the text of a setting.
+ *
+ * Nothing when the text (blanks at both ends are ignored) is not a number from
+ * `min_font_size` to `max_font_size`.
+ */
+std::optional<double> parse_font_size(const std::string& text);
+
+/**
+ * @short Whether the text is a style of a font that can be saved.
+ *
+ * Empty (the default style) or a name without a control character, like
+ * "Bold Italic".
+ */
+bool valid_font_style(const std::string& text);
 
 /**
  * @short Whether the text is a name of a font that can be saved.

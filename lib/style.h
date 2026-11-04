@@ -22,6 +22,12 @@ int scaled(int value, double factor);
 std::string xft_name(const std::string& family, double size,
                      const std::string& style = "");
 
+/**
+ * @short The part of an Xft name that asks for a style by its name
+ * (`:style=Bold Italic`), escaped like the family; empty for an empty style.
+ */
+std::string xft_style(const std::string& style);
+
 class Style {
     /* State heredity
      * Invisible - widget is not visible (out of allowed drawing area)
@@ -69,6 +75,17 @@ class Style {
 
     //! The family of the font; takes effect at the next `init()`
     void set_font_family(const std::string& family) { font_family = family; }
+
+    //! The size at the scale 1, in points; takes effect at the next `scale()`
+    //! and `init()`
+    void set_font_size(double size)
+    {
+        base_font_size = size;
+        font_size = size;
+    }
+
+    //! The style of the font as the part of an Xft name, see `xft_style()`
+    void set_font_style(const std::string& style) { font_style = style; }
 
     std::string get_xft_fg(uint8_t state) const;
 

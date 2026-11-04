@@ -43,16 +43,32 @@ int scaled(int value, double factor)
     return static_cast<int>(lround(value * factor));
 }
 
+namespace {
+
+//! The text with a backslash before the characters of the fontconfig syntax
+std::string escaped(const std::string& text)
+{
+    std::string rv;
+    for (const char c : text) {
+        if (c == '\\' || c == '-' || c == ':' || c == ',') {
+            rv += '\\';
+        }
+        rv += c;
+    }
+    return rv;
+}
+
+} // namespace
+
+std::string xft_style(const std::string& style)
+{
+    return style.empty() ? "" : ":style=" + escaped(style);
+}
+
 std::string xft_name(const std::string& family, double size,
                      const std::string& style)
 {
-    std::string name;
-    for (const char c : family) {
-        if (c == '\\' || c == '-' || c == ':' || c == ',') {
-            name += '\\';
-        }
-        name += c;
-    }
+    const std::string name = escaped(family);
     char number[32];
     snprintf(number, sizeof number, "-%g", size);
     return name + number + style;
