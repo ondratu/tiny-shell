@@ -61,7 +61,8 @@ Implemented:
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
   (Super).
 - **Settings:** `tiny-settings`, a small form that changes the font, the
-  terminal and the scale in the configuration file of the user (see below).
+  terminal, the scale and the rendering of text (antialiasing, hinting,
+  subpixel order) in the configuration file of the user (see below).
 - **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
   and shows a specimen of each one (see below).
 - **Other:** one `poll()` event loop for X events, signals and timers
@@ -172,6 +173,16 @@ font_size = 12
 # is the default style. The title bars are always bold.
 font_style = Bold
 
+[xft]
+# How the programs draw text, put into the X resources Xft.* when tiny-shell
+# starts. Empty (or no key) means "not set": the system decides.
+# yes or no
+antialias = yes
+# none, slight, medium or full
+hinting = slight
+# The order of the subpixels of the display: none, rgb, bgr, vrgb or vbgr
+rgba = rgb
+
 [commands]
 # Restart and Shutdown in the main menu (these are the defaults)
 reboot = systemctl reboot
@@ -199,7 +210,7 @@ stderr and leaves the old file as it was. The file says so at the top.
 ### Settings
 
 `build/tiny-settings` (made by `make`) changes the font (with its size and
-style), the terminal and the scale. It shows the values in use now (the global
+style), the terminal, the scale and the rendering of text. It shows the values in use now (the global
 file and the one of the user together). A field has a cursor: the arrows,
 Home, End, Backspace and Delete work, and a click puts the cursor where the
 pointer is. Tab moves between the fields. A field with a wrong value turns
@@ -215,12 +226,28 @@ size field, and the arrows or a click change the style in the style field (it
 offers the styles that the family has). Select (or Return) takes the three
 into the form, Cancel (or Escape) goes back and changes nothing.
 
+The rows Antialias, Hinting and Subpixel are choices, not text: the left and
+right arrows, Space and a click go through the values, Backspace goes back to
+Default. Default means that nothing is set and the programs keep what the
+system (fontconfig) says. They set how the programs draw text, the way a
+GNOME settings daemon does it for GTK, but through the X resources `Xft.antialias`,
+`Xft.hinting`, `Xft.hintstyle` and `Xft.rgba`, which Xft (and so tiny-shell
+and the programs that use Xft or read the resources, like Qt on X11) reads
+when a program draws its first text. Save puts them into the
+`RESOURCE_MANAGER` property of the root window at once (the other resources
+there stay), so the programs that you start later use them; a program that
+runs keeps its look until it is started again. tiny-shell also puts the
+values of the file there when it starts, before it opens its first font.
+GTK programs read their own channels (XSETTINGS, GSettings), which are not
+set by this.
+
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
-`font_style`, `[theme] scale`, `[commands] terminal`) to the file of the user, so the others still
+`font_style`, `[theme] scale`, `[commands] terminal`, `[xft] antialias`,
+`hinting`, `rgba`) to the file of the user, so the others still
 come from the global file, in the way that is described above (the
 comments of the file are lost), and closes the program. Cancel or Escape
 closes it and writes nothing. tiny-shell reads the file only when it starts, so
-a change is seen after you log out and in again.
+a change of the rest is seen after you log out and in again.
 
 ### The main menu
 

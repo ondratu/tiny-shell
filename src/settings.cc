@@ -1,13 +1,18 @@
-// tiny-settings: changes the font, the terminal and the scale of tiny-shell.
+// tiny-settings: changes the font, the terminal, the scale and the rendering
+// of text of tiny-shell.
 //
 // The form has the fields of the font, its size and style, the terminal and
-// the scale; a field has a cursor (the arrows, Home, End, Delete and the
+// the scale, and the choices of antialiasing, hinting and subpixel order of
+// the text of the programs (the arrows, Space and a click go through them);
+// a field has a cursor (the arrows, Home, End, Delete and the
 // pointer move it). The button next to the font opens a list of the fonts of
 // the system (type to search it) with the size and the style of the font and
-// a preview of a text in them. Save writes the three values to the
-// configuration file of the user (never the global one) and closes the
-// program; tiny-shell reads the file when it starts, so a change is seen after
-// the next login. Escape and Cancel close the program without writing.
+// a preview of a text in them. Save writes the values to the configuration
+// file of the user (never the global one) and closes the program; tiny-shell
+// reads the file when it starts, so a change is seen after the next login. The
+// rendering of text is also put into the X resources (Xft.*) at once, so the
+// programs that start later use it. Escape and Cancel close the program
+// without writing.
 //
 // The text is drawn by Xft into a pixmap that is copied to the window, so the
 // window does not flicker. What can be decided without X (the fields, the
@@ -36,6 +41,7 @@
 #include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
+#include "wm/xresources.h"
 #include "x_util.h"
 #include "xdg/font_list.h"
 
@@ -52,7 +58,8 @@ constexpr size_t font_cache_limit = 64;
 constexpr int start_height = 600;
 constexpr int start_width = 560;
 
-constexpr const char* hint = "Takes effect after you log in again.";
+constexpr const char* hint =
+        "Applies after login; the text options in new programs at once.";
 
 XRenderColor render_color(unsigned red, unsigned green, unsigned blue)
 {
@@ -77,6 +84,25 @@ std::string number_text(double value)
     return text;
 }
 
+constexpr tiny::wm::XftOption xft_options[] = {tiny::wm::XftOption::Antialias,
+                                               tiny::wm::XftOption::Hinting,
+                                               tiny::wm::XftOption::Rgba};
+
+//! The value of an option of `[xft]` in the form
+const std::string& xft_value(const SettingsForm::Values& v,
+                             tiny::wm::XftOption option)
+{
+    switch (option) {
+        case tiny::wm::XftOption::Antialias:
+            return v.antialias;
+        case tiny::wm::XftOption::Hinting:
+            return v.hinting;
+        case tiny::wm::XftOption::Rgba:
+            break;
+    }
+    return v.rgba;
+}
+
 class SettingsApp {
   public:
     SettingsApp(tiny::Display& display_arg, const tiny::wm::Config& config,
@@ -87,8 +113,14 @@ class SettingsApp {
         file(std::move(file_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
-        initial{config.font, config.terminal_line, number_text(config.scale),
-                number_text(config.font_size), config.font_style},
+        initial{config.font,
+                config.terminal_line,
+                number_text(config.scale),
+                number_text(config.font_size),
+                config.font_style,
+                config.xft_antialias,
+                config.xft_hinting,
+                config.xft_rgba},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles)
     {
         Visual* visual = DefaultVisual(display, screen);
@@ -400,15 +432,42 @@ class SettingsApp {
             if (v.style != initial.style) {
                 changed.push_back({"theme", "font_style", v.style});
             }
+            for (const tiny::wm::XftOption option : xft_options) {
+                if (xft_value(v, option) != xft_value(initial, option)) {
+                    changed.push_back({"xft", tiny::wm::xft_key(option),
+                                       xft_value(v, option)});
+                }
+            }
             if (v.terminal != initial.terminal) {
                 changed.push_back({"commands", "terminal", v.terminal});
             }
             if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
+                publish_xft(v);
                 return true;
             }
         }
         form.reject("Not saved: " + why);
         return false;
+    }
+
+    //! Put the changed rendering of text into the X resources, where the
+    //! programs that start later find it; a failure is not worth stopping
+    //! for, the file has the values and tiny-shell publishes them at login
+    void publish_xft(const SettingsForm::Values& v)
+    {
+        std::vector<tiny::wm::ResourceChange> changes;
+        for (const tiny::wm::XftOption option : xft_options) {
+            if (xft_value(v, option) != xft_value(initial, option)) {
+                for (auto& c :
+                     tiny::wm::xft_resources(option, xft_value(v, option))) {
+                    changes.push_back(std::move(c));
+                }
+            }
+        }
+        if (!changes.empty() &&
+            !tiny::wm::publish_resources(display, changes)) {
+            fprintf(stderr, "tiny-settings: can't change RESOURCE_MANAGER\n");
+        }
     }
 
     void present()
@@ -548,6 +607,24 @@ class SettingsApp {
         text_in(ui_font, dim, second, 0, note);
     }
 
+    //! A choice: the name of its value, an arrow at each end (a click on the
+    //! left half goes back, on the right half goes on)
+    void paint_choice(const tiny::Rect& r, const std::string& label,
+                      bool focused)
+    {
+        fill(field, r);
+        frame(focused ? accent : rule, r);
+        const std::string back = "\xE2\x80\xB9";
+        const std::string next = "\xE2\x80\xBA";
+        const int padding = metrics.padding;
+        text_in(ui_font, dim, r, padding, back);
+        text_in(ui_font, text_color, r,
+                padding + text_width(ui_font, back) + padding, label);
+        text_in(ui_font, dim, r,
+                std::max(0, r.width - padding - text_width(ui_font, next)),
+                next);
+    }
+
     void paint_form()
     {
         const struct {
@@ -557,11 +634,20 @@ class SettingsApp {
                     {SettingsForm::Field::Size, "Size"},
                     {SettingsForm::Field::Style, "Style"},
                     {SettingsForm::Field::Terminal, "Terminal"},
-                    {SettingsForm::Field::Scale, "Scale"}};
+                    {SettingsForm::Field::Scale, "Scale"},
+                    {SettingsForm::Field::Antialias, "Antialias"},
+                    {SettingsForm::Field::Hinting, "Hinting"},
+                    {SettingsForm::Field::Rgba, "Subpixel"}};
         for (const auto& row : rows) {
             text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
-            paint_field(form.field_rect(row.id), form.field(row.id),
-                        form.focus() == row.id, !form.problem(row.id).empty());
+            const tiny::Rect r = form.field_rect(row.id);
+            if (SettingsForm::is_choice(row.id)) {
+                paint_choice(r, form.choice_label(row.id),
+                             form.focus() == row.id);
+                continue;
+            }
+            paint_field(r, form.field(row.id), form.focus() == row.id,
+                        !form.problem(row.id).empty());
         }
         paint_button(form.choose_rect(), "Choose…", true);
 
@@ -702,10 +788,11 @@ int main(int argc, char** argv)
         const bool help = std::strcmp(argv[1], "--help") == 0;
         fprintf(help ? stdout : stderr,
                 "usage: %s\nChanges the font (its size and style), the "
-                "terminal "
-                "and the scale of tiny-shell.\nThe settings are written to the "
-                "configuration "
-                "file of the user and are used\nafter the next login.\n",
+                "terminal, the scale of tiny-shell and the rendering of text "
+                "(antialiasing, hinting, subpixel order).\nThe settings are "
+                "written to the configuration file of the user and are used\n"
+                "after the next login; the rendering of text is also used "
+                "by the programs that start later.\n",
                 argv[0]);
         return help ? EXIT_SUCCESS : 2;
     }
