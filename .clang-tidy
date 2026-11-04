@@ -1,9 +1,10 @@
 # Strict, with the checks that do not fit this project switched off. Every
 # switched off check has a reason; revisit them when the reason is gone.
+# The slow analyzer (clang-analyzer-*) is not here: `make lint-analyze` runs it
+# apart, on lib/ and src/ only.
 Checks: >
   -*,
   bugprone-*,
-  clang-analyzer-*,
   cert-*,
   misc-*,
   modernize-*,

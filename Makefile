@@ -75,7 +75,8 @@ OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: FORCE all examples clean check coverage format lint asan cppcheck help
+.PHONY: FORCE all examples clean check coverage format lint lint-fast \
+    lint-analyze asan cppcheck help
 .DELETE_ON_ERROR:
 
 all: $(TARGET) $(FONTS) $(SETTINGS)
@@ -86,7 +87,9 @@ help:
 	@echo "make check      run the unit tests (against Xvfb)"
 	@echo "make coverage   run the tests and print the coverage table"
 	@echo "make asan       run the tests with AddressSanitizer and UBSan"
-	@echo "make lint       static analysis with clang-tidy"
+	@echo "make lint       static analysis with clang-tidy (lint-fast + lint-analyze)"
+	@echo "make lint-fast  clang-tidy checks without the slow analyzer, all sources"
+	@echo "make lint-analyze  clang-tidy analyzer (clang-analyzer-*), lib/ and src/"
 	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
@@ -225,12 +228,23 @@ format:
 CLANG_TIDY ?= tools/run-tool.sh clang-tidy
 LINT_FLAGS = -std=c++17 -I./lib -isystem ./lib/third_party $(SYS_CFLAGS)
 LINT_SRC = $(LIB_SRC) $(wildcard src/*.cc examples/*.cc)
+# The path-sensitive analyzer (clang-analyzer-*) takes over 90 % of the time,
+# and by far the most on the googletest macros, so it runs only on the library
+# and the programs; every other check runs on all the sources.
+ANALYZE_SRC = $(LIB_SRC) $(wildcard src/*.cc)
 
-lint: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
+lint: lint-fast lint-analyze
+
+lint-fast: $(BUILD)/.pkg_check $(BUILD)/.gtest_check
 	@printf '%s\n' $(LINT_SRC) | xargs -P $$(nproc) -I{} \
 	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS)
 	@printf '%s\n' $(TEST_SRC) | xargs -P $$(nproc) -I{} \
-	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) $(GTEST_CFLAGS) -I./tests
+	    $(CLANG_TIDY) --quiet {} -- $(LINT_FLAGS) \
+	    $(GTEST_CFLAGS) -I./tests
+
+lint-analyze: $(BUILD)/.pkg_check
+	@printf '%s\n' $(ANALYZE_SRC) | xargs -P $$(nproc) -I{} \
+	    $(CLANG_TIDY) --quiet '--checks=-*,clang-analyzer-*' {} -- $(LINT_FLAGS)
 
 # A second opinion next to clang-tidy, part of CI and of the pre-push hook.
 # The tests are left out (cppcheck does not know the googletest macros) and so
