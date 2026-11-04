@@ -80,7 +80,7 @@ void XftWindow::create(const Spec& spec)
     XSetWMProtocols(display, window, &delete_window, 1);
 
     if (spec.input_method) {
-        input = std::make_unique<InputMethod>(display, window);
+        input = std::make_unique<InputMethod>(display, window, true);
     }
 
     new_buffer();
@@ -190,6 +190,7 @@ XftColor& XftWindow::alloc_color(unsigned red, unsigned green, unsigned blue)
 
 XftFont* XftWindow::font(const std::string& family, int pixel_size)
 {
+    pixel_size = std::max(1, pixel_size); // 0 is the key of the names
     const auto key = std::make_pair(family, pixel_size);
     const auto found = fonts.find(key);
     if (found != fonts.end()) {

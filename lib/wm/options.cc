@@ -1,23 +1,12 @@
 #include "wm/options.h"
 
-#include <cstdio>
+#include "text.h"
 
 #ifndef TINY_SHELL_VERSION
 #define TINY_SHELL_VERSION "unknown"
 #endif
 
 namespace tiny::wm {
-
-namespace {
-
-std::string number_text(double value)
-{
-    char text[32];
-    snprintf(text, sizeof(text), "%g", value);
-    return text;
-}
-
-} // namespace
 
 Options parse_options(const std::vector<std::string>& args)
 {

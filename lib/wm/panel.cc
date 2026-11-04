@@ -97,6 +97,9 @@ void Panel::add_applet(tiny::Widget* applet, Side side)
     if (!is_realized) {
         return error("tiny::wm::Panel must be realized");
     }
+    if (applet == nullptr || applet->get_realized()) { // null, or added already
+        return error("tiny::wm::Panel: wrong applet");
+    }
     if (side == Side::Left) {
         push_start(applet);
     } else {

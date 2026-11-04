@@ -18,7 +18,11 @@ std::string_view trim(std::string_view text);
 std::vector<std::string> split(std::string_view list, char separator,
                                bool trim_items = false);
 
-//! The letters of ASCII in lower case, the other bytes as they are
+//! The letters of ASCII in lower case, the other bytes as they are (whatever
+//! the locale is)
 std::string lower(std::string_view text);
+
+//! A number as it is written in the files: 1.5, not 1.500000
+std::string number_text(double value);
 
 } // namespace tiny

@@ -14,7 +14,7 @@ namespace tiny::wm {
  * An action is a function without arguments. The shell registers its own
  * ("logout", "run-dialog", "next-window"...), and the menus, the key bindings
  * and the scripts (later) only know the names. `run()` also understands
- * `exec:<command>` (a shell command line), which needs no registration.
+ * `exec:<command>` (words are a program with arguments, anything the shell understands goes to the shell), which needs no registration.
  */
 class ActionRegistry {
   public:

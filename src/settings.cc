@@ -35,6 +35,7 @@
 #include "display.h"
 #include "entry.h"
 #include "app/settings_form.h"
+#include "text.h"
 #include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
@@ -58,14 +59,6 @@ constexpr int start_width = 560;
 
 constexpr const char* hint =
         "Applies after login; the text options in new programs at once.";
-
-//! The scale as it is written in the file: 1.5, not 1.500000
-std::string number_text(double value)
-{
-    char text[32];
-    snprintf(text, sizeof text, "%g", value);
-    return text;
-}
 
 constexpr tiny::wm::XftOption xft_options[] = {tiny::wm::XftOption::Antialias,
                                                tiny::wm::XftOption::Hinting,
@@ -94,8 +87,9 @@ class SettingsApp : public tiny::XftWindow {
         file(std::move(file_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
-        initial{config.font, config.terminal_line, number_text(config.scale),
-                number_text(config.font_size), config.font_style,
+        initial{config.font, config.terminal_line,
+                tiny::number_text(config.scale),
+                tiny::number_text(config.font_size), config.font_style,
                 config.xft_antialias, config.xft_hinting, config.xft_rgba},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
