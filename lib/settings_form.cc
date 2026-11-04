@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <iterator>
 #include <utility>
 
@@ -39,18 +40,6 @@ bool equal_names(const std::string& a, const std::string& b)
                       [](char x, char y) { return lower(x) == lower(y); });
 }
 
-//! The text without its last character (UTF-8 can take more bytes)
-void erase_last_character(std::string& text)
-{
-    while (!text.empty()) {
-        const auto last = static_cast<unsigned char>(text.back());
-        text.pop_back();
-        if ((last & 0xC0) != 0x80) {
-            break;
-        }
-    }
-}
-
 //! A typed text without the control characters (Return, Tab, Escape...)
 std::string printable(const std::string& text)
 {
@@ -64,9 +53,20 @@ std::string printable(const std::string& text)
     return rv;
 }
 
-constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
-                                          SettingsForm::Field::Terminal,
-                                          SettingsForm::Field::Scale};
+//! A size without the zeros that a number would have at the end ("12", "9.5")
+std::string size_text(double size)
+{
+    char text[32];
+    snprintf(text, sizeof text, "%g", size);
+    return text;
+}
+
+constexpr SettingsForm::Field fields[] = {
+        SettingsForm::Field::Font, SettingsForm::Field::Size,
+        SettingsForm::Field::Style, SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale};
+
+constexpr size_t field_count = std::size(fields);
 
 } // namespace
 
@@ -74,6 +74,7 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
 {
     Metrics m;
     m.margin = tiny::scaled(m.margin, factor);
+    m.padding = tiny::scaled(m.padding, factor);
     m.label_width = tiny::scaled(m.label_width, factor);
     m.row_height = tiny::scaled(m.row_height, factor);
     m.row_gap = tiny::scaled(m.row_gap, factor);
@@ -83,9 +84,13 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
     return m;
 }
 
-SettingsForm::SettingsForm(Values initial, std::vector<std::string> families,
-                           const Metrics& metrics):
-    values_(std::move(initial)),
+SettingsForm::SettingsForm(const Values& initial,
+                           std::vector<std::string> families,
+                           const Metrics& metrics, StylesFn styles_of):
+    fields_{TextField(initial.font), TextField(initial.size),
+            TextField(initial.style), TextField(initial.terminal),
+            TextField(initial.scale)},
+    styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
     metrics_(metrics)
@@ -104,48 +109,60 @@ void SettingsForm::resize(int width, int height)
 
 int SettingsForm::form_height() const
 {
-    // three fields, the message of two rows and the buttons
-    const int rows = 3 + 2 + 1;
+    // the fields, the message of two rows and the buttons
+    const auto rows = static_cast<int>(field_count) + 2 + 1;
     return 2 * metrics_.margin + rows * metrics_.row_height +
-           4 * metrics_.row_gap;
+           static_cast<int>(field_count + 1) * metrics_.row_gap;
 }
 
-const std::string& SettingsForm::text(Field field) const
+SettingsForm::Values SettingsForm::values() const
 {
-    switch (field) {
-        case Field::Font:
-            return values_.font;
-        case Field::Terminal:
-            return values_.terminal;
-        case Field::Scale:
-            break;
-    }
-    return values_.scale;
+    return {text(Field::Font), text(Field::Terminal), text(Field::Scale),
+            text(Field::Size), text(Field::Style)};
+}
+
+const TextField& SettingsForm::field(Field field) const
+{
+    return fields_[static_cast<size_t>(field)];
+}
+
+TextField& SettingsForm::field_ref(Field field)
+{
+    return fields_[static_cast<size_t>(field)];
 }
 
 std::string SettingsForm::problem(Field field) const
 {
+    const std::string& value = text(field);
     switch (field) {
         case Field::Font:
-            return wm::valid_font(values_.font)
+            return wm::valid_font(value)
                            ? ""
                            : "The font must be the name of a font family.";
+        case Field::Size:
+            return wm::parse_font_size(value)
+                           ? ""
+                           : "The size must be a number from 4 to 96.";
+        case Field::Style:
+            return wm::valid_font_style(value)
+                           ? ""
+                           : "The style must be a name without line breaks.";
         case Field::Terminal:
-            return xdg::split_exec(values_.terminal).empty()
+            return xdg::split_exec(value).empty()
                            ? "The terminal must be a program with arguments."
                            : "";
         case Field::Scale:
-            return wm::parse_scale(values_.scale)
-                           ? ""
-                           : "The scale must be a number above 0, up to 16.";
+            break;
     }
-    return "";
+    return wm::parse_scale(value)
+                   ? ""
+                   : "The scale must be a number above 0, up to 16.";
 }
 
 std::string SettingsForm::problem() const
 {
-    for (const Field field : fields) {
-        std::string what = problem(field);
+    for (const Field f : fields) {
+        std::string what = problem(f);
         if (!what.empty()) {
             return what;
         }
@@ -155,16 +172,27 @@ std::string SettingsForm::problem() const
 
 SettingsForm::Values SettingsForm::clean_values() const
 {
-    const auto clean = [](const std::string& text) {
-        return std::string(trim(text));
+    const auto clean = [](const std::string& value) {
+        return std::string(trim(value));
     };
-    return {clean(values_.font), clean(values_.terminal), clean(values_.scale)};
+    const Values v = values();
+    return {clean(v.font), clean(v.terminal), clean(v.scale), clean(v.size),
+            clean(v.style)};
 }
 
 void SettingsForm::reject(const std::string& message)
 {
     result_ = Result::Editing;
     status_ = message;
+}
+
+int SettingsForm::shift(const TextField& field, int room) const
+{
+    if (!measure_) {
+        return 0;
+    }
+    const int before = measure_(field.text().substr(0, field.cursor()));
+    return std::min(0, room - before);
 }
 
 // The form: the rows of the fields, then the message and the buttons
@@ -218,11 +246,16 @@ Rect SettingsForm::cancel_rect() const
     return r;
 }
 
-// The list of fonts: the search field, then the rows
+// The list of fonts: the search field, the rows, the preview, the controls
 
 int SettingsForm::rows_top() const
 {
     return 2 * metrics_.margin + metrics_.row_height;
+}
+
+int SettingsForm::controls_top() const
+{
+    return save_rect().y - metrics_.row_gap - metrics_.row_height;
 }
 
 Rect SettingsForm::search_rect() const
@@ -231,9 +264,44 @@ Rect SettingsForm::search_rect() const
             std::max(1, width_ - 2 * metrics_.margin), metrics_.row_height};
 }
 
+Rect SettingsForm::preview_rect() const
+{
+    const int height = metrics_.preview_rows * metrics_.row_height;
+    return {metrics_.margin, controls_top() - metrics_.row_gap - height,
+            std::max(1, width_ - 2 * metrics_.margin), height};
+}
+
+Rect SettingsForm::size_label_rect() const
+{
+    return {metrics_.margin, controls_top(), metrics_.label_width,
+            metrics_.row_height};
+}
+
+Rect SettingsForm::size_rect() const
+{
+    return {metrics_.margin + metrics_.label_width, controls_top(),
+            metrics_.button_width, metrics_.row_height};
+}
+
+Rect SettingsForm::style_label_rect() const
+{
+    const Rect size = size_rect();
+    return {size.x + size.width + metrics_.row_gap, size.y,
+            metrics_.label_width, metrics_.row_height};
+}
+
+Rect SettingsForm::style_rect() const
+{
+    const Rect label = style_label_rect();
+    const int x = label.x + label.width;
+    return {x, label.y, std::max(1, width_ - metrics_.margin - x),
+            metrics_.row_height};
+}
+
 size_t SettingsForm::visible_rows() const
 {
-    const int rows = (height_ - rows_top()) / metrics_.row_height;
+    const int bottom = preview_rect().y - metrics_.row_gap;
+    const int rows = (bottom - rows_top()) / metrics_.row_height;
     return static_cast<size_t>(std::max(1, rows));
 }
 
@@ -260,6 +328,50 @@ void SettingsForm::reveal()
     }
 }
 
+const std::string& SettingsForm::preview_family() const
+{
+    static const std::string none;
+    return selected_ < shown_.size() ? shown_[selected_] : none;
+}
+
+double SettingsForm::preview_size() const
+{
+    if (const auto size = wm::parse_font_size(pick_size_.text())) {
+        return *size;
+    }
+    return wm::parse_font_size(text(Field::Size)).value_or(12);
+}
+
+const char* SettingsForm::preview_text()
+{
+    return "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+}
+
+std::string SettingsForm::pick_problem() const
+{
+    return wm::parse_font_size(pick_size_.text())
+                   ? ""
+                   : "The size must be a number from 4 to 96.";
+}
+
+void SettingsForm::refresh_styles()
+{
+    pick_styles_.clear();
+    const std::string& family = preview_family();
+    if (styles_of_ && !family.empty()) {
+        auto found = styles_cache_.find(family);
+        if (found == styles_cache_.end()) {
+            found = styles_cache_.emplace(family, styles_of_(family)).first;
+        }
+        pick_styles_ = found->second;
+    }
+    // a style that the family does not have is the default one
+    if (std::find(pick_styles_.begin(), pick_styles_.end(), pick_style_) ==
+        pick_styles_.end()) {
+        pick_style_.clear();
+    }
+}
+
 bool SettingsForm::select(size_t index)
 {
     if (shown_.empty()) {
@@ -270,28 +382,35 @@ bool SettingsForm::select(size_t index)
     const size_t old = selected_;
     selected_ = index;
     reveal();
+    if (selected_ != old) {
+        refresh_styles();
+    }
     return selected_ != old || first_ != old_first;
 }
 
 void SettingsForm::search(const std::string& query)
 {
-    query_ = query;
     shown_.clear();
     for (const std::string& name : all_) {
-        if (matches(name, query_)) {
+        if (matches(name, query)) {
             shown_.push_back(name);
         }
     }
     selected_ = 0;
     first_ = 0;
+    refresh_styles();
 }
 
 void SettingsForm::open_picker()
 {
     view_ = View::Picker;
+    pane_ = Pane::Search;
+    pick_size_.set_text(text(Field::Size));
+    pick_style_ = text(Field::Style);
+    search_.set_text("");
     search("");
     // the family of the font field is where the list starts
-    const std::string current(trim(values_.font));
+    const std::string current(trim(text(Field::Font)));
     const auto found = std::find_if(shown_.begin(), shown_.end(),
                                     [&](const std::string& name) {
                                         return equal_names(name, current);
@@ -299,15 +418,24 @@ void SettingsForm::open_picker()
     if (found != shown_.end()) {
         select(static_cast<size_t>(found - shown_.begin()));
     }
+    // the style of the form belongs to this family, so it is kept
+    pick_style_ = text(Field::Style);
+    refresh_styles();
 }
 
-void SettingsForm::choose()
+bool SettingsForm::choose()
 {
+    if (!pick_problem().empty()) {
+        return false;
+    }
     if (!shown_.empty()) {
-        values_.font = shown_[selected_];
+        field_ref(Field::Font).set_text(shown_[selected_]);
+        field_ref(Field::Size).set_text(std::string(trim(pick_size_.text())));
+        field_ref(Field::Style).set_text(pick_style_);
         status_.clear();
     }
     close_picker();
+    return true;
 }
 
 void SettingsForm::close_picker()
@@ -322,24 +450,36 @@ void SettingsForm::close_picker()
 size_t SettingsForm::target_at(int x, int y) const
 {
     if (view_ == View::Picker) {
+        if (inside(search_rect(), x, y)) {
+            return SearchBox;
+        }
+        if (inside(size_rect(), x, y)) {
+            return SizeBox;
+        }
+        if (inside(style_rect(), x, y)) {
+            return StyleBox;
+        }
+        if (inside(cancel_rect(), x, y)) {
+            return CancelButton;
+        }
+        if (inside(save_rect(), x, y)) {
+            return SaveButton;
+        }
         if (y < rows_top()) {
             return NoTarget;
         }
         const size_t row = first_ + static_cast<size_t>((y - rows_top()) /
                                                         metrics_.row_height);
         // the strip under the last whole row shows no row
-        return row < shown_.size() && row < first_ + visible_rows()
+        return row < shown_.size() && row < first_ + visible_rows() &&
+                               y < preview_rect().y - metrics_.row_gap
                        ? FirstRow + row
                        : NoTarget;
     }
-    if (inside(field_rect(Field::Font), x, y)) {
-        return FontField;
-    }
-    if (inside(field_rect(Field::Terminal), x, y)) {
-        return TerminalField;
-    }
-    if (inside(field_rect(Field::Scale), x, y)) {
-        return ScaleField;
+    for (const Field f : fields) {
+        if (inside(field_rect(f), x, y)) {
+            return FontField + static_cast<size_t>(f);
+        }
     }
     if (inside(choose_rect(), x, y)) {
         return ChooseButton;
@@ -360,35 +500,57 @@ bool SettingsForm::release(int x, int y)
     const size_t target = target_at(x, y);
     const size_t pressed = pressed_;
     pressed_ = NoTarget;
-    return target != NoTarget && target == pressed && act(target);
+    return target != NoTarget && target == pressed && act(target, x);
 }
 
-bool SettingsForm::act(size_t target)
+void SettingsForm::put_cursor(TextField& field, const Rect& rect, int x)
+{
+    const int room = rect.width - 2 * metrics_.padding;
+    const int start = rect.x + metrics_.padding + shift(field, room);
+    field.set_cursor(field.offset_at(x - start, measure_));
+}
+
+bool SettingsForm::act(size_t target, int x)
 {
     switch (target) {
         case FontField:
-            focus_ = Field::Font;
-            return true;
+        case SizeField:
+        case StyleField:
         case TerminalField:
-            focus_ = Field::Terminal;
+        case ScaleField: {
+            focus_ = fields[target - FontField];
+            put_cursor(field_ref(focus_), field_rect(focus_), x);
             return true;
-        case ScaleField:
-            focus_ = Field::Scale;
-            return true;
+        }
         case ChooseButton:
             open_picker();
             return true;
         case CancelButton:
-            result_ = Result::Cancelled;
+            if (view_ == View::Picker) {
+                close_picker();
+            } else {
+                result_ = Result::Cancelled;
+            }
             return true;
         case SaveButton:
-            return request_save();
+            return view_ == View::Picker ? choose() : request_save();
+        case SearchBox:
+            pane_ = Pane::Search;
+            put_cursor(search_, search_rect(), x);
+            return true;
+        case SizeBox:
+            pane_ = Pane::Size;
+            put_cursor(pick_size_, size_rect(), x);
+            return true;
+        case StyleBox:
+            pane_ = Pane::Style;
+            return cycle_style(1);
         default:
             break;
     }
     // a row of the list
+    pane_ = Pane::Search;
     select(target - FirstRow);
-    choose();
     return true;
 }
 
@@ -415,18 +577,52 @@ bool SettingsForm::wheel(int notches)
     return changed;
 }
 
+//! The keys that edit a field; true when the field or the cursor changed
+bool SettingsForm::edit(TextField& field, Key pressed)
+{
+    bool changed = false;
+    switch (pressed) {
+        case Key::Left:
+            changed = field.left();
+            break;
+        case Key::Right:
+            changed = field.right();
+            break;
+        case Key::Home:
+            changed = field.home();
+            break;
+        case Key::End:
+            changed = field.end();
+            break;
+        case Key::Back:
+            changed = field.backspace();
+            break;
+        case Key::Delete:
+            changed = field.erase();
+            break;
+        default:
+            return false;
+    }
+    if (changed && (pressed == Key::Back || pressed == Key::Delete)) {
+        status_.clear();
+    }
+    return changed;
+}
+
 bool SettingsForm::key(Key pressed)
 {
-    if (view_ == View::Picker) {
-        return picker_key(pressed);
-    }
-    const auto count = std::size(fields);
+    return view_ == View::Picker ? picker_key(pressed) : form_key(pressed);
+}
+
+bool SettingsForm::form_key(Key pressed)
+{
     const auto index = static_cast<size_t>(focus_);
     switch (pressed) {
         case Key::Tab:
         case Key::BackTab:
-            focus_ = fields[pressed == Key::Tab ? (index + 1) % count
-                                                : (index + count - 1) % count];
+            focus_ = fields[pressed == Key::Tab
+                                    ? (index + 1) % field_count
+                                    : (index + field_count - 1) % field_count];
             return true;
         case Key::Down:
             // like a combo box: the list of fonts opens from the font field
@@ -434,13 +630,11 @@ bool SettingsForm::key(Key pressed)
                 open_picker();
                 return true;
             }
-            focus_ = fields[(index + 1) % count];
+            focus_ = fields[(index + 1) % field_count];
             return true;
         case Key::Up:
-            focus_ = fields[(index + count - 1) % count];
+            focus_ = fields[(index + field_count - 1) % field_count];
             return true;
-        case Key::Back:
-            return edit("");
         case Key::Return:
             return request_save();
         case Key::Escape:
@@ -448,14 +642,20 @@ bool SettingsForm::key(Key pressed)
             return true;
         case Key::PageUp:
         case Key::PageDown:
+            return false;
+        case Key::Left:
+        case Key::Right:
         case Key::Home:
         case Key::End:
+        case Key::Back:
+        case Key::Delete:
             break;
     }
-    return false;
+    return edit(field_ref(focus_), pressed);
 }
 
-bool SettingsForm::picker_key(Key pressed)
+//! The keys that move in the list of fonts
+bool SettingsForm::list_key(Key pressed)
 {
     const size_t page = visible_rows();
     switch (pressed) {
@@ -471,72 +671,125 @@ bool SettingsForm::picker_key(Key pressed)
             return select(0);
         case Key::End:
             return select(shown_.size());
+        default:
+            return false;
+    }
+}
+
+bool SettingsForm::size_step(int direction)
+{
+    const double size = preview_size() + direction;
+    const double limited =
+            std::clamp(size, wm::min_font_size, wm::max_font_size);
+    const std::string text = size_text(limited);
+    const bool changed = text != pick_size_.text();
+    pick_size_.set_text(text);
+    return changed;
+}
+
+bool SettingsForm::cycle_style(int direction)
+{
+    // the default style is the first of the choices, then the styles
+    std::vector<std::string> choices = {""};
+    choices.insert(choices.end(), pick_styles_.begin(), pick_styles_.end());
+    const auto found = std::find(choices.begin(), choices.end(), pick_style_);
+    const auto n = static_cast<long>(choices.size());
+    const long at = found - choices.begin();
+    const auto to = static_cast<size_t>((at + direction % n + n) % n);
+    const bool changed = choices[to] != pick_style_;
+    pick_style_ = choices[to];
+    return changed;
+}
+
+bool SettingsForm::picker_key(Key pressed)
+{
+    switch (pressed) {
         case Key::Return:
             choose();
             return true;
-        case Key::Back:
-            if (query_.empty()) {
-                return false;
-            }
-            {
-                std::string shorter = query_;
-                erase_last_character(shorter);
-                search(shorter);
-            }
-            return true;
         case Key::Escape:
-            if (!query_.empty()) {
-                search(""); // the first Escape clears the search
+            if (!search_.text().empty()) {
+                search_.set_text(""); // the first Escape clears the search
+                search("");
             } else {
                 close_picker();
             }
             return true;
         case Key::Tab:
-        case Key::BackTab:
+        case Key::BackTab: {
+            const int step = pressed == Key::Tab ? 1 : 2;
+            pane_ = static_cast<Pane>((static_cast<int>(pane_) + step) % 3);
+            return true;
+        }
+        default:
             break;
+    }
+    switch (pane_) {
+        case Pane::Search: {
+            if (list_key(pressed)) {
+                return true;
+            }
+            const std::string before = search_.text();
+            const bool changed = edit(search_, pressed);
+            if (before != search_.text()) {
+                search(search_.text());
+            }
+            return changed;
+        }
+        case Pane::Size:
+            if (pressed == Key::Up || pressed == Key::Down) {
+                return size_step(pressed == Key::Up ? 1 : -1);
+            }
+            if (pressed == Key::PageUp || pressed == Key::PageDown) {
+                return list_key(pressed);
+            }
+            return edit(pick_size_, pressed);
+        case Pane::Style:
+            switch (pressed) {
+                case Key::Up:
+                case Key::Left:
+                    return cycle_style(-1);
+                case Key::Down:
+                case Key::Right:
+                    return cycle_style(1);
+                default:
+                    return list_key(pressed);
+            }
     }
     return false;
 }
 
-std::string& SettingsForm::focused_text()
-{
-    switch (focus_) {
-        case Field::Font:
-            return values_.font;
-        case Field::Terminal:
-            return values_.terminal;
-        case Field::Scale:
-            break;
-    }
-    return values_.scale;
-}
-
-bool SettingsForm::edit(const std::string& added)
-{
-    std::string& target = focused_text();
-    if (added.empty()) { // a backspace
-        if (target.empty()) {
-            return false;
-        }
-        erase_last_character(target);
-    } else {
-        target += added;
-    }
-    status_.clear();
-    return true;
-}
-
 bool SettingsForm::type(const std::string& typed)
 {
-    const std::string text = printable(typed);
+    std::string text = printable(typed);
     if (text.empty()) {
         return false;
     }
-    if (view_ == View::Picker) {
-        search(query_ + text);
-        return true;
+    if (view_ == View::Form) {
+        status_.clear();
+        return field_ref(focus_).insert(text);
     }
-    return edit(text);
+    switch (pane_) {
+        case Pane::Search:
+            search_.insert(text);
+            search(search_.text());
+            return true;
+        case Pane::Size:
+            // a number: the other characters are not wanted
+            text.erase(std::remove_if(
+                               text.begin(), text.end(),
+                               [](char c) {
+                                   return std::isdigit(
+                                                  static_cast<unsigned char>(
+                                                          c)) == 0 &&
+                                          c != '.';
+                               }),
+                       text.end());
+            return pick_size_.insert(text);
+        case Pane::Style:
+            break;
+    }
+    return false;
 }
 
 } // namespace tiny

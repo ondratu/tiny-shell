@@ -48,7 +48,7 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   `src/main.cc` is the window manager itself, `src/fonts.cc` is the font viewer
   `tiny-fonts` (a program of its own, its logic is in `lib/font_browser.*`),
   `src/settings.cc` is the settings form `tiny-settings` (its logic is in
-  `lib/settings_form.*`),
+  `lib/settings_form.*` and `lib/text_field.*`),
   `tests/` are the unit tests, `examples/` are small toolkit programs
   (`make examples`) and a default session, `tools/` are development scripts.
   Everything is built into `build/`. Files that belong to one machine (a

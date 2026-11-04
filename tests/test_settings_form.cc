@@ -11,6 +11,7 @@ using Field = SettingsForm::Field;
 using Key = SettingsForm::Key;
 using Result = SettingsForm::Result;
 using View = SettingsForm::View;
+using Pane = SettingsForm::Pane;
 using Strings = std::vector<std::string>;
 
 namespace {
@@ -19,12 +20,18 @@ const Strings families = {"Alpha",   "Beta Mono", "Gamma", "Delta Mono",
                           "Epsilon", "Zeta",      "Eta",   "Theta",
                           "Iota",    "Kappa"};
 
-SettingsForm make(const SettingsForm::Values& values = {"Gamma", "xterm -e",
-                                                        "1"},
+SettingsForm::Values V(const char* font, const char* terminal,
+                       const char* scale)
+{
+    return {font, terminal, scale, "12", ""};
+}
+
+SettingsForm make(const SettingsForm::Values& values = V("Gamma", "xterm -e",
+                                                         "1"),
                   const Strings& list = families)
 {
     SettingsForm form(values, list, SettingsForm::Metrics());
-    form.resize(500, 300);
+    form.resize(500, 400);
     return form;
 }
 
@@ -92,7 +99,7 @@ TEST(SettingsFormTest, the_form_has_the_fields_one_under_another)
     // the buttons are at the bottom, Cancel left of Save
     EXPECT_LT(form.cancel_rect().x, form.save_rect().x);
     EXPECT_GT(form.save_rect().y, scale.y);
-    EXPECT_LE(form.save_rect().y + form.save_rect().height, 300);
+    EXPECT_LE(form.save_rect().y + form.save_rect().height, 400);
     EXPECT_GT(form.message_rect().y, scale.y);
     EXPECT_LT(form.message_rect().y + form.message_rect().height,
               form.save_rect().y + form.save_rect().height);
@@ -125,7 +132,10 @@ TEST(SettingsFormTest, typing_goes_to_the_focused_field)
 
     EXPECT_TRUE(form.type("X"));
     EXPECT_EQ(form.text(Field::Font), "GammaX");
-    EXPECT_TRUE(form.key(Key::Tab));
+    form.key(Key::Tab);
+    form.key(Key::Tab);
+    form.key(Key::Tab);
+    EXPECT_EQ(form.focus(), Field::Terminal);
     EXPECT_TRUE(form.type(" -x"));
     EXPECT_EQ(form.text(Field::Terminal), "xterm -e -x");
     EXPECT_TRUE(form.key(Key::Tab));
@@ -147,7 +157,7 @@ TEST(SettingsFormTest, control_characters_are_not_typed)
 
 TEST(SettingsFormTest, backspace_deletes_a_whole_utf8_character)
 {
-    SettingsForm form = make({"", "", ""});
+    SettingsForm form = make(V("", "", ""));
 
     EXPECT_FALSE(form.key(Key::Back)); // nothing to delete
     form.type("a\xC5\x99");            // a, r with a caron
@@ -161,12 +171,11 @@ TEST(SettingsFormTest, tab_goes_round_the_fields_and_back_tab_the_other_way)
 {
     SettingsForm form = make();
 
-    form.key(Key::Tab);
-    EXPECT_EQ(form.focus(), Field::Terminal);
-    form.key(Key::Tab);
-    EXPECT_EQ(form.focus(), Field::Scale);
-    form.key(Key::Tab);
-    EXPECT_EQ(form.focus(), Field::Font);
+    for (const Field next : {Field::Size, Field::Style, Field::Terminal,
+                             Field::Scale, Field::Font}) {
+        form.key(Key::Tab);
+        EXPECT_EQ(form.focus(), next);
+    }
     form.key(Key::BackTab);
     EXPECT_EQ(form.focus(), Field::Scale);
     form.key(Key::BackTab);
@@ -184,16 +193,16 @@ TEST(SettingsFormTest, the_arrows_move_between_the_fields)
     EXPECT_EQ(form.view(), View::Form);
     form.key(Key::Tab);
     form.key(Key::Down);
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.focus(), Field::Style);
     form.key(Key::Up);
-    EXPECT_EQ(form.focus(), Field::Terminal);
+    EXPECT_EQ(form.focus(), Field::Size);
 }
 
-TEST(SettingsFormTest, the_other_keys_do_nothing_in_the_form)
+TEST(SettingsFormTest, the_page_keys_do_nothing_in_the_form)
 {
     SettingsForm form = make();
 
-    for (const Key key : {Key::PageUp, Key::PageDown, Key::Home, Key::End}) {
+    for (const Key key : {Key::PageUp, Key::PageDown}) {
         EXPECT_FALSE(form.key(key));
     }
 }
@@ -228,7 +237,7 @@ TEST(SettingsFormTest, a_press_that_moves_away_before_the_release_does_nothing)
 
 TEST(SettingsFormTest, the_problems_of_the_fields_are_told)
 {
-    SettingsForm form = make({"", "", "big"});
+    SettingsForm form = make(V("", "", "big"));
 
     EXPECT_FALSE(form.problem(Field::Font).empty());
     EXPECT_FALSE(form.problem(Field::Terminal).empty());
@@ -237,24 +246,24 @@ TEST(SettingsFormTest, the_problems_of_the_fields_are_told)
 
     form.type("Gamma");
     EXPECT_EQ(form.problem(), form.problem(Field::Terminal));
-    form.key(Key::Tab);
+    for (int i = 0; i < 3; ++i) {
+        form.key(Key::Tab); // the size, the style, the terminal
+    }
     form.type("xterm -e");
+    EXPECT_TRUE(form.problem(Field::Terminal).empty());
     EXPECT_EQ(form.problem(), form.problem(Field::Scale));
-    form.key(Key::Tab);
-    form.key(Key::Tab); // scale again... "big"
-    EXPECT_FALSE(form.problem().empty());
 }
 
 TEST(SettingsFormTest, a_blank_terminal_is_a_problem)
 {
-    const SettingsForm form = make({"Gamma", "   ", "1"});
+    const SettingsForm form = make(V("Gamma", "   ", "1"));
 
     EXPECT_FALSE(form.problem(Field::Terminal).empty());
 }
 
 TEST(SettingsFormTest, the_values_to_write_have_no_blanks_at_the_ends)
 {
-    const SettingsForm form = make({" Gamma ", " foot -e", "2 "});
+    const SettingsForm form = make(V(" Gamma ", " foot -e", "2 "));
 
     const auto values = form.clean_values();
     EXPECT_EQ(values.font, "Gamma");
@@ -281,7 +290,7 @@ TEST(SettingsFormTest, return_saves_from_any_field)
 
 TEST(SettingsFormTest, nothing_is_saved_while_something_is_wrong)
 {
-    SettingsForm form = make({"Gamma", "xterm -e", "0"});
+    SettingsForm form = make(V("Gamma", "xterm -e", "0"));
 
     EXPECT_FALSE(click(form, form.save_rect()));
     EXPECT_FALSE(form.key(Key::Return));
@@ -328,7 +337,7 @@ TEST(SettingsFormTest, the_wheel_does_nothing_in_the_form)
 
 TEST(SettingsFormTest, the_choose_button_opens_the_list_at_the_current_font)
 {
-    SettingsForm form = make({"gamma", "xterm -e", "1"}); // another case
+    SettingsForm form = make(V("gamma", "xterm -e", "1")); // another case
 
     EXPECT_TRUE(click(form, form.choose_rect()));
 
@@ -340,7 +349,7 @@ TEST(SettingsFormTest, the_choose_button_opens_the_list_at_the_current_font)
 
 TEST(SettingsFormTest, the_list_starts_at_the_top_for_a_font_that_is_not_there)
 {
-    SettingsForm form = make({"Nothing", "xterm -e", "1"});
+    SettingsForm form = make(V("Nothing", "xterm -e", "1"));
 
     form.open_picker();
 
@@ -426,13 +435,16 @@ TEST(SettingsFormTest, return_in_a_search_without_a_result_keeps_the_font)
     EXPECT_EQ(form.text(Field::Font), "Gamma");
 }
 
-TEST(SettingsFormTest, a_click_on_a_row_takes_the_family)
+TEST(SettingsFormTest, a_click_on_a_row_selects_it_and_select_takes_it)
 {
     SettingsForm form = make();
     form.open_picker();
 
     EXPECT_TRUE(click(form, form.row_rect(form.first() + 1)));
 
+    EXPECT_EQ(form.view(), View::Picker);
+    EXPECT_EQ(form.preview_family(), "Beta Mono");
+    EXPECT_TRUE(click(form, form.save_rect()));
     EXPECT_EQ(form.view(), View::Form);
     EXPECT_EQ(form.text(Field::Font), "Beta Mono");
 }
@@ -442,8 +454,10 @@ TEST(SettingsFormTest, a_click_outside_of_the_rows_does_nothing)
     SettingsForm form = make();
     form.open_picker();
 
-    // on the search field
-    EXPECT_FALSE(click(form, form.search_rect()));
+    // between the search field and the first row
+    form.press(10, form.search_rect().y + form.search_rect().height + 3);
+    EXPECT_FALSE(form.release(10, form.search_rect().y +
+                                          form.search_rect().height + 3));
     // under the last row of a short list
     form.type("zeta");
     EXPECT_FALSE(click(form, form.row_rect(2)));
@@ -452,7 +466,7 @@ TEST(SettingsFormTest, a_click_outside_of_the_rows_does_nothing)
 
 TEST(SettingsFormTest, the_keys_move_the_selection_and_keep_it_in_view)
 {
-    SettingsForm form = make({"Gamma", "xterm -e", "1"});
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"));
     form.resize(500, 160); // few rows
     form.open_picker();
     const size_t rows = form.visible_rows();
@@ -482,13 +496,20 @@ TEST(SettingsFormTest, the_keys_move_the_selection_and_keep_it_in_view)
     EXPECT_EQ(form.first(), 0u);
 }
 
-TEST(SettingsFormTest, the_tab_does_nothing_in_the_list)
+TEST(SettingsFormTest, tab_goes_round_the_search_the_size_and_the_style)
 {
     SettingsForm form = make();
     form.open_picker();
+    EXPECT_EQ(form.pane(), Pane::Search);
 
-    EXPECT_FALSE(form.key(Key::Tab));
-    EXPECT_FALSE(form.key(Key::BackTab));
+    form.key(Key::Tab);
+    EXPECT_EQ(form.pane(), Pane::Size);
+    form.key(Key::Tab);
+    EXPECT_EQ(form.pane(), Pane::Style);
+    form.key(Key::Tab);
+    EXPECT_EQ(form.pane(), Pane::Search);
+    form.key(Key::BackTab);
+    EXPECT_EQ(form.pane(), Pane::Style);
 }
 
 TEST(SettingsFormTest, the_wheel_scrolls_the_rows_but_not_the_selection)
@@ -528,7 +549,7 @@ TEST(SettingsFormTest, the_rows_are_under_the_search_field_one_under_another)
 
 TEST(SettingsFormTest, a_smaller_window_keeps_the_selection_in_view)
 {
-    SettingsForm form = make({"Kappa", "xterm -e", "1"});
+    SettingsForm form = make(V("Kappa", "xterm -e", "1"));
     form.open_picker();
     ASSERT_EQ(form.selected(), 9u);
 
@@ -553,7 +574,7 @@ TEST(SettingsFormTest, opening_again_forgets_the_old_search)
 
 TEST(SettingsFormTest, a_list_without_fonts_can_be_opened_and_closed)
 {
-    SettingsForm form = make({"Gamma", "xterm -e", "1"}, {});
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"), {});
 
     form.open_picker();
     EXPECT_TRUE(form.families().empty());
@@ -568,11 +589,495 @@ TEST(SettingsFormTest, a_list_without_fonts_can_be_opened_and_closed)
 TEST(SettingsFormTest, a_click_under_the_last_whole_row_does_nothing)
 {
     SettingsForm form = make();
-    form.resize(500, 160); // two whole rows and a strip that is not a row
+    form.resize(500, 372); // two whole rows and a strip that is not a row
     form.open_picker();
     ASSERT_EQ(form.visible_rows(), 2u);
 
     const Rect strip = form.row_rect(form.first() + form.visible_rows());
     EXPECT_FALSE(click(form, {strip.x, strip.y, strip.width, 5}));
     EXPECT_EQ(form.view(), View::Picker);
+}
+
+// The cursor
+
+TEST(SettingsFormTest, the_arrows_move_the_cursor_in_a_field)
+{
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"));
+
+    EXPECT_EQ(form.field(Field::Font).cursor(), 5u); // at the end
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_EQ(form.field(Field::Font).cursor(), 3u);
+    EXPECT_TRUE(form.type("--"));
+    EXPECT_EQ(form.text(Field::Font), "Gam--ma");
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.field(Field::Font).cursor(), 6u);
+    EXPECT_TRUE(form.key(Key::Home));
+    EXPECT_FALSE(form.key(Key::Left));
+    EXPECT_FALSE(form.key(Key::Home));
+    EXPECT_TRUE(form.key(Key::End));
+    EXPECT_FALSE(form.key(Key::Right));
+    EXPECT_FALSE(form.key(Key::End));
+}
+
+TEST(SettingsFormTest, delete_takes_the_character_after_the_cursor)
+{
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"));
+
+    EXPECT_FALSE(form.key(Key::Delete)); // at the end
+    form.key(Key::Home);
+    EXPECT_TRUE(form.key(Key::Delete));
+    EXPECT_EQ(form.text(Field::Font), "amma");
+    form.key(Key::Right);
+    EXPECT_TRUE(form.key(Key::Back)); // before the cursor
+    EXPECT_EQ(form.text(Field::Font), "mma");
+}
+
+TEST(SettingsFormTest, an_edit_takes_the_message_of_a_failed_write_away)
+{
+    SettingsForm form = make();
+    form.reject("Not saved");
+    form.key(Key::Delete); // at the end: nothing changes
+    EXPECT_FALSE(form.status().empty());
+    form.key(Key::Left); // a move is not an edit
+    EXPECT_FALSE(form.status().empty());
+    form.key(Key::Delete);
+    EXPECT_TRUE(form.status().empty());
+}
+
+//! Every byte is 10 pixels wide
+SettingsForm make_measured()
+{
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"));
+    form.set_measure([](const std::string& text) {
+        return static_cast<int>(text.size()) * 10;
+    });
+    return form;
+}
+
+TEST(SettingsFormTest, a_click_puts_the_cursor_where_the_pointer_is)
+{
+    SettingsForm form = make_measured();
+    const Rect r = form.field_rect(Field::Terminal);
+    const int start = r.x + SettingsForm::Metrics().padding;
+
+    // the nearest border: 22 is nearer to 20 (2 characters) than to 30
+    form.press(start + 22, center_y(r));
+    EXPECT_TRUE(form.release(start + 22, center_y(r)));
+    EXPECT_EQ(form.focus(), Field::Terminal);
+    EXPECT_EQ(form.field(Field::Terminal).cursor(), 2u);
+
+    form.press(start + 26, center_y(r));
+    form.release(start + 26, center_y(r));
+    EXPECT_EQ(form.field(Field::Terminal).cursor(), 3u);
+
+    // before the text and after it
+    form.press(r.x + 1, center_y(r));
+    form.release(r.x + 1, center_y(r));
+    EXPECT_EQ(form.field(Field::Terminal).cursor(), 0u);
+    form.press(r.x + r.width - 2, center_y(r));
+    form.release(r.x + r.width - 2, center_y(r));
+    EXPECT_EQ(form.field(Field::Terminal).cursor(), 8u);
+}
+
+TEST(SettingsFormTest, a_click_in_a_long_text_counts_the_shift_of_the_text)
+{
+    SettingsForm form = make_measured();
+    const Rect r = form.field_rect(Field::Font);
+    const int room = r.width - 2 * SettingsForm::Metrics().padding;
+    // the text is longer than the field and the cursor is at its end
+    form.type(std::string(static_cast<size_t>(room / 10 + 5), 'x'));
+    const tiny::TextField& font = form.field(Field::Font);
+    const int shift = form.shift(font, room);
+    ASSERT_LT(shift, 0);
+
+    const int start = r.x + SettingsForm::Metrics().padding + shift;
+    form.press(start + 100, center_y(r));
+    form.release(start + 100, center_y(r));
+
+    EXPECT_EQ(form.field(Field::Font).cursor(), 10u);
+}
+
+TEST(SettingsFormTest, without_a_measure_the_text_does_not_shift)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.shift(form.field(Field::Font), 10), 0);
+}
+
+TEST(SettingsFormTest, the_shift_keeps_the_cursor_in_the_field)
+{
+    SettingsForm form = make_measured(); // "Gamma", 50 pixels
+
+    EXPECT_EQ(form.shift(form.field(Field::Font), 100), 0);
+    EXPECT_EQ(form.shift(form.field(Field::Font), 30), -20);
+    form.key(Key::Home);
+    EXPECT_EQ(form.shift(form.field(Field::Font), 30), 0);
+}
+
+// The size, the style and the preview
+
+namespace {
+
+//! The styles of Beta Mono and Gamma
+Strings styles_of(const std::string& family)
+{
+    if (family == "Gamma") {
+        return {"Regular", "Bold", "Italic"};
+    }
+    if (family == "Beta Mono") {
+        return {"Book"};
+    }
+    return {};
+}
+
+SettingsForm make_with_styles(const std::string& style = "")
+{
+    SettingsForm form({"Gamma", "xterm -e", "1", "12", style}, families,
+                      SettingsForm::Metrics(), styles_of);
+    form.resize(500, 600);
+    return form;
+}
+
+} // namespace
+
+TEST(SettingsFormTest, the_form_has_the_size_and_the_style)
+{
+    SettingsForm form =
+            make({"Gamma", "xterm -e", "1", "14", "Bold"}, families);
+
+    EXPECT_EQ(form.text(Field::Size), "14");
+    EXPECT_EQ(form.text(Field::Style), "Bold");
+    EXPECT_EQ(form.values().size, "14");
+    EXPECT_EQ(form.values().style, "Bold");
+    EXPECT_EQ(form.clean_values().size, "14");
+}
+
+TEST(SettingsFormTest, a_size_that_is_not_a_number_in_the_limits_is_a_problem)
+{
+    for (const char* size : {"", "3", "97", "big", "12pt"}) {
+        const SettingsForm form = make({"Gamma", "xterm -e", "1", size, ""});
+        EXPECT_FALSE(form.problem(Field::Size).empty()) << size;
+    }
+    for (const char* size : {"4", "9.5", " 12 ", "96"}) {
+        const SettingsForm form = make({"Gamma", "xterm -e", "1", size, ""});
+        EXPECT_TRUE(form.problem(Field::Size).empty()) << size;
+    }
+}
+
+TEST(SettingsFormTest, the_style_may_be_empty_but_not_have_a_control_character)
+{
+    EXPECT_TRUE(make({"Gamma", "xterm -e", "1", "12", ""})
+                        .problem(Field::Style)
+                        .empty());
+    EXPECT_FALSE(make({"Gamma", "xterm -e", "1", "12", "a\tb"})
+                         .problem(Field::Style)
+                         .empty());
+}
+
+TEST(SettingsFormTest, the_list_starts_with_the_size_and_the_style_of_the_form)
+{
+    SettingsForm form({"Gamma", "xterm -e", "1", "14", "Bold"}, families,
+                      SettingsForm::Metrics(), styles_of);
+    form.resize(500, 600);
+
+    form.open_picker();
+
+    EXPECT_EQ(form.pane(), Pane::Search);
+    EXPECT_EQ(form.size_field().text(), "14");
+    EXPECT_EQ(form.pick_style(), "Bold");
+    EXPECT_EQ(form.pick_styles(), (Strings{"Regular", "Bold", "Italic"}));
+    EXPECT_EQ(form.preview_family(), "Gamma");
+    EXPECT_EQ(form.preview_size(), 14.0);
+}
+
+TEST(SettingsFormTest, a_family_without_the_style_has_the_default_one)
+{
+    SettingsForm form = make_with_styles("Bold");
+    form.open_picker();
+    ASSERT_EQ(form.pick_style(), "Bold");
+
+    form.type("beta"); // Beta Mono has only Book
+
+    EXPECT_EQ(form.pick_styles(), (Strings{"Book"}));
+    EXPECT_TRUE(form.pick_style().empty());
+}
+
+TEST(SettingsFormTest, a_family_that_has_no_styles_is_shown_with_the_default)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+
+    form.type("zeta");
+
+    EXPECT_TRUE(form.pick_styles().empty());
+    EXPECT_TRUE(form.pick_style().empty());
+}
+
+TEST(SettingsFormTest, the_styles_of_a_family_are_asked_for_once)
+{
+    int asked = 0;
+    SettingsForm form({"Gamma", "xterm -e", "1", "12", ""}, families,
+                      SettingsForm::Metrics(),
+                      [&](const std::string&) -> Strings {
+                          ++asked;
+                          return {"Regular"};
+                      });
+    form.resize(500, 600);
+    form.open_picker();
+    const int after_open = asked;
+
+    form.key(Key::Down);
+    form.key(Key::Up);
+    form.key(Key::Down);
+    form.key(Key::Up);
+
+    EXPECT_EQ(asked, after_open + 1); // the neighbor, once
+}
+
+TEST(SettingsFormTest, the_style_is_chosen_in_the_list_of_the_styles)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Tab);
+    ASSERT_EQ(form.pane(), Pane::Style);
+
+    EXPECT_TRUE(form.key(Key::Down));
+    EXPECT_EQ(form.pick_style(), "Regular");
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.pick_style(), "Bold");
+    EXPECT_TRUE(form.key(Key::Down));
+    EXPECT_EQ(form.pick_style(), "Italic");
+    EXPECT_TRUE(form.key(Key::Down)); // round to the default
+    EXPECT_TRUE(form.pick_style().empty());
+    EXPECT_TRUE(form.key(Key::Up)); // and back
+    EXPECT_EQ(form.pick_style(), "Italic");
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_EQ(form.pick_style(), "Bold");
+    EXPECT_FALSE(form.key(Key::Delete)); // nothing to edit
+    EXPECT_FALSE(form.type("x"));
+}
+
+TEST(SettingsFormTest, a_click_on_the_style_takes_the_next_one)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+
+    EXPECT_TRUE(click(form, form.style_rect()));
+    EXPECT_EQ(form.pane(), Pane::Style);
+    EXPECT_EQ(form.pick_style(), "Regular");
+    click(form, form.style_rect());
+    EXPECT_EQ(form.pick_style(), "Bold");
+}
+
+TEST(SettingsFormTest, a_style_box_without_choices_stays_default)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.type("zeta");
+
+    EXPECT_FALSE(click(form, form.style_rect()));
+    EXPECT_TRUE(form.pick_style().empty());
+}
+
+TEST(SettingsFormTest, up_and_down_change_the_size_in_the_size_field)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    ASSERT_EQ(form.pane(), Pane::Size);
+
+    EXPECT_TRUE(form.key(Key::Up));
+    EXPECT_EQ(form.size_field().text(), "13");
+    EXPECT_TRUE(form.key(Key::Down));
+    EXPECT_TRUE(form.key(Key::Down));
+    EXPECT_EQ(form.size_field().text(), "11");
+    EXPECT_EQ(form.preview_size(), 11.0);
+    // the family is not changed by it
+    EXPECT_EQ(form.preview_family(), "Gamma");
+}
+
+TEST(SettingsFormTest, the_size_stays_in_the_limits)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Home);
+    form.key(Key::Delete);
+    form.key(Key::Delete);
+    form.type("96");
+
+    EXPECT_FALSE(form.key(Key::Up));
+    EXPECT_EQ(form.size_field().text(), "96");
+    form.key(Key::Home);
+    form.key(Key::Delete);
+    form.key(Key::Delete);
+    form.type("4");
+    EXPECT_FALSE(form.key(Key::Down));
+    EXPECT_EQ(form.size_field().text(), "4");
+}
+
+TEST(SettingsFormTest, a_wrong_size_steps_from_the_size_of_the_form)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Back);
+    form.key(Key::Back); // empty
+    ASSERT_FALSE(form.pick_problem().empty());
+    EXPECT_EQ(form.preview_size(), 12.0);
+
+    EXPECT_TRUE(form.key(Key::Up));
+
+    EXPECT_EQ(form.size_field().text(), "13");
+    EXPECT_TRUE(form.pick_problem().empty());
+}
+
+TEST(SettingsFormTest, only_a_number_is_typed_into_the_size)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::End);
+
+    EXPECT_FALSE(form.type("pt"));
+    EXPECT_TRUE(form.type("a.5b"));
+
+    EXPECT_EQ(form.size_field().text(), "12.5");
+    EXPECT_EQ(form.preview_size(), 12.5);
+}
+
+TEST(SettingsFormTest, the_size_has_a_cursor_too)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+
+    form.key(Key::Left);
+    form.type("0");
+
+    EXPECT_EQ(form.size_field().text(), "102");
+    // the page keys still scroll the list
+    EXPECT_TRUE(form.key(Key::PageDown));
+}
+
+TEST(SettingsFormTest, a_click_on_the_size_puts_the_cursor_there)
+{
+    SettingsForm form = make_with_styles();
+    form.set_measure([](const std::string& text) {
+        return static_cast<int>(text.size()) * 10;
+    });
+    form.open_picker();
+    const Rect r = form.size_rect();
+
+    form.press(r.x + SettingsForm::Metrics().padding + 11, center_y(r));
+    form.release(r.x + SettingsForm::Metrics().padding + 11, center_y(r));
+
+    EXPECT_EQ(form.pane(), Pane::Size);
+    EXPECT_EQ(form.size_field().cursor(), 1u);
+}
+
+TEST(SettingsFormTest, the_search_has_a_cursor_too)
+{
+    SettingsForm form = make_with_styles();
+    form.set_measure([](const std::string& text) {
+        return static_cast<int>(text.size()) * 10;
+    });
+    form.open_picker();
+    form.type("eta");
+    ASSERT_EQ(form.families().size(), 4u); // Beta Mono, Zeta, Eta, Theta
+
+    form.key(Key::Left);
+    form.key(Key::Left);
+    form.type("x"); // "exta": nothing matches
+    EXPECT_TRUE(form.families().empty());
+    form.key(Key::Back); // "eta" again
+    EXPECT_FALSE(form.families().empty());
+    form.key(Key::Home); // Home goes to the first family, not in the text
+    EXPECT_EQ(form.query(), "eta");
+
+    const Rect r = form.search_rect();
+    form.press(r.x + SettingsForm::Metrics().padding + 11, center_y(r));
+    form.release(r.x + SettingsForm::Metrics().padding + 11, center_y(r));
+    EXPECT_EQ(form.search_field().cursor(), 1u);
+}
+
+TEST(SettingsFormTest, select_takes_the_family_the_size_and_the_style)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.type("gam");
+    form.key(Key::Tab);
+    form.key(Key::Up);
+    form.key(Key::Tab);
+    form.key(Key::Right);
+    form.key(Key::Right);
+
+    EXPECT_TRUE(form.key(Key::Return));
+
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.text(Field::Font), "Gamma");
+    EXPECT_EQ(form.text(Field::Size), "13");
+    EXPECT_EQ(form.text(Field::Style), "Bold");
+}
+
+TEST(SettingsFormTest, cancel_leaves_the_size_and_the_style_as_they_were)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Up);
+    form.key(Key::Tab);
+    form.key(Key::Right);
+
+    EXPECT_TRUE(click(form, form.cancel_rect()));
+
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.result(), Result::Editing);
+    EXPECT_EQ(form.text(Field::Size), "12");
+    EXPECT_TRUE(form.text(Field::Style).empty());
+    // Escape does the same
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Up);
+    form.key(Key::Escape);
+    EXPECT_EQ(form.text(Field::Size), "12");
+}
+
+TEST(SettingsFormTest, select_waits_for_a_right_size)
+{
+    SettingsForm form = make_with_styles();
+    form.open_picker();
+    form.key(Key::Tab);
+    form.key(Key::Back);
+    form.key(Key::Back);
+
+    form.key(Key::Return);
+    EXPECT_EQ(form.view(), View::Picker);
+    EXPECT_FALSE(click(form, form.save_rect()) && form.view() == View::Form);
+    EXPECT_EQ(form.view(), View::Picker);
+    EXPECT_FALSE(form.choose());
+}
+
+TEST(SettingsFormTest, the_preview_is_over_the_controls_and_under_the_list)
+{
+    const SettingsForm form = make_with_styles();
+
+    const Rect preview = form.preview_rect();
+    const Rect size = form.size_rect();
+    const Rect style = form.style_rect();
+    EXPECT_LT(preview.y + preview.height, size.y);
+    EXPECT_EQ(size.y, style.y);
+    EXPECT_LT(size.x + size.width, form.style_label_rect().x);
+    EXPECT_LT(form.style_label_rect().x, style.x);
+    EXPECT_EQ(form.size_label_rect().y, size.y);
+    EXPECT_LT(size.y + size.height, form.save_rect().y);
+    EXPECT_NE(std::string(SettingsForm::preview_text()).find("Lorem ipsum"),
+              std::string::npos);
+    // the last row of the list is over the preview
+    SettingsForm list = make_with_styles();
+    list.open_picker();
+    const Rect last = list.row_rect(list.first() + list.visible_rows() - 1);
+    EXPECT_LE(last.y + last.height, preview.y);
 }

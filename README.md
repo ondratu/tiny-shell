@@ -165,6 +165,11 @@ scale = 1.5
 # One family of the font of the shell (see tiny-fonts for the names); a
 # list of families is not supported
 font = Cantarell
+# The size in points at the scale 1, from 4 to 96
+font_size = 12
+# The style of the font, a name that the family has ("Bold", "Italic"); empty
+# is the default style. The title bars are always bold.
+font_style = Bold
 
 [commands]
 # Restart and Shutdown in the user menu (these are the defaults)
@@ -191,16 +196,25 @@ stderr and leaves the old file as it was. The file says so at the top.
 
 ### Settings
 
-`build/tiny-settings` (made by `make`) changes the font, the terminal and the
-scale. It shows the values in use now (the global file and the one of the
-user together). Type into a field, or press the button Choose... (or Down in
-the font field) to see a list of the fonts of the system: type to search it,
-choose a family with a click or Return, Escape goes back. Tab moves between the
-fields. A field with a wrong value turns red and says what is wrong, and Save
-waits until it is right.
+`build/tiny-settings` (made by `make`) changes the font (with its size and
+style), the terminal and the scale. It shows the values in use now (the global
+file and the one of the user together). A field has a cursor: the arrows,
+Home, End, Backspace and Delete work, and a click puts the cursor where the
+pointer is. Tab moves between the fields. A field with a wrong value turns
+red and says what is wrong, and Save waits until it is right.
 
-Save (or Return) writes the values you changed (`[theme] font`, `[theme]
-scale`, `[commands] terminal`) to the file of the user, so the others still
+The button Choose... (or Down in the font field) shows a list of the fonts of
+the system: type to search it, move with the arrows, Page Up and Page Down.
+Under the list are the size and the style of the font, and a preview of a
+sentence in the selected family, size and style, so you see how it will look
+(the size follows `[theme] scale`, like in the shell). Tab moves between the
+search, the size and the style; Up and Down change the size by a point in the
+size field, and the arrows or a click change the style in the style field (it
+offers the styles that the family has). Select (or Return) takes the three
+into the form, Cancel (or Escape) goes back and changes nothing.
+
+Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
+`font_style`, `[theme] scale`, `[commands] terminal`) to the file of the user, so the others still
 come from the global file, in the way that is described above (the
 comments of the file are lost), and closes the program. Cancel or Escape
 closes it and writes nothing. tiny-shell reads the file only when it starts, so
