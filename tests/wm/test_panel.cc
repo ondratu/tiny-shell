@@ -46,6 +46,17 @@ TEST(MainMenuTest, realize_twice_keeps_one_set_of_lines)
     EXPECT_EQ(children_of(menu.get_window()).size(), 11u);
 }
 
+TEST(MainMenuTest, items_have_no_border)
+{
+    tiny::wm::MainMenu menu;
+
+    menu.realize(root_window());
+
+    EXPECT_EQ(attributes_of(menu.settings).border_width, 0);
+    EXPECT_EQ(attributes_of(menu.logout).border_width, 0);
+    EXPECT_EQ(attributes_of(menu.logout).width, tiny::theme.wm_menu_width);
+}
+
 TEST(MainMenuTest, buttons_have_labels)
 {
     const tiny::wm::MainMenu menu;
