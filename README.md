@@ -24,8 +24,10 @@ much as it can give.
 - A set of freedesktop.org standards implemented as faithfully as possible
   (ICCCM, EWMH, Desktop Entry, Icon Theme), so that ordinary applications
   just work.
-- A tiny widget toolkit (`lib/`), made of plain X windows and Xft text,
-  loosely inspired by GTK. It exists to serve the shell, not to be reused.
+- A tiny widget toolkit (`lib/`, the library `libtiny-widgets.a`), made of
+  plain X windows and Xft text, loosely inspired by GTK. It exists to serve
+  the shell, the settings and the font viewer (and later the Lua plugins of the
+  panel), not to be reused: it knows nothing about window management.
 
 ## What it is not
 
@@ -65,6 +67,13 @@ Implemented:
   subpixel order) in the configuration file of the user (see below).
 - **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
   and shows a specimen of each one (see below).
+- **Look:** two built-in themes, dark (the default) and light, chosen by
+  `[theme] style` and switchable while the shell runs (the actions
+  `theme-dark`, `theme-light` and `theme-toggle`).
+- **Actions:** the menu items and the shortcuts run actions by name
+  (`logout`, `run-dialog`, `launcher`, `next-window`, `exec:<command>`...),
+  and the panel has slots for small widgets of plugins; this is what the
+  planned Lua plugins will use.
 - **Other:** one `poll()` event loop for X events, signals and timers
   (finished children are collected by a `SIGCHLD` handler), commands of
   Restart and Shutdown, a configuration file (scale, commands, favorites of
@@ -84,8 +93,7 @@ programs is done, so there is no "must" list):
       the dock
 - [ ] Applications of the launcher grouped by category
 - [ ] Most recently used order for Alt+Tab
-- [ ] More in the configuration file: key bindings, panel layout,
-      the theme (light or dark), plugins
+- [ ] More in the configuration file: key bindings, panel layout, plugins
 - [ ] No flicker: double buffered drawing of the panel and the dock
 
 ### Could: nice to have
@@ -99,7 +107,8 @@ programs is done, so there is no "must" list):
 
 ## Technology
 
-- Written in C++17, built with GNU make
+- Written in C++17 (without RTTI), built with GNU make; two static libraries,
+  the widgets and the shell
 - [Xlib](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html),
   Xft (with fontconfig) and Xrender; nothing else is needed to run it
 - Tests use [googletest](https://github.com/google/googletest) and Xvfb
@@ -121,7 +130,8 @@ files of `x11`, `xft` and `xrender`.
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libfontconfig-dev
 
-make
+make                 # build/tiny-shell, build/tiny-settings, build/tiny-fonts
+make release         # the same, small and stripped, into build-release/
 ```
 
 To run the tests (they need `xvfb` and googletest):
@@ -169,6 +179,8 @@ scale = 1.5
 font = Cantarell
 # The size in points at the scale 1, from 4 to 96
 font_size = 12
+# The colors: dark (the default) or light
+style = dark
 # The style of the font, a name that the family has ("Bold", "Italic"); empty
 # is the default style. The title bars are always bold.
 font_style = Bold
