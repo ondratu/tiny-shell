@@ -276,5 +276,5 @@ asan:
 	@ASAN_SYMBOLIZER_PATH=$(SYMBOLIZER) UBSAN_OPTIONS=print_stacktrace=1 \
 	    ASAN_OPTIONS=fast_unwind_on_malloc=0 \
 	    LSAN_OPTIONS=suppressions=$(CURDIR)/tools/lsan.supp:print_suppressions=0 \
-	    $(MAKE) BUILD=$(ASAN_DIR) check \
+	    $(MAKE) -j$$(nproc) BUILD=$(ASAN_DIR) check \
 	    CXXFLAGS="-g -O1 $(SANITIZE)" LDFLAGS="$(SANITIZE)"

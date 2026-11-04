@@ -87,10 +87,13 @@ jobs:
             packages: clang-19
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y $DEPS ${{ matrix.packages }}
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS ccache ${{ matrix.packages }}
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-${{ matrix.cxx }}
       - name: Build and test
         run: |
-          make CXX=${{ matrix.cxx }} all check examples
+          make -j$(nproc) CXX="ccache ${{ matrix.cxx }}" all check examples
 
   asan:
     name: ASan + UBSan
@@ -98,8 +101,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19 llvm-19
-      - run: make CXX=clang++-19 asan
+      - run: sudo apt-get update && sudo apt-get install -y $DEPS ccache clang-19 llvm-19
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: asan
+      - run: make CXX="ccache clang++-19" asan
 
   alpine:
     needs: pre-commit
