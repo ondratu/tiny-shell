@@ -314,7 +314,7 @@ TEST_F(ManagerTest, adopted_windows_get_an_icon_in_the_dock)
     start();
     pump_events();
 
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 3u);
 }
 
 TEST_F(ManagerTest, windows_that_skip_the_taskbar_have_no_dock_icon)
@@ -326,7 +326,7 @@ TEST_F(ManagerTest, windows_that_skip_the_taskbar_have_no_dock_icon)
     pump_events();
 
     EXPECT_TRUE(is_managed(c));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 1u);
 }
 
 TEST_F(ManagerTest, unmapped_windows_are_not_adopted)
@@ -1828,7 +1828,7 @@ TEST_F(ManagerTest, new_window_gets_an_icon_in_the_dock)
     run_loop();
     pump_events();
 
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 2u);
 }
 
 TEST_F(ManagerTest, focus_of_a_new_window_makes_it_active)
@@ -2148,7 +2148,7 @@ TEST_F(ManagerTest, unmapped_window_is_forgotten)
                          window),
               0);
     EXPECT_NE(manager->active, window);
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 1u);
     XWindowAttributes attrs;
     EXPECT_EQ(XGetWindowAttributes(dsp(), frame, &attrs), 0); // frame is gone
     EXPECT_EQ(parent_of(c.window), root_window()); // the client is not
@@ -2274,7 +2274,7 @@ TEST_F(ManagerTest, a_minimized_window_withdrawn_by_the_client_is_forgotten)
     pump_events();
 
     EXPECT_FALSE(is_managed(c));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 1u);
 }
 
 TEST_F(ManagerTest, destroyed_window_is_forgotten)
@@ -2292,7 +2292,7 @@ TEST_F(ManagerTest, destroyed_window_is_forgotten)
 
     EXPECT_FALSE(is_managed(c));
     EXPECT_EQ(manager->wm_tops.size(), 0u);
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 1u);
     EXPECT_EQ(manager->active, nullptr);
 }
 
@@ -2313,7 +2313,7 @@ TEST_F(ManagerTest, destroyed_minimized_window_leaves_the_dock)
 
     EXPECT_FALSE(is_managed(c));
     EXPECT_EQ(manager->wm_tops.size(), 0u);
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), 1u);
     EXPECT_EQ(manager->active, nullptr);
 }
 
@@ -2543,7 +2543,7 @@ class ManagerFavoritesTest : public ManagerTest {
     // The icons of the dock, without the dots
     size_t icons()
     {
-        return children_of(manager->wm_dock.get_window()).size() - 1;
+        return mapped_children_of(manager->wm_dock.get_window()).size() - 1;
     }
 
     std::filesystem::path root =
@@ -2662,6 +2662,115 @@ TEST_F(ManagerFavoritesTest, a_favorite_that_is_not_installed_stays_in_the_list)
 
     EXPECT_EQ(saved,
               (std::vector<std::string>{"gone.desktop", "epsilon.desktop"}));
+}
+
+TEST_F(ManagerFavoritesTest, a_dragged_favorite_changes_the_order_and_tells_it)
+{
+    start();
+    std::vector<std::vector<std::string>> saved;
+    manager->set_favorites({"epsilon.desktop", "eta.desktop"},
+                           [&saved](const std::vector<std::string>& list) {
+                               saved.push_back(list);
+                           });
+
+    manager->wm_dock.on_move_favorite("epsilon.desktop", 1);
+
+    ASSERT_EQ(saved.size(), 1u);
+    EXPECT_EQ(saved[0],
+              (std::vector<std::string>{"eta.desktop", "epsilon.desktop"}));
+    EXPECT_EQ(manager->wm_dock.get_favorites().at(0).id, "eta.desktop");
+}
+
+TEST_F(ManagerFavoritesTest, a_favorite_that_is_not_installed_keeps_its_place)
+{
+    start();
+    std::vector<std::string> saved;
+    manager->set_favorites(
+            {"epsilon.desktop", "gone.desktop", "eta.desktop"},
+            [&saved](const std::vector<std::string>& list) { saved = list; });
+
+    manager->wm_dock.on_move_favorite("eta.desktop", 0);
+
+    EXPECT_EQ(saved, (std::vector<std::string>{"eta.desktop", "gone.desktop",
+                                               "epsilon.desktop"}));
+}
+
+TEST_F(ManagerFavoritesTest, the_place_behind_the_last_favorite_is_the_end)
+{
+    start();
+    std::vector<std::string> saved;
+    manager->set_favorites(
+            {"epsilon.desktop", "eta.desktop"},
+            [&saved](const std::vector<std::string>& list) { saved = list; });
+
+    manager->wm_dock.on_move_favorite("epsilon.desktop", 99);
+
+    EXPECT_EQ(saved,
+              (std::vector<std::string>{"eta.desktop", "epsilon.desktop"}));
+}
+
+TEST_F(ManagerFavoritesTest, an_application_that_is_not_a_favorite_is_not_moved)
+{
+    start();
+    std::vector<std::string> saved;
+    manager->set_favorites(
+            {"epsilon.desktop"},
+            [&saved](const std::vector<std::string>& list) { saved = list; });
+
+    manager->wm_dock.on_move_favorite("eta.desktop", 0);
+
+    EXPECT_TRUE(saved.empty());
+}
+
+TEST_F(ManagerFavoritesTest, the_right_button_in_the_launcher_opens_the_menu)
+{
+    start();
+    manager->wm_launcher.popup();
+
+    manager->wm_launcher.on_menu("epsilon.desktop", XButtonEvent{});
+    pump_events();
+
+    EXPECT_EQ(attributes_of(manager->wm_dock.get_menu()).map_state, IsViewable);
+    // the launcher stays open under the menu
+    EXPECT_TRUE(manager->wm_launcher.is_open());
+}
+
+TEST_F(ManagerFavoritesTest, the_launcher_gets_the_keyboard_back_after_the_menu)
+{
+    start();
+    manager->wm_launcher.popup();
+    manager->wm_launcher.on_menu("epsilon.desktop", XButtonEvent{});
+    pump_events();
+
+    manager->wm_dock.get_menu().unmap();
+
+    ::Window focus;
+    int revert;
+    XGetInputFocus(tiny::get_display(), &focus, &revert);
+    EXPECT_NE(focus, PointerRoot);
+    EXPECT_TRUE(manager->wm_launcher.is_open());
+}
+
+TEST_F(ManagerFavoritesTest,
+       starting_an_application_from_the_dock_closes_the_launcher)
+{
+    start();
+    manager->wm_launcher.popup();
+
+    manager->wm_dock.on_launch("epsilon.desktop");
+
+    EXPECT_FALSE(manager->wm_launcher.is_open());
+}
+
+TEST_F(ManagerFavoritesTest,
+       starting_an_action_from_the_dock_closes_the_launcher)
+{
+    start();
+    manager->wm_launcher.popup();
+
+    manager->wm_dock.on_action("epsilon.desktop", 0);
+
+    EXPECT_FALSE(manager->wm_launcher.is_open());
 }
 
 TEST_F(ManagerFavoritesTest, changes_are_fine_without_anybody_to_save_them)
@@ -3084,14 +3193,15 @@ TEST_F(ManagerTest, a_dialog_has_no_icon_in_the_dock)
     start();
     const FakeClient& parent = add_client();
     run_loop();
-    const auto before = children_of(manager->wm_dock.get_window()).size();
+    const auto before =
+            mapped_children_of(manager->wm_dock.get_window()).size();
     FakeClient& dialog = add_client(false);
     dialog.set_transient_for(parent.window);
     dialog.map();
     run_loop();
 
     EXPECT_TRUE(is_managed(dialog));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), before);
 }
 
 TEST_F(ManagerTest, a_dialog_of_an_unknown_window_is_a_normal_window)
@@ -3327,7 +3437,8 @@ TEST_F(ManagerTest, a_transient_toolbar_is_not_treated_as_a_dialog)
     start();
     const FakeClient& parent = add_client();
     run_loop();
-    const auto before = children_of(manager->wm_dock.get_window()).size();
+    const auto before =
+            mapped_children_of(manager->wm_dock.get_window()).size();
     FakeClient& toolbar = add_client(false);
     set_window_type(toolbar, dsp()._NET_WM_WINDOW_TYPE_TOOLBAR);
     toolbar.set_transient_for(parent.window);
@@ -3337,7 +3448,7 @@ TEST_F(ManagerTest, a_transient_toolbar_is_not_treated_as_a_dialog)
     EXPECT_TRUE(
             manager->transients_of(manager->wm_windows[parent.window]).empty());
     // a toolbar is not a dialog, but it has no place in the dock either
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), before);
 }
 
 TEST_F(ManagerTest, dialogs_of_each_other_do_not_stop_alt_tab)
@@ -3904,14 +4015,15 @@ TEST_F(ManagerTest, a_window_that_starts_shaded_is_rolled_up)
 TEST_F(ManagerTest, a_utility_window_has_no_icon_in_the_dock)
 {
     start();
-    const auto before = children_of(manager->wm_dock.get_window()).size();
+    const auto before =
+            mapped_children_of(manager->wm_dock.get_window()).size();
     FakeClient& c = add_client(false);
     set_window_type(c, dsp()._NET_WM_WINDOW_TYPE_UTILITY);
     c.map();
     run_loop();
 
     EXPECT_TRUE(is_managed(c));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), before);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(), before);
 }
 
 TEST_F(ManagerTest, skip_taskbar_removes_the_icon_from_the_dock_and_back)
@@ -3920,16 +4032,19 @@ TEST_F(ManagerTest, skip_taskbar_removes_the_icon_from_the_dock_and_back)
     const FakeClient& c = add_client();
     run_loop();
     auto* window = manager->wm_windows[c.window];
-    const auto with_icon = children_of(manager->wm_dock.get_window()).size();
+    const auto with_icon =
+            mapped_children_of(manager->wm_dock.get_window()).size();
     ASSERT_TRUE(manager->wm_dock.contains(window));
 
     window->set_skip_taskbar(true);
     EXPECT_FALSE(manager->wm_dock.contains(window));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), with_icon - 1);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(),
+              with_icon - 1);
 
     window->set_skip_taskbar(false);
     EXPECT_TRUE(manager->wm_dock.contains(window));
-    EXPECT_EQ(children_of(manager->wm_dock.get_window()).size(), with_icon);
+    EXPECT_EQ(mapped_children_of(manager->wm_dock.get_window()).size(),
+              with_icon);
 }
 
 TEST_F(ManagerTest, skip_taskbar_does_not_add_a_dialog_to_the_dock)

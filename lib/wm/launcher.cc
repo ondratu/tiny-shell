@@ -63,6 +63,12 @@ Launcher::Launcher():
     grid.on_activate.connect([this](tiny::Object* o, const XEvent& e, void* d) {
         run(o, e, d);
     });
+    grid.on_context.connect([this](tiny::Object*, const XEvent& e, void*) {
+        if (on_menu && grid.get_selected() < found.size()) {
+            on_menu(index.applications()[found[grid.get_selected()]].id,
+                    e.xbutton);
+        }
+    });
     prev_page.on_click.connect([this](tiny::Object* o, const XEvent& e,
                                       void* d) { turn(o, e, d); });
     next_page.on_click.connect([this](tiny::Object* o, const XEvent& e,
@@ -185,6 +191,20 @@ void Launcher::toggle()
         close(this, XEvent(), nullptr);
     } else {
         popup();
+    }
+}
+
+void Launcher::hide()
+{
+    if (is_maped) {
+        close(this, XEvent(), nullptr);
+    }
+}
+
+void Launcher::refocus()
+{
+    if (is_maped) {
+        entry.set_focus();
     }
 }
 

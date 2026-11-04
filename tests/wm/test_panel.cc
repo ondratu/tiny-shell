@@ -27,8 +27,9 @@ TEST(UserMenuTest, realize_stacks_three_buttons_under_each_other)
     menu.realize(root_window());
 
     const ::Window top = child_at(menu.get_window(), 0, 0);
-    const ::Window middle = child_at(menu.get_window(), 0, 20);
-    const ::Window bottom = child_at(menu.get_window(), 0, 40);
+    const int item = tiny::theme.wm_popup_item_height;
+    const ::Window middle = child_at(menu.get_window(), 0, item);
+    const ::Window bottom = child_at(menu.get_window(), 0, 2 * item);
     EXPECT_EQ(top, menu.restart.get_window());
     EXPECT_EQ(middle, menu.shutdown.get_window());
     EXPECT_EQ(bottom, menu.logout.get_window());
@@ -145,7 +146,7 @@ TEST_F(PanelScaledTest, user_menu_is_scaled)
 
     const XWindowAttributes attrs = attributes_of(menu);
     EXPECT_EQ(attrs.width, 240);
-    EXPECT_EQ(attrs.height, 120);
+    EXPECT_EQ(attrs.height, 180); // three items as high as the panel
 }
 
 TEST_F(PanelScaledTest, user_menu_buttons_are_scaled_and_stacked)
@@ -155,9 +156,9 @@ TEST_F(PanelScaledTest, user_menu_buttons_are_scaled_and_stacked)
     menu.realize(root_window());
 
     EXPECT_EQ(attributes_of(menu.logout).width, 240);
-    EXPECT_EQ(attributes_of(menu.logout).height, 40);
-    EXPECT_EQ(child_at(menu.get_window(), 0, 40), menu.shutdown.get_window());
-    EXPECT_EQ(child_at(menu.get_window(), 0, 80), menu.logout.get_window());
+    EXPECT_EQ(attributes_of(menu.logout).height, 60);
+    EXPECT_EQ(child_at(menu.get_window(), 0, 60), menu.shutdown.get_window());
+    EXPECT_EQ(child_at(menu.get_window(), 0, 120), menu.logout.get_window());
 }
 
 TEST_F(PanelScaledTest, panel_height_is_scaled)

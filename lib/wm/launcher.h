@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -58,6 +59,18 @@ class Launcher : public tiny::Popover {
     }
 
     void toggle();
+
+    bool is_open() const { return is_maped; }
+
+    /// Close the launcher and forget the search (when it is open).
+    void hide();
+
+    /// Give the keyboard back to the search field (after a menu was shown).
+    void refocus();
+
+    /// The right button on an application (its desktop file id and the
+    /// event); the owner shows a menu.
+    std::function<void(const std::string&, const XButtonEvent&)> on_menu;
 
     /// Close the launcher and forget the search.
     void close(Object* o, const XEvent& e, void* data);

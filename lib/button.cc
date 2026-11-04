@@ -82,6 +82,15 @@ void LabelButton::set_text(const std::string& text_arg)
     }
 }
 
+int LabelButton::text_width() const
+{
+    XGlyphInfo extents;
+    XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
+                       reinterpret_cast<const FcChar8*>(text.c_str()),
+                       static_cast<int>(text.size()), &extents);
+    return extents.xOff;
+}
+
 void LabelButton::on_enter_notify(const XEvent& e, void* data)
 {
     Button::on_enter_notify(e, data);
@@ -113,8 +122,9 @@ void LabelButton::on_expose(const XEvent&, void*)
                        reinterpret_cast<const FcChar8*>(text.c_str()),
                        static_cast<int>(text.size()), &extents);
 
-    // Text is center normal center TODO: could be configurable
-    const int x = (width - extents.width) / 2;
+    // Text is centered unless the owner wants it from the left
+    const int x =
+            text_padding >= 0 ? text_padding : (width - extents.width) / 2;
     const int y = (height + extents.height) / 2;
 
     XSetWindowBackground(display, window, get_style().get_bg(state));

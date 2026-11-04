@@ -34,7 +34,13 @@ class Theme {
     int wm_panel_login_width = 120;
     int wm_menu_width = 120;
     int wm_menu_item_height = 20;
-    int wm_dock_menu_width = 180; //!< the menu of an icon of the dock
+    int wm_popup_item_height = 30; //!< an item of a menu: as high as the panel
+    int wm_menu_padding = 12;      //!< left and right of the text of an item
+    int wm_dock_dots = 10;         //!< under an icon, the room for its dots
+    int wm_dock_dot = 4;           //!< the diameter of a dot (a window)
+    int wm_dock_line = 1;          //!< the width of the line between the groups
+    int wm_dock_marker = 3;        //!< the width of the mark of a drop
+    int wm_dock_drag = 6;          //!< how far a press moves before it drags
     int wm_launcher_columns = 8;
     int wm_launcher_rows = 4;
     int wm_launcher_cell_width = 64; // the narrowest cell
@@ -48,6 +54,8 @@ class Theme {
     wm::ButtonStyle wm_button;
     wm::HeaderStyle wm_header;
     wm::DockStyle wm_dock;
+    wm::PlainStyle wm_dock_separator{0x555753};
+    wm::PlainStyle wm_dock_mark{0x729FCF};
     EntryStyle entry;
     ListStyle list;
 }; // Theme

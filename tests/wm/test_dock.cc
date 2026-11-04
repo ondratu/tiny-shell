@@ -373,69 +373,449 @@ TEST_F(DockIconTest, the_right_button_does_not_focus_the_window)
     EXPECT_EQ(menu.calls, 1);
 }
 
-// ---- arrange_dock ----
+// ---- the windows of an application in one icon ----
 
-using Strings = std::vector<std::string>;
+class DockIconWindowsTest : public ::testing::Test {
+  protected:
+    void SetUp() override
+    {
+        first = std::make_unique<WmWindow>(client1.window, root_window(),
+                                           0xFFFF, screen_area());
+        second = std::make_unique<WmWindow>(client2.window, root_window(),
+                                            0xFFFF, screen_area());
+        client1.map();
+        client2.map();
+        icon = std::make_unique<tiny::wm::DockIcon>(
+                std::vector<WmWindow*>{first.get(), second.get()});
+        icon->realize(root_window(), 0, 0);
+        icon->map_all();
+    }
 
-TEST(ArrangeDockTest, nothing_is_empty)
+    // The color of the middle of the dot `index` of `count`
+    uint32_t dot_color(int index, int count) const
+    {
+        const int dot = tiny::theme.wm_dock_dot;
+        const int left = (icon_size() - (count * 2 * dot - dot)) / 2;
+        const int top = icon_size() + (tiny::theme.wm_dock_dots - dot) / 2;
+        const Image img(icon->get_window(), icon->get_width(),
+                        icon->get_height());
+        return img.at(left + index * 2 * dot + dot / 2, top + dot / 2);
+    }
+
+    FakeClient client1;
+    FakeClient client2;
+    std::unique_ptr<WmWindow> first;
+    std::unique_ptr<WmWindow> second;
+    std::unique_ptr<tiny::wm::DockIcon> icon;
+};
+
+TEST_F(DockIconWindowsTest, is_higher_than_the_icon_by_the_room_for_the_dots)
 {
-    EXPECT_TRUE(tiny::wm::arrange_dock({}, {}).empty());
+    EXPECT_EQ(icon->get_width(), icon_size());
+    EXPECT_EQ(icon->get_height(), icon_size() + tiny::theme.wm_dock_dots);
 }
 
-TEST(ArrangeDockTest, windows_without_favorites_stay_in_their_order)
+TEST_F(DockIconWindowsTest, has_a_dot_for_every_window)
 {
-    const auto slots = tiny::wm::arrange_dock({}, {"a", "", "b"});
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    send(*icon, Expose);
 
-    ASSERT_EQ(slots.size(), 3u);
-    for (int i = 0; i < 3; ++i) {
-        EXPECT_EQ(slots[static_cast<size_t>(i)].favorite, -1);
-        EXPECT_EQ(slots[static_cast<size_t>(i)].task, i);
+    EXPECT_EQ(dot_color(0, 2), tiny::theme.wm_dock.get_fg(normal));
+    EXPECT_EQ(dot_color(1, 2), tiny::theme.wm_dock.get_fg(normal));
+    EXPECT_EQ(icon->get_windows().size(), 2u);
+}
+
+TEST_F(DockIconWindowsTest, the_dot_of_the_focused_window_is_brighter)
+{
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    const auto hover = static_cast<uint8_t>(tiny::Style::State::Hover);
+    second->set_focus();
+    XRaiseWindow(tiny::get_display(), icon->get_window()); // over the client
+
+    send(*icon, Expose);
+
+    EXPECT_EQ(dot_color(0, 2), tiny::theme.wm_dock.get_fg(normal));
+    EXPECT_EQ(dot_color(1, 2), tiny::theme.wm_dock.get_fg(hover));
+}
+
+TEST_F(DockIconWindowsTest, the_icon_of_a_focused_window_is_selected)
+{
+    second->set_focus();
+
+    send(*icon, Expose);
+
+    const Image img(icon->get_window(), icon_size(), icon_size());
+    EXPECT_EQ(img.at(0, 0), widget_bg(tiny::Style::State::Selected));
+}
+
+TEST_F(DockIconWindowsTest, an_application_that_does_not_run_has_no_dots)
+{
+    tiny::wm::DockIcon idle(nullptr, "a.desktop");
+    idle.realize(root_window(), 0, 0);
+    idle.map_all();
+    const uint32_t bg = widget_bg(tiny::Style::State::Normal);
+
+    send(idle, Expose);
+
+    const Image img(idle.get_window(), idle.get_width(), idle.get_height());
+    EXPECT_EQ(img.count_not(bg, idle.get_width()) > 0, true); // the circle
+    for (int x = 0; x < idle.get_width(); ++x) {
+        EXPECT_EQ(img.at(x, icon_size() + tiny::theme.wm_dock_dots / 2), bg);
     }
 }
 
-TEST(ArrangeDockTest, favorites_that_do_not_run_come_first_and_have_no_window)
+TEST_F(DockIconWindowsTest, a_click_focuses_the_next_window_of_the_application)
 {
-    const auto slots = tiny::wm::arrange_dock({"a", "b"}, {"c"});
+    send(*icon, ButtonRelease);
+    EXPECT_TRUE(first->is_focused());
 
-    ASSERT_EQ(slots.size(), 3u);
-    EXPECT_EQ(slots[0].favorite, 0);
-    EXPECT_EQ(slots[0].task, -1);
-    EXPECT_EQ(slots[1].favorite, 1);
-    EXPECT_EQ(slots[1].task, -1);
-    EXPECT_EQ(slots[2].favorite, -1);
-    EXPECT_EQ(slots[2].task, 0);
+    send(*icon, ButtonRelease);
+    EXPECT_TRUE(second->is_focused());
+
+    send(*icon, ButtonRelease);
+    EXPECT_TRUE(first->is_focused());
 }
 
-TEST(ArrangeDockTest, a_window_takes_the_place_of_its_favorite)
+TEST_F(DockIconWindowsTest, knows_its_windows)
 {
-    const auto slots = tiny::wm::arrange_dock({"a", "b"}, {"c", "b"});
-
-    ASSERT_EQ(slots.size(), 3u);
-    EXPECT_EQ(slots[0].task, -1); // a does not run
-    EXPECT_EQ(slots[1].favorite, 1);
-    EXPECT_EQ(slots[1].task, 1);
-    EXPECT_EQ(slots[2].favorite, -1);
-    EXPECT_EQ(slots[2].task, 0);
+    EXPECT_TRUE(icon->contains(first.get()));
+    EXPECT_TRUE(icon->contains(second.get()));
+    EXPECT_FALSE(icon->contains(nullptr));
+    EXPECT_EQ(icon->get_task(), first.get());
 }
 
-TEST(ArrangeDockTest, only_the_first_window_of_an_application_takes_the_place)
+TEST_F(DockIconWindowsTest, the_dots_do_not_go_over_the_width_of_the_icon)
 {
-    const auto slots = tiny::wm::arrange_dock({"a"}, {"a", "a"});
+    std::vector<std::unique_ptr<FakeClient>> clients;
+    std::vector<std::unique_ptr<WmWindow>> owned;
+    std::vector<WmWindow*> many;
+    for (int i = 0; i < 20; ++i) {
+        clients.push_back(std::make_unique<FakeClient>());
+        clients.back()->map();
+        owned.push_back(std::make_unique<WmWindow>(
+                clients.back()->window, root_window(), 0xFFFF, screen_area()));
+        many.push_back(owned.back().get());
+    }
+    tiny::wm::DockIcon crowded(many);
+    crowded.realize(root_window(), 0, 0);
+    crowded.map_all();
 
-    ASSERT_EQ(slots.size(), 2u);
-    EXPECT_EQ(slots[0].favorite, 0);
-    EXPECT_EQ(slots[0].task, 0);
-    EXPECT_EQ(slots[1].favorite, -1);
-    EXPECT_EQ(slots[1].task, 1);
+    const XErrors errors;
+    send(crowded, Expose);
+
+    EXPECT_EQ(errors.errors(), 0);
 }
 
-TEST(ArrangeDockTest, a_window_of_unknown_application_never_takes_a_place)
-{
-    const auto slots = tiny::wm::arrange_dock({"a"}, {""});
+// ---- drag of a favorite ----
 
-    ASSERT_EQ(slots.size(), 2u);
-    EXPECT_EQ(slots[0].task, -1);
-    EXPECT_EQ(slots[1].task, 0);
+class DockIconDragTest : public DockIconFavoriteTest {
+  protected:
+    void SetUp() override
+    {
+        DockIconFavoriteTest::SetUp();
+        icon->set_draggable(true);
+        icon->on_drag = [this](const tiny::wm::DockIcon&, int x) {
+            dragged.push_back(x);
+        };
+        icon->on_drop = [this](const tiny::wm::DockIcon&, int x) {
+            dropped.push_back(x);
+        };
+        icon->on_click.connect(click.slot());
+    }
+
+    void press(int x_root)
+    {
+        XEvent e = make_event(ButtonPress);
+        e.xbutton.button = Button1;
+        e.xbutton.x_root = x_root;
+        send(icon->get_window(), e);
+    }
+
+    void move(int x_root)
+    {
+        XEvent e = make_event(MotionNotify);
+        e.xmotion.x_root = x_root;
+        send(icon->get_window(), e);
+    }
+
+    void release(int x_root)
+    {
+        XEvent e = make_event(ButtonRelease);
+        e.xbutton.button = Button1;
+        e.xbutton.x_root = x_root;
+        send(icon->get_window(), e);
+    }
+
+    Recorder click;
+    std::vector<int> dragged;
+    std::vector<int> dropped;
+};
+
+TEST_F(DockIconDragTest, a_small_move_is_not_a_drag)
+{
+    press(100);
+    move(100 + tiny::theme.wm_dock_drag - 1);
+
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_TRUE(dragged.empty());
+}
+
+TEST_F(DockIconDragTest, a_longer_move_starts_the_drag_and_tells_every_move)
+{
+    press(100);
+    move(100 + tiny::theme.wm_dock_drag);
+    move(140);
+
+    EXPECT_TRUE(icon->is_dragging());
+    EXPECT_EQ(dragged, (std::vector<int>{100 + tiny::theme.wm_dock_drag, 140}));
+}
+
+TEST_F(DockIconDragTest, a_move_to_the_left_drags_too)
+{
+    press(100);
+    move(60);
+
+    EXPECT_TRUE(icon->is_dragging());
+}
+
+TEST_F(DockIconDragTest, the_release_drops_the_icon_and_is_not_a_click)
+{
+    press(100);
+    move(150);
+    release(160);
+
+    EXPECT_EQ(dropped, (std::vector<int>{160}));
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_EQ(click.calls, 0);
+}
+
+TEST_F(DockIconDragTest, the_release_without_a_drag_is_a_click)
+{
+    press(100);
+    move(101);
+    release(101);
+
+    EXPECT_TRUE(dropped.empty());
+    EXPECT_EQ(click.calls, 1);
+}
+
+TEST_F(DockIconDragTest, a_move_without_a_press_does_nothing)
+{
+    move(500);
+
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_TRUE(dragged.empty());
+}
+
+TEST_F(DockIconDragTest, an_icon_that_is_not_draggable_stays)
+{
+    icon->set_draggable(false);
+
+    press(100);
+    move(300);
+
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_TRUE(dragged.empty());
+}
+
+TEST_F(DockIconDragTest, a_drag_without_handlers_is_ignored)
+{
+    icon->on_drag = nullptr;
+    icon->on_drop = nullptr;
+
+    press(100);
+    move(200);
+    release(200);
+
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_EQ(click.calls, 0);
+}
+
+TEST_F(DockIconDragTest, the_icon_is_drawn_smaller_while_it_is_dragged)
+{
+    if (pixmap == None) {
+        GTEST_SKIP() << "no ARGB32 format";
+    }
+    const uint32_t green = 0x00FF00;
+    send(*icon, Expose);
+    const Image whole(icon->get_window(), icon_size(), icon_size());
+    ASSERT_EQ(whole.at(2, 2), green);
+
+    press(100);
+    move(200);
+    const Image small(icon->get_window(), icon_size(), icon_size());
+
+    EXPECT_NE(small.at(2, 2), green);
+    EXPECT_EQ(small.at(icon_size() / 2, icon_size() / 2), green);
+
+    release(200);
+    const Image back(icon->get_window(), icon_size(), icon_size());
+    EXPECT_EQ(back.at(2, 2), green);
+}
+
+TEST_F(DockIconDragTest, an_icon_without_a_picture_is_smaller_too)
+{
+    tiny::wm::DockIcon bare(nullptr, "b.desktop");
+    bare.set_draggable(true);
+    bare.realize(root_window(), 0, 0);
+    bare.map_all();
+    const uint32_t bg = widget_bg(tiny::Style::State::Normal);
+    XEvent e = make_event(ButtonPress);
+    e.xbutton.button = Button1;
+    e.xbutton.x_root = 10;
+    send(bare.get_window(), e);
+    e = make_event(MotionNotify);
+    e.xmotion.x_root = 100;
+    send(bare.get_window(), e);
+
+    const Image img(bare.get_window(), icon_size(), icon_size());
+
+    EXPECT_EQ(img.at(1, icon_size() / 2), bg); // the circle is smaller
+    EXPECT_NE(img.count_not(bg, icon_size()), 0u);
+}
+
+TEST(DockIconLifeTest, destructor_disconnects_the_drag_events)
+{
+    ::Window window;
+    {
+        tiny::wm::DockIcon icon(nullptr, "a.desktop");
+        icon.realize(root_window(), 0, 0);
+        window = icon.get_window();
+        EXPECT_TRUE(has_handler(ButtonPress, window));
+        EXPECT_TRUE(has_handler(MotionNotify, window));
+    }
+    EXPECT_FALSE(has_handler(ButtonPress, window));
+    EXPECT_FALSE(has_handler(MotionNotify, window));
+}
+
+// ---- group_dock ----
+
+using Strings = std::vector<std::string>;
+
+TEST(GroupDockTest, nothing_is_empty)
+{
+    EXPECT_TRUE(tiny::wm::group_dock({}, {}).empty());
+}
+
+TEST(GroupDockTest, windows_of_one_application_are_one_icon)
+{
+    const auto groups = tiny::wm::group_dock({}, {"a", "b", "a"});
+
+    ASSERT_EQ(groups.size(), 2u);
+    EXPECT_EQ(groups[0].favorite, -1);
+    EXPECT_EQ(groups[0].key, "a");
+    EXPECT_EQ(groups[0].tasks, (std::vector<size_t>{0, 2}));
+    EXPECT_EQ(groups[1].tasks, (std::vector<size_t>{1}));
+}
+
+TEST(GroupDockTest, every_window_of_unknown_application_is_an_icon)
+{
+    const auto groups = tiny::wm::group_dock({}, {"", "", "b"});
+
+    ASSERT_EQ(groups.size(), 3u);
+    EXPECT_EQ(groups[0].tasks, (std::vector<size_t>{0}));
+    EXPECT_EQ(groups[1].tasks, (std::vector<size_t>{1}));
+    EXPECT_EQ(groups[2].tasks, (std::vector<size_t>{2}));
+}
+
+TEST(GroupDockTest, favorites_that_do_not_run_come_first_and_have_no_window)
+{
+    const auto groups = tiny::wm::group_dock({"a", "b"}, {"c"});
+
+    ASSERT_EQ(groups.size(), 3u);
+    EXPECT_EQ(groups[0].favorite, 0);
+    EXPECT_TRUE(groups[0].tasks.empty());
+    EXPECT_EQ(groups[1].favorite, 1);
+    EXPECT_TRUE(groups[1].tasks.empty());
+    EXPECT_EQ(groups[2].favorite, -1);
+    EXPECT_EQ(groups[2].tasks, (std::vector<size_t>{0}));
+}
+
+TEST(GroupDockTest, all_windows_of_a_favorite_are_at_its_place)
+{
+    const auto groups = tiny::wm::group_dock({"a", "b"}, {"c", "b", "b"});
+
+    ASSERT_EQ(groups.size(), 3u);
+    EXPECT_TRUE(groups[0].tasks.empty());
+    EXPECT_EQ(groups[1].favorite, 1);
+    EXPECT_EQ(groups[1].tasks, (std::vector<size_t>{1, 2}));
+    EXPECT_EQ(groups[2].favorite, -1);
+    EXPECT_EQ(groups[2].tasks, (std::vector<size_t>{0}));
+}
+
+TEST(GroupDockTest, a_window_never_joins_a_group_of_another_application)
+{
+    const auto groups = tiny::wm::group_dock({"a"}, {""});
+
+    ASSERT_EQ(groups.size(), 2u);
+    EXPECT_TRUE(groups[0].tasks.empty());
+    EXPECT_EQ(groups[1].tasks, (std::vector<size_t>{0}));
+}
+
+// ---- helpers of the layout ----
+
+TEST(DropPositionTest, counts_the_icons_left_of_the_pointer)
+{
+    const std::vector<int> centers = {10, 30, 50};
+
+    EXPECT_EQ(tiny::wm::drop_position(centers, 0), 0u);
+    EXPECT_EQ(tiny::wm::drop_position(centers, 31), 2u);
+    EXPECT_EQ(tiny::wm::drop_position(centers, 500), 3u);
+    EXPECT_EQ(tiny::wm::drop_position({}, 5), 0u);
+}
+
+TEST(MenuTitleTest, a_short_title_stays)
+{
+    EXPECT_EQ(tiny::wm::menu_title("Terminal", 40), "Terminal");
+}
+
+TEST(MenuTitleTest, a_long_title_ends_with_an_ellipsis)
+{
+    EXPECT_EQ(tiny::wm::menu_title("abcdef", 3), "abc\xE2\x80\xA6");
+    EXPECT_EQ(tiny::wm::menu_title("abc", 3), "abc");
+}
+
+TEST(MenuTitleTest, a_character_is_never_cut_in_the_middle)
+{
+    // each of the letters is two bytes
+    EXPECT_EQ(tiny::wm::menu_title("\xC4\x9B\xC5\xA1\xC4\x8D\xC5\x99", 2),
+              "\xC4\x9B\xC5\xA1\xE2\x80\xA6");
+}
+
+TEST(MenuTitleTest, a_window_without_a_title_has_a_name)
+{
+    EXPECT_EQ(tiny::wm::menu_title("", 40), "Untitled");
+}
+
+TEST(PlaceMenuTest, opens_above_the_anchor_in_the_middle)
+{
+    const auto place =
+            tiny::wm::place_menu(300, 500, 100, 60, true, true, 1000, 800);
+
+    EXPECT_EQ(place.x, 250);
+    EXPECT_EQ(place.y, 440);
+}
+
+TEST(PlaceMenuTest, opens_below_the_anchor_from_it)
+{
+    const auto place =
+            tiny::wm::place_menu(300, 500, 100, 60, false, false, 1000, 800);
+
+    EXPECT_EQ(place.x, 300);
+    EXPECT_EQ(place.y, 500);
+}
+
+TEST(PlaceMenuTest, stays_in_the_screen)
+{
+    const auto right =
+            tiny::wm::place_menu(990, 790, 100, 60, false, false, 1000, 800);
+    const auto left =
+            tiny::wm::place_menu(-20, 10, 100, 60, true, true, 1000, 800);
+
+    EXPECT_EQ(right.x, 900);
+    EXPECT_EQ(right.y, 740);
+    EXPECT_EQ(left.x, 0);
+    EXPECT_EQ(left.y, 0);
 }
 
 // ---- Dock ----
@@ -481,13 +861,15 @@ class DockTest : public ::testing::Test {
 TEST_F(DockTest, starts_with_room_for_the_menu_button)
 {
     EXPECT_EQ(dock.get_width(), icon_size() + border() * 2);
-    EXPECT_EQ(dock.get_height(), icon_size() + border() * 2);
+    // the dots of the windows are under the icons
+    EXPECT_EQ(dock.get_height(),
+              icon_size() + tiny::theme.wm_dock_dots + border() * 2);
     EXPECT_EQ(dock.get_style().padding_width, 5u);
 }
 
 TEST_F(DockTest, menu_button_is_in_the_dock)
 {
-    EXPECT_EQ(children_of(dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 1u);
 }
 
 TEST_F(DockTest, is_placed_where_it_was_realized)
@@ -503,7 +885,7 @@ TEST_F(DockTest, add_creates_an_icon_and_grows_the_dock)
     FakeClient c;
     add(manage(c));
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     EXPECT_EQ(attributes_of(dock).width, task_width(1));
     EXPECT_EQ(dock.get_width(), task_width(1));
 }
@@ -544,7 +926,7 @@ TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)
 
     remove(w1);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     EXPECT_EQ(dock.get_width(), task_width(1));
 }
 
@@ -572,7 +954,7 @@ TEST_F(DockTest, remove_of_unknown_window_changes_nothing)
 
     remove(unknown);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     EXPECT_EQ(dock.get_width(), task_width(1));
 }
 
@@ -645,6 +1027,15 @@ class DockFavoritesTest : public DockTest {
                         border() + index * (icon_size() + border()), border());
     }
 
+    // The window of the icon after the line that follows `favorites` icons
+    ::Window icon_after_line(int favorites) const
+    {
+        return child_at(dock.get_window(),
+                        border() + favorites * (icon_size() + border()) +
+                                border() + tiny::theme.wm_dock_line,
+                        border());
+    }
+
     void right_click(::Window icon)
     {
         XEvent e = make_event(ButtonRelease);
@@ -668,7 +1059,7 @@ TEST_F(DockFavoritesTest, a_favorite_has_an_icon_when_it_does_not_run)
 {
     set({"a.desktop", "b.desktop"});
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 3u);
     EXPECT_EQ(dock.get_width(), task_width(2));
     EXPECT_NE(icon_at(0), 0u);
     EXPECT_NE(icon_at(1), 0u);
@@ -679,7 +1070,7 @@ TEST_F(DockFavoritesTest, no_favorites_remove_the_icons)
     set({"a.desktop"});
     set({});
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 1u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 1u);
     EXPECT_EQ(dock.get_width(), task_width(0));
 }
 
@@ -691,7 +1082,7 @@ TEST_F(DockFavoritesTest, a_window_of_a_favorite_takes_its_place)
 
     add(w);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 3u);
     send(icon_at(1), make_event(ButtonRelease));
     EXPECT_TRUE(w->is_focused());
 }
@@ -703,8 +1094,9 @@ TEST_F(DockFavoritesTest, other_windows_come_after_the_favorites)
     add(w);
     set({"a.desktop"});
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 3u);
-    send(icon_at(1), make_event(ButtonRelease));
+    // the menu button, two icons and the line between them
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 4u);
+    send(icon_after_line(1), make_event(ButtonRelease));
     EXPECT_TRUE(w->is_focused());
 }
 
@@ -717,11 +1109,11 @@ TEST_F(DockFavoritesTest, a_closed_window_leaves_its_favorite_in_the_dock)
 
     remove(w);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     EXPECT_FALSE(dock.contains(w));
 }
 
-TEST_F(DockFavoritesTest, a_second_window_takes_the_place_when_the_first_closes)
+TEST_F(DockFavoritesTest, the_second_window_stays_when_the_first_closes)
 {
     set({"a.desktop"});
     FakeClient c1;
@@ -730,11 +1122,11 @@ TEST_F(DockFavoritesTest, a_second_window_takes_the_place_when_the_first_closes)
     WmWindow* second = manage_app(c2, "a.desktop");
     add(first);
     add(second);
-    ASSERT_EQ(children_of(dock.get_window()).size(), 3u);
+    ASSERT_EQ(mapped_children_of(dock.get_window()).size(), 2u); // one icon
 
     remove(first);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     send(icon_at(0), make_event(ButtonRelease));
     EXPECT_TRUE(second->is_focused());
 }
@@ -747,7 +1139,7 @@ TEST_F(DockFavoritesTest, the_same_window_is_not_added_twice)
     add(w);
     add(w);
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
 }
 
 TEST_F(DockFavoritesTest, a_click_on_a_favorite_that_does_not_run_launches_it)
@@ -782,13 +1174,13 @@ TEST_F(DockFavoritesTest, the_icons_change_after_the_click_that_changed_them)
     dock.on_launch = [this](const std::string&) {
         // the clicked icon would be deleted under its own handler
         dock.set_favorites(favorites({"c.desktop"}));
-        EXPECT_EQ(children_of(dock.get_window()).size(), 3u); // not yet
+        EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 3u); // not yet
     };
 
     send(icon_at(0), make_event(ButtonRelease));
     pump_events();
 
-    EXPECT_EQ(children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
     EXPECT_EQ(dock.get_favorites().size(), 1u);
 }
 
@@ -828,7 +1220,7 @@ TEST_F(DockFavoritesTest,
 
     EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
     EXPECT_EQ(menu_texts(dock.get_menu()),
-              (Strings{"New Window", "Remove from favorites"}));
+              (Strings{"New Window", "Remove from Favorites"}));
 }
 
 TEST_F(DockFavoritesTest,
@@ -863,7 +1255,7 @@ TEST_F(DockFavoritesTest, the_actions_of_the_application_are_between_the_items)
     right_click(icon_at(0));
     ASSERT_EQ(menu_texts(dock.get_menu()),
               (Strings{"New Window", "Private", "Compose",
-                       "Remove from favorites"}));
+                       "Remove from Favorites"}));
     click_item(dock.get_menu(), 2);
 
     ASSERT_EQ(chosen.size(), 1u);
@@ -884,9 +1276,9 @@ TEST_F(DockFavoritesTest, the_menu_is_made_again_for_every_icon)
     right_click(icon_at(1));
 
     EXPECT_EQ(menu_texts(dock.get_menu()),
-              (Strings{"New Window", "Remove from favorites"}));
+              (Strings{"New Window", "Remove from Favorites"}));
     EXPECT_EQ(attributes_of(dock.get_menu()).height,
-              2 * tiny::theme.wm_menu_item_height);
+              2 * tiny::theme.wm_popup_item_height);
 }
 
 TEST_F(DockFavoritesTest, an_item_without_a_handler_only_closes_the_menu)
@@ -925,7 +1317,8 @@ TEST_F(DockFavoritesTest, the_menu_of_another_window_adds_it)
     right_click(icon_at(0));
 
     EXPECT_EQ(menu_texts(dock.get_menu()),
-              (Strings{"New Window", "Add to favorites"}));
+              (Strings{"New Window", "All Windows \xE2\x80\xBA",
+                       "Add to Favorites", "Close Window"}));
 }
 
 TEST_F(DockFavoritesTest, the_menu_is_above_the_icon)
@@ -938,18 +1331,18 @@ TEST_F(DockFavoritesTest, the_menu_is_above_the_icon)
     const XWindowAttributes menu = attributes_of(dock.get_menu());
     // the border is a part of the menu, the icon starts at y_root - y
     EXPECT_EQ(menu.y + menu.height + 2 * menu.border_width, 500 - 10);
-    EXPECT_EQ(menu.height, 3 * tiny::theme.wm_menu_item_height);
+    EXPECT_EQ(menu.height, 3 * tiny::theme.wm_popup_item_height);
 }
 
-TEST_F(DockFavoritesTest, a_window_of_unknown_application_has_no_menu)
+TEST_F(DockFavoritesTest, a_window_of_unknown_application_has_no_launcher_items)
 {
     FakeClient c;
     add(manage(c));
 
     right_click(icon_at(0));
 
-    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
-    EXPECT_EQ(dock.get_menu().count(), 0u);
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"All Windows \xE2\x80\xBA", "Close Window"}));
 }
 
 TEST_F(DockFavoritesTest, the_icons_are_made_when_the_dock_is_realized_later)
@@ -963,8 +1356,646 @@ TEST_F(DockFavoritesTest, the_icons_are_made_when_the_dock_is_realized_later)
     later.realize(root_window(), 0, 0);
     pump_events();
 
-    EXPECT_EQ(children_of(later.get_window()).size(), 3u);
+    EXPECT_EQ(children_of(later.get_window()).size(), 4u); // the mark too
     EXPECT_TRUE(later.contains(w));
+}
+
+// ---- groups, the line, the menu with the windows, the drag ----
+
+class DockGroupsTest : public DockFavoritesTest {
+  protected:
+    int width_of_menu(tiny::wm::DockMenu& menu)
+    {
+        int text = 0;
+        for (size_t i = 0; i < menu.count(); ++i) {
+            text = std::max(text, menu.item(i).text_width());
+        }
+        return text + 2 * tiny::theme.wm_menu_padding;
+    }
+
+    // The root x of the middle of the favorite icon `index`
+    int center_of(int index)
+    {
+        return attributes_of(dock).x + border() +
+               index * (icon_size() + border()) + icon_size() / 2;
+    }
+
+    void press(::Window icon, int x_root)
+    {
+        XEvent e = make_event(ButtonPress);
+        e.xbutton.button = Button1;
+        e.xbutton.x_root = x_root;
+        send(icon, e);
+    }
+
+    void move(::Window icon, int x_root)
+    {
+        XEvent e = make_event(MotionNotify);
+        e.xmotion.x_root = x_root;
+        send(icon, e);
+    }
+
+    void release(::Window icon, int x_root)
+    {
+        XEvent e = make_event(ButtonRelease);
+        e.xbutton.button = Button1;
+        e.xbutton.x_root = x_root;
+        send(icon, e);
+        pump_events();
+    }
+};
+
+TEST_F(DockGroupsTest, windows_of_one_application_have_one_icon)
+{
+    FakeClient c1;
+    FakeClient c2;
+    FakeClient c3;
+    add(manage_app(c1, "x.desktop"));
+    add(manage_app(c2, "x.desktop"));
+    add(manage_app(c3, "y.desktop"));
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(),
+              3u); // x, y, the button
+}
+
+TEST_F(DockGroupsTest, windows_of_one_unknown_class_have_one_icon)
+{
+    FakeClient c1;
+    FakeClient c2;
+    c1.set_class("one", "Same");
+    c2.set_class("two", "Same");
+    add(manage(c1));
+    add(manage(c2));
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
+}
+
+TEST_F(DockGroupsTest, windows_without_application_and_class_have_an_icon_each)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage(c1));
+    add(manage(c2));
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 3u);
+}
+
+TEST_F(DockGroupsTest, a_line_divides_the_favorites_from_the_other_applications)
+{
+    set({"a.desktop"});
+    FakeClient c;
+    add(manage_app(c, "x.desktop"));
+
+    const int inset = icon_size() / 6;
+    const ::Window line = child_at(
+            dock.get_window(), 2 * border() + icon_size(), border() + inset);
+    ASSERT_NE(line, 0u);
+    const XWindowAttributes attrs = attributes_of(line);
+    EXPECT_EQ(attrs.width, tiny::theme.wm_dock_line);
+    // it does not touch the edges of the icons
+    EXPECT_EQ(attrs.height, icon_size() - 2 * inset);
+    EXPECT_LT(attrs.height, icon_size());
+    EXPECT_EQ(dock.get_width(),
+              task_width(2) + border() + tiny::theme.wm_dock_line);
+}
+
+TEST_F(DockGroupsTest, the_line_has_the_color_of_the_theme)
+{
+    set({"a.desktop"});
+    FakeClient c;
+    add(manage_app(c, "x.desktop"));
+
+    const ::Window line =
+            child_at(dock.get_window(), 2 * border() + icon_size(),
+                     border() + icon_size() / 6);
+    const Image img(line, tiny::theme.wm_dock_line, 1);
+
+    EXPECT_EQ(img.at(0, 0),
+              tiny::theme.wm_dock_separator.get_bg(
+                      static_cast<uint8_t>(tiny::Style::State::Normal)));
+}
+
+TEST_F(DockGroupsTest, there_is_no_line_without_the_other_applications)
+{
+    set({"a.desktop", "b.desktop"});
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 3u);
+    EXPECT_EQ(dock.get_width(), task_width(2));
+}
+
+TEST_F(DockGroupsTest, there_is_no_line_without_favorites)
+{
+    FakeClient c;
+    add(manage_app(c, "x.desktop"));
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
+}
+
+TEST_F(DockGroupsTest, the_line_goes_with_the_last_other_application)
+{
+    set({"a.desktop"});
+    FakeClient c;
+    WmWindow* w = manage_app(c, "x.desktop");
+    add(w);
+    ASSERT_EQ(mapped_children_of(dock.get_window()).size(), 4u);
+
+    remove(w);
+
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 2u);
+    EXPECT_EQ(dock.get_width(), task_width(1));
+}
+
+TEST_F(DockGroupsTest, a_window_of_a_group_is_redrawn_in_the_icon_of_the_group)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage_app(c1, "x.desktop"));
+    WmWindow* second = manage_app(c2, "x.desktop");
+    add(second);
+    second->set_focus();
+
+    dock.redraw(second, make_event(Expose));
+
+    const Image img(icon_at(0), icon_size(), icon_size());
+    EXPECT_EQ(img.at(0, 0), widget_bg(tiny::Style::State::Selected));
+}
+
+TEST_F(DockGroupsTest, the_menu_is_as_wide_as_its_longest_text_and_a_margin)
+{
+    set({"a.desktop"});
+    dock.list_actions = [](const std::string&) {
+        return Strings{"A very long name of an action of the application"};
+    };
+
+    right_click(icon_at(0));
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).width,
+              width_of_menu(dock.get_menu()));
+    EXPECT_GT(attributes_of(dock.get_menu()).width,
+              dock.get_menu().item(0).text_width() +
+                      2 * tiny::theme.wm_menu_padding);
+}
+
+TEST_F(DockGroupsTest, a_short_menu_is_narrow)
+{
+    set({"a.desktop"});
+
+    right_click(icon_at(0));
+    const int narrow = attributes_of(dock.get_menu()).width;
+    dock.get_menu().unmap();
+    dock.list_actions = [](const std::string&) {
+        return Strings{"A very long name of an action of the application"};
+    };
+    right_click(icon_at(0));
+
+    EXPECT_EQ(narrow, width_of_menu(dock.get_menu()) -
+                              (dock.get_menu().content_width() - narrow));
+    EXPECT_LT(narrow, attributes_of(dock.get_menu()).width);
+}
+
+TEST_F(DockGroupsTest, the_items_have_room_around_the_text)
+{
+    set({"a.desktop"});
+
+    right_click(icon_at(0));
+
+    EXPECT_GE(tiny::theme.wm_popup_item_height, tiny::theme.wm_panel);
+    const XWindowAttributes item = attributes_of(dock.get_menu().item(1));
+    EXPECT_EQ(item.height, tiny::theme.wm_popup_item_height);
+    EXPECT_EQ(item.y, tiny::theme.wm_popup_item_height);
+    EXPECT_EQ(item.width, dock.get_menu().content_width());
+}
+
+TEST_F(DockGroupsTest,
+       the_menu_of_a_running_application_has_the_windows_and_close)
+{
+    set({"a.desktop"});
+    FakeClient c1;
+    FakeClient c2;
+    add(manage_app(c1, "a.desktop"));
+    add(manage_app(c2, "a.desktop"));
+
+    right_click(icon_at(0));
+
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "All Windows \xE2\x80\xBA",
+                       "Remove from Favorites", "Close All Windows"}));
+}
+
+TEST_F(DockGroupsTest, all_windows_opens_a_submenu_with_their_titles)
+{
+    set({"a.desktop"});
+    FakeClient c1;
+    FakeClient c2;
+    c1.set_title("First window");
+    c2.set_title(std::string(60, 'x'));
+    add(manage_app(c1, "a.desktop"));
+    add(manage_app(c2, "a.desktop"));
+
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    EXPECT_EQ(attributes_of(dock.get_windows_menu()).map_state, IsViewable);
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
+    EXPECT_EQ(menu_texts(dock.get_windows_menu()),
+              (Strings{"First window", std::string(40, 'x') + "\xE2\x80\xA6"}));
+}
+
+TEST_F(DockGroupsTest, the_submenu_is_next_to_the_item)
+{
+    set({"a.desktop"});
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    const XWindowAttributes menu = attributes_of(dock.get_menu());
+    const XWindowAttributes sub = attributes_of(dock.get_windows_menu());
+    EXPECT_EQ(sub.x, menu.x + menu.width + 2 * menu.border_width);
+    EXPECT_EQ(sub.y, menu.y + tiny::theme.wm_popup_item_height);
+}
+
+TEST_F(DockGroupsTest, the_submenu_opens_to_the_left_at_the_edge_of_the_screen)
+{
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    const int width = attributes_of(root_window()).width;
+
+    dock.popup_menu("a.desktop", width - 10, 10);
+    pump_events();
+    click_item(dock.get_menu(), 1);
+
+    const XWindowAttributes menu = attributes_of(dock.get_menu());
+    const XWindowAttributes sub = attributes_of(dock.get_windows_menu());
+    EXPECT_LT(sub.x, menu.x);
+    EXPECT_LE(sub.x + sub.width + 2 * sub.border_width, menu.x);
+}
+
+TEST_F(DockGroupsTest, a_window_of_the_submenu_gets_the_focus)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage_app(c1, "a.desktop"));
+    WmWindow* second = manage_app(c2, "a.desktop");
+    add(second);
+
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+    click_item(dock.get_windows_menu(), 1);
+
+    EXPECT_TRUE(second->is_focused());
+    EXPECT_EQ(attributes_of(dock.get_windows_menu()).map_state, IsUnmapped);
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, closing_the_submenu_closes_the_menu)
+{
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    dock.get_windows_menu().unmap();
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, closing_the_menu_closes_the_submenu)
+{
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    dock.get_menu().unmap();
+
+    EXPECT_EQ(attributes_of(dock.get_windows_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, the_menu_tells_when_it_is_closed)
+{
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    int closed = 0;
+    dock.on_menu_closed = [&closed] { ++closed; };
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    dock.get_windows_menu().unmap();
+
+    EXPECT_EQ(closed, 1);
+}
+
+TEST_F(DockGroupsTest, a_closed_window_closes_the_menu)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage_app(c1, "a.desktop"));
+    WmWindow* second = manage_app(c2, "a.desktop");
+    add(second);
+    right_click(icon_at(0));
+    ASSERT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
+
+    remove(second);
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, close_window_asks_the_window_to_close)
+{
+    FakeClient c;
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    add(manage_app(c, "a.desktop"));
+
+    right_click(icon_at(0));
+    ASSERT_EQ(menu_texts(dock.get_menu()).back(), "Close Window");
+    click_item(dock.get_menu(), dock.get_menu().count() - 1);
+
+    XEvent e;
+    ASSERT_TRUE(c.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, close_all_windows_asks_every_window_to_close)
+{
+    FakeClient c1;
+    FakeClient c2;
+    c1.set_protocols({dsp().WM_DELETE_WINDOW});
+    c2.set_protocols({dsp().WM_DELETE_WINDOW});
+    add(manage_app(c1, "a.desktop"));
+    add(manage_app(c2, "a.desktop"));
+
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), dock.get_menu().count() - 1);
+
+    XEvent e;
+    EXPECT_TRUE(c1.message(e));
+    EXPECT_TRUE(c2.message(e));
+}
+
+TEST_F(DockGroupsTest,
+       the_menu_of_an_application_that_does_not_run_cannot_close)
+{
+    set({"a.desktop"});
+
+    right_click(icon_at(0));
+
+    for (const std::string& text : menu_texts(dock.get_menu())) {
+        EXPECT_EQ(text.find("Close"), std::string::npos) << text;
+        EXPECT_EQ(text.find("All Windows"), std::string::npos) << text;
+    }
+}
+
+TEST_F(DockGroupsTest, the_menu_can_be_opened_at_the_pointer)
+{
+    FakeClient c;
+    add(manage_app(c, "x.desktop"));
+
+    dock.popup_menu("x.desktop", 100, 200);
+    pump_events();
+
+    const XWindowAttributes menu = attributes_of(dock.get_menu());
+    EXPECT_EQ(menu.map_state, IsViewable);
+    EXPECT_EQ(menu.x, 100);
+    EXPECT_EQ(menu.y, 200);
+    EXPECT_EQ(menu_texts(dock.get_menu()),
+              (Strings{"New Window", "All Windows \xE2\x80\xBA",
+                       "Add to Favorites", "Close Window"}));
+}
+
+TEST_F(DockGroupsTest,
+       the_menu_of_an_application_that_does_not_run_at_the_pointer)
+{
+    set({"a.desktop"});
+    Strings launched;
+    dock.on_launch = [&launched](const std::string& id) {
+        launched.push_back(id);
+    };
+
+    dock.popup_menu("a.desktop", 100, 200);
+    pump_events();
+    click_item(dock.get_menu(), 0);
+
+    EXPECT_EQ(launched, (Strings{"a.desktop"}));
+}
+
+TEST_F(DockGroupsTest, the_menu_without_an_application_is_not_shown)
+{
+    dock.popup_menu("", 100, 200);
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, the_menu_stays_in_the_screen)
+{
+    set({"a.desktop"});
+    const XWindowAttributes root = attributes_of(root_window());
+
+    dock.popup_menu("a.desktop", root.width - 5, root.height - 5);
+    pump_events();
+
+    const XWindowAttributes menu = attributes_of(dock.get_menu());
+    EXPECT_LE(menu.x + menu.width + 2 * menu.border_width, root.width);
+    EXPECT_LE(menu.y + menu.height + 2 * menu.border_width, root.height);
+}
+
+TEST_F(DockGroupsTest, a_dragged_favorite_shows_where_it_would_go)
+{
+    set({"a.desktop", "b.desktop", "c.desktop"});
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+    move(first, center_of(2) + 1); // behind the last one
+    pump_events();
+
+    const XWindowAttributes mark = attributes_of(dock.get_mark());
+    EXPECT_EQ(mark.map_state, IsViewable);
+    EXPECT_EQ(mark.width, tiny::theme.wm_dock_marker);
+    EXPECT_EQ(mark.height, icon_size());
+    // in the gap behind the icon c
+    const int end_of_c = border() + 3 * (icon_size() + border()) - border();
+    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2, end_of_c + border() / 2);
+}
+
+TEST_F(DockGroupsTest, the_mark_before_the_first_favorite)
+{
+    set({"a.desktop", "b.desktop", "c.desktop"});
+    const ::Window last = icon_at(2);
+    press(last, center_of(2));
+    move(last, attributes_of(dock).x);
+    pump_events();
+
+    const XWindowAttributes mark = attributes_of(dock.get_mark());
+    EXPECT_EQ(mark.map_state, IsViewable);
+    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2, border() - border() / 2);
+}
+
+TEST_F(DockGroupsTest, the_mark_between_two_favorites)
+{
+    set({"a.desktop", "b.desktop", "c.desktop"});
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+    // behind b, before c
+    move(first, center_of(1) + 1);
+    pump_events();
+
+    const XWindowAttributes mark = attributes_of(dock.get_mark());
+    const int end_of_b = border() + 2 * (icon_size() + border()) - border();
+    const int start_of_c = border() + 2 * (icon_size() + border());
+    EXPECT_EQ(mark.x + tiny::theme.wm_dock_marker / 2,
+              (end_of_b + start_of_c) / 2);
+}
+
+TEST_F(DockGroupsTest, the_drop_tells_the_new_place_and_hides_the_mark)
+{
+    set({"a.desktop", "b.desktop", "c.desktop"});
+    std::vector<std::pair<std::string, size_t>> moved;
+    dock.on_move_favorite = [&moved](const std::string& id, size_t place) {
+        moved.emplace_back(id, place);
+    };
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+    move(first, center_of(2) + 1);
+    release(first, center_of(2) + 1);
+
+    ASSERT_EQ(moved.size(), 1u);
+    EXPECT_EQ(moved[0].first, "a.desktop");
+    EXPECT_EQ(moved[0].second, 2u);
+    EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, a_drop_at_the_start_is_the_place_zero)
+{
+    set({"a.desktop", "b.desktop"});
+    std::vector<size_t> places;
+    dock.on_move_favorite = [&places](const std::string&, size_t place) {
+        places.push_back(place);
+    };
+    const ::Window second = icon_at(1);
+    press(second, center_of(1));
+    move(second, 0);
+    release(second, 0);
+
+    EXPECT_EQ(places, (std::vector<size_t>{0}));
+}
+
+TEST_F(DockGroupsTest, a_drop_at_the_old_place_changes_nothing)
+{
+    set({"a.desktop", "b.desktop"});
+    int moved = 0;
+    dock.on_move_favorite = [&moved](const std::string&, size_t) { ++moved; };
+    const ::Window first = icon_at(0);
+
+    press(first, center_of(0));
+    move(first, center_of(0) + 2 * tiny::theme.wm_dock_drag);
+    release(first, center_of(0) + 2 * tiny::theme.wm_dock_drag);
+
+    EXPECT_EQ(moved, 0);
+}
+
+TEST_F(DockGroupsTest, the_dock_is_not_rebuilt_under_a_dragged_icon)
+{
+    set({"a.desktop", "b.desktop"});
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+    move(first, center_of(1) + 1);
+    FakeClient c;
+
+    add(manage_app(c, "x.desktop")); // would delete the dragged icon
+
+    EXPECT_EQ(icon_at(0), first);
+    release(first, center_of(1) + 1);
+    EXPECT_EQ(mapped_children_of(dock.get_window()).size(), 5u);
+}
+
+TEST_F(DockGroupsTest, a_window_of_another_application_keeps_the_menu_open)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage_app(c1, "a.desktop"));
+    WmWindow* other = manage_app(c2, "b.desktop");
+    add(other);
+    right_click(icon_at(0));
+
+    remove(other);
+
+    EXPECT_EQ(attributes_of(dock.get_menu()).map_state, IsViewable);
+}
+
+TEST_F(DockGroupsTest, the_menu_is_above_the_catcher_of_the_submenu)
+{
+    FakeClient c;
+    add(manage_app(c, "a.desktop"));
+    right_click(icon_at(0));
+    click_item(dock.get_menu(), 1);
+
+    const auto stack = children_of(root_window()); // bottom to top
+    const auto at = [&](::Window w) {
+        return std::find(stack.begin(), stack.end(), w) - stack.begin();
+    };
+    EXPECT_GT(at(dock.get_windows_menu().get_window()),
+              at(dock.get_menu().get_window()));
+}
+
+TEST_F(DockGroupsTest, a_click_on_a_favorite_is_not_a_move)
+{
+    set({"a.desktop"});
+    int moved = 0;
+    dock.on_move_favorite = [&moved](const std::string&, size_t) { ++moved; };
+    Strings launched;
+    dock.on_launch = [&launched](const std::string& id) {
+        launched.push_back(id);
+    };
+    const ::Window first = icon_at(0);
+
+    press(first, center_of(0));
+    release(first, center_of(0));
+
+    EXPECT_EQ(moved, 0);
+    EXPECT_EQ(launched, (Strings{"a.desktop"}));
+}
+
+TEST_F(DockGroupsTest, the_only_favorite_has_no_place_to_go)
+{
+    set({"a.desktop"});
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+
+    move(first, center_of(0) + 100);
+
+    EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, a_drop_without_a_handler_is_ignored)
+{
+    set({"a.desktop", "b.desktop"});
+    const ::Window first = icon_at(0);
+
+    press(first, center_of(0));
+    move(first, center_of(1) + 1);
+    release(first, center_of(1) + 1);
+
+    EXPECT_EQ(dock.get_favorites().size(), 2u);
+    EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, an_application_that_is_not_a_favorite_cannot_be_dragged)
+{
+    set({"a.desktop", "b.desktop"});
+    FakeClient c;
+    add(manage_app(c, "x.desktop"));
+    int moved = 0;
+    dock.on_move_favorite = [&moved](const std::string&, size_t) { ++moved; };
+    const ::Window other = icon_after_line(2);
+    ASSERT_NE(other, 0u);
+
+    press(other, 500);
+    move(other, 0);
+    release(other, 0);
+
+    EXPECT_EQ(moved, 0);
+    EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
 }
 
 TEST(DockLifeTest, destructor_destroys_the_icons)
@@ -978,7 +2009,7 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
         dock.realize(root_window(), 0, 0);
         dock.add(&w);
         dock_window = dock.get_window();
-        ASSERT_EQ(children_of(dock_window).size(), 2u);
+        ASSERT_EQ(children_of(dock_window).size(), 3u); // the mark too
     }
 
     const XErrors errors;

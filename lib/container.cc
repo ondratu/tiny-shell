@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <X11/cursorfont.h>
 
 #include <sys/time.h>
@@ -289,13 +290,20 @@ bool Popover::has_focus_inside() const
     return inside;
 }
 
+bool Popover::is_nested(::Window focus) const
+{
+    return std::any_of(nested.begin(), nested.end(), [focus](const Popover* p) {
+        return p->window == focus;
+    });
+}
+
 bool Popover::is_inside(::Window focus) const
 {
     // The focus moves between the popover and its children (e.g. an entry)
     // and, while a shortcut key is held, the pointer window gets FocusOut
     // too. Only a focus outside of the popover closes it.
     while (focus > PointerRoot) {
-        if (focus == window) {
+        if (focus == window || is_nested(focus)) {
             return true;
         }
         ::Window root;

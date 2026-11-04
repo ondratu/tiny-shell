@@ -2,6 +2,7 @@
 
 #include <list>
 #include <memory>
+#include <vector>
 
 #include "widget.h"
 #include "theme.h"
@@ -109,14 +110,20 @@ class Popover : public Box {
     void popup(int x, int y);
     void popup(const XButtonEvent& be);
 
+    //! A popover that opens from this one (a submenu): the focus in it does
+    //! not close this popover
+    void add_nested(const Popover* popover) { nested.push_back(popover); }
+
   protected:
     void on_focus_out(const XEvent& e, void*);
 
   private:
     bool has_focus_inside() const;
     bool is_inside(::Window focus) const;
+    bool is_nested(::Window focus) const;
 
     ClickCatcher catcher;
+    std::vector<const Popover*> nested;
     long int time_from_unmap;
 };
 

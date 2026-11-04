@@ -317,6 +317,14 @@ void IconGrid::on_button_press(const XEvent& e, void*)
             }
             break;
         }
+        case Button3: {
+            const size_t cell = cell_at(e.xbutton.x, e.xbutton.y);
+            if (cell < count) {
+                select(cell);
+                on_context(this, e);
+            }
+            break;
+        }
         case Button4: // wheel up
             select_page(false);
             break;
