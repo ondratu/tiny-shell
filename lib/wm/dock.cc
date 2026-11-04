@@ -102,7 +102,7 @@ DockLine::DockLine(const tiny::Style& style_arg, int w, int h):
 DockIcon::DockIcon(std::vector<Window*> windows_arg, std::string app_id_arg,
                    const Window::AppIcon& icon):
     DockButton(tiny::theme.wm_icon,
-               tiny::theme.wm_icon + tiny::theme.wm_dock_dots),
+               tiny::theme.wm_icon + tiny::theme.wm_dock_border),
     windows(std::move(windows_arg)),
     app_id(std::move(app_id_arg)),
     favorite_icon(icon)
@@ -263,7 +263,9 @@ void DockIcon::draw_dots(GC gc)
     const size_t room = static_cast<size_t>(std::max(1, (width + dot) / step));
     const int count = static_cast<int>(std::min(windows.size(), room));
     const int left = (width - (count * step - dot)) / 2;
-    const int top = tiny::theme.wm_icon + (tiny::theme.wm_dock_dots - dot) / 2;
+    // in the border of the dock under the icon, close to the edge
+    const int top = tiny::theme.wm_icon +
+                    std::max(0, tiny::theme.wm_dock_border - dot - 1);
 
     for (int i = 0; i < count; ++i) {
         const auto state = windows[static_cast<size_t>(i)]->is_focused()
@@ -454,8 +456,7 @@ void DockMenu::set_items(const std::vector<std::string>& labels)
 Dock::Dock():
     tiny::Box(tiny::Box::Type::Horizontal,
               tiny::theme.wm_icon + tiny::theme.wm_dock_border * 2,
-              tiny::theme.wm_icon + tiny::theme.wm_dock_dots +
-                      tiny::theme.wm_dock_border * 2),
+              tiny::theme.wm_icon + tiny::theme.wm_dock_border * 2),
     mark(tiny::theme.wm_dock_mark, tiny::theme.wm_dock_marker,
          tiny::theme.wm_icon)
 {
