@@ -18,10 +18,8 @@
 // window does not flicker. What can be decided without X (the fields, the
 // list, the keys) is in SettingsForm.
 
-#include <X11/Xatom.h>
 #include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
-#include <X11/Xutil.h>
 #include <X11/keysym.h>
 
 #include <algorithm>
@@ -30,7 +28,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,6 +41,7 @@
 #include "wm/xresources.h"
 #include "x_util.h"
 #include "xdg/font_list.h"
+#include "xft_window.h"
 
 namespace {
 
@@ -60,21 +58,6 @@ constexpr int start_width = 560;
 
 constexpr const char* hint =
         "Applies after login; the text options in new programs at once.";
-
-XRenderColor render_color(unsigned red, unsigned green, unsigned blue)
-{
-    return {static_cast<unsigned short>(red * 0x101),
-            static_cast<unsigned short>(green * 0x101),
-            static_cast<unsigned short>(blue * 0x101), 0xffff};
-}
-
-XRectangle x_rectangle(int x, int y, int width, int height)
-{
-    return {static_cast<short>(std::clamp(x, -32768, 32767)),
-            static_cast<short>(std::clamp(y, -32768, 32767)),
-            static_cast<unsigned short>(std::clamp(width, 0, 65535)),
-            static_cast<unsigned short>(std::clamp(height, 0, 65535))};
-}
 
 //! The scale as it is written in the file: 1.5, not 1.500000
 std::string number_text(double value)
@@ -103,247 +86,67 @@ const std::string& xft_value(const SettingsForm::Values& v,
     return v.rgba;
 }
 
-class SettingsApp {
+class SettingsApp : public tiny::XftWindow {
   public:
     SettingsApp(tiny::Display& display_arg, const tiny::wm::Config& config,
                 std::string file_arg, std::vector<std::string> families):
-        atoms(display_arg),
-        display(display_arg),
-        screen(DefaultScreen(static_cast<::Display*>(display_arg))),
+        XftWindow(display_arg),
         file(std::move(file_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
-        initial{config.font,
-                config.terminal_line,
-                number_text(config.scale),
-                number_text(config.font_size),
-                config.font_style,
-                config.xft_antialias,
-                config.xft_hinting,
-                config.xft_rgba},
-        form(initial, std::move(families), metrics, tiny::xdg::font_styles)
+        initial{config.font, config.terminal_line, number_text(config.scale),
+                number_text(config.font_size), config.font_style,
+                config.xft_antialias, config.xft_hinting, config.xft_rgba},
+        form(initial, std::move(families), metrics, tiny::xdg::font_styles),
+        background(alloc_color(0xf8, 0xf8, 0xf8)),
+        field(alloc_color(0xff, 0xff, 0xff)),
+        text_color(alloc_color(0x2e, 0x34, 0x36)),
+        dim(alloc_color(0x6e, 0x74, 0x76)),
+        rule(alloc_color(0xc8, 0xc8, 0xc8)),
+        accent(alloc_color(0x72, 0x9f, 0xcf)),
+        selected(alloc_color(0xdc, 0xe8, 0xf5)),
+        error(alloc_color(0xc0, 0x1c, 0x28))
     {
-        Visual* visual = DefaultVisual(display, screen);
-        const Colormap colormap = DefaultColormap(display, screen);
-        alloc_color(background, render_color(0xf8, 0xf8, 0xf8));
-        alloc_color(field, render_color(0xff, 0xff, 0xff));
-        alloc_color(text_color, render_color(0x2e, 0x34, 0x36));
-        alloc_color(dim, render_color(0x6e, 0x74, 0x76));
-        alloc_color(rule, render_color(0xc8, 0xc8, 0xc8));
-        alloc_color(accent, render_color(0x72, 0x9f, 0xcf));
-        alloc_color(selected, render_color(0xdc, 0xe8, 0xf5));
-        alloc_color(error, render_color(0xc0, 0x1c, 0x28));
-
         // the font of the shell, when it can be opened, else any sans
         ui_family = config.font;
-        ui_font = font(ui_family);
+        ui_font = text_font(ui_family);
         if (ui_font == nullptr) {
             ui_family = "sans";
-            ui_font = font(ui_family);
+            ui_font = text_font(ui_family);
         }
 
         form.set_measure([this](const std::string& text) {
-            return ui_font != nullptr ? text_width(ui_font, text) : 0;
+            return text_width(ui_font, text);
         });
 
-        create_window();
-        draw = XftDrawCreate(display, buffer, visual, colormap);
-    }
-
-    SettingsApp(const SettingsApp&) = delete;
-    SettingsApp& operator=(const SettingsApp&) = delete;
-
-    ~SettingsApp()
-    {
-        close_fonts();
-        XftDrawDestroy(draw);
-        XFreePixmap(display, buffer);
-        Visual* visual = DefaultVisual(display, screen);
-        const Colormap colormap = DefaultColormap(display, screen);
-        for (XftColor* color : {&background, &field, &text_color, &dim, &rule,
-                                &accent, &selected, &error}) {
-            XftColorFree(display, visual, colormap, color);
-        }
-        if (xic != nullptr) {
-            XDestroyIC(xic);
-        }
-        if (xim != nullptr) {
-            XCloseIM(xim);
-        }
-        XDestroyWindow(display, window);
-    }
-
-    void run()
-    {
-        paint(); // the first Expose copies what is in the buffer
-        XMapWindow(display, window);
-        while (running) {
-            XEvent e;
-            XNextEvent(display, &e);
-            if (XFilterEvent(&e, None) != 0) {
-                continue; // the input method used the event
-            }
-            switch (e.type) {
-                case Expose:
-                    if (e.xexpose.count == 0) {
-                        present();
-                    }
-                    break;
-                case ConfigureNotify:
-                    on_configure(e.xconfigure);
-                    break;
-                case KeyPress:
-                    on_key(e.xkey);
-                    break;
-                case FocusIn:
-                    if (xic != nullptr) {
-                        XSetICFocus(xic);
-                    }
-                    break;
-                case FocusOut:
-                    if (xic != nullptr) {
-                        XUnsetICFocus(xic);
-                    }
-                    break;
-                case ButtonPress:
-                    on_button_press(e.xbutton);
-                    break;
-                case ButtonRelease:
-                    if (e.xbutton.button == Button1 &&
-                        form.release(e.xbutton.x, e.xbutton.y)) {
-                        update();
-                    }
-                    break;
-                case ClientMessage:
-                    if (static_cast<Atom>(e.xclient.data.l[0]) ==
-                        delete_window) {
-                        running = false;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+        const int w = std::min(tiny::scaled(start_width, scale),
+                               DisplayWidth(display, screen));
+        const int h = std::min(
+                std::max(tiny::scaled(start_height, scale), form.form_height()),
+                DisplayHeight(display, screen));
+        form.resize(w, h);
+        create({title, "tiny-settings", "TinySettings", w, h,
+                tiny::scaled(start_width, scale) / 2, form.form_height(), 0,
+                true});
     }
 
   private:
-    void alloc_color(XftColor& target, const XRenderColor& color)
+    void on_resize(int w, int h) override { form.resize(w, h); }
+
+    void on_button_release(const XButtonEvent& e) override
     {
-        XftColorAllocValue(display, DefaultVisual(display, screen),
-                           DefaultColormap(display, screen), &color, &target);
-    }
-
-    void create_window()
-    {
-        width = std::min(tiny::scaled(start_width, scale),
-                         DisplayWidth(display, screen));
-        height = std::min(
-                std::max(tiny::scaled(start_height, scale), form.form_height()),
-                DisplayHeight(display, screen));
-        form.resize(width, height);
-
-        window = XCreateSimpleWindow(display, RootWindow(display, screen), 0, 0,
-                                     tiny::x_dim(width), tiny::x_dim(height), 0,
-                                     BlackPixel(display, screen),
-                                     WhitePixel(display, screen));
-        // the whole window is painted from the buffer, so X must not clear it
-        XSetWindowBackgroundPixmap(display, window, None);
-        XSelectInput(display, window,
-                     ExposureMask | KeyPressMask | ButtonPressMask |
-                             ButtonReleaseMask | StructureNotifyMask |
-                             FocusChangeMask);
-
-        XStoreName(display, window, title);
-        XChangeProperty(display, window, atoms._NET_WM_NAME, atoms.UTF8_STRING,
-                        8, PropModeReplace,
-                        reinterpret_cast<const unsigned char*>(title),
-                        static_cast<int>(std::strlen(title)));
-        XClassHint class_hint = {const_cast<char*>("tiny-settings"),
-                                 const_cast<char*>("TinySettings")};
-        XSetClassHint(display, window, &class_hint);
-        XSizeHints hints = {};
-        hints.flags = PMinSize;
-        hints.min_width = tiny::scaled(start_width, scale) / 2;
-        hints.min_height = form.form_height();
-        XSetWMNormalHints(display, window, &hints);
-        delete_window = atoms.WM_DELETE_WINDOW;
-        XSetWMProtocols(display, window, &delete_window, 1);
-
-        // an input method gives the characters that are not Latin-1; without
-        // one the keys give Latin-1 only
-        if (XSupportsLocale() != False) {
-            XSetLocaleModifiers("");
-            xim = XOpenIM(display, nullptr, nullptr, nullptr);
-        }
-        if (xim != nullptr) {
-            xic = XCreateIC(
-                    xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                    XNClientWindow, window, XNFocusWindow, window, nullptr);
-        }
-
-        new_buffer();
-    }
-
-    void new_buffer()
-    {
-        const Pixmap old = buffer;
-        buffer = XCreatePixmap(
-                display, window, tiny::x_dim(width), tiny::x_dim(height),
-                static_cast<unsigned>(DefaultDepth(display, screen)));
-        if (draw != nullptr) {
-            XftDrawChange(draw, buffer);
-        }
-        if (old != None) {
-            XFreePixmap(display, old);
+        if (e.button == Button1 && form.release(e.x, e.y)) {
+            act();
         }
     }
 
-    void on_configure(const XConfigureEvent& e)
-    {
-        if (e.width == width && e.height == height) {
-            return; // only moved
-        }
-        width = e.width;
-        height = e.height;
-        form.resize(width, height);
-        new_buffer();
-        update();
-    }
-
-    //! The characters of a key, in UTF-8, and its symbol
-    std::string lookup(XKeyEvent& e, KeySym& symbol)
-    {
-        if (xic == nullptr) { // Latin-1 only
-            char buf[32];
-            const int len =
-                    XLookupString(&e, buf, sizeof buf, &symbol, nullptr);
-            return tiny::latin1_to_utf8(buf, len);
-        }
-        std::string buf(32, '\0');
-        Status state = 0;
-        int len = Xutf8LookupString(xic, &e, buf.data(),
-                                    static_cast<int>(buf.size()), &symbol,
-                                    &state);
-        if (state == XBufferOverflow) { // `len` is the needed size
-            buf.assign(static_cast<size_t>(len), '\0');
-            len = Xutf8LookupString(xic, &e, buf.data(),
-                                    static_cast<int>(buf.size()), &symbol,
-                                    &state);
-        }
-        if (state != XLookupChars && state != XLookupBoth) {
-            return {}; // a key without characters; `len` means nothing
-        }
-        buf.resize(static_cast<size_t>(std::max(len, 0)));
-        return buf;
-    }
-
-    void on_key(XKeyEvent& e)
+    void on_key(XKeyEvent& e) override
     {
         KeySym symbol = NoSymbol;
         const std::string typed = lookup(e, symbol);
         if ((e.state & ControlMask) != 0) {
             if (symbol == XK_q || symbol == XK_w) {
-                running = false;
+                quit();
             }
             return;
         }
@@ -369,44 +172,43 @@ class SettingsApp {
                 const bool back =
                         key == SettingsForm::Key::Tab && (e.state & ShiftMask);
                 if (form.key(back ? SettingsForm::Key::BackTab : key)) {
-                    update();
+                    act();
                 }
                 return;
             }
         }
         if (form.type(typed)) {
-            update();
+            act();
         }
     }
 
-    void on_button_press(const XButtonEvent& e)
+    void on_button_press(const XButtonEvent& e) override
     {
         if (e.button == Button1) {
             form.press(e.x, e.y);
         } else if ((e.button == Button4 || e.button == Button5) &&
                    form.wheel(e.button == Button4 ? -1 : 1)) {
-            update();
+            act();
         }
     }
 
     //! Paint after something changed, and act on what the user asked for
-    void update()
+    void act()
     {
         switch (form.result()) {
             case SettingsForm::Result::Editing:
                 break;
             case SettingsForm::Result::Cancelled:
-                running = false;
+                quit();
                 return;
             case SettingsForm::Result::Saved:
                 if (save()) {
-                    running = false;
+                    quit();
                     return;
                 }
                 break;
         }
-        paint();
-        present();
+        update();
     }
 
     //! Write the file of the user; on a failure the form tells why
@@ -470,87 +272,15 @@ class SettingsApp {
         }
     }
 
-    void present()
+    XftFont* text_font(const std::string& family)
     {
-        XCopyArea(display, buffer, window, DefaultGC(display, screen), 0, 0,
-                  tiny::x_dim(width), tiny::x_dim(height), 0, 0);
-    }
-
-    // A font of a family at the size of the text; null when it can't be opened
-    XftFont* font(const std::string& family)
-    {
-        const auto found = fonts.find(family);
-        if (found != fonts.end()) {
-            return found->second;
-        }
-        XftFont* opened =
-                XftFontOpen(display, screen, FC_FAMILY, XftTypeString,
-                            family.c_str(), FC_PIXEL_SIZE, XftTypeDouble,
-                            static_cast<double>(metrics.text_size), nullptr);
-        fonts[family] = opened;
-        return opened;
-    }
-
-    void close_fonts()
-    {
-        for (const auto& entry : fonts) {
-            if (entry.second != nullptr) {
-                XftFontClose(display, entry.second);
-            }
-        }
-        fonts.clear();
-    }
-
-    int text_width(XftFont* f, const std::string& text) const
-    {
-        if (f == nullptr) {
-            return 0;
-        }
-        XGlyphInfo info;
-        XftTextExtentsUtf8(display, f,
-                           reinterpret_cast<const FcChar8*>(text.c_str()),
-                           static_cast<int>(text.size()), &info);
-        return info.xOff;
-    }
-
-    void clip(const tiny::Rect& r)
-    {
-        const XRectangle area = x_rectangle(r.x, r.y, r.width, r.height);
-        XftDrawSetClipRectangles(draw, 0, 0, &area, 1);
-    }
-
-    void unclip() { XftDrawSetClip(draw, nullptr); }
-
-    void fill(const XftColor& color, const tiny::Rect& r)
-    {
-        XftDrawRect(draw, &color, r.x, r.y, tiny::x_uint(r.width),
-                    tiny::x_uint(r.height));
+        return font(family, metrics.text_size);
     }
 
     //! A frame of one pixel (two at a high scale) inside of the rectangle
     void frame(const XftColor& color, const tiny::Rect& r)
     {
-        const int line = std::max(1, metrics.row_height / 34);
-        fill(color, {r.x, r.y, r.width, line});
-        fill(color, {r.x, r.y + r.height - line, r.width, line});
-        fill(color, {r.x, r.y, line, r.height});
-        fill(color, {r.x + r.width - line, r.y, line, r.height});
-    }
-
-    //! The text with its baseline in the middle of the rectangle, `left` from
-    //! its start and moved by `shift` (to the left, to show the cursor)
-    void text_in(XftFont* f, const XftColor& color, const tiny::Rect& r,
-                 int left, const std::string& text, int shift = 0)
-    {
-        if (f == nullptr) {
-            return;
-        }
-        const int baseline = r.y + (r.height + f->ascent - f->descent) / 2;
-        clip(r);
-        XftDrawStringUtf8(draw, &color, f, r.x + left + shift, baseline,
-                          reinterpret_cast<const FcChar8*>(text.c_str()),
-                          static_cast<int>(text.size()));
-        unclip();
+        XftWindow::frame(color, r, std::max(1, metrics.row_height / 34));
     }
 
     //! A field with its text, and the cursor when it has the focus
@@ -576,7 +306,7 @@ class SettingsApp {
         }
     }
 
-    void paint()
+    void paint() override
     {
         fill(background, {0, 0, width, height});
         if (form.view() == SettingsForm::View::Picker) {
@@ -661,19 +391,6 @@ class SettingsApp {
         paint_button(form.save_rect(), "Save", form.problem().empty());
     }
 
-    // A font by its Xft name (family, size in points and style); null when it
-    // can't be opened
-    XftFont* named_font(const std::string& name)
-    {
-        const auto found = fonts.find(name);
-        if (found != fonts.end()) {
-            return found->second;
-        }
-        XftFont* opened = XftFontOpenName(display, screen, name.c_str());
-        fonts[name] = opened;
-        return opened;
-    }
-
     void paint_preview()
     {
         const tiny::Rect r = form.preview_rect();
@@ -687,7 +404,7 @@ class SettingsApp {
             return;
         }
         // the size is the one of the shell, so it follows the scale
-        XftFont* f = named_font(tiny::xft_name(
+        XftFont* f = font_by_name(tiny::xft_name(
                 form.preview_family(), form.preview_size() * scale,
                 tiny::xft_style(form.pick_style())));
         text_in(f != nullptr ? f : ui_font, text_color, r, metrics.padding,
@@ -697,9 +414,9 @@ class SettingsApp {
     void paint_picker()
     {
         // the fonts of the rows that show are never thrown away mid-paint
-        if (fonts.size() > font_cache_limit + 2 * form.visible_rows()) {
+        if (cached_fonts() > font_cache_limit + 2 * form.visible_rows()) {
             close_fonts();
-            ui_font = font(ui_family);
+            ui_font = text_font(ui_family);
         }
         const int padding = metrics.padding;
         const tiny::Rect search = form.search_rect();
@@ -726,7 +443,7 @@ class SettingsApp {
             }
             // every family in its own font; the name in the font of the form
             // when the family has no glyphs for it
-            XftFont* f = font(family);
+            XftFont* f = text_font(family);
             text_in(f != nullptr ? f : ui_font, text_color, row, metrics.margin,
                     family);
         }
@@ -750,34 +467,21 @@ class SettingsApp {
         paint_button(form.save_rect(), "Select", form.pick_problem().empty());
     }
 
-    tiny::Display& atoms;
-    ::Display* display;
-    int screen;
     std::string file; //!< of the user, empty when its place is not known
     double scale;
     SettingsForm::Metrics metrics;
     SettingsForm::Values initial; //!< what the files say now
     SettingsForm form;
-    ::Window window = None;
-    Pixmap buffer = None;
-    Atom delete_window = None;
-    XIM xim = nullptr;
-    XIC xic = nullptr;
-    XftDraw* draw = nullptr;
     XftFont* ui_font = nullptr;
     std::string ui_family; //!< the family of `ui_font`
-    XftColor background{};
-    XftColor field{};
-    XftColor text_color{};
-    XftColor dim{};
-    XftColor rule{};
-    XftColor accent{};
-    XftColor selected{};
-    XftColor error{};
-    std::map<std::string, XftFont*> fonts;
-    int width = 0;
-    int height = 0;
-    bool running = true;
+    XftColor& background;
+    XftColor& field;
+    XftColor& text_color;
+    XftColor& dim;
+    XftColor& rule;
+    XftColor& accent;
+    XftColor& selected;
+    XftColor& error;
 };
 
 } // namespace

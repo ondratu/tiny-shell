@@ -1,15 +1,13 @@
 #include <X11/keysym.h>
 
 #include <algorithm>
-#include <array>
 
 #include "entry.h"
 #include "x_util.h"
 
 namespace tiny {
 
-Entry::Entry(int w, int h):
-    Widget(Type::Normal, w, h), xim(nullptr), xic(nullptr)
+Entry::Entry(int w, int h): Widget(Type::Normal, w, h)
 {
     name = "entry";
 }
@@ -22,26 +20,13 @@ Entry::~Entry()
         disconnect(FocusIn);
         disconnect(FocusOut);
     }
-    if (xic) {
-        XDestroyIC(xic);
-        xic = nullptr;
-    }
-    if (xim) {
-        XCloseIM(xim);
-        xim = nullptr;
-    }
 }
 
 void Entry::realize(Window parent_arg, int x, int y)
 {
     Widget::realize(parent_arg, x, y);
 
-    // Without an input method the entry stays without input (xic is null)
-    xim = XOpenIM(display, nullptr, nullptr, nullptr);
-    if (xim) {
-        xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                        XNClientWindow, window, XNFocusWindow, window, NULL);
-    }
+    input = std::make_unique<InputMethod>(display, window);
 }
 
 void Entry::set_events(long mask)
@@ -70,51 +55,10 @@ void Entry::clear()
     set_text("");
 }
 
-std::string latin1_to_utf8(const char* bytes, int len)
-{
-    std::string out;
-    for (int i = 0; i < len; ++i) {
-        const auto c = static_cast<unsigned char>(bytes[i]);
-        if (c < 0x80) {
-            out += static_cast<char>(c);
-        } else {
-            out += static_cast<char>(0xC0 | (c >> 6));
-            out += static_cast<char>(0x80 | (c & 0x3F));
-        }
-    }
-    return out;
-}
-
-std::string Entry::lookup(const XKeyEvent& key, KeySym& keysym)
-{
-    auto* const event = const_cast<XKeyEvent*>(&key);
-    if (!xic) { // no input method: Latin-1 only
-        std::array<char, 32> buf{};
-        const int len =
-                XLookupString(event, buf.data(), buf.size(), &keysym, nullptr);
-        return latin1_to_utf8(buf.data(), len);
-    }
-
-    std::string buf(32, '\0');
-    Status state = 0;
-    int len = Xutf8LookupString(xic, event, buf.data(),
-                                static_cast<int>(buf.size()), &keysym, &state);
-    if (state == XBufferOverflow) { // `len` is the needed size
-        buf.assign(static_cast<size_t>(len), '\0');
-        len = Xutf8LookupString(xic, event, buf.data(),
-                                static_cast<int>(buf.size()), &keysym, &state);
-    }
-    if (state != XLookupChars && state != XLookupBoth) {
-        return {}; // a key without characters; `len` means nothing
-    }
-    buf.resize(static_cast<size_t>(std::max(len, 0)));
-    return buf;
-}
-
 void Entry::on_key_press(const XEvent& e, void*)
 {
     KeySym keysym = NoSymbol;
-    const std::string typed = lookup(e.xkey, keysym);
+    const std::string typed = input->lookup(e.xkey, keysym);
 
     switch (keysym) {
         case XK_BackSpace:
@@ -215,9 +159,7 @@ void Entry::set_focus_state(bool focus, const XEvent& e)
         return;
     }
     is_focus = focus;
-    if (xic) {
-        focus ? XSetICFocus(xic) : XUnsetICFocus(xic);
-    }
+    input->set_focus(focus);
     redraw();
 }
 
