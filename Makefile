@@ -41,7 +41,8 @@ ifdef HARDEN
 HARDENING = -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fstack-protector-strong
 endif
 
-PKGS = x11 xft xrender
+# fontconfig is a dependency of Xft; it is named because the list of fonts uses it
+PKGS = x11 xft xrender fontconfig
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
@@ -66,18 +67,20 @@ LIB = $(BUILD)/lib/libtiny.a
 
 EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc))
 TARGET = $(BUILD)/tiny-shell
+FONTS = $(BUILD)/tiny-fonts
 
-PROGS = $(TARGET) $(EXAMPLES)
-OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(addsuffix .o,$(EXAMPLES))
+PROGS = $(TARGET) $(FONTS) $(EXAMPLES)
+OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o \
+    $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
 .PHONY: FORCE all examples clean check coverage format lint asan cppcheck help
 .DELETE_ON_ERROR:
 
-all: $(TARGET)
+all: $(TARGET) $(FONTS)
 
 help:
-	@echo "make            build build/tiny-shell"
+	@echo "make            build build/tiny-shell and build/tiny-fonts"
 	@echo "make examples   build the toolkit examples"
 	@echo "make check      run the unit tests (against Xvfb)"
 	@echo "make coverage   run the tests and print the coverage table"
@@ -112,8 +115,12 @@ $(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
 $(LIB): $(LIB_OBJ)
 	$(AR) rcs $@ $^
 
-# tiny-shell is built from src/main.cc, the examples from examples/<name>.cc
+# tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc, the
+# examples from examples/<name>.cc
 $(TARGET): $(BUILD)/src/main.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+$(FONTS): $(BUILD)/src/fonts.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(EXAMPLES): %: %.o $(LIB)
