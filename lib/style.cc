@@ -1,12 +1,12 @@
 #include "style.h"
 
-#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
 #include <string>
 
 #include "display.h"
+#include "text.h"
 
 #define GET_STATE_COLOR(state, P)                                              \
     if (state & uint8_t(State::Selected) && selected_##P >> 24 != 0x01) {      \
@@ -77,13 +77,10 @@ std::string xft_name(const std::string& family, double size,
 
 bool variant_from_name(const std::string& name, Variant& variant)
 {
-    std::string lower = name;
-    for (char& c : lower) {
-        c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
-    }
-    if (lower == "dark") {
+    const std::string lowered = lower(name);
+    if (lowered == "dark") {
         variant = Variant::Dark;
-    } else if (lower == "light") {
+    } else if (lowered == "light") {
         variant = Variant::Light;
     } else {
         return false;

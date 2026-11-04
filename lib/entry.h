@@ -4,6 +4,7 @@
 #include <string>
 
 #include "input_method.h"
+#include "text_field.h"
 #include "widget.h"
 
 namespace tiny {
@@ -33,7 +34,7 @@ class Entry : public Widget {
 
     void set_text(const std::string& text);
 
-    const std::string& get_text() const { return text; }
+    const std::string& get_text() const { return field.text(); }
 
     void clear();
 
@@ -52,7 +53,7 @@ class Entry : public Widget {
     void redraw();
     void set_focus_state(bool focus, const XEvent& e);
 
-    std::string text;
+    TextField field; //!< the text; the cursor stays at its end
 
     std::unique_ptr<InputMethod> input; //!< made when the entry is realized
 };

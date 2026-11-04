@@ -1,4 +1,5 @@
 #include "xdg/icon_theme.h"
+#include "text.h"
 
 #include <algorithm>
 #include <charconv>
@@ -20,16 +21,6 @@ constexpr std::string_view EXTENSIONS[] = {".png", ".xpm", ".svg"};
 
 using Section = std::map<std::string, std::string>;
 
-std::string_view trim(std::string_view text)
-{
-    const char* const blanks = " \t\r";
-    const auto first = text.find_first_not_of(blanks);
-    if (first == std::string_view::npos) {
-        return {};
-    }
-    return text.substr(first, text.find_last_not_of(blanks) - first + 1);
-}
-
 // the groups of an index.theme (an ini file); the keys are not localized
 std::map<std::string, Section> read_groups(const fs::path& file)
 {
@@ -50,20 +41,6 @@ std::map<std::string, Section> read_groups(const fs::path& file)
         }
     }
     return groups;
-}
-
-std::vector<std::string> split_commas(std::string_view list)
-{
-    std::vector<std::string> out;
-    while (!list.empty()) {
-        const auto comma = list.find(',');
-        if (const auto item = trim(list.substr(0, comma)); !item.empty()) {
-            out.emplace_back(item);
-        }
-        list.remove_prefix(comma == std::string_view::npos ? list.size()
-                                                           : comma + 1);
-    }
-    return out;
 }
 
 int to_int(const Section& section, const char* key, int fallback)
@@ -178,7 +155,7 @@ void IconTheme::load(const std::string& name, std::vector<std::string>& parents)
         Theme theme{name, {}};
         const auto list = main->second.find("Directories");
         for (const auto& dir :
-             split_commas(list != main->second.end() ? list->second : "")) {
+             split(list != main->second.end() ? list->second : "", ',', true)) {
             const auto it = groups.find(dir);
             if (it == groups.end() || to_int(it->second, "Scale", 1) != 1) {
                 continue;
@@ -203,7 +180,7 @@ void IconTheme::load(const std::string& name, std::vector<std::string>& parents)
 
         const auto inherits = main->second.find("Inherits");
         if (inherits != main->second.end()) {
-            parents = split_commas(inherits->second);
+            parents = split(inherits->second, ',', true);
         }
         return; // the first index.theme describes the theme
     }

@@ -4,16 +4,6 @@
 
 namespace tiny {
 
-std::string_view trim(std::string_view text)
-{
-    const char* const blanks = " \t\r\n";
-    const auto first = text.find_first_not_of(blanks);
-    if (first == std::string_view::npos) {
-        return {};
-    }
-    return text.substr(first, text.find_last_not_of(blanks) - first + 1);
-}
-
 void Ini::parse(std::string_view text, std::vector<std::string>* errors)
 {
     const auto fail = [&](size_t number, const char* what) {

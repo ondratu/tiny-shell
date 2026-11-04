@@ -1,4 +1,5 @@
 #include "xdg/dirs.h"
+#include "text.h"
 
 #include <algorithm>
 
@@ -28,17 +29,7 @@ std::string absolute_dir(std::string_view dir)
 
 std::vector<std::string> split_path_list(std::string_view paths)
 {
-    std::vector<std::string> out;
-    while (!paths.empty()) {
-        const auto colon = paths.find(':');
-        const auto part = paths.substr(0, colon);
-        if (!part.empty()) {
-            out.emplace_back(part);
-        }
-        paths.remove_prefix(colon == std::string_view::npos ? paths.size()
-                                                            : colon + 1);
-    }
-    return out;
+    return split(paths, ':');
 }
 
 namespace {

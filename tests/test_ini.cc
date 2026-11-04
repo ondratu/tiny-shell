@@ -131,13 +131,6 @@ TEST(IniTest, errors_may_be_ignored)
     EXPECT_TRUE(ini.empty());
 }
 
-TEST(IniTest, trim_drops_the_blanks)
-{
-    EXPECT_EQ(tiny::trim(" \t x y \r\n"), "x y");
-    EXPECT_EQ(tiny::trim(" \t"), "");
-    EXPECT_EQ(tiny::trim(""), "");
-}
-
 TEST(IniTest, set_adds_and_replaces_a_value)
 {
     Ini ini;
