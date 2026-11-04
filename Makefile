@@ -68,19 +68,20 @@ LIB = $(BUILD)/lib/libtiny.a
 EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc))
 TARGET = $(BUILD)/tiny-shell
 FONTS = $(BUILD)/tiny-fonts
+SETTINGS = $(BUILD)/tiny-settings
 
-PROGS = $(TARGET) $(FONTS) $(EXAMPLES)
-OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o \
+PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(EXAMPLES)
+OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
 .PHONY: FORCE all examples clean check coverage format lint asan cppcheck help
 .DELETE_ON_ERROR:
 
-all: $(TARGET) $(FONTS)
+all: $(TARGET) $(FONTS) $(SETTINGS)
 
 help:
-	@echo "make            build build/tiny-shell and build/tiny-fonts"
+	@echo "make            build tiny-shell, tiny-fonts and tiny-settings"
 	@echo "make examples   build the toolkit examples"
 	@echo "make check      run the unit tests (against Xvfb)"
 	@echo "make coverage   run the tests and print the coverage table"
@@ -115,12 +116,15 @@ $(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
 $(LIB): $(LIB_OBJ)
 	$(AR) rcs $@ $^
 
-# tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc, the
-# examples from examples/<name>.cc
+# tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc,
+# tiny-settings from src/settings.cc, the examples from examples/<name>.cc
 $(TARGET): $(BUILD)/src/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(FONTS): $(BUILD)/src/fonts.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+$(SETTINGS): $(BUILD)/src/settings.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(EXAMPLES): %: %.o $(LIB)
