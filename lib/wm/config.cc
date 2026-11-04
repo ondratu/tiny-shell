@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -81,28 +82,28 @@ bool valid_font(const std::string& text)
     });
 }
 
-const std::vector<XftChoice>& xft_choices(XftOption option)
+XftChoices xft_choices(XftOption option)
 {
-    static const std::vector<XftChoice> antialias = {
+    static constexpr XftChoice antialias[] = {
             {"", "Default"}, {"yes", "On"}, {"no", "Off"}};
-    static const std::vector<XftChoice> hinting = {{"", "Default"},
-                                                   {"none", "None"},
-                                                   {"slight", "Slight"},
-                                                   {"medium", "Medium"},
-                                                   {"full", "Full"}};
-    static const std::vector<XftChoice> rgba = {
+    static constexpr XftChoice hinting[] = {{"", "Default"},
+                                            {"none", "None"},
+                                            {"slight", "Slight"},
+                                            {"medium", "Medium"},
+                                            {"full", "Full"}};
+    static constexpr XftChoice rgba[] = {
             {"", "Default"},          {"none", "None (grayscale)"},
             {"rgb", "RGB"},           {"bgr", "BGR"},
             {"vrgb", "Vertical RGB"}, {"vbgr", "Vertical BGR"}};
     switch (option) {
         case XftOption::Antialias:
-            return antialias;
+            return {std::begin(antialias), std::end(antialias)};
         case XftOption::Hinting:
-            return hinting;
+            return {std::begin(hinting), std::end(hinting)};
         case XftOption::Rgba:
             break;
     }
-    return rgba;
+    return {std::begin(rgba), std::end(rgba)};
 }
 
 const char* xft_key(XftOption option)
@@ -120,9 +121,9 @@ const char* xft_key(XftOption option)
 
 bool valid_xft(XftOption option, const std::string& text)
 {
-    const auto& choices = xft_choices(option);
+    const XftChoices choices = xft_choices(option);
     return std::any_of(choices.begin(), choices.end(),
-                       [&](const XftChoice& c) { return c.value == text; });
+                       [&](const XftChoice& c) { return text == c.value; });
 }
 
 std::vector<std::string> config_files(const char* config_home,
@@ -218,12 +219,8 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             if (valid_xft(option, *value)) {
                 *target = *value;
             } else {
-                std::string choices;
-                for (const XftChoice& c : xft_choices(option)) {
-                    choices += c.value.empty() ? "" : " " + c.value;
-                }
-                problem(("[xft] " + std::string(xft_key(option)) +
-                         " must be empty or one of:" + choices)
+                problem((std::string("[xft] ") + xft_key(option) +
+                         " is not one of the values of the option")
                                 .c_str());
             }
         }

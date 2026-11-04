@@ -143,17 +143,7 @@ int main(int argc, char** argv)
         // The rendering of text of [xft] goes to the X resources before the
         // first font is opened, so the shell and the programs started from it
         // use it; what is not set is left as the system has it
-        std::vector<tiny::wm::ResourceChange> resources;
-        for (const auto& [option, value] :
-             {std::pair{tiny::wm::XftOption::Antialias, config.xft_antialias},
-              std::pair{tiny::wm::XftOption::Hinting, config.xft_hinting},
-              std::pair{tiny::wm::XftOption::Rgba, config.xft_rgba}}) {
-            if (!value.empty()) {
-                for (auto& c : tiny::wm::xft_resources(option, value)) {
-                    resources.push_back(std::move(c));
-                }
-            }
-        }
+        const auto resources = tiny::wm::xft_resources(config);
         if (!resources.empty() &&
             !tiny::wm::publish_resources(display, resources)) {
             fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", argv[0]);

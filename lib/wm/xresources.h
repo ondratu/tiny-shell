@@ -39,6 +39,9 @@ std::string merge_resources(const std::string& current,
 std::vector<ResourceChange> xft_resources(XftOption option,
                                           const std::string& value);
 
+//! The resources for the options of `[xft]` that the configuration sets
+std::vector<ResourceChange> xft_resources(const Config& config);
+
 /**
  * @short Put the changes into `RESOURCE_MANAGER` of the root window.
  *

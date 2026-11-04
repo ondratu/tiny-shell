@@ -135,3 +135,17 @@ TEST(XResourcesTest, a_missing_property_starts_a_new_one)
 
     set_resource_manager(before);
 }
+
+TEST(XResourcesTest, the_configuration_gives_the_resources_that_it_sets)
+{
+    tiny::wm::Config config;
+    EXPECT_TRUE(tiny::wm::xft_resources(config).empty());
+
+    config.xft_antialias = "no";
+    config.xft_rgba = "bgr";
+    EXPECT_EQ(tiny::wm::xft_resources(config),
+              (Changes{{"Xft.antialias", "0"}, {"Xft.rgba", "bgr"}}));
+
+    config.xft_hinting = "full";
+    EXPECT_EQ(tiny::wm::xft_resources(config).size(), 4u);
+}
