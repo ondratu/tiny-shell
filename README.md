@@ -29,8 +29,8 @@ much as it can give.
 
 ## What it is not
 
-- Not a desktop environment. No file manager, settings application, session
-  manager or desktop icons (use an external tool such as idesk if you need
+- Not a desktop environment. No file manager, session manager or desktop
+  icons (use an external tool such as idesk if you need
   them).
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
@@ -59,6 +59,8 @@ Implemented:
   favorite applications, which stay there when they do not run and can be moved
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
   (Super).
+- **Settings:** `tiny-settings`, a small form that changes the font, the
+  terminal and the scale in the configuration file of the user (see below).
 - **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
   and shows a specimen of each one (see below).
 - **Other:** one `poll()` event loop for X events, signals and timers
@@ -80,7 +82,7 @@ programs is done, so there is no "must" list):
       the dock
 - [ ] Application menu grouped by category
 - [ ] Most recently used order for Alt+Tab
-- [ ] More in the configuration file: key bindings, panel layout, fonts,
+- [ ] More in the configuration file: key bindings, panel layout,
       the theme (light or dark), plugins
 - [ ] No flicker: double buffered drawing of the panel and the dock
 
@@ -160,6 +162,9 @@ on stderr and the default is used.
 [theme]
 # A number above 0, up to 16
 scale = 1.5
+# One family of the font of the shell (see tiny-fonts for the names); a
+# list of families is not supported
+font = Cantarell
 
 [commands]
 # Restart and Shutdown in the user menu (these are the defaults)
@@ -178,11 +183,28 @@ favorites = firefox.desktop;org.gnome.Nautilus.desktop
 Use `sudo reboot`, `doas poweroff` or similar where there is no systemd.
 
 tiny-shell writes the file of the user (never the global one) when you change
-the favorites of the dock. It makes the whole file again from the values that
+the favorites of the dock, and so does `tiny-settings` (see below). It makes the whole file again from the values that
 were in it, so **your comments are lost** and the sections come in the order
 of their names; the values of the global file are not copied into it. The
 new file replaces the old one in one step, and a failure is reported on
 stderr and leaves the old file as it was. The file says so at the top.
+
+### Settings
+
+`build/tiny-settings` (made by `make`) changes the font, the terminal and the
+scale. It shows the values in use now (the global file and the one of the
+user together). Type into a field, or press the button Choose... (or Down in
+the font field) to see a list of the fonts of the system: type to search it,
+choose a family with a click or Return, Escape goes back. Tab moves between the
+fields. A field with a wrong value turns red and says what is wrong, and Save
+waits until it is right.
+
+Save (or Return) writes the values you changed (`[theme] font`, `[theme]
+scale`, `[commands] terminal`) to the file of the user, so the others still
+come from the global file, in the way that is described above (the
+comments of the file are lost), and closes the program. Cancel or Escape
+closes it and writes nothing. tiny-shell reads the file only when it starts, so
+a change is seen after you log out and in again.
 
 ### The dock and the favorite applications
 
