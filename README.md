@@ -19,7 +19,7 @@ much as it can give.
 
 - A reparenting window manager with title bars, buttons and borders drawn by
   tiny-shell itself.
-- A small shell around it: top panel, application and user menus, a dock
+- A small shell around it: top panel with the main menu, a dock
   with the icons of running windows, a run dialog.
 - A set of freedesktop.org standards implemented as faithfully as possible
   (ICCCM, EWMH, Desktop Entry, Icon Theme), so that ordinary applications
@@ -54,7 +54,8 @@ Implemented:
   stealing prevention, frame extents, the client lists), `_MOTIF_WM_HINTS`
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
-- **Shell:** top panel with an application menu and a user menu, a dock with
+- **Shell:** top panel with the main menu (Settings, Applications, Terminal,
+  Force Quit, Restart, Shutdown, Logout), a dock with
   one icon for every application (a dot under it for every window) and the
   favorite applications, which stay there when they do not run and can be moved
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
@@ -80,7 +81,7 @@ programs is done, so there is no "must" list):
 - [ ] Clock (date and time) in the panel
 - [ ] Task bar in the panel (the "old style" task list), as an alternative to
       the dock
-- [ ] Application menu grouped by category
+- [ ] Applications of the launcher grouped by category
 - [ ] Most recently used order for Alt+Tab
 - [ ] More in the configuration file: key bindings, panel layout,
       the theme (light or dark), plugins
@@ -172,10 +173,11 @@ font_size = 12
 font_style = Bold
 
 [commands]
-# Restart and Shutdown in the user menu (these are the defaults)
+# Restart and Shutdown in the main menu (these are the defaults)
 reboot = systemctl reboot
 poweroff = systemctl poweroff
-# Runs the applications with Terminal=true; the command follows it
+# Runs the applications with Terminal=true, the command follows it; the
+# Terminal item of the main menu starts the program alone (xterm)
 terminal = xterm -e
 
 [dock]
@@ -219,6 +221,22 @@ come from the global file, in the way that is described above (the
 comments of the file are lost), and closes the program. Cancel or Escape
 closes it and writes nothing. tiny-shell reads the file only when it starts, so
 a change is seen after you log out and in again.
+
+### The main menu
+
+The button Main Menu at the left of the panel opens a menu with these items,
+in groups:
+
+- **Settings** starts `tiny-settings` (the one next to `tiny-shell` when it was
+  started with a path, else the one in `PATH`).
+- **Applications** opens the launcher; **Terminal** starts the terminal of
+  `[commands] terminal` (without the `-e` at its end).
+- **Force Quit** starts `xkill`: click a window to end its program.
+- **Restart** and **Shutdown** run `[commands] reboot` and `poweroff`.
+- **Logout** ends tiny-shell.
+
+A click on an item closes the menu. A program that cannot be started is
+reported on stderr.
 
 ### The dock and the favorite applications
 

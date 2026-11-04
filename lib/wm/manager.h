@@ -33,15 +33,30 @@ class Manager : public tiny::Object {
     //! The manager ends when another one takes this selection (`--replace`)
     void set_selection(const Selection* owned) { selection = owned; }
 
-    //! Commands of Restart and Shutdown in the user menu; an empty one keeps
+    //! Commands of Restart and Shutdown in the main menu; an empty one keeps
     //! the current command
     void set_power_commands(const std::string& restart,
                             const std::string& shutdown);
 
-    //! The terminal of the applications that need one, e.g. `{"xterm", "-e"}`
+    //! The terminal of the applications that need one, e.g. `{"xterm", "-e"}`;
+    //! the Terminal item of the main menu starts it without a trailing `-e`
+    //! or `--`
     void set_terminal(std::vector<std::string> command)
     {
+        terminal_program = command;
+        // the option that takes a command (`-e`, `--`) is left out
+        if (terminal_program.size() > 1 && (terminal_program.back() == "-e" ||
+                                            terminal_program.back() == "--")) {
+            terminal_program.pop_back();
+        }
         wm_launcher.set_terminal(std::move(command));
+    }
+
+    //! The program of the Settings item of the main menu (`tiny-settings`
+    //! is searched in PATH by default)
+    void set_settings_command(std::string command)
+    {
+        settings_command = std::move(command);
     }
 
     /**
@@ -149,8 +164,12 @@ class Manager : public tiny::Object {
     //! A favorite was dragged to a place among the shown favorites
     void move_favorite(const std::string& id, size_t place);
 
-    //! Start a command of the user menu; an empty one does nothing
+    //! Start a command of the main menu (Restart, Shutdown) by the shell; an
+    //! empty one does nothing
     void run_system_command(const std::string& command);
+    //! Start one program of the main menu without a shell and without
+    //! splitting; an empty one does nothing, a failure is reported on stderr
+    void run_program(const std::vector<std::string>& argv);
 
     void connect_window(Window* window);
 
@@ -239,9 +258,13 @@ class Manager : public tiny::Object {
     void on_window_modal(const Window* dialog);
     void on_window_focus(Window* window, const XEvent& e);
     void on_window_minimize(Window* window);
+    void on_settings(tiny::Object* o, const XEvent& e, void* data);
+    void on_terminal(tiny::Object* o, const XEvent& e, void* data);
+    void on_force_quit(tiny::Object* o, const XEvent& e, void* data);
     void on_logout(tiny::Object* o, const XEvent& e, void* data);
     void on_restart(tiny::Object* o, const XEvent& e, void* data);
     void on_shutdown(tiny::Object* o, const XEvent& e, void* data);
+    void on_applications(tiny::Object* o, const XEvent& e, void* data);
     void on_launcher(tiny::Object* o, const XEvent& e, void* data);
 
     /* direct event handlers */
@@ -306,6 +329,9 @@ class Manager : public tiny::Object {
     std::function<void(const std::vector<std::string>&)> favorites_changed;
 
     // until there is a configuration the commands are the systemd ones
+    std::string settings_command = "tiny-settings";
+    std::string force_quit_program = "xkill";
+    std::vector<std::string> terminal_program = {"xterm"};
     std::string restart_command = Config().reboot_command;
     std::string shutdown_command = Config().poweroff_command;
 };

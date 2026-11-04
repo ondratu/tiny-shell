@@ -32,9 +32,9 @@ void Theme::scale(double factor)
     wm_dock_border = scaled(5, factor);
     wm_dock_attention_bar = scaled(3, factor);
     wm_panel_app_width = scaled(200, factor);
-    wm_panel_login_width = scaled(120, factor);
-    wm_menu_width = scaled(120, factor);
+    wm_menu_width = scaled(200, factor);
     wm_menu_item_height = scaled(20, factor);
+    wm_menu_separator = scaled(8, factor);
     wm_popup_item_height = scaled(30, factor);
     wm_menu_padding = scaled(12, factor);
     wm_dock_dot = scaled(4, factor);

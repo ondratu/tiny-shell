@@ -181,12 +181,12 @@ TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
     EXPECT_EQ(dock.y, root.height - manager->wm_dock.get_height() - border());
 }
 
-TEST_F(ManagerTest, connects_logout_of_the_user_menu)
+TEST_F(ManagerTest, connects_logout_of_the_main_menu)
 {
     start();
     ASSERT_TRUE(manager->running);
 
-    auto& logout = manager->wm_panel.menu_user.logout;
+    auto& logout = manager->wm_panel.menu_main.logout;
     logout.on_click(&logout, make_event(ButtonRelease));
 
     EXPECT_FALSE(manager->running);
@@ -216,13 +216,13 @@ std::filesystem::path marker_file(const char* name)
 
 } // namespace
 
-TEST_F(ManagerTest, restart_of_the_user_menu_runs_its_command)
+TEST_F(ManagerTest, restart_of_the_main_menu_runs_its_command)
 {
     start();
     const auto marker = marker_file("tiny-manager-restart-");
     manager->restart_command = "touch " + marker.string();
 
-    auto& restart = manager->wm_panel.menu_user.restart;
+    auto& restart = manager->wm_panel.menu_main.restart;
     restart.on_click(&restart, make_event(ButtonRelease));
 
     EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
@@ -230,42 +230,154 @@ TEST_F(ManagerTest, restart_of_the_user_menu_runs_its_command)
     std::filesystem::remove(marker);
 }
 
-TEST_F(ManagerTest, shutdown_of_the_user_menu_runs_its_command)
+TEST_F(ManagerTest, shutdown_of_the_main_menu_runs_its_command)
 {
     start();
     const auto marker = marker_file("tiny-manager-shutdown-");
     manager->shutdown_command = "touch " + marker.string();
 
-    auto& shutdown = manager->wm_panel.menu_user.shutdown;
+    auto& shutdown = manager->wm_panel.menu_main.shutdown;
     shutdown.on_click(&shutdown, make_event(ButtonRelease));
 
     EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
     std::filesystem::remove(marker);
 }
 
-TEST_F(ManagerTest, an_empty_command_of_the_user_menu_does_nothing)
+TEST_F(ManagerTest, an_empty_command_of_the_main_menu_does_nothing)
 {
     start();
     manager->shutdown_command.clear();
 
-    auto& shutdown = manager->wm_panel.menu_user.shutdown;
+    auto& shutdown = manager->wm_panel.menu_main.shutdown;
     shutdown.on_click(&shutdown, make_event(ButtonRelease));
 
     EXPECT_TRUE(manager->running);
 }
 
-TEST_F(ManagerTest, a_missing_command_of_the_user_menu_is_reported)
+TEST_F(ManagerTest, a_missing_command_of_the_main_menu_is_reported)
 {
     start();
     manager->restart_command = "tiny-no-such-program";
 
     ::testing::internal::CaptureStderr();
-    auto& restart = manager->wm_panel.menu_user.restart;
+    auto& restart = manager->wm_panel.menu_main.restart;
     restart.on_click(&restart, make_event(ButtonRelease));
 
     EXPECT_NE(::testing::internal::GetCapturedStderr().find(
                       "tiny-no-such-program"),
               std::string::npos);
+}
+
+namespace {
+
+//! An executable that makes the marker file, so a program (started without a
+//! shell and without arguments) leaves a trace
+std::filesystem::path marker_program(const std::filesystem::path& marker)
+{
+    auto program = marker;
+    program += ".sh";
+    std::ofstream(program) << "#!/bin/sh\ntouch '" << marker.string() << "'\n";
+    std::filesystem::permissions(program, std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::add);
+    return program;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, settings_of_the_main_menu_starts_the_settings_program)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-settings-");
+    const auto program = marker_program(marker);
+    manager->set_settings_command(program.string());
+
+    auto& settings = manager->wm_panel.menu_main.settings;
+    settings.on_click(&settings, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->running);
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest,
+       terminal_of_the_main_menu_starts_the_program_of_the_terminal)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-terminal-");
+    const auto program = marker_program(marker);
+    manager->set_terminal({program.string(), "-e"}); // "-e" is dropped
+
+    auto& terminal = manager->wm_panel.menu_main.terminal;
+    terminal.on_click(&terminal, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, force_quit_of_the_main_menu_starts_xkill)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-xkill-");
+    const auto program = marker_program(marker);
+    manager->force_quit_program = program.string();
+
+    auto& force_quit = manager->wm_panel.menu_main.force_quit;
+    force_quit.on_click(&force_quit, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, a_missing_program_of_the_main_menu_is_reported)
+{
+    start();
+    manager->set_settings_command("tiny-no-such-settings");
+
+    ::testing::internal::CaptureStderr();
+    auto& settings = manager->wm_panel.menu_main.settings;
+    settings.on_click(&settings, make_event(ButtonRelease));
+
+    EXPECT_NE(::testing::internal::GetCapturedStderr().find(
+                      "tiny-no-such-settings"),
+              std::string::npos);
+}
+
+TEST_F(ManagerTest, no_terminal_of_the_main_menu_does_nothing)
+{
+    start();
+    manager->set_terminal({});
+
+    auto& terminal = manager->wm_panel.menu_main.terminal;
+    terminal.on_click(&terminal, make_event(ButtonRelease));
+
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, an_item_of_the_main_menu_closes_the_menu)
+{
+    start();
+    auto& menu = manager->wm_panel.menu_main;
+    menu.popup(10, 10);
+    ASSERT_EQ(attributes_of(menu).map_state, IsViewable);
+
+    manager->set_terminal({});
+    menu.terminal.on_click(&menu.terminal, make_event(ButtonRelease));
+
+    EXPECT_EQ(attributes_of(menu).map_state, IsUnmapped);
+}
+
+TEST_F(ManagerTest, applications_of_the_main_menu_opens_the_launcher)
+{
+    start();
+    ASSERT_FALSE(manager->wm_launcher.is_open());
+
+    auto& applications = manager->wm_panel.menu_main.applications;
+    applications.on_click(&applications, make_event(ButtonRelease));
+
+    EXPECT_TRUE(manager->wm_launcher.is_open());
 }
 
 TEST_F(ManagerTest, signals_end_the_main_loop)
@@ -4406,7 +4518,7 @@ TEST_F(ManagerTest, the_terminal_goes_to_the_launcher)
     manager->set_terminal({"foot", "-e"}); // nothing to see, it must not fail
 }
 
-TEST_F(ManagerTest, the_commands_of_the_user_menu_can_be_set)
+TEST_F(ManagerTest, the_commands_of_the_main_menu_can_be_set)
 {
     start();
     manager->set_power_commands("my-restart", "");

@@ -179,18 +179,22 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
             [this](tiny::Object* o, const XEvent& e, void* d) {
                 on_launcher(o, e, d);
             });
-    wm_panel.menu_user.restart.on_click.connect(
-            [this](tiny::Object* o, const XEvent& e, void* d) {
-                on_restart(o, e, d);
-            });
-    wm_panel.menu_user.shutdown.on_click.connect(
-            [this](tiny::Object* o, const XEvent& e, void* d) {
-                on_shutdown(o, e, d);
-            });
-    wm_panel.menu_user.logout.on_click.connect(
-            [this](tiny::Object* o, const XEvent& e, void* d) {
-                on_logout(o, e, d);
-            });
+    // an item hides the menu first, so the launcher opens over the desktop
+    auto connect_item = [this](tiny::LabelButton& item, auto handler) {
+        item.on_click.connect(
+                [this, handler](tiny::Object* o, const XEvent& e, void* d) {
+                    wm_panel.menu_main.unmap();
+                    (this->*handler)(o, e, d);
+                });
+    };
+    MainMenu& menu = wm_panel.menu_main;
+    connect_item(menu.settings, &Manager::on_settings);
+    connect_item(menu.applications, &Manager::on_applications);
+    connect_item(menu.terminal, &Manager::on_terminal);
+    connect_item(menu.force_quit, &Manager::on_force_quit);
+    connect_item(menu.restart, &Manager::on_restart);
+    connect_item(menu.shutdown, &Manager::on_shutdown);
+    connect_item(menu.logout, &Manager::on_logout);
 
     XClearWindow(display_arg, root_arg);
     set_events();
@@ -1270,6 +1274,21 @@ void Manager::on_window_minimize(Window* window)
     }
 }
 
+void Manager::on_settings(tiny::Object*, const XEvent&, void*)
+{
+    run_program({settings_command});
+}
+
+void Manager::on_terminal(tiny::Object*, const XEvent&, void*)
+{
+    run_program(terminal_program);
+}
+
+void Manager::on_force_quit(tiny::Object*, const XEvent&, void*)
+{
+    run_program({force_quit_program});
+}
+
 void Manager::on_logout(tiny::Object*, const XEvent&, void*)
 {
     running = false;
@@ -1292,6 +1311,25 @@ void Manager::run_system_command(const std::string& command)
     }
     if (tiny::spawn_command(command) < 0) {
         tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
+    }
+}
+
+void Manager::run_program(const std::vector<std::string>& argv)
+{
+    if (argv.empty() || argv.front().empty()) {
+        return;
+    }
+    // no shell and no splitting, the path of the program can have a blank
+    if (tiny::spawn(argv) < 0) {
+        tiny::error("Can't run '%s': %s", argv.front().c_str(),
+                    strerror(errno));
+    }
+}
+
+void Manager::on_applications(tiny::Object*, const XEvent&, void*)
+{
+    if (!wm_launcher.is_open()) { // the item opens it, never closes it
+        wm_launcher.popup();
     }
 }
 
