@@ -59,6 +59,8 @@ Implemented:
   favorite applications, which stay there when they do not run and can be moved
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
   (Super).
+- **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
+  and shows a specimen of each one (see below).
 - **Other:** one `poll()` event loop for X events, signals and timers
   (finished children are collected by a `SIGCHLD` handler), commands of
   Restart and Shutdown, a configuration file (scale, commands, favorites of
@@ -214,6 +216,17 @@ button on an application opens the same menu, so you can put an application in
 the dock without starting it. The favorites are saved at once to
 `[dock] favorites`. An id of an application that is not installed is kept in the
 file but not shown.
+
+### Fonts
+
+`build/tiny-fonts` (made by `make`) shows the font families of the system, the
+list that `fc-list : family` prints, read from fontconfig. Every family is a
+cell with "Aa" in the family (black on white) and its name under it. Scroll
+with the wheel or the keys, click a family (or press Return) to see its
+specimen: the small letters, the capitals, the digits and the signs, then one
+sentence in 8, 12, 16, 20, 24, 32, 64 and 128 pixels. Escape, backspace or the
+button at the top return to the list, Ctrl+Q and Ctrl+W quit. The sizes
+follow `[theme] scale`.
 
 ### Command line
 

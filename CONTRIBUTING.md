@@ -13,8 +13,9 @@ messages, issues and documentation.
 
 1. **Small.** Small source, small binary, small memory footprint. A feature
    that costs a lot of any of them needs a good reason.
-2. **Few dependencies.** The shell runs with libX11, Xft and Xrender (and the
-   C and C++ standard libraries). See [Dependencies](#dependencies).
+2. **Few dependencies.** The shell runs with libX11, Xft and Xrender, and
+   fontconfig that Xft needs anyway (and the C and C++ standard libraries).
+   See [Dependencies](#dependencies).
 3. **Standards first.** Use ICCCM, EWMH and freedesktop.org specifications as
    written. Applications and external tools must work without being told
    anything about tiny-shell. Do not invent private protocols when a
@@ -44,12 +45,13 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   (`lib/xdg/`) and `tiny::image` for decoding, scaling and uploading pictures
   (`lib/image/`). Includes are written from `lib/`: `#include "wm/dock.h"`.
 - **Layout:** `lib/` is the library `libtiny.a` (toolkit and window manager),
-  `src/main.cc` is the window manager itself, `tests/` are the unit tests,
-  `examples/` are small toolkit programs (`make examples`) and a default
-  session, `tools/` are development scripts. Everything is built into
-  `build/`. Files that belong to one machine (a session script, local
-  settings) are not committed: they live in the ignored `local/`, created
-  from `examples/` by the scripts.
+  `src/main.cc` is the window manager itself, `src/fonts.cc` is the font viewer
+  `tiny-fonts` (a program of its own, its logic is in `lib/font_browser.*`),
+  `tests/` are the unit tests, `examples/` are small toolkit programs
+  (`make examples`) and a default session, `tools/` are development scripts.
+  Everything is built into `build/`. Files that belong to one machine (a
+  session script, local settings) are not committed: they live in the ignored
+  `local/`, created from `examples/` by the scripts.
 - **Geometry is `int`.** Sizes, offsets and coordinates are `int`, like in
   Xlib structures, so that sums and differences do not wrap around. The
   size of a widget cannot be negative: the constructor and `resize()` clamp
@@ -130,7 +132,8 @@ costs a lot of code or memory (see the goals above).
 
 ## Dependencies
 
-- Allowed without discussion: libX11, Xft, Xrender, and (when needed for a
+- Allowed without discussion: libX11, Xft, Xrender, fontconfig (Xft uses it, we
+  use it for the list of fonts), and (when needed for a
   feature) Xrandr or Xext extensions that are on every Xorg system.
 - Everything else needs a discussion first and must be **optional at build
   time** (a make variable, with the feature compiled out when it is off).
