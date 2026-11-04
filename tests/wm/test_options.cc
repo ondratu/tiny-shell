@@ -93,11 +93,15 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     config.scale = 1.5;
     config.reboot_command = "my-reboot";
     config.poweroff_command = "my-poweroff";
+    config.font = "My Font";
+    config.terminal_line = "my-term -e";
     const std::string text = tiny::wm::info_text(
             config, {"/etc/xdg/tiny-shell.ini"}, {"/a/applications"});
 
     EXPECT_NE(text.find("1.5"), std::string::npos);
     EXPECT_NE(text.find("my-reboot"), std::string::npos);
+    EXPECT_NE(text.find("My Font"), std::string::npos);
+    EXPECT_NE(text.find("my-term -e"), std::string::npos);
     EXPECT_NE(text.find("my-poweroff"), std::string::npos);
     EXPECT_NE(text.find("/etc/xdg/tiny-shell.ini"), std::string::npos);
     EXPECT_NE(text.find("/a/applications"), std::string::npos);

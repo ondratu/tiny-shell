@@ -287,3 +287,41 @@ TEST(ThemeScaleTest, the_scale_is_one_until_it_is_set)
     t.scale(2);
     EXPECT_EQ(t.scale_factor, 2.0);
 }
+
+TEST(ThemeFontTest, xft_name_has_the_family_the_size_and_the_style)
+{
+    EXPECT_EQ(tiny::xft_name("Cantarell", 12), "Cantarell-12");
+    EXPECT_EQ(tiny::xft_name("Cantarell", 10.5, ":bold"),
+              "Cantarell-10.5:bold");
+}
+
+TEST(ThemeFontTest, xft_name_escapes_what_fontconfig_would_read)
+{
+    EXPECT_EQ(tiny::xft_name("A-B:C,D\\E", 9), "A\\-B\\:C\\,D\\\\E-9");
+    EXPECT_EQ(tiny::xft_name("Noto Sans Mono", 9), "Noto Sans Mono-9");
+}
+
+TEST(ThemeFontTest, the_font_of_the_theme_is_set_before_init)
+{
+    tiny::Theme t;
+
+    t.set_font("DejaVu Sans Mono");
+    t.init();
+
+    // fontconfig gives the closest font when the family is not installed
+    EXPECT_NE(t.widget.get_font(), nullptr);
+    EXPECT_NE(t.entry.get_font(), nullptr);
+    EXPECT_NE(t.list.get_font(), nullptr);
+    EXPECT_NE(t.wm_button.get_font(), nullptr);
+    EXPECT_NE(t.wm_header.get_font(), nullptr);
+}
+
+TEST(ThemeFontTest, a_family_with_special_characters_still_opens_a_font)
+{
+    tiny::Theme t;
+
+    t.set_font("No-Such: Family, 1");
+    t.init();
+
+    EXPECT_NE(t.widget.get_font(), nullptr);
+}

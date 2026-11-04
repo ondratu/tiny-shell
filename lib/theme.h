@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <string>
+
 #include "style.h"
 #include "wm/styles.h"
 
@@ -14,6 +16,9 @@ class Theme {
     ~Theme() = default;
 
     void init();
+
+    //! The family of the font of all the styles; call before `init()`
+    void set_font(const std::string& family);
 
     // Scale all metrics and fonts (relative to the default theme)
     void scale(double factor);

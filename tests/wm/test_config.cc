@@ -26,7 +26,67 @@ TEST(ConfigTest, the_defaults_work_without_any_file)
     EXPECT_EQ(c.reboot_command, "systemctl reboot");
     EXPECT_EQ(c.poweroff_command, "systemctl poweroff");
     EXPECT_EQ(c.terminal, (Strings{"xterm", "-e"}));
+    EXPECT_EQ(c.terminal_line, "xterm -e");
+    EXPECT_EQ(c.font, "Cantarell");
     EXPECT_TRUE(c.favorites.empty());
+}
+
+TEST(ConfigTest, reads_the_font_and_keeps_the_text_of_the_terminal)
+{
+    const Config c =
+            parse_config({{"a", "[theme]\nfont = DejaVu Sans Mono\n"
+                                "[commands]\nterminal = \"my term\" -e\n"}});
+
+    EXPECT_EQ(c.font, "DejaVu Sans Mono");
+    EXPECT_EQ(c.terminal_line, "\"my term\" -e");
+}
+
+TEST(ConfigTest, an_empty_font_is_a_problem_and_keeps_the_default)
+{
+    Strings problems;
+
+    const Config c = parse_config({{"a", "[theme]\nfont =\n"}}, &problems);
+
+    EXPECT_EQ(c.font, "Cantarell");
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("font"), std::string::npos);
+}
+
+TEST(ConfigTest, a_wrong_terminal_keeps_the_text_of_the_default)
+{
+    Strings problems;
+
+    const Config c =
+            parse_config({{"a", "[commands]\nterminal = \"\n"}}, &problems);
+
+    EXPECT_EQ(c.terminal_line, "xterm -e");
+}
+
+TEST(ConfigTest, the_scale_is_a_number_above_zero_up_to_sixteen)
+{
+    using tiny::wm::parse_scale;
+
+    EXPECT_EQ(parse_scale("1.5"), 1.5);
+    EXPECT_EQ(parse_scale("  2 "), 2.0);
+    EXPECT_EQ(parse_scale("16"), 16.0);
+    EXPECT_FALSE(parse_scale(""));
+    EXPECT_FALSE(parse_scale("0"));
+    EXPECT_FALSE(parse_scale("-1"));
+    EXPECT_FALSE(parse_scale("16.5"));
+    EXPECT_FALSE(parse_scale("2x"));
+    EXPECT_FALSE(parse_scale("nan"));
+}
+
+TEST(ConfigTest, a_font_is_a_name_without_control_characters)
+{
+    using tiny::wm::valid_font;
+
+    EXPECT_TRUE(valid_font("Noto Sans"));
+    EXPECT_TRUE(valid_font(" Noto Sans "));
+    EXPECT_FALSE(valid_font(""));
+    EXPECT_FALSE(valid_font("   "));
+    EXPECT_FALSE(valid_font("Noto\nSans"));
+    EXPECT_FALSE(valid_font(std::string("Noto\0Sans", 9)));
 }
 
 TEST(ConfigTest, reads_the_settings)
@@ -371,4 +431,47 @@ TEST_F(ConfigFilesTest, save_favorites_keeps_the_permissions_of_the_file)
     struct stat info;
     ASSERT_EQ(stat(file.c_str(), &info), 0);
     EXPECT_EQ(info.st_mode & 07777, 0600u);
+}
+
+TEST_F(ConfigFilesTest, save_values_sets_the_values_and_keeps_the_others)
+{
+    const std::string file = write(
+            "tiny-shell.ini", "[theme]\nscale = 2\n[dock]\nfavorites = a\n");
+
+    std::string error;
+    ASSERT_TRUE(tiny::wm::save_values(file,
+                                      {{"theme", "font", "Noto Sans"},
+                                       {"theme", "scale", "1.5"},
+                                       {"commands", "terminal", "foot -e"}},
+                                      &error))
+            << error;
+
+    const Config c = tiny::wm::load_config({file});
+    EXPECT_EQ(c.font, "Noto Sans");
+    EXPECT_EQ(c.scale, 1.5);
+    EXPECT_EQ(c.terminal_line, "foot -e");
+    EXPECT_EQ(c.favorites, (Strings{"a"}));
+}
+
+TEST_F(ConfigFilesTest, save_values_refuses_what_would_break_the_file)
+{
+    const std::string file = write("tiny-shell.ini", "[theme]\nscale = 2\n");
+    const std::vector<tiny::wm::IniValue> wrong[] = {
+            {{"theme", "font", "a\nb"}},
+            {{"theme", "font", "a\rb"}},
+            {{"theme", "", "x"}},
+            {{"theme", "a=b", "x"}},
+            {{"theme", "a\nb", "x"}},
+            {{"the]me", "a", "x"}},
+            {{"the\nme", "a", "x"}},
+            {{"theme", "scale", "3"}, {"theme", "font", "a\nb"}}};
+
+    for (const auto& values : wrong) {
+        std::string error;
+        EXPECT_FALSE(tiny::wm::save_values(file, values, &error));
+        EXPECT_NE(error.find("wrong setting"), std::string::npos) << error;
+    }
+    EXPECT_FALSE(tiny::wm::save_values(file, wrong[0])); // no error wanted
+    // nothing was written, not even the part that was right
+    EXPECT_EQ(tiny::wm::load_config({file}).scale, 2.0);
 }
