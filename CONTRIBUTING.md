@@ -29,9 +29,10 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
 
 ## Technology and conventions
 
-- **Language:** C++17. Use the standard library, but keep templates, exceptions
-  and RTTI simple; the code is read by people learning Xlib. Do not use
-  C++ exceptions for control flow in the event loop.
+- **Language:** C++17. Use the standard library, but keep templates and
+  exceptions simple; the code is read by people learning Xlib. Do not use
+  C++ exceptions for control flow in the event loop. There is no RTTI
+  (`-fno-rtti`, it was 15 kB of the binary): no `dynamic_cast` and no `typeid`.
 - **Build system:** GNU make, one `Makefile`. Dependencies are found with
   `pkg-config`. No autotools or CMake.
 - **Code style:** 4 spaces, braces on the same line, `CamelCase` types,
@@ -39,18 +40,25 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   where it is practical. Match the surrounding code, including the density of
   comments. Files are `snake_case`, named after their main class in the
   singular (`container.h`, `run_dialog.h`).
-- **Namespaces follow the directories of `lib/`:** `tiny` for the toolkit
-  (`lib/`), `tiny::wm` for the window manager and the shell (`lib/wm/`),
+- **Namespaces follow the directories of `lib/`:** `tiny` for the widget
+  toolkit (`lib/`), `tiny::wm` for the window manager and the shell (`lib/wm/`),
   `tiny::xdg` for the freedesktop.org files, applications and icon themes
-  (`lib/xdg/`) and `tiny::image` for decoding, scaling and uploading pictures
-  (`lib/image/`). Includes are written from `lib/`: `#include "wm/dock.h"`.
-- **Layout:** `lib/` is the library `libtiny.a` (toolkit and window manager),
-  `src/main.cc` is the window manager itself, `src/fonts.cc` is the font viewer
-  `tiny-fonts` (a program of its own, its logic is in `lib/font_browser.*`),
-  `src/settings.cc` is the settings form `tiny-settings` (its logic is in
-  `lib/settings_form.*` and `lib/text_field.*`),
-  `tests/` are the unit tests, `examples/` are small toolkit programs
-  (`make examples`) and a default session, `tools/` are development scripts.
+  (`lib/xdg/`), `tiny::image` for decoding, scaling and uploading pictures
+  (`lib/image/`) and `tiny::app` for the logic of the programs (`lib/app/`).
+  Includes are written from `lib/`: `#include "wm/dock.h"`.
+- **Layout:** two libraries are built from `lib/`. `libtiny-widgets.a` is the
+  widget toolkit (`lib/*.cc`, `lib/image/` and the vendored libraries); it
+  includes nothing from `wm/`, `xdg/` and `app/` (`make layers` checks it, and
+  the tests of the widgets link only this library). `libtiny-shell.a` is the
+  window manager and the shell (`lib/wm/`), the freedesktop.org files
+  (`lib/xdg/`) and the logic of the programs (`lib/app/`). `src/main.cc` is the
+  window manager itself, `src/fonts.cc` is the font viewer `tiny-fonts` and
+  `src/settings.cc` is the settings form `tiny-settings`; these two are
+  windows of `tiny::XftWindow` (the window, the pixmap, the colors, the font
+  cache and the loop are there) and their logic is in `lib/app/font_browser.*`
+  and `lib/app/settings_form.*`. `tests/` are the unit tests (they mirror
+  `lib/`), `examples/` are small toolkit programs (`make examples`) and a
+  default session, `tools/` are development scripts.
   Everything is built into `build/`. Files that belong to one machine (a
   session script, local settings) are not committed: they live in the ignored
   `local/`, created from `examples/` by the scripts.
@@ -118,9 +126,18 @@ costs a lot of code or memory (see the goals above).
 - **Event handlers.** New code connects events with `std::function`
   (a lambda capturing `this`), registered and unregistered by RAII.
   Do not add new casts between unrelated pointer-to-member types.
-- **No global state in new code.** The display, the theme and the handler
-  table are global today; new code takes what it needs as an argument, so that
-  it can be tested and the globals can be removed later.
+- **No global state in new code.** The display, the themes (`tiny::theme`,
+  `wm::shell_theme`) and the handler table are global today; new code takes what
+  it needs as an argument (like `LauncherLayout::compute()` takes the theme),
+  so that it can be tested and the globals can be removed later.
+- **Actions have names.** What a menu item, a key or a script can ask for is
+  registered by name in the `ActionRegistry` of the manager ("logout",
+  "run-dialog", "theme-toggle"); do not connect a new menu item to a private
+  handler of the manager. A plugin gets a panel slot from `Panel::add_applet()`.
+- **Two looks, same sizes.** The theme has the variants `Dark` (the default)
+  and `Light`; a color belongs to `Style::colorize()`, never to a constructor
+  or a widget, so that the variant can change while the shell runs
+  (`Widget::restyle()`).
 - **Standards are data.** Atoms, window types and states are listed in one
   place (`display.h`). Do not spread `XInternAtom` calls over the code.
 - **Decide without X when you can.** What can be decided without a display
@@ -193,7 +210,8 @@ make asan        # all the tests with AddressSanitizer and UBSan
 
 The same checks run in GitHub Actions (`.github/workflows/ci.yml`) with GCC,
 Clang, on Alpine (musl) and NetBSD, plus pre-commit, clang-tidy, cppcheck,
-the sanitizers, a coverage minimum and a binary size limit. A
+the sanitizers, a coverage minimum and a binary size limit (`make release`
+builds the small programs). A
 change should pass all of them; the NetBSD job is best effort.
 
 ## Tests
