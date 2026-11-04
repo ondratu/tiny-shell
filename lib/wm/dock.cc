@@ -471,11 +471,11 @@ Dock::Dock():
     // a click outside of the submenu closes both
     windows_menu.on_hide = [this] { menu.unmap(); };
     windows_menu.on_item = [this](size_t index) {
-        Window* window =
+        Window* chosen =
                 index < menu_windows.size() ? menu_windows[index] : nullptr;
         hide_menus();
-        if (window && contains(window)) {
-            window->set_focus();
+        if (chosen && contains(chosen)) {
+            chosen->set_focus();
         }
     };
 }
@@ -807,9 +807,9 @@ void Dock::choose(size_t index)
             }
             break;
         case Item::Close:
-            for (Window* window : windows) {
-                if (contains(window)) {
-                    window->close();
+            for (Window* closed : windows) {
+                if (contains(closed)) {
+                    closed->close();
                 }
             }
             break;
@@ -822,8 +822,8 @@ void Dock::open_windows_menu(size_t index)
 {
     std::vector<std::string> titles;
     titles.reserve(menu_windows.size());
-    for (const Window* window : menu_windows) {
-        titles.push_back(menu_title(window->get_wm_name(), 40));
+    for (const Window* listed : menu_windows) {
+        titles.push_back(menu_title(listed->get_wm_name(), 40));
     }
     windows_menu.set_items(titles);
 
