@@ -23,7 +23,7 @@ const Strings families = {"Alpha",   "Beta Mono", "Gamma", "Delta Mono",
 SettingsForm::Values V(const char* font, const char* terminal,
                        const char* scale)
 {
-    return {font, terminal, scale, "12", ""};
+    return {font, terminal, scale, "12", "", "", "", ""};
 }
 
 SettingsForm make(const SettingsForm::Values& values = V("Gamma", "xterm -e",
@@ -734,8 +734,8 @@ Strings styles_of(const std::string& family)
 
 SettingsForm make_with_styles(const std::string& style = "")
 {
-    SettingsForm form({"Gamma", "xterm -e", "1", "12", style}, families,
-                      SettingsForm::Metrics(), styles_of);
+    SettingsForm form({"Gamma", "xterm -e", "1", "12", style, "", "", ""},
+                      families, SettingsForm::Metrics(), styles_of);
     form.resize(500, 600);
     return form;
 }
@@ -744,8 +744,8 @@ SettingsForm make_with_styles(const std::string& style = "")
 
 TEST(SettingsFormTest, the_form_has_the_size_and_the_style)
 {
-    SettingsForm form =
-            make({"Gamma", "xterm -e", "1", "14", "Bold"}, families);
+    SettingsForm form = make(
+            {"Gamma", "xterm -e", "1", "14", "Bold", "", "", ""}, families);
 
     EXPECT_EQ(form.text(Field::Size), "14");
     EXPECT_EQ(form.text(Field::Style), "Bold");
@@ -757,29 +757,31 @@ TEST(SettingsFormTest, the_form_has_the_size_and_the_style)
 TEST(SettingsFormTest, a_size_that_is_not_a_number_in_the_limits_is_a_problem)
 {
     for (const char* size : {"", "3", "97", "big", "12pt"}) {
-        const SettingsForm form = make({"Gamma", "xterm -e", "1", size, ""});
+        const SettingsForm form =
+                make({"Gamma", "xterm -e", "1", size, "", "", "", ""});
         EXPECT_FALSE(form.problem(Field::Size).empty()) << size;
     }
     for (const char* size : {"4", "9.5", " 12 ", "96"}) {
-        const SettingsForm form = make({"Gamma", "xterm -e", "1", size, ""});
+        const SettingsForm form =
+                make({"Gamma", "xterm -e", "1", size, "", "", "", ""});
         EXPECT_TRUE(form.problem(Field::Size).empty()) << size;
     }
 }
 
 TEST(SettingsFormTest, the_style_may_be_empty_but_not_have_a_control_character)
 {
-    EXPECT_TRUE(make({"Gamma", "xterm -e", "1", "12", ""})
+    EXPECT_TRUE(make({"Gamma", "xterm -e", "1", "12", "", "", "", ""})
                         .problem(Field::Style)
                         .empty());
-    EXPECT_FALSE(make({"Gamma", "xterm -e", "1", "12", "a\tb"})
+    EXPECT_FALSE(make({"Gamma", "xterm -e", "1", "12", "a\tb", "", "", ""})
                          .problem(Field::Style)
                          .empty());
 }
 
 TEST(SettingsFormTest, the_list_starts_with_the_size_and_the_style_of_the_form)
 {
-    SettingsForm form({"Gamma", "xterm -e", "1", "14", "Bold"}, families,
-                      SettingsForm::Metrics(), styles_of);
+    SettingsForm form({"Gamma", "xterm -e", "1", "14", "Bold", "", "", ""},
+                      families, SettingsForm::Metrics(), styles_of);
     form.resize(500, 600);
 
     form.open_picker();
@@ -818,8 +820,8 @@ TEST(SettingsFormTest, a_family_that_has_no_styles_is_shown_with_the_default)
 TEST(SettingsFormTest, the_styles_of_a_family_are_asked_for_once)
 {
     int asked = 0;
-    SettingsForm form({"Gamma", "xterm -e", "1", "12", ""}, families,
-                      SettingsForm::Metrics(),
+    SettingsForm form({"Gamma", "xterm -e", "1", "12", "", "", "", ""},
+                      families, SettingsForm::Metrics(),
                       [&](const std::string&) -> Strings {
                           ++asked;
                           return {"Regular"};
