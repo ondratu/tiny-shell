@@ -1,10 +1,10 @@
-#include "font_browser.h"
+#include "app/font_browser.h"
 
 #include <algorithm>
 
 #include "style.h"
 
-namespace tiny {
+namespace tiny::app {
 
 namespace {
 
@@ -316,4 +316,4 @@ void FontBrowser::back()
     move_selection(selected_);
 }
 
-} // namespace tiny
+} // namespace tiny::app

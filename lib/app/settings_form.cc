@@ -1,4 +1,4 @@
-#include "settings_form.h"
+#include "app/settings_form.h"
 
 #include <algorithm>
 #include <cctype>
@@ -11,7 +11,7 @@
 #include "wm/config.h"
 #include "xdg/desktop_entry.h"
 
-namespace tiny {
+namespace tiny::app {
 
 namespace {
 
@@ -877,4 +877,4 @@ bool SettingsForm::type(const std::string& typed)
     return false;
 }
 
-} // namespace tiny
+} // namespace tiny::app

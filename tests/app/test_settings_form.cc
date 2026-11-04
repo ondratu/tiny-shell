@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "settings_form.h"
+#include "app/settings_form.h"
 
 using tiny::Rect;
-using tiny::SettingsForm;
+using tiny::app::SettingsForm;
 using Field = SettingsForm::Field;
 using Key = SettingsForm::Key;
 using Result = SettingsForm::Result;

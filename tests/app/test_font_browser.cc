@@ -3,11 +3,11 @@
 #include <string>
 #include <vector>
 
-#include "font_browser.h"
+#include "app/font_browser.h"
 
 namespace {
 
-using tiny::FontBrowser;
+using tiny::app::FontBrowser;
 using Key = FontBrowser::Key;
 using View = FontBrowser::View;
 

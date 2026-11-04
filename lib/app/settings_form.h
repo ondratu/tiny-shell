@@ -11,7 +11,7 @@
 #include "widget.h"
 #include "wm/config.h"
 
-namespace tiny {
+namespace tiny::app {
 
 /**
  * @short What the settings program shows and does, without any drawing.
@@ -328,4 +328,4 @@ class SettingsForm {
     size_t pressed_ = NoTarget;
 };
 
-} // namespace tiny
+} // namespace tiny::app

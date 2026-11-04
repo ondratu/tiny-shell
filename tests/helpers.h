@@ -2,7 +2,6 @@
 
 // gtest must be included before Xlib: X.h defines the None macro
 #include <gtest/gtest.h>
-#include "wm/shell_theme.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -32,15 +31,6 @@ inline XEvent make_event(int type)
 inline ::Window root_window()
 {
     return XDefaultRootWindow(tiny::get_display());
-}
-
-// The screen below the panel, the work area without any dock.
-inline tiny::Rect screen_area()
-{
-    XWindowAttributes a;
-    XGetWindowAttributes(tiny::get_display(), root_window(), &a);
-    return {0, tiny::wm::shell_theme.panel, a.width,
-            a.height - tiny::wm::shell_theme.panel};
 }
 
 // Calls the handler registered for `type` on `window`, like the main loop.
@@ -298,22 +288,6 @@ inline void pump_events()
         }
     }
 }
-
-// Same as WidgetFont for wm::shell_theme.header.
-class HeaderFont {
-  public:
-    HeaderFont(): original(tiny::wm::shell_theme.header), with_font(original)
-    {
-        with_font.init();
-        tiny::wm::shell_theme.header = with_font;
-    }
-
-    ~HeaderFont() { tiny::wm::shell_theme.header = original; }
-
-  private:
-    tiny::wm::HeaderStyle original;
-    tiny::wm::HeaderStyle with_font;
-};
 
 inline XEvent key_event(::Window window, KeySym key, int type = KeyPress,
                         unsigned int state = 0)

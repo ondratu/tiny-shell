@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "display.h"
-#include "font_browser.h"
+#include "app/font_browser.h"
 #include "style.h"
 #include "wm/config.h"
 #include "x_util.h"
@@ -33,7 +33,7 @@
 
 namespace {
 
-using tiny::FontBrowser;
+using tiny::app::FontBrowser;
 
 constexpr const char* title = "Fonts";
 

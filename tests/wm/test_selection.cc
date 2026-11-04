@@ -1,4 +1,4 @@
-#include "helpers.h"
+#include "wm_helpers.h"
 
 #include <X11/Xatom.h>
 
