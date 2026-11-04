@@ -46,7 +46,7 @@ void Entry::set_focus()
 
 void Entry::set_text(const std::string& text_arg)
 {
-    text = text_arg;
+    field.set_text(text_arg);
     redraw();
 }
 
@@ -62,15 +62,9 @@ void Entry::on_key_press(const XEvent& e, void*)
 
     switch (keysym) {
         case XK_BackSpace:
-            if (text.empty()) {
+            if (!field.backspace()) { // a whole UTF-8 character
                 return;
             }
-            // remove the whole UTF-8 character, not only its last byte
-            while ((static_cast<unsigned char>(text.back()) & 0xC0) == 0x80 &&
-                   text.size() > 1) {
-                text.pop_back();
-            }
-            text.pop_back();
             break;
         case XK_Return:
         case XK_KP_Enter:
@@ -94,7 +88,7 @@ void Entry::on_key_press(const XEvent& e, void*)
                 typed[0] == 0x7F) {
                 return;
             }
-            text += typed;
+            field.insert(typed);
             break;
     }
 
@@ -124,6 +118,7 @@ void Entry::on_expose(const XEvent&, void*)
     XftDraw* draw = XftDrawCreate(display, window, visual, colormap);
 
     XGlyphInfo extents;
+    const std::string& text = field.text();
     XftTextExtentsUtf8(display, font,
                        reinterpret_cast<const FcChar8*>(text.c_str()),
                        static_cast<int>(text.size()), &extents);

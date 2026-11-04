@@ -7,10 +7,9 @@
 #include <utility>
 #include <vector>
 
-namespace tiny {
+#include "text.h"
 
-//! `text` without the blanks (space, tab, CR, LF) at both ends
-std::string_view trim(std::string_view text);
+namespace tiny {
 
 /**
  * @short The values of an ini file: `[section]` lines and `key = value` lines.

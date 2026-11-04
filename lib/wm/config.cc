@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "ini.h"
+#include "text.h"
 #include "xdg/application_launch.h"
 #include "xdg/dirs.h"
 
@@ -160,13 +161,9 @@ namespace {
 std::vector<std::string> split_ids(std::string_view list)
 {
     std::vector<std::string> ids;
-    while (!list.empty()) {
-        const auto semicolon = list.find(';');
-        const std::string id(trim(list.substr(0, semicolon)));
-        list.remove_prefix(semicolon == std::string_view::npos ? list.size()
-                                                               : semicolon + 1);
-        if (!id.empty() && std::find(ids.begin(), ids.end(), id) == ids.end()) {
-            ids.push_back(id);
+    for (std::string& id : split(list, ';', true)) {
+        if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+            ids.push_back(std::move(id));
         }
     }
     return ids;

@@ -12,6 +12,7 @@
 #include <set>
 
 #include "xdg/dirs.h"
+#include "text.h"
 
 namespace tiny::xdg {
 
@@ -26,15 +27,6 @@ bool is_executable_file(const std::string& file)
 {
     std::error_code error;
     return fs::is_regular_file(file, error) && access(file.c_str(), X_OK) == 0;
-}
-
-std::string lower(std::string_view text)
-{
-    std::string out(text);
-    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-    return out;
 }
 
 struct Scanner {
