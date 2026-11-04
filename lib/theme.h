@@ -36,7 +36,6 @@ class Theme {
     int wm_menu_item_height = 20;
     int wm_popup_item_height = 30; //!< an item of a menu: as high as the panel
     int wm_menu_padding = 12;      //!< left and right of the text of an item
-    int wm_dock_dots = 10;         //!< under an icon, the room for its dots
     int wm_dock_dot = 4;           //!< the diameter of a dot (a window)
     int wm_dock_line = 1;          //!< the width of the line between the groups
     int wm_dock_marker = 3;        //!< the width of the mark of a drop

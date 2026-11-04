@@ -396,7 +396,7 @@ class DockIconWindowsTest : public ::testing::Test {
     {
         const int dot = tiny::theme.wm_dock_dot;
         const int left = (icon_size() - (count * 2 * dot - dot)) / 2;
-        const int top = icon_size() + (tiny::theme.wm_dock_dots - dot) / 2;
+        const int top = icon_size() + std::max(0, border() - dot - 1);
         const Image img(icon->get_window(), icon->get_width(),
                         icon->get_height());
         return img.at(left + index * 2 * dot + dot / 2, top + dot / 2);
@@ -412,7 +412,7 @@ class DockIconWindowsTest : public ::testing::Test {
 TEST_F(DockIconWindowsTest, is_higher_than_the_icon_by_the_room_for_the_dots)
 {
     EXPECT_EQ(icon->get_width(), icon_size());
-    EXPECT_EQ(icon->get_height(), icon_size() + tiny::theme.wm_dock_dots);
+    EXPECT_EQ(icon->get_height(), icon_size() + border());
 }
 
 TEST_F(DockIconWindowsTest, has_a_dot_for_every_window)
@@ -460,7 +460,7 @@ TEST_F(DockIconWindowsTest, an_application_that_does_not_run_has_no_dots)
     const Image img(idle.get_window(), idle.get_width(), idle.get_height());
     EXPECT_EQ(img.count_not(bg, idle.get_width()) > 0, true); // the circle
     for (int x = 0; x < idle.get_width(); ++x) {
-        EXPECT_EQ(img.at(x, icon_size() + tiny::theme.wm_dock_dots / 2), bg);
+        EXPECT_EQ(img.at(x, icon_size() + border() / 2), bg);
     }
 }
 
@@ -862,8 +862,7 @@ TEST_F(DockTest, starts_with_room_for_the_menu_button)
 {
     EXPECT_EQ(dock.get_width(), icon_size() + border() * 2);
     // the dots of the windows are under the icons
-    EXPECT_EQ(dock.get_height(),
-              icon_size() + tiny::theme.wm_dock_dots + border() * 2);
+    EXPECT_EQ(dock.get_height(), icon_size() + border() * 2);
     EXPECT_EQ(dock.get_style().padding_width, 5u);
 }
 
