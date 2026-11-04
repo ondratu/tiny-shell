@@ -43,6 +43,15 @@ class LabelButton : public Button {
     //! The text starts `padding` from the left (it is centered by default)
     void set_text_padding(int padding) { text_padding = padding; }
 
+    //! The width of the border instead of the one of the style (an item of a
+    //! menu has none); set it before the button is realized
+    void set_border(int border_width) { border = border_width; }
+
+    int get_border() const override
+    {
+        return border >= 0 ? border : Button::get_border();
+    }
+
   protected:
     void on_enter_notify(const XEvent& e, void* data) override;
     void on_leave_notify(const XEvent& e, void* data) override;
@@ -50,6 +59,7 @@ class LabelButton : public Button {
 
     std::string text;
     int text_padding = -1; //!< -1: centered
+    int border = -1;       //!< -1: the border of the style
 };
 
 class MenuButton : public LabelButton {

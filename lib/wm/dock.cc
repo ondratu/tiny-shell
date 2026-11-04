@@ -438,6 +438,7 @@ void DockMenu::set_items(const std::vector<std::string>& labels)
         tiny::LabelButton* button = items[i].get();
         button->resize(content_w, item_height); // not realized yet
         button->set_text_padding(padding);
+        button->set_border(0);
         add(button, 0, static_cast<int>(i) * item_height);
         button->on_click.connect([this, i](const XEvent&) {
             if (on_item) {

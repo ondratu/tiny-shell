@@ -355,3 +355,17 @@ TEST_F(MenuButtonTest, click_without_popover_is_ignored)
 
     click(b, click_event(310, 205, 10, 5)); // must not crash
 }
+
+TEST(LabelButtonTest, border_is_the_one_of_the_style_unless_it_is_set)
+{
+    tiny::LabelButton button(50, 20, "x");
+    EXPECT_EQ(button.get_border(), tiny::theme.widget.border_width);
+
+    button.set_border(0);
+    button.realize(XDefaultRootWindow(tiny::get_display()), 0, 0);
+
+    XWindowAttributes attrs;
+    XGetWindowAttributes(tiny::get_display(), button.get_window(), &attrs);
+    EXPECT_EQ(button.get_border(), 0);
+    EXPECT_EQ(attrs.border_width, 0);
+}

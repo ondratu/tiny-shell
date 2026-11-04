@@ -64,6 +64,7 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
                 continue;
             }
             item->set_text_padding(tiny::theme.wm_menu_padding);
+            item->set_border(0);
             add(item, 0, top);
             top += tiny::theme.wm_popup_item_height;
         }
