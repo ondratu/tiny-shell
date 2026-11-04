@@ -66,8 +66,8 @@ std::vector<ResourceChange> xft_resources(XftOption option,
 std::vector<ResourceChange> xft_resources(const Config& config)
 {
     std::vector<ResourceChange> rv;
-    const std::string* values[] = {&config.xft_antialias, &config.xft_hinting,
-                                   &config.xft_rgba};
+    const std::string* const values[] = {&config.xft_antialias,
+                                         &config.xft_hinting, &config.xft_rgba};
     for (const XftOption option :
          {XftOption::Antialias, XftOption::Hinting, XftOption::Rgba}) {
         const std::string& value = *values[static_cast<size_t>(option)];
