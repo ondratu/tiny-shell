@@ -18,6 +18,11 @@ namespace tiny::wm {
  * font_size = 12
  * font_style = Bold
  *
+ * [xft]
+ * antialias = yes
+ * hinting = slight
+ * rgba = rgb
+ *
  * [commands]
  * reboot = sudo reboot
  * poweroff = doas poweroff
@@ -36,9 +41,35 @@ struct Config {
     std::string font = "Cantarell"; //!< [theme] font, a family of fontconfig
     double font_size = 12;          //!< [theme] font_size, points at scale 1
     std::string font_style;         //!< [theme] font_style, "" is the default
+    std::string xft_antialias;      //!< [xft] antialias, "" is not set
+    std::string xft_hinting;        //!< [xft] hinting, "" is not set
+    std::string xft_rgba;           //!< [xft] rgba, "" is not set
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
+
+//! The ways the programs draw text, that `[xft]` sets (`Xft.*` of X resources)
+enum class XftOption { Antialias, Hinting, Rgba };
+
+//! A value of `[xft]` and the name that a form shows for it
+struct XftChoice {
+    std::string value;
+    std::string label;
+};
+
+/**
+ * @short The values that an option of `[xft]` can have.
+ *
+ * The first one is always "" (not set: the programs keep what the system
+ * says), shown as "Default".
+ */
+const std::vector<XftChoice>& xft_choices(XftOption option);
+
+//! The key of the option in `[xft]`
+const char* xft_key(XftOption option);
+
+//! Whether the text is one of `xft_choices(option)`
+bool valid_xft(XftOption option, const std::string& text);
 
 /**
  * @short The scale from the text of a setting.

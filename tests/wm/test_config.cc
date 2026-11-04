@@ -523,3 +523,51 @@ TEST(ConfigTest, a_style_is_a_name_without_control_characters)
     EXPECT_TRUE(valid_font_style("Bold Italic"));
     EXPECT_FALSE(valid_font_style("Bold\nItalic"));
 }
+
+TEST(ConfigTest, reads_the_rendering_of_text)
+{
+    const Config c = parse_config(
+            {{"a", "[xft]\nantialias = no\nhinting = slight\nrgba = vrgb\n"}});
+
+    EXPECT_EQ(c.xft_antialias, "no");
+    EXPECT_EQ(c.xft_hinting, "slight");
+    EXPECT_EQ(c.xft_rgba, "vrgb");
+    EXPECT_TRUE(parse_config({}).xft_antialias.empty());
+}
+
+TEST(ConfigTest, an_empty_rendering_value_is_not_set_and_a_wrong_one_is_told)
+{
+    Strings problems;
+    const Config c = parse_config(
+            {{"a", "[xft]\nantialias = yes\nhinting =\nrgba = rgb\n"},
+             {"b", "[xft]\nantialias = maybe\nhinting = sharp\n"}},
+            &problems);
+
+    EXPECT_EQ(c.xft_antialias, "yes"); // the wrong value of "b" is left out
+    EXPECT_TRUE(c.xft_hinting.empty());
+    EXPECT_EQ(c.xft_rgba, "rgb");
+    ASSERT_EQ(problems.size(), 2u);
+    EXPECT_NE(problems[0].find("b: [xft] antialias must be"),
+              std::string::npos);
+    EXPECT_NE(problems[1].find("[xft] hinting must be"), std::string::npos);
+}
+
+TEST(ConfigTest, the_choices_of_the_rendering_start_with_the_default)
+{
+    using tiny::wm::valid_xft;
+    using tiny::wm::xft_choices;
+    using tiny::wm::xft_key;
+    using tiny::wm::XftOption;
+
+    for (const auto option :
+         {XftOption::Antialias, XftOption::Hinting, XftOption::Rgba}) {
+        ASSERT_GT(xft_choices(option).size(), 2u);
+        EXPECT_EQ(xft_choices(option)[0].value, "");
+        EXPECT_TRUE(valid_xft(option, ""));
+        EXPECT_FALSE(valid_xft(option, "bogus"));
+    }
+    EXPECT_STREQ(xft_key(XftOption::Antialias), "antialias");
+    EXPECT_STREQ(xft_key(XftOption::Hinting), "hinting");
+    EXPECT_STREQ(xft_key(XftOption::Rgba), "rgba");
+    EXPECT_TRUE(valid_xft(XftOption::Hinting, "full"));
+}

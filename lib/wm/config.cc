@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <optional>
+#include <utility>
 
 #include "ini.h"
 #include "xdg/application_launch.h"
@@ -78,6 +79,50 @@ bool valid_font(const std::string& text)
     return !font.empty() && std::none_of(font.begin(), font.end(), [](char c) {
         return std::iscntrl(static_cast<unsigned char>(c)) != 0;
     });
+}
+
+const std::vector<XftChoice>& xft_choices(XftOption option)
+{
+    static const std::vector<XftChoice> antialias = {
+            {"", "Default"}, {"yes", "On"}, {"no", "Off"}};
+    static const std::vector<XftChoice> hinting = {{"", "Default"},
+                                                   {"none", "None"},
+                                                   {"slight", "Slight"},
+                                                   {"medium", "Medium"},
+                                                   {"full", "Full"}};
+    static const std::vector<XftChoice> rgba = {
+            {"", "Default"},          {"none", "None (grayscale)"},
+            {"rgb", "RGB"},           {"bgr", "BGR"},
+            {"vrgb", "Vertical RGB"}, {"vbgr", "Vertical BGR"}};
+    switch (option) {
+        case XftOption::Antialias:
+            return antialias;
+        case XftOption::Hinting:
+            return hinting;
+        case XftOption::Rgba:
+            break;
+    }
+    return rgba;
+}
+
+const char* xft_key(XftOption option)
+{
+    switch (option) {
+        case XftOption::Antialias:
+            return "antialias";
+        case XftOption::Hinting:
+            return "hinting";
+        case XftOption::Rgba:
+            break;
+    }
+    return "rgba";
+}
+
+bool valid_xft(XftOption option, const std::string& text)
+{
+    const auto& choices = xft_choices(option);
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return c.value == text; });
 }
 
 std::vector<std::string> config_files(const char* config_home,
@@ -162,6 +207,25 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.font_style = *value;
         } else {
             problem("[theme] font_style must be the name of a style");
+        }
+    }
+    const std::pair<XftOption, std::string*> xft[] = {
+            {XftOption::Antialias, &config.xft_antialias},
+            {XftOption::Hinting, &config.xft_hinting},
+            {XftOption::Rgba, &config.xft_rgba}};
+    for (const auto& [option, target] : xft) {
+        if (const auto value = ini.get("xft", xft_key(option))) {
+            if (valid_xft(option, *value)) {
+                *target = *value;
+            } else {
+                std::string choices;
+                for (const XftChoice& c : xft_choices(option)) {
+                    choices += c.value.empty() ? "" : " " + c.value;
+                }
+                problem(("[xft] " + std::string(xft_key(option)) +
+                         " must be empty or one of:" + choices)
+                                .c_str());
+            }
         }
     }
     if (const auto value = ini.get("commands", "reboot"); value) {
