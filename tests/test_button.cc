@@ -328,7 +328,7 @@ TEST_F(MenuButtonTest, click_pops_popover_up_under_button)
     // centered under the button: 300 + 100/2 - 60/2, below it: 200 + 28, the
     // border of the popover covers the edge of the button
     EXPECT_EQ(attrs.x, 320);
-    EXPECT_EQ(attrs.y, 228 - static_cast<int>(popover.get_border()));
+    EXPECT_EQ(attrs.y, 228 - popover.get_border());
 }
 
 TEST_F(MenuButtonTest, click_does_not_popup_already_visible_popover)
