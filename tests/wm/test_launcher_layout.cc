@@ -1,14 +1,21 @@
 #include <gtest/gtest.h>
 
 #include "theme.h"
+#include "wm/shell_theme.h"
 #include "wm/launcher_layout.h"
 
 namespace {
 
+// The default theme, not scaled; a local one, so the global is not touched
+struct Themes {
+    tiny::Theme toolkit;
+    tiny::wm::ShellTheme shell{toolkit};
+};
+
 tiny::wm::LauncherLayout layout_of(int width, int height)
 {
-    const tiny::Theme theme; // the default one, not scaled
-    return tiny::wm::LauncherLayout::compute(width, height, theme);
+    const Themes themes;
+    return tiny::wm::LauncherLayout::compute(width, height, themes.shell);
 }
 
 } // namespace
@@ -47,11 +54,11 @@ TEST(LauncherLayoutTest, the_cells_take_at_most_three_quarters_of_the_screen)
 
 TEST(LauncherLayoutTest, the_entry_is_in_the_middle_between_the_panel_and_cells)
 {
-    const tiny::Theme theme;
+    const Themes theme;
     const auto l = layout_of(1920, 1080);
 
-    const int outer = l.entry.height + 2 * theme.entry.border_width;
-    const int above = l.entry.y - theme.wm_panel;
+    const int outer = l.entry.height + 2 * theme.toolkit.entry.border_width;
+    const int above = l.entry.y - theme.shell.panel;
     const int under = l.grid.y - (l.entry.y + outer);
     EXPECT_NEAR(above, under, 1);
     EXPECT_GT(above, 0);
@@ -59,10 +66,10 @@ TEST(LauncherLayoutTest, the_entry_is_in_the_middle_between_the_panel_and_cells)
 
 TEST(LauncherLayoutTest, the_entry_is_a_third_of_the_screen_wide)
 {
-    const tiny::Theme theme;
+    const Themes theme;
     const auto l = layout_of(1920, 1080);
 
-    EXPECT_EQ(l.entry.width + 2 * theme.entry.border_width, 640);
+    EXPECT_EQ(l.entry.width + 2 * theme.toolkit.entry.border_width, 640);
     EXPECT_EQ(l.entry.x * 2 + 640, 1920);
 }
 
@@ -128,10 +135,10 @@ TEST(LauncherLayoutTest, the_icons_are_between_16_and_512_pixels)
 
 TEST(LauncherLayoutTest, the_icons_follow_the_scale_of_the_theme)
 {
-    tiny::Theme theme;
-    theme.scale(2);
+    Themes theme;
+    theme.shell.scale(2);
 
-    const auto l = tiny::wm::LauncherLayout::compute(3840, 2160, theme);
+    const auto l = tiny::wm::LauncherLayout::compute(3840, 2160, theme.shell);
 
     EXPECT_EQ(l.icon, 96);
     EXPECT_EQ(l.columns, 8);

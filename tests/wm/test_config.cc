@@ -18,6 +18,22 @@ using tiny::wm::Config;
 using tiny::wm::parse_config;
 using Strings = std::vector<std::string>;
 
+TEST(ConfigTest, the_style_of_the_theme_is_dark_or_light)
+{
+    EXPECT_EQ(parse_config({}).style, tiny::Variant::Dark);
+    EXPECT_EQ(parse_config({{"a", "[theme]\nstyle = Light\n"}}).style,
+              tiny::Variant::Light);
+
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[theme]\nstyle = blue\n"}}, &problems);
+
+    EXPECT_EQ(c.style, tiny::Variant::Dark);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("[theme] style must be dark or light"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, the_defaults_work_without_any_file)
 {
     const Config c = parse_config({});

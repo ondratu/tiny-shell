@@ -4,6 +4,7 @@
 #include <iterator>
 #include <utility>
 
+#include "wm/shell_theme.h"
 #include "x_util.h"
 #include "wm/dock.h"
 #include "object.h"
@@ -13,8 +14,7 @@
 
 namespace tiny::wm {
 
-DockButton::DockButton(): DockButton(tiny::theme.wm_icon, tiny::theme.wm_icon)
-{}
+DockButton::DockButton(): DockButton(shell_theme.icon, shell_theme.icon) {}
 
 DockButton::DockButton(int w, int h): tiny::Widget(w, h)
 {
@@ -101,8 +101,7 @@ DockLine::DockLine(const tiny::Style& style_arg, int w, int h):
 
 DockIcon::DockIcon(std::vector<Window*> windows_arg, std::string app_id_arg,
                    const Window::AppIcon& icon):
-    DockButton(tiny::theme.wm_icon,
-               tiny::theme.wm_icon + tiny::theme.wm_dock_border),
+    DockButton(shell_theme.icon, shell_theme.icon + shell_theme.dock_border),
     windows(std::move(windows_arg)),
     app_id(std::move(app_id_arg)),
     favorite_icon(icon)
@@ -164,7 +163,7 @@ void DockIcon::on_motion(const XEvent& e)
     }
     const int x = e.xmotion.x_root;
     if (!dragging) {
-        if (std::abs(x - press_x) < tiny::theme.wm_dock_drag) {
+        if (std::abs(x - press_x) < shell_theme.dock_drag) {
             return;
         }
         dragging = true;
@@ -246,7 +245,7 @@ void DockIcon::draw_app_icon(const Window::AppIcon& app_icon, bool small)
         XRenderSetPictureTransform(display, app_icon.picture, &scale);
     }
     XRenderComposite(display, PictOpOver, app_icon.picture, None, target, 0, 0,
-                     0, 0, (width - w) / 2, (tiny::theme.wm_icon - h) / 2,
+                     0, 0, (width - w) / 2, (shell_theme.icon - h) / 2,
                      tiny::x_uint(w), tiny::x_uint(h));
     if (small) {
         XTransform identity = {{{XDoubleToFixed(1), 0, 0},
@@ -258,21 +257,21 @@ void DockIcon::draw_app_icon(const Window::AppIcon& app_icon, bool small)
 
 void DockIcon::draw_dots(GC gc)
 {
-    const int dot = tiny::theme.wm_dock_dot;
+    const int dot = shell_theme.dock_dot;
     const int step = 2 * dot; // a dot and the same gap
     const size_t room = static_cast<size_t>(std::max(1, (width + dot) / step));
     const int count = static_cast<int>(std::min(windows.size(), room));
     const int left = (width - (count * step - dot)) / 2;
     // in the border of the dock under the icon, close to the edge
-    const int top = tiny::theme.wm_icon +
-                    std::max(0, tiny::theme.wm_dock_border - dot - 1);
+    const int top =
+            shell_theme.icon + std::max(0, shell_theme.dock_border - dot - 1);
 
     for (int i = 0; i < count; ++i) {
         const auto state = windows[static_cast<size_t>(i)]->is_focused()
                                    ? tiny::Style::State::Hover
                                    : tiny::Style::State::Normal;
         XSetForeground(display, gc,
-                       tiny::theme.wm_dock.get_fg(static_cast<uint8_t>(state)));
+                       shell_theme.dock.get_fg(static_cast<uint8_t>(state)));
         XFillArc(display, window, gc, left + i * step, top, tiny::x_uint(dot),
                  tiny::x_uint(dot), 0, 360 * 64);
     }
@@ -283,7 +282,7 @@ void DockIcon::on_expose(const XEvent&, void*)
     is_selected = std::any_of(windows.begin(), windows.end(),
                               [](const Window* w) { return w->is_focused(); });
 
-    const int size = tiny::theme.wm_icon; // the dots are under it
+    const int size = shell_theme.icon; // the dots are under it
     GC gc = XCreateGC(display, window, 0, nullptr);
     XSetWindowBackground(display, window,
                          get_style().get_bg(get_theme_state()));
@@ -318,8 +317,8 @@ void DockIcon::on_expose(const XEvent&, void*)
     }
     if (std::any_of(windows.begin(), windows.end(),
                     [](const Window* w) { return w->demands_attention(); })) {
-        const int bar = tiny::theme.wm_dock_attention_bar;
-        XSetForeground(display, gc, tiny::theme.wm_dock.attention);
+        const int bar = shell_theme.dock_attention_bar;
+        XSetForeground(display, gc, shell_theme.dock.attention);
         XFillRectangle(display, window, gc, 0, size - bar, tiny::x_uint(width),
                        tiny::x_uint(bar));
     }
@@ -397,7 +396,7 @@ MenuPlace place_menu(int x, int y, int width, int height, bool above,
             std::max(0, std::min(top, screen_height - height))};
 }
 
-DockMenu::DockMenu(): tiny::Popover(1, tiny::theme.wm_popup_item_height)
+DockMenu::DockMenu(): tiny::Popover(1, shell_theme.popup_item_height)
 {
     name = "wm_dockmenu";
 }
@@ -423,8 +422,8 @@ void DockMenu::set_items(const std::vector<std::string>& labels)
     }
     items.clear();
 
-    const int item_height = tiny::theme.wm_popup_item_height;
-    const int padding = tiny::theme.wm_menu_padding;
+    const int item_height = shell_theme.popup_item_height;
+    const int padding = shell_theme.menu_padding;
     int text = 0;
     for (const std::string& label : labels) {
         items.push_back(
@@ -456,10 +455,9 @@ void DockMenu::set_items(const std::vector<std::string>& labels)
 
 Dock::Dock():
     tiny::Box(tiny::Box::Type::Horizontal,
-              tiny::theme.wm_icon + tiny::theme.wm_dock_border * 2,
-              tiny::theme.wm_icon + tiny::theme.wm_dock_border * 2),
-    mark(tiny::theme.wm_dock_mark, tiny::theme.wm_dock_marker,
-         tiny::theme.wm_icon)
+              shell_theme.icon + shell_theme.dock_border * 2,
+              shell_theme.icon + shell_theme.dock_border * 2),
+    mark(shell_theme.dock_mark, shell_theme.dock_marker, shell_theme.icon)
 {
     name = "wm_dock";
     menu.on_item = [this](size_t index) { choose(index); };
@@ -605,15 +603,15 @@ void Dock::rebuild()
     }
 
     const auto groups = group_dock(favorite_ids, keys);
-    const int border = tiny::theme.wm_dock_border;
+    const int border = shell_theme.dock_border;
     const bool with_favorites = !favorites.empty();
     for (const DockGroup& group : groups) {
         if (with_favorites && group.favorite < 0 && !separator) {
             // not from edge to edge of the icons
-            const int inset = tiny::theme.wm_icon / 6;
+            const int inset = shell_theme.icon / 6;
             separator = std::make_unique<DockLine>(
-                    tiny::theme.wm_dock_separator, tiny::theme.wm_dock_line,
-                    tiny::theme.wm_icon - 2 * inset);
+                    shell_theme.dock_separator, shell_theme.dock_line,
+                    shell_theme.icon - 2 * inset);
             push_start(separator.get(), border, border + inset);
             separator->map();
         }
@@ -683,7 +681,7 @@ void Dock::drag(const DockIcon& dragged, int x_root)
         return;
     }
     const size_t place = drop_place(dragged, x_root);
-    const int border = tiny::theme.wm_dock_border;
+    const int border = shell_theme.dock_border;
     int x;
     if (place == 0) {
         x = edges.front() - border / 2;
@@ -692,7 +690,7 @@ void Dock::drag(const DockIcon& dragged, int x_root)
     } else {
         x = (edges[place * 2 - 1] + edges[place * 2]) / 2;
     }
-    XMoveWindow(display, mark.get_window(), x - tiny::theme.wm_dock_marker / 2,
+    XMoveWindow(display, mark.get_window(), x - shell_theme.dock_marker / 2,
                 border);
     mark.map();
     XRaiseWindow(display, mark.get_window());
@@ -843,7 +841,7 @@ void Dock::open_windows_menu(size_t index)
     const MenuPlace place =
             place_menu(x,
                        menu_place.y + static_cast<int>(index) *
-                                              tiny::theme.wm_popup_item_height,
+                                              shell_theme.popup_item_height,
                        w, h, false, false, screen.width, screen.height);
     windows_menu.popup(place.x + windows_menu.content_width() / 2, place.y);
     // the catcher of the submenu covers the screen, the menu stays usable
@@ -859,8 +857,7 @@ void Dock::hide_menus()
 
 void Dock::resize_to_children()
 {
-    resize(get_start_offset() + icon.get_width() +
-                   2 * tiny::theme.wm_dock_border,
+    resize(get_start_offset() + icon.get_width() + 2 * shell_theme.dock_border,
            height);
 }
 
@@ -877,8 +874,8 @@ void Dock::realize(::Window parent_arg, int x, int y)
 {
     tiny::Box::realize(parent_arg, x, y);
 
-    push_back(&icon, tiny::theme.wm_dock_border, tiny::theme.wm_dock_border);
-    mark.realize(window, 0, tiny::theme.wm_dock_border);
+    push_back(&icon, shell_theme.dock_border, shell_theme.dock_border);
+    mark.realize(window, 0, shell_theme.dock_border);
     menu.realize(parent_arg);
     windows_menu.realize(parent_arg);
     if (!tasks.empty() || !favorites.empty()) {
@@ -894,7 +891,7 @@ void Dock::resize(int w, int h)
         XWindowAttributes attrs;
         XGetWindowAttributes(display, parent, &attrs);
         XMoveWindow(display, window, attrs.width / 2 - w / 2,
-                    attrs.height - h - tiny::theme.wm_dock_border);
+                    attrs.height - h - shell_theme.dock_border);
     }
 }
 

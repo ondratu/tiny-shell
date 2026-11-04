@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "style.h"
+
 namespace tiny::wm {
 
 /**
@@ -18,6 +20,7 @@ namespace tiny::wm {
  * font = Cantarell
  * font_size = 12
  * font_style = Bold
+ * style = dark
  *
  * [xft]
  * antialias = yes
@@ -45,6 +48,7 @@ struct Config {
     std::string xft_antialias;      //!< [xft] antialias, "" is not set
     std::string xft_hinting;        //!< [xft] hinting, "" is not set
     std::string xft_rgba;           //!< [xft] rgba, "" is not set
+    Variant style = Variant::Dark;  //!< [theme] style, dark or light
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };

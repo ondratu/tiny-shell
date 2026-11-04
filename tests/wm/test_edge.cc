@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <X11/cursorfont.h>
 
@@ -114,8 +115,8 @@ TEST(EdgeTest, delete_through_base_pointer)
 
 class BackWindowTest : public ::testing::Test {
   protected:
-    int border() const { return tiny::theme.wm_win_border; }
-    int corner() const { return tiny::theme.wm_win_corner; }
+    int border() const { return tiny::wm::shell_theme.win_border; }
+    int corner() const { return tiny::wm::shell_theme.win_corner; }
 
     // client area 200x100 at 50, 60 -> 220x120 window at 40, 50
     void SetUp() override { bw = new tiny::wm::BackWindow(200, 100); }

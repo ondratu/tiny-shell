@@ -1,6 +1,6 @@
 #pragma once
 
-#include "theme.h"
+#include "wm/shell_theme.h"
 #include "widget.h"
 
 namespace tiny::wm {
@@ -31,10 +31,10 @@ struct LauncherLayout {
     Rect next = {0, 0, 0, 0};
 
     static LauncherLayout compute(int screen_width, int screen_height,
-                                  const Theme& theme);
+                                  const ShellTheme& theme);
 
     /// The height above (and under) the cells that is kept for the entry.
-    static int band(const Theme& theme);
+    static int band(const ShellTheme& theme);
 
     bool operator==(const LauncherLayout& other) const;
 };

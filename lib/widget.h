@@ -55,6 +55,10 @@ class Widget : public Object {
 
     virtual void unmap();
 
+    //! Take the colors of the style again (the theme changed its variant) and
+    //! repaint; a widget that is not shown does it when it is mapped
+    virtual void restyle();
+
     // Generate ResizeRequest and Expose when Expose when size is smaller
     virtual void resize(int width, int height);
 
@@ -87,6 +91,12 @@ class Widget : public Object {
     bool is_focus = false;    //!< is keyboard cursor in / on
     bool is_pressed = false;  //!< is pressed (buttons)
     bool is_dragged = false;  //!< is dragged
+
+  private:
+    //! Give the window the background and the border color of the style
+    void apply_colors();
+
+    unsigned colors_generation; //!< of the theme that the window has colors of
 };
 
 } // namespace tiny

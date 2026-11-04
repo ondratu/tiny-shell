@@ -1,5 +1,6 @@
 #include "style.h"
 
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
@@ -74,12 +75,64 @@ std::string xft_name(const std::string& family, double size,
     return name + number + style;
 }
 
+bool variant_from_name(const std::string& name, Variant& variant)
+{
+    std::string lower = name;
+    for (char& c : lower) {
+        c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+    }
+    if (lower == "dark") {
+        variant = Variant::Dark;
+    } else if (lower == "light") {
+        variant = Variant::Light;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+const char* variant_name(Variant variant)
+{
+    return variant == Variant::Light ? "light" : "dark";
+}
+
 Style::~Style()
 {
     if (font) {
         XftFontClose(get_display(), font);
         font = nullptr;
     }
+}
+
+void Style::colorize(Variant variant)
+{
+    const bool dark = variant == Variant::Dark;
+    normal_bg = dark ? BLACK : 0xF6F5F4;
+    normal_fg = dark ? 0xA8A8A8 : 0x2E3436;
+    normal_br = dark ? 0x2E3436 : 0xD8D6D4;
+    disable_fg = dark ? 0x555753 : 0x8B8E8F;
+    hover_bg = dark ? 0x2E3436 : 0xDEDDDA;
+    hover_fg = dark ? 0xF3F3F3 : 0x0E1416;
+    selected_bg = dark ? 0x3E4446 : 0xD0DDF0;
+}
+
+void EntryStyle::colorize(Variant variant)
+{
+    Style::colorize(variant);
+    const bool dark = variant == Variant::Dark;
+    normal_bg = dark ? 0x2E3436 : 0xFFFFFF;
+    normal_fg = dark ? 0xF3F3F3 : 0x2E3436;
+    normal_br = dark ? 0x555753 : 0xBABDBE;
+    disable_fg = 0x8B8E8F;
+    focus_br = 0x729FCF;
+}
+
+void ListStyle::colorize(Variant variant)
+{
+    Style::colorize(variant);
+    const bool dark = variant == Variant::Dark;
+    selected_bg = dark ? 0x3E4446 : 0xD0DDF0;
+    selected_fg = dark ? 0xF3F3F3 : 0x0E1416;
 }
 
 void Style::scale(double factor)

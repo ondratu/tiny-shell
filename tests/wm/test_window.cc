@@ -1,5 +1,6 @@
 #include "fake_client.h"
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
@@ -1487,7 +1488,7 @@ TEST_F(WindowTest, a_client_without_a_pid_is_killed_by_its_connection)
 
 TEST_F(WindowTest, wm_hints_icon_of_the_theme_size_is_copied)
 {
-    client.set_icon_pixmap(tiny::theme.wm_icon, false);
+    client.set_icon_pixmap(tiny::wm::shell_theme.icon, false);
 
     auto window = manage();
 
@@ -1497,7 +1498,7 @@ TEST_F(WindowTest, wm_hints_icon_of_the_theme_size_is_copied)
 
 TEST_F(WindowTest, wm_hints_icon_of_the_theme_size_with_mask)
 {
-    client.set_icon_pixmap(tiny::theme.wm_icon, true);
+    client.set_icon_pixmap(tiny::wm::shell_theme.icon, true);
 
     auto window = manage();
 
@@ -1522,8 +1523,8 @@ TEST_F(WindowTest, wm_hints_icon_of_other_size_is_scaled)
     unsigned int depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
                  &depth);
-    EXPECT_EQ(w, tiny::theme.wm_icon);
-    EXPECT_EQ(h, tiny::theme.wm_icon);
+    EXPECT_EQ(w, tiny::wm::shell_theme.icon);
+    EXPECT_EQ(h, tiny::wm::shell_theme.icon);
 }
 
 TEST_F(WindowTest, wm_hints_without_icon_leave_no_icon)
@@ -1552,7 +1553,7 @@ TEST_F(WindowTest, wm_hints_with_a_broken_icon_pixmap_leave_no_icon)
 
 TEST_F(WindowTest, net_wm_icon_is_converted_to_a_pixmap)
 {
-    client.set_net_icon(tiny::theme.wm_icon, tiny::theme.wm_icon);
+    client.set_net_icon(tiny::wm::shell_theme.icon, tiny::wm::shell_theme.icon);
 
     auto window = manage();
 
@@ -1576,8 +1577,8 @@ TEST_F(WindowTest, small_net_wm_icon_is_scaled)
     unsigned int depth;
     XGetGeometry(dsp(), window->get_icon(), &root, &x, &y, &w, &h, &border,
                  &depth);
-    EXPECT_EQ(w, tiny::theme.wm_icon);
-    EXPECT_EQ(h, tiny::theme.wm_icon);
+    EXPECT_EQ(w, tiny::wm::shell_theme.icon);
+    EXPECT_EQ(h, tiny::wm::shell_theme.icon);
 }
 
 TEST_F(WindowTest, the_best_net_wm_icon_is_chosen_from_several)
@@ -1596,7 +1597,7 @@ TEST_F(WindowTest, the_best_net_wm_icon_is_chosen_from_several)
 
 TEST_F(WindowTest, icon_update_replaces_the_icon)
 {
-    client.set_net_icon(tiny::theme.wm_icon, tiny::theme.wm_icon);
+    client.set_net_icon(tiny::wm::shell_theme.icon, tiny::wm::shell_theme.icon);
     auto window = manage();
     window->set_events();
     ASSERT_NE(window->get_icon(), 0u);
@@ -1839,7 +1840,8 @@ TEST_F(WindowTest, set_maximized_updates_state_and_property)
 TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 {
     client.map();
-    XMoveWindow(client.display, client.window, 10, tiny::theme.wm_panel + 20);
+    XMoveWindow(client.display, client.window, 10,
+                tiny::wm::shell_theme.panel + 20);
     client.sync();
     auto window = manage();
 
@@ -1847,16 +1849,16 @@ TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
 
     const XWindowAttributes max = client.attrs();
     EXPECT_EQ(max.x, 0);
-    EXPECT_EQ(max.y, tiny::theme.wm_panel);
+    EXPECT_EQ(max.y, tiny::wm::shell_theme.panel);
     EXPECT_EQ(max.width, screen().width);
-    EXPECT_EQ(max.height, screen().height - tiny::theme.wm_panel);
+    EXPECT_EQ(max.height, screen().height - tiny::wm::shell_theme.panel);
     EXPECT_TRUE(window->get_maximized());
 
     window->restore();
 
     const XWindowAttributes restored = client.attrs();
     EXPECT_EQ(restored.x, 10);
-    EXPECT_EQ(restored.y, tiny::theme.wm_panel + 20);
+    EXPECT_EQ(restored.y, tiny::wm::shell_theme.panel + 20);
     EXPECT_EQ(restored.width, 200);
     EXPECT_EQ(restored.height, 100);
     EXPECT_FALSE(window->get_maximized());
@@ -2652,11 +2654,11 @@ TEST_F(WindowTest, dragging_a_maximized_window_restores_it_first)
 
 TEST_F(WindowTest, icon_update_without_mask_causes_no_x_error)
 {
-    client.set_icon_pixmap(tiny::theme.wm_icon, true);
+    client.set_icon_pixmap(tiny::wm::shell_theme.icon, true);
     const XErrors errors;
     {
         auto window = manage();
-        client.set_icon_pixmap(tiny::theme.wm_icon, false);
+        client.set_icon_pixmap(tiny::wm::shell_theme.icon, false);
         window->update_wm_hints();
     }
     EXPECT_EQ(errors.errors(), 0);

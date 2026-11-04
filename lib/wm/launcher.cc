@@ -6,6 +6,7 @@
 #include <cstring>
 #include <optional>
 
+#include "wm/shell_theme.h"
 #include "image/image.h"
 #include "image/pixmap.h"
 #include "wm/launcher.h"
@@ -43,8 +44,8 @@ std::string message_locale()
 
 Launcher::Launcher():
     tiny::Popover(1, 1),
-    entry(1, tiny::theme.wm_win_header),
-    grid(1, 1, 1, 1, 1, tiny::theme.wm_launcher_dot),
+    entry(1, shell_theme.win_header),
+    grid(1, 1, 1, 1, 1, shell_theme.launcher_dot),
     prev_page(1, 1, "<"),
     next_page(1, 1, ">")
 {
@@ -103,7 +104,7 @@ void Launcher::relayout()
         return;
     }
     const LauncherLayout next =
-            LauncherLayout::compute(attrs.width, attrs.height, tiny::theme);
+            LauncherLayout::compute(attrs.width, attrs.height, shell_theme);
     if (next.icon != layout.icon) {
         free_icons(); // loaded in the other size
     }
@@ -383,7 +384,7 @@ const Launcher::Icon& Launcher::application_icon(const xdg::Application& app)
     if (it == window_icons.end()) {
         it = window_icons
                      .emplace(app.id,
-                              load_icon(app.entry.icon, tiny::theme.wm_icon))
+                              load_icon(app.entry.icon, shell_theme.icon))
                      .first;
     }
     return it->second;

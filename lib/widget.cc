@@ -19,7 +19,8 @@ Widget::Widget(Type type_arg, int w, int h):
     width(std::max(0, w)),
     height(std::max(0, h)),
     is_maped(false),
-    is_realized(false)
+    is_realized(false),
+    colors_generation(theme.generation)
 {
     name = "widget";
 }
@@ -120,6 +121,7 @@ void Widget::realize(Window parent_arg, int x, int y)
     }
 
     is_realized = true;
+    colors_generation = theme.generation;
     set_events();
 }
 
@@ -129,8 +131,33 @@ void Widget::map()
         return error("tiny::Widget is not realized");
     }
 
+    if (colors_generation != theme.generation) {
+        apply_colors();
+    }
     XMapWindow(display, window);
     is_maped = true;
+}
+
+void Widget::apply_colors()
+{
+    colors_generation = theme.generation;
+    if (type == Type::Input) { // has no colors
+        return;
+    }
+    const uint8_t state = get_theme_state();
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XSetWindowBorder(display, window, get_style().get_br(state));
+}
+
+void Widget::restyle()
+{
+    if (!is_realized) {
+        return;
+    }
+    apply_colors();
+    if (is_maped && type != Type::Input) {
+        XClearArea(display, window, 0, 0, 0, 0, True); // repaints it
+    }
 }
 
 void Widget::map_all()

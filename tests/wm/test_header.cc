@@ -1,4 +1,5 @@
 #include "helpers.h"
+#include "wm/shell_theme.h"
 
 #include "wm/header.h"
 
@@ -91,19 +92,19 @@ TEST(TitleBoxTest, delete_through_base_pointer)
 
 class HeaderTest : public ::testing::Test {
   protected:
-    uint32_t bg() const { return tiny::theme.wm_header.normal_bg; }
+    uint32_t bg() const { return tiny::wm::shell_theme.header.normal_bg; }
 
-    // Drawing needs a font, which theme.wm_header does not have by default.
+    // Drawing needs a font, which wm::shell_theme.header does not have by default.
     // It is opened for the test and closed while the display is still open.
     void SetUp() override
     {
-        original = tiny::theme.wm_header;
+        original = tiny::wm::shell_theme.header;
         with_font = original;
         with_font.init();
-        tiny::theme.wm_header = with_font;
+        tiny::wm::shell_theme.header = with_font;
     }
 
-    void TearDown() override { tiny::theme.wm_header = original; }
+    void TearDown() override { tiny::wm::shell_theme.header = original; }
 
     Image image_of(const tiny::wm::Header& h)
     {
@@ -134,7 +135,7 @@ TEST_F(HeaderTest, new_header_is_horizontal_box_without_title)
     EXPECT_EQ(h.get_title(), "");
     EXPECT_EQ(h.get_width(), 300u);
     EXPECT_EQ(h.get_height(), 25u);
-    EXPECT_EQ(&h.get_style(), &tiny::theme.wm_header);
+    EXPECT_EQ(&h.get_style(), &tiny::wm::shell_theme.header);
 }
 
 TEST_F(HeaderTest, title_box_covers_the_header)
@@ -179,8 +180,8 @@ TEST_F(HeaderTest, expose_draws_title_text_and_bottom_line)
 
     const Image img = image_of(h);
     EXPECT_EQ(img.at(0, 0), bg());
-    EXPECT_GT(img.count_not(bg(), 24), 0u);                    // text
-    EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br); // line
+    EXPECT_GT(img.count_not(bg(), 24), 0u);                           // text
+    EXPECT_EQ(img.at(5, 24), tiny::wm::shell_theme.header.normal_br); // line
 }
 
 TEST_F(HeaderTest, header_without_title_draws_only_the_bottom_line)
@@ -193,7 +194,7 @@ TEST_F(HeaderTest, header_without_title_draws_only_the_bottom_line)
 
     const Image img = image_of(h);
     EXPECT_EQ(img.count_not(bg(), 24), 0u);
-    EXPECT_EQ(img.at(5, 24), tiny::theme.wm_header.normal_br);
+    EXPECT_EQ(img.at(5, 24), tiny::wm::shell_theme.header.normal_br);
 }
 
 TEST_F(HeaderTest, set_title_redraws_mapped_header)
@@ -294,7 +295,7 @@ TEST_F(HeaderTest, resize_mapped_header_redraws)
 
     const Image img = image_of(h);
     EXPECT_EQ(img.width, 400u);
-    EXPECT_EQ(img.at(5, 29), tiny::theme.wm_header.normal_br);
+    EXPECT_EQ(img.at(5, 29), tiny::wm::shell_theme.header.normal_br);
 }
 
 TEST_F(HeaderTest, title_box_signals_are_reachable_through_the_header)

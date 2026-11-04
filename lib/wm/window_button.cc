@@ -3,6 +3,7 @@
 
 #include <X11/cursorfont.h>
 
+#include "wm/shell_theme.h"
 #include "wm/window_button.h"
 #include "x_util.h"
 
@@ -26,8 +27,8 @@ static int line_width()
 }
 
 WindowButton::WindowButton():
-    tiny::Button(tiny::theme.wm_win_icon, // TODO: WM_WIN_HEADER_PADDING
-                 tiny::theme.wm_win_icon)
+    tiny::Button(shell_theme.win_icon, // TODO: WM_WIN_HEADER_PADDING
+                 shell_theme.win_icon)
 {}
 
 WindowButton::~WindowButton()

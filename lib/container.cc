@@ -48,6 +48,14 @@ Container::Container(int w, int h, const char* name_arg):
 
 Container::~Container() = default;
 
+void Container::restyle()
+{
+    Widget::restyle();
+    for (Widget* child : children) {
+        child->restyle();
+    }
+}
+
 void Container::map_all()
 {
     Widget::map_all();

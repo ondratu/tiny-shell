@@ -94,7 +94,8 @@ std::string info_text(const Config& config,
     for (const std::string& file : files) {
         rv += "  " + file + "\n";
     }
-    rv += "Scale of the theme: " + number_text(config.scale) +
+    rv += std::string("Colors of the theme: ") + variant_name(config.style) +
+          "\nScale of the theme: " + number_text(config.scale) +
           "\n"
           "Font: " +
           config.font + " " + number_text(config.font_size) +

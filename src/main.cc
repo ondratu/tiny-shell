@@ -13,6 +13,7 @@
 
 #include "object.h"
 #include "theme.h"
+#include "wm/shell_theme.h"
 #include "wm/config.h"
 #include "wm/manager.h"
 #include "wm/options.h"
@@ -150,11 +151,13 @@ int main(int argc, char** argv)
         }
 
         // The theme needs the display (the fonts are opened here)
-        tiny::theme.set_font_size(config.font_size);
-        tiny::theme.scale(config.scale);
-        tiny::theme.set_font(config.font);
-        tiny::theme.set_font_style(config.font_style);
-        tiny::theme.init();
+        tiny::wm::ShellTheme& theme = tiny::wm::shell_theme;
+        theme.set_font_size(config.font_size);
+        theme.scale(config.scale);
+        theme.set_font(config.font);
+        theme.set_font_style(config.font_style);
+        theme.set_variant(config.style);
+        theme.init();
 
         const ::Window root = XDefaultRootWindow(display);
 

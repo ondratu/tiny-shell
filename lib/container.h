@@ -27,6 +27,7 @@ class Container : public Widget {
     ~Container() override;
 
     void map_all() override;
+    void restyle() override;
 
     virtual void add(Widget* widget, int x = 0, int y = 0,
                      int gravity = NorthWestGravity);

@@ -225,6 +225,11 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             }
         }
     }
+    if (const auto value = ini.get("theme", "style")) {
+        if (!variant_from_name(*value, config.style)) {
+            problem("[theme] style must be dark or light");
+        }
+    }
     if (const auto value = ini.get("commands", "reboot"); value) {
         if (value->empty()) {
             problem("[commands] reboot must be a command");

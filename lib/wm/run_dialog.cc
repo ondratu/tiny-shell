@@ -3,6 +3,7 @@
 
 #include "spawn.h"
 #include "theme.h"
+#include "wm/shell_theme.h"
 #include "wm/run_dialog.h"
 
 namespace tiny::wm {
@@ -13,18 +14,18 @@ constexpr int dialog_width = 320;
 
 int spacing()
 {
-    return tiny::theme.wm_win_border;
+    return shell_theme.win_border;
 }
 
 int title_height()
 {
-    return tiny::theme.wm_menu_item_height;
+    return shell_theme.menu_item_height;
 }
 
 // The border of the entry is outside of its size
 int entry_height()
 {
-    return tiny::theme.wm_win_header;
+    return shell_theme.win_header;
 }
 
 int dialog_height()

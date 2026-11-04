@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "wm/shell_theme.h"
 #include "wm/header.h"
 #include "x_util.h"
 
@@ -130,7 +131,7 @@ void Header::on_expose(const XEvent&, void*)
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
-    XftTextExtentsUtf8(display, tiny::theme.wm_header.get_font(),
+    XftTextExtentsUtf8(display, shell_theme.header.get_font(),
                        reinterpret_cast<const FcChar8*>(title.c_str()),
                        static_cast<int>(title.size()), &extents);
 
@@ -143,9 +144,9 @@ void Header::on_expose(const XEvent&, void*)
     }
     x = std::max(x, get_padding());
 
-    XSetWindowBackground(display, window, tiny::theme.wm_header.get_bg(state));
+    XSetWindowBackground(display, window, shell_theme.header.get_bg(state));
     XClearWindow(display, window);
-    XftDrawStringUtf8(draw, &color, tiny::theme.wm_header.get_font(), x, y,
+    XftDrawStringUtf8(draw, &color, shell_theme.header.get_font(), x, y,
                       reinterpret_cast<const FcChar8*>(title.c_str()),
                       static_cast<int>(title.size()));
 
@@ -154,7 +155,7 @@ void Header::on_expose(const XEvent&, void*)
 
     // bottom line
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetForeground(display, gc, tiny::theme.wm_header.get_br(state));
+    XSetForeground(display, gc, shell_theme.header.get_br(state));
     XSetLineAttributes(display, gc, tiny::x_uint(get_border()), LineSolid,
                        CapButt, JoinBevel);
     XDrawLine(display, window, gc, 0, height - 1, width, height - 1);
