@@ -34,7 +34,7 @@
 
 #include "display.h"
 #include "entry.h"
-#include "settings_form.h"
+#include "app/settings_form.h"
 #include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
@@ -45,7 +45,7 @@
 
 namespace {
 
-using tiny::SettingsForm;
+using tiny::app::SettingsForm;
 
 constexpr const char* title = "Settings";
 

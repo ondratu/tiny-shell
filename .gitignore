@@ -2,6 +2,7 @@
 build/
 build-cov/
 build-asan/
+build-release/
 *.o
 *.d
 *.a

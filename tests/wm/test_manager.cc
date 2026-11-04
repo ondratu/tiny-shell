@@ -1,5 +1,5 @@
 #include "fake_client.h"
-#include "helpers.h"
+#include "wm_helpers.h"
 #include "wm/shell_theme.h"
 
 #include <X11/keysym.h>
@@ -602,8 +602,6 @@ TEST_F(ManagerTest, window_without_decorations_is_not_framed)
 
     ASSERT_TRUE(is_managed(c));
     EXPECT_FALSE(is_framed(c));
-    EXPECT_EQ(dynamic_cast<tiny::wm::Client*>(manager->wm_windows[c.window]),
-              nullptr);
 }
 
 TEST_F(ManagerTest, window_with_decorations_is_framed)
@@ -613,8 +611,7 @@ TEST_F(ManagerTest, window_with_decorations_is_framed)
     start();
 
     ASSERT_TRUE(is_managed(c));
-    EXPECT_NE(dynamic_cast<tiny::wm::Client*>(manager->wm_windows[c.window]),
-              nullptr);
+    EXPECT_TRUE(is_framed(c));
 }
 
 TEST_F(ManagerTest, grabs_the_shortcuts_of_the_manager)

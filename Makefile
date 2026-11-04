@@ -52,18 +52,31 @@ TINY_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null)
 # X headers are system headers: their warnings are not ours to fix
 SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
-CXXFLAGS ?= -g
-override CXXFLAGS += -MMD -std=c++17 -I./lib -isystem ./lib/third_party \
+# -Os: small is the first goal. -fno-rtti: nothing uses dynamic_cast or typeid
+# (the typeinfo of the classes was 15 kB of the binary).
+CXXFLAGS ?= -Os -g
+override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
     $(HARDENING)
 LDLIBS = $(PKG_LIBS)
 
-# the library has a directory for each part: lib/wm/, lib/xdg/, lib/image/
-LIB_SRC = $(filter-out lib/third_party/%,$(wildcard lib/*.cc lib/*/*.cc))
-# the vendored libraries are built into the library, but not analyzed
+# Two libraries. libtiny-widgets.a is the widget toolkit (lib/*.cc, the
+# pictures in lib/image/ and the vendored libraries): it knows nothing about
+# windows managers, and the shell, the settings and the font viewer all use it.
+# libtiny-shell.a has the window manager and the shell (lib/wm/), the
+# freedesktop.org files (lib/xdg/) and the logic of the programs (lib/app/).
+WIDGET_SRC = $(filter-out lib/third_party/%,$(wildcard lib/*.cc lib/image/*.cc))
+SHELL_SRC = $(wildcard lib/wm/*.cc lib/xdg/*.cc lib/app/*.cc)
+LIB_SRC = $(WIDGET_SRC) $(SHELL_SRC)
+# the vendored libraries are built into the widgets, but not analyzed
 VENDOR_SRC = $(wildcard lib/third_party/*.cc)
-LIB_OBJ = $(LIB_SRC:%.cc=$(BUILD)/%.o) $(VENDOR_SRC:%.cc=$(BUILD)/%.o)
-LIB = $(BUILD)/lib/libtiny.a
+WIDGET_OBJ = $(WIDGET_SRC:%.cc=$(BUILD)/%.o) $(VENDOR_SRC:%.cc=$(BUILD)/%.o)
+SHELL_OBJ = $(SHELL_SRC:%.cc=$(BUILD)/%.o)
+LIB_OBJ = $(SHELL_OBJ) $(WIDGET_OBJ)
+WIDGET_LIB = $(BUILD)/lib/libtiny-widgets.a
+SHELL_LIB = $(BUILD)/lib/libtiny-shell.a
+# the order matters: the shell uses the widgets
+LIB = $(SHELL_LIB) $(WIDGET_LIB)
 
 EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc))
 TARGET = $(BUILD)/tiny-shell
@@ -75,14 +88,23 @@ OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
-.PHONY: FORCE all examples clean check coverage format lint lint-fast \
-    lint-analyze asan cppcheck help
+.PHONY: FORCE all release examples clean check coverage format lint lint-fast \
+    lint-analyze asan cppcheck help layers
 .DELETE_ON_ERROR:
 
 all: $(TARGET) $(FONTS) $(SETTINGS)
 
+# A small binary without the debugging information, into build-release.
+# CI measures the size with -flto on top of this (see ci.yml).
+RELEASE_DIR = build-release
+release:
+	$(MAKE) BUILD=$(RELEASE_DIR) CXXFLAGS="-Os -ffunction-sections -fdata-sections" \
+	    LDFLAGS="-s -Wl,--gc-sections" all
+
 help:
 	@echo "make            build tiny-shell, tiny-fonts and tiny-settings"
+	@echo "make layers     check that the widgets do not include the shell"
+	@echo "make release    build small stripped programs into build-release"
 	@echo "make examples   build the toolkit examples"
 	@echo "make check      run the unit tests (against Xvfb)"
 	@echo "make coverage   run the tests and print the coverage table"
@@ -116,7 +138,10 @@ $(BUILD)/%.o: %.cc | $(BUILD)/.pkg_check
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(LIB): $(LIB_OBJ)
+$(WIDGET_LIB): $(WIDGET_OBJ)
+	$(AR) rcs $@ $^
+
+$(SHELL_LIB): $(SHELL_OBJ)
 	$(AR) rcs $@ $^
 
 # tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc,
@@ -156,8 +181,13 @@ XVFB_RUN ?= xvfb-run -a
 GTEST_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags gtest))
 
 # tests/ mirrors lib/: tests/wm/test_dock.cc covers lib/wm/dock.cc
-TEST_SRC = $(wildcard tests/test_*.cc tests/*/test_*.cc)
+TEST_WIDGET_SRC = $(wildcard tests/test_*.cc tests/image/test_*.cc)
+TEST_SHELL_SRC = $(wildcard tests/wm/test_*.cc tests/xdg/test_*.cc \
+    tests/app/test_*.cc)
+TEST_SRC = $(TEST_WIDGET_SRC) $(TEST_SHELL_SRC)
 TESTS = $(TEST_SRC:%.cc=$(BUILD)/%)
+TESTS_WIDGET = $(TEST_WIDGET_SRC:%.cc=$(BUILD)/%)
+TESTS_SHELL = $(TEST_SHELL_SRC:%.cc=$(BUILD)/%)
 TEST_OBJ = $(TEST_SRC:%.cc=$(BUILD)/%.o) $(BUILD)/tests/main.o
 DEP += $(TEST_OBJ:.o=.d)
 
@@ -165,10 +195,20 @@ DEP += $(TEST_OBJ:.o=.d)
 
 $(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS) -I./tests
 
-$(TESTS): %: %.o $(BUILD)/tests/main.o $(LIB)
+# the tests of the widgets link the widgets only: they cannot need the shell
+$(TESTS_WIDGET): %: %.o $(BUILD)/tests/main.o $(WIDGET_LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
 
-check: $(BUILD)/.gtest_check $(TESTS)
+$(TESTS_SHELL): %: %.o $(BUILD)/tests/main.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
+
+# The widget toolkit must not include the shell (the layers of CONTRIBUTING.md)
+layers:
+	@! grep -nE '#include "(wm|xdg|app)/' lib/*.h lib/*.cc lib/image/*.h \
+	    lib/image/*.cc || { echo "layers: the widgets include the shell" >&2; \
+	    exit 1; }
+
+check: layers $(BUILD)/.gtest_check $(TESTS)
 	@rc=0; for t in $(TESTS); do \
 	    echo "running $$t"; $(XVFB_RUN) $$t || rc=1; done; exit $$rc
 
@@ -210,7 +250,7 @@ coverage:
 	                ts ? 100*(ts-tm)/ts : 100}'
 
 clean:
-	@$(RM) -r $(BUILD) $(COV_DIR) $(ASAN_DIR)
+	@$(RM) -r $(BUILD) $(COV_DIR) $(ASAN_DIR) $(RELEASE_DIR)
 	@$(RM) compile_flags.txt .syntastic_cpp_config
 
 # Format the sources with clang-format (style in .clang-format).

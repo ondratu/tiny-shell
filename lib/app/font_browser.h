@@ -7,7 +7,7 @@
 
 #include "widget.h"
 
-namespace tiny {
+namespace tiny::app {
 
 /**
  * @short What the font viewer shows and where, without any drawing.
@@ -154,4 +154,4 @@ class FontBrowser {
     size_t pressed_;
 };
 
-} // namespace tiny
+} // namespace tiny::app

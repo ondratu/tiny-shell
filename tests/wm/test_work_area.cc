@@ -1,5 +1,5 @@
 #include "fake_client.h"
-#include "helpers.h"
+#include "wm_helpers.h"
 
 #include "wm/work_area.h"
 
