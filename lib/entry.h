@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
+#include "input_method.h"
 #include "widget.h"
 
 namespace tiny {
@@ -14,9 +16,6 @@ namespace tiny {
  * that move in a list or a grid (the arrows, Page Up, Page Down) are passed to on_key.
  * What the text means is up to the owner.
  */
-/// Latin-1 bytes (what `XLookupString` gives without an input method) as UTF-8.
-std::string latin1_to_utf8(const char* bytes, int len);
-
 class Entry : public Widget {
   public:
     Entry(int width, int height);
@@ -50,15 +49,12 @@ class Entry : public Widget {
     void on_focus_out(const XEvent& e, void* data);
 
   private:
-    //! The typed characters in UTF-8; sets the keysym of the key
-    std::string lookup(const XKeyEvent& key, KeySym& keysym);
     void redraw();
     void set_focus_state(bool focus, const XEvent& e);
 
     std::string text;
 
-    XIM xim;
-    XIC xic;
+    std::unique_ptr<InputMethod> input; //!< made when the entry is realized
 };
 
 } // namespace tiny
