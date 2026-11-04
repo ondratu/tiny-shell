@@ -1,7 +1,10 @@
 // tiny-settings: changes the font, the terminal and the scale of tiny-shell.
 //
-// The form has three fields. The button next to the font opens a list of the
-// fonts of the system (type to search it). Save writes the three values to the
+// The form has the fields of the font, its size and style, the terminal and
+// the scale; a field has a cursor (the arrows, Home, End, Delete and the
+// pointer move it). The button next to the font opens a list of the fonts of
+// the system (type to search it) with the size and the style of the font and
+// a preview of a text in them. Save writes the three values to the
 // configuration file of the user (never the global one) and closes the
 // program; tiny-shell reads the file when it starts, so a change is seen after
 // the next login. Escape and Cancel close the program without writing.
@@ -30,6 +33,7 @@
 #include "display.h"
 #include "entry.h"
 #include "settings_form.h"
+#include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
 #include "x_util.h"
@@ -45,7 +49,7 @@ constexpr const char* title = "Settings";
 constexpr size_t font_cache_limit = 64;
 
 //! The initial height of the window, at the scale 1
-constexpr int start_height = 420;
+constexpr int start_height = 600;
 constexpr int start_width = 560;
 
 constexpr const char* hint = "Takes effect after you log in again.";
@@ -83,8 +87,9 @@ class SettingsApp {
         file(std::move(file_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
-        initial{config.font, config.terminal_line, number_text(config.scale)},
-        form(initial, std::move(families), metrics)
+        initial{config.font, config.terminal_line, number_text(config.scale),
+                number_text(config.font_size), config.font_style},
+        form(initial, std::move(families), metrics, tiny::xdg::font_styles)
     {
         Visual* visual = DefaultVisual(display, screen);
         const Colormap colormap = DefaultColormap(display, screen);
@@ -104,6 +109,10 @@ class SettingsApp {
             ui_family = "sans";
             ui_font = font(ui_family);
         }
+
+        form.set_measure([this](const std::string& text) {
+            return ui_font != nullptr ? text_width(ui_font, text) : 0;
+        });
 
         create_window();
         draw = XftDrawCreate(display, buffer, visual, colormap);
@@ -309,6 +318,10 @@ class SettingsApp {
         static const std::pair<KeySym, SettingsForm::Key> keys[] = {
                 {XK_Up, SettingsForm::Key::Up},
                 {XK_Down, SettingsForm::Key::Down},
+                {XK_Left, SettingsForm::Key::Left},
+                {XK_Right, SettingsForm::Key::Right},
+                {XK_Delete, SettingsForm::Key::Delete},
+                {XK_KP_Delete, SettingsForm::Key::Delete},
                 {XK_Page_Up, SettingsForm::Key::PageUp},
                 {XK_Page_Down, SettingsForm::Key::PageDown},
                 {XK_Home, SettingsForm::Key::Home},
@@ -380,6 +393,12 @@ class SettingsApp {
             }
             if (v.scale != initial.scale) {
                 changed.push_back({"theme", "scale", v.scale});
+            }
+            if (v.size != initial.size) {
+                changed.push_back({"theme", "font_size", v.size});
+            }
+            if (v.style != initial.style) {
+                changed.push_back({"theme", "font_style", v.style});
             }
             if (v.terminal != initial.terminal) {
                 changed.push_back({"commands", "terminal", v.terminal});
@@ -459,22 +478,43 @@ class SettingsApp {
         fill(color, {r.x + r.width - line, r.y, line, r.height});
     }
 
-    //! The text with its baseline in the middle of the rectangle; it is
-    //! shifted left (to show its end) when it is wider than the rectangle
+    //! The text with its baseline in the middle of the rectangle, `left` from
+    //! its start and moved by `shift` (to the left, to show the cursor)
     void text_in(XftFont* f, const XftColor& color, const tiny::Rect& r,
-                 int left, const std::string& text, bool end = false)
+                 int left, const std::string& text, int shift = 0)
     {
         if (f == nullptr) {
             return;
         }
         const int baseline = r.y + (r.height + f->ascent - f->descent) / 2;
-        const int room = r.width - 2 * left;
-        const int shift = end ? std::min(0, room - text_width(f, text)) : 0;
         clip(r);
         XftDrawStringUtf8(draw, &color, f, r.x + left + shift, baseline,
                           reinterpret_cast<const FcChar8*>(text.c_str()),
                           static_cast<int>(text.size()));
         unclip();
+    }
+
+    //! A field with its text, and the cursor when it has the focus
+    void paint_field(const tiny::Rect& r, const tiny::TextField& edited,
+                     bool focused, bool wrong)
+    {
+        const int padding = metrics.padding;
+        fill(field, r);
+        const XftColor* border = focused ? &accent : &rule;
+        if (wrong) {
+            border = &error;
+        }
+        frame(*border, r);
+        const int shift = form.shift(edited, r.width - 2 * padding);
+        text_in(ui_font, text_color, r, padding, edited.text(), shift);
+        if (focused && ui_font != nullptr) {
+            const int before = text_width(
+                    ui_font, edited.text().substr(0, edited.cursor()));
+            const int line = std::max(1, metrics.row_height / 34);
+            fill(text_color,
+                 {r.x + padding + shift + before, r.y + metrics.row_height / 5,
+                  line, metrics.row_height * 3 / 5});
+        }
     }
 
     void paint()
@@ -496,53 +536,76 @@ class SettingsApp {
                 std::max(0, (r.width - text_width(ui_font, label)) / 2), label);
     }
 
-    void paint_form()
+    //! The two rows of the message: what is wrong, then the hint
+    void paint_message(const std::string& wrong, const char* note)
     {
-        const int padding = metrics.margin / 2;
-        const struct {
-            SettingsForm::Field id;
-            const char* label;
-        } rows[] = {{SettingsForm::Field::Font, "Font"},
-                    {SettingsForm::Field::Terminal, "Terminal"},
-                    {SettingsForm::Field::Scale, "Scale"}};
-        for (const auto& row : rows) {
-            text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
-            const tiny::Rect r = form.field_rect(row.id);
-            const bool focused = form.focus() == row.id;
-            fill(field, r);
-            const XftColor* border = focused ? &accent : &rule;
-            if (!form.problem(row.id).empty()) {
-                border = &error;
-            }
-            frame(*border, r);
-            text_in(ui_font, text_color, r, padding, form.text(row.id), true);
-            if (focused && ui_font != nullptr) {
-                // the cursor is at the end of the text
-                const int end = std::min(
-                        padding + text_width(ui_font, form.text(row.id)),
-                        r.width - padding);
-                fill(text_color, {r.x + end, r.y + metrics.row_height / 5,
-                                  std::max(1, metrics.row_height / 34),
-                                  metrics.row_height * 3 / 5});
-            }
-        }
-        paint_button(form.choose_rect(), "Choose…", true);
-
-        // the first row of the message: what is wrong, the second: the hint
         const tiny::Rect message = form.message_rect();
-        std::string wrong = form.problem();
-        if (wrong.empty()) {
-            wrong = form.status();
-        }
         const tiny::Rect first = {message.x, message.y, message.width,
                                   message.height / 2};
         const tiny::Rect second = {message.x, message.y + message.height / 2,
                                    message.width, message.height / 2};
         text_in(ui_font, error, first, 0, wrong);
-        text_in(ui_font, dim, second, 0, hint);
+        text_in(ui_font, dim, second, 0, note);
+    }
+
+    void paint_form()
+    {
+        const struct {
+            SettingsForm::Field id;
+            const char* label;
+        } rows[] = {{SettingsForm::Field::Font, "Font"},
+                    {SettingsForm::Field::Size, "Size"},
+                    {SettingsForm::Field::Style, "Style"},
+                    {SettingsForm::Field::Terminal, "Terminal"},
+                    {SettingsForm::Field::Scale, "Scale"}};
+        for (const auto& row : rows) {
+            text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
+            paint_field(form.field_rect(row.id), form.field(row.id),
+                        form.focus() == row.id, !form.problem(row.id).empty());
+        }
+        paint_button(form.choose_rect(), "Choose…", true);
+
+        std::string wrong = form.problem();
+        if (wrong.empty()) {
+            wrong = form.status();
+        }
+        paint_message(wrong, hint);
 
         paint_button(form.cancel_rect(), "Cancel", true);
         paint_button(form.save_rect(), "Save", form.problem().empty());
+    }
+
+    // A font by its Xft name (family, size in points and style); null when it
+    // can't be opened
+    XftFont* named_font(const std::string& name)
+    {
+        const auto found = fonts.find(name);
+        if (found != fonts.end()) {
+            return found->second;
+        }
+        XftFont* opened = XftFontOpenName(display, screen, name.c_str());
+        fonts[name] = opened;
+        return opened;
+    }
+
+    void paint_preview()
+    {
+        const tiny::Rect r = form.preview_rect();
+        fill(field, r);
+        frame(rule, r);
+        if (!form.pick_problem().empty()) {
+            text_in(ui_font, error, r, metrics.padding, form.pick_problem());
+            return;
+        }
+        if (form.preview_family().empty()) {
+            return;
+        }
+        // the size is the one of the shell, so it follows the scale
+        XftFont* f = named_font(tiny::xft_name(
+                form.preview_family(), form.preview_size() * scale,
+                tiny::xft_style(form.pick_style())));
+        text_in(f != nullptr ? f : ui_font, text_color, r, metrics.padding,
+                SettingsForm::preview_text());
     }
 
     void paint_picker()
@@ -552,21 +615,20 @@ class SettingsApp {
             close_fonts();
             ui_font = font(ui_family);
         }
-        const int padding = metrics.margin / 2;
+        const int padding = metrics.padding;
         const tiny::Rect search = form.search_rect();
-        fill(field, search);
-        frame(accent, search);
-        const std::string& query = form.query();
-        if (query.empty()) {
+        const bool in_search = form.pane() == SettingsForm::Pane::Search;
+        if (form.query().empty() && !in_search) {
+            fill(field, search);
+            frame(rule, search);
             text_in(ui_font, dim, search, padding, "Type to search the fonts");
         } else {
-            text_in(ui_font, text_color, search, padding, query, true);
+            paint_field(search, form.search_field(), in_search, false);
         }
 
         if (form.families().empty()) {
             const tiny::Rect none = form.row_rect(0);
             text_in(ui_font, dim, none, padding, "No font matches");
-            return;
         }
         const size_t end = std::min(form.families().size(),
                                     form.first() + form.visible_rows());
@@ -582,6 +644,24 @@ class SettingsApp {
             text_in(f != nullptr ? f : ui_font, text_color, row, metrics.margin,
                     family);
         }
+
+        paint_preview();
+
+        text_in(ui_font, text_color, form.size_label_rect(), 0, "Size");
+        paint_field(form.size_rect(), form.size_field(),
+                    form.pane() == SettingsForm::Pane::Size,
+                    !form.pick_problem().empty());
+        text_in(ui_font, text_color, form.style_label_rect(), 0, "Style");
+        const tiny::Rect style = form.style_rect();
+        fill(field, style);
+        frame(form.pane() == SettingsForm::Pane::Style ? accent : rule, style);
+        const std::string label =
+                form.pick_style().empty() ? "Default" : form.pick_style();
+        text_in(ui_font, text_color, style, padding,
+                "\xE2\x80\xB9  " + label + "  \xE2\x80\xBA");
+
+        paint_button(form.cancel_rect(), "Cancel", true);
+        paint_button(form.save_rect(), "Select", form.pick_problem().empty());
     }
 
     tiny::Display& atoms;
@@ -621,8 +701,10 @@ int main(int argc, char** argv)
     if (argc > 1) {
         const bool help = std::strcmp(argv[1], "--help") == 0;
         fprintf(help ? stdout : stderr,
-                "usage: %s\nChanges the font, the terminal and the scale of "
-                "tiny-shell.\nThe settings are written to the configuration "
+                "usage: %s\nChanges the font (its size and style), the "
+                "terminal "
+                "and the scale of tiny-shell.\nThe settings are written to the "
+                "configuration "
                 "file of the user and are used\nafter the next login.\n",
                 argv[0]);
         return help ? EXIT_SUCCESS : 2;

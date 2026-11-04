@@ -1,9 +1,13 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
+#include "text_field.h"
 #include "widget.h"
 
 namespace tiny {
@@ -11,13 +15,21 @@ namespace tiny {
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has three text fields (the font, the terminal, the scale), a
- * button that opens the list of fonts, and the buttons Cancel and Save. The
- * list of fonts replaces the form: a search field above the families, one
- * family selected; a click or Return takes the family into the form, Escape
- * goes back and leaves the font as it was. The owner (`tiny-settings`) tells
- * the size of the window and the input, asks for the rectangles to draw and
- * writes the file when `result()` says Saved. All the numbers are in pixels.
+ * The form has text fields (the font, its size and style, the terminal, the
+ * scale), a button that opens the list of fonts, and the buttons Cancel and
+ * Save. The fields are edited with a cursor: the arrows, Home, End, Backspace
+ * and Delete work, and a click puts the cursor where the pointer is.
+ *
+ * The list of fonts replaces the form: a search field above the families, one
+ * family selected, and under the list the size and the style of the font and
+ * a preview of a text in the selected family, size and style. Select (or
+ * Return) takes the three into the form, Cancel (or Escape) goes back and
+ * leaves them as they were.
+ *
+ * The owner (`tiny-settings`) tells the size of the window and the input,
+ * asks for the rectangles to draw, how wide a text is (`set_measure`, for the
+ * pointer) and writes the file when `result()` says Saved. All the numbers
+ * are in pixels, except the size of the font, which is in points.
  *
  * A click is a press and a release on the same thing, so a press that moves
  * away before the release does nothing.
@@ -26,17 +38,23 @@ class SettingsForm {
   public:
     enum class View { Form, Picker };
 
-    enum class Field { Font, Terminal, Scale };
+    enum class Field { Font, Size, Style, Terminal, Scale };
+
+    //! What has the keyboard in the list of fonts
+    enum class Pane { Search, Size, Style };
 
     enum class Key {
         Up,
         Down,
+        Left,
+        Right,
         PageUp,
         PageDown,
         Home,
         End,
         Return,
         Back, //!< backspace
+        Delete,
         Escape,
         Tab,
         BackTab //!< Shift+Tab
@@ -50,25 +68,39 @@ class SettingsForm {
         std::string font;
         std::string terminal;
         std::string scale;
+        std::string size = "12"; //!< in points at the scale 1
+        std::string style;       //!< "" is the default style of the family
     };
 
     //! The sizes of the parts, at the scale 1
     struct Metrics {
         int margin = 16;
+        int padding = 8;        //!< inside of a field, left and right
         int label_width = 90;   //!< the labels left of the fields
         int row_height = 34;    //!< a field, a button, a row of the list
         int row_gap = 14;       //!< between the fields
         int button_width = 100; //!< Save and Cancel
         int choose_width = 120; //!< the button that opens the list of fonts
-        int text_size = 15;     //!< the font of the text
+        int text_size = 15;     //!< the font of the text, in pixels
         int scroll_step = 3;    //!< the rows of one notch of the wheel
+        int preview_rows = 3;   //!< the height of the preview, in rows
 
         //! Every size multiplied by the factor and rounded
         static Metrics scaled(double factor);
     };
 
-    SettingsForm(Values initial, std::vector<std::string> families,
-                 const Metrics& metrics);
+    //! The names of the styles of a family
+    using StylesFn =
+            std::function<std::vector<std::string>(const std::string&)>;
+
+    SettingsForm(const Values& initial, std::vector<std::string> families,
+                 const Metrics& metrics, StylesFn styles_of = nullptr);
+
+    /// How wide a text is, so that a click can find a place in it.
+    void set_measure(TextField::Measure measure)
+    {
+        measure_ = std::move(measure);
+    }
 
     /// The size of the window.
     void resize(int width, int height);
@@ -82,10 +114,17 @@ class SettingsForm {
 
     Field focus() const { return focus_; }
 
-    const Values& values() const { return values_; }
+    /// The texts of the fields.
+    Values values() const;
+
+    /// The field, with the text and the cursor.
+    const TextField& field(Field field) const;
 
     /// The text of a field.
-    const std::string& text(Field field) const;
+    const std::string& text(Field field) const
+    {
+        return this->field(field).text();
+    }
 
     /// What is wrong in a field, empty when the text can be saved.
     std::string problem(Field field) const;
@@ -103,20 +142,30 @@ class SettingsForm {
     /// The write failed: editing goes on and `message` is shown.
     void reject(const std::string& message);
 
+    /// How far to the left the text of a field is moved so that its cursor
+    /// shows, in a field with `room` pixels for the text (zero or less).
+    int shift(const TextField& field, int room) const;
+
     // The form
 
     Rect label_rect(Field field) const;
     Rect field_rect(Field field) const;
     Rect choose_rect() const;
+    //! Cancel; in the list of fonts it goes back
     Rect cancel_rect() const;
+    //! Save; in the list of fonts it is Select
     Rect save_rect() const;
 
-    /// Where the hint, and under it the problem, are written.
+    /// Where the problem, and under it the hint, are written.
     Rect message_rect() const;
 
     // The list of fonts
 
-    const std::string& query() const { return query_; }
+    Pane pane() const { return pane_; }
+
+    const TextField& search_field() const { return search_; }
+
+    const std::string& query() const { return search_.text(); }
 
     /// The families that match the search.
     const std::vector<std::string>& families() const { return shown_; }
@@ -135,6 +184,35 @@ class SettingsForm {
     /// The row of the list in the coordinates of the window, for `first()` + n.
     Rect row_rect(size_t index) const;
 
+    const TextField& size_field() const { return pick_size_; }
+
+    /// The style that is chosen, "" is the default one.
+    const std::string& pick_style() const { return pick_style_; }
+
+    /// The styles of the selected family.
+    const std::vector<std::string>& pick_styles() const { return pick_styles_; }
+
+    /// What is wrong with the size in the list, empty when it is right.
+    std::string pick_problem() const;
+
+    Rect size_label_rect() const;
+    Rect size_rect() const;
+    Rect style_label_rect() const;
+    Rect style_rect() const;
+
+    /// Where the preview is drawn.
+    Rect preview_rect() const;
+
+    /// The selected family, empty when there is none.
+    const std::string& preview_family() const;
+
+    /// The size of the preview in points (at the scale 1); the size of the
+    /// form when the one in the list is wrong.
+    double preview_size() const;
+
+    /// The text of the preview.
+    static const char* preview_text();
+
     /// A button went down at the point.
     void press(int x, int y);
 
@@ -152,11 +230,12 @@ class SettingsForm {
     /// the search; true when something changed.
     bool type(const std::string& typed);
 
-    /// Show the list of fonts, the family of the font field selected.
+    /// Show the list of fonts at the font, the size and the style of the form.
     void open_picker();
 
-    /// Take the selected family into the font field and show the form.
-    void choose();
+    /// Take the selected family, size and style into the form and show it.
+    /// False (and the list stays) when the size is wrong.
+    bool choose();
 
     /// Show the form again, the font is as it was.
     void close_picker();
@@ -165,35 +244,54 @@ class SettingsForm {
     enum Target : size_t {
         NoTarget,
         FontField,
+        SizeField,
+        StyleField,
         TerminalField,
         ScaleField,
         ChooseButton,
         CancelButton,
         SaveButton,
+        SearchBox,
+        SizeBox,
+        StyleBox,
         FirstRow //!< and the rows of the list from here
     };
 
+    TextField& field_ref(Field field);
     size_t target_at(int x, int y) const;
-    bool act(size_t target);
+    bool act(size_t target, int x);
     bool request_save();
-    std::string& focused_text();
-    bool edit(const std::string& added);
+    bool edit(TextField& field, Key pressed);
+    bool form_key(Key pressed);
     bool picker_key(Key pressed);
+    bool list_key(Key pressed);
+    bool size_step(int direction);
+    bool cycle_style(int direction);
     bool select(size_t index);
     void search(const std::string& query);
+    void refresh_styles();
+    void put_cursor(TextField& field, const Rect& rect, int x);
     void reveal();
     size_t max_first() const;
     int rows_top() const;
+    int controls_top() const;
 
-    Values values_;
+    std::array<TextField, 5> fields_;
+    TextField search_;
+    TextField pick_size_;
+    std::string pick_style_;
+    std::vector<std::string> pick_styles_;
+    std::map<std::string, std::vector<std::string>> styles_cache_;
+    StylesFn styles_of_;
+    TextField::Measure measure_;
     std::vector<std::string> all_;
     std::vector<std::string> shown_;
-    std::string query_;
     std::string status_;
     Metrics metrics_;
     View view_ = View::Form;
     Result result_ = Result::Editing;
     Field focus_ = Field::Font;
+    Pane pane_ = Pane::Search;
     int width_ = 1;
     int height_ = 1;
     size_t selected_ = 0;
