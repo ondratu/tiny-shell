@@ -241,7 +241,14 @@ TEST(ThemeScaleTest, scale_multiplies_metrics_and_styles)
     EXPECT_EQ(t.entry.padding_width, 12u);
     EXPECT_EQ(t.entry.border_width, 2u);
     EXPECT_EQ(t.list.padding_width, 12);
-    EXPECT_EQ(t.wm_dock_menu_width, 360);
+    EXPECT_EQ(t.wm_menu_item_height, 40);
+    EXPECT_EQ(t.wm_popup_item_height, 60);
+    EXPECT_EQ(t.wm_menu_padding, 24);
+    EXPECT_EQ(t.wm_dock_dots, 20);
+    EXPECT_EQ(t.wm_dock_dot, 8);
+    EXPECT_EQ(t.wm_dock_line, 2);
+    EXPECT_EQ(t.wm_dock_marker, 6);
+    EXPECT_EQ(t.wm_dock_drag, 12);
     EXPECT_EQ(t.wm_launcher_cell_width, 128);
     EXPECT_EQ(t.wm_launcher_label, 80);
     EXPECT_EQ(t.wm_launcher_icon, 96);

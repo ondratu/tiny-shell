@@ -82,6 +82,9 @@ class IconGrid : public Widget {
 
     Signal on_activate;
 
+    //! The right button was pressed on a cell; the cell is selected
+    Signal on_context;
+
   protected:
     void on_expose(const XEvent& e, void* data);
     void on_motion_notify(const XEvent& e, void* data);

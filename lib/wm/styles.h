@@ -51,4 +51,15 @@ class DockStyle : public tiny::Style {
 
 }; // DockStyle
 
+//! A flat colored area without a border (a line, a mark)
+class PlainStyle : public tiny::Style {
+  public:
+    explicit PlainStyle(uint32_t color)
+    {
+        normal_bg = color;
+        border_width = 0;
+        padding_width = 0;
+    }
+}; // PlainStyle
+
 } // namespace tiny::wm

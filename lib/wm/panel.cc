@@ -11,12 +11,13 @@ AppMenu::~AppMenu() = default;
 
 UserMenu::UserMenu():
     tiny::Popover(tiny::theme.wm_menu_width,
-                  tiny::theme.wm_menu_item_height * 3),
-    restart(tiny::theme.wm_menu_width, tiny::theme.wm_menu_item_height,
+                  tiny::theme.wm_popup_item_height * 3),
+    restart(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
             "Restart"),
-    shutdown(tiny::theme.wm_menu_width, tiny::theme.wm_menu_item_height,
+    shutdown(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
              "Shutdown"),
-    logout(tiny::theme.wm_menu_width, tiny::theme.wm_menu_item_height, "Logout")
+    logout(tiny::theme.wm_menu_width, tiny::theme.wm_popup_item_height,
+           "Logout")
 {
     name = "wm_usermanu";
 }

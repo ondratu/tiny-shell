@@ -173,6 +173,47 @@ TEST_F(ButtonTest, label_button_keeps_text)
     EXPECT_EQ(b.get_text(), "World");
 }
 
+TEST_F(ButtonTest, label_button_measures_its_text)
+{
+    const tiny::LabelButton none(100, 28, "");
+    const tiny::LabelButton one(100, 28, "i");
+    const tiny::LabelButton longer(100, 28, "iiiiiiiiii");
+
+    EXPECT_EQ(none.text_width(), 0);
+    EXPECT_GT(one.text_width(), 0);
+    EXPECT_EQ(longer.text_width(), 10 * one.text_width());
+}
+
+TEST_F(ButtonTest, label_button_text_may_start_from_the_left)
+{
+    tiny::LabelButton b(100, 28, "Item");
+    b.set_text_padding(20);
+    b.realize(root(), 0, 0);
+    b.map();
+
+    send(b, Expose);
+
+    XSync(tiny::get_display(), False);
+    XImage* img = XGetImage(tiny::get_display(), b.get_window(), 0, 0, 100, 28,
+                            AllPlanes, ZPixmap);
+    const uint32_t bg = tiny::theme.widget.normal_bg;
+    int first = -1;
+    int last = -1;
+    for (int x = 0; x < 100; ++x) {
+        for (int y = 0; y < 28; ++y) {
+            if ((XGetPixel(img, x, y) & 0xFFFFFF) != bg) {
+                first = first < 0 ? x : first;
+                last = x;
+            }
+        }
+    }
+    XDestroyImage(img);
+    ASSERT_GE(first, 0);
+    EXPECT_GE(first, 20);
+    EXPECT_LT(first, 20 + b.text_width());
+    EXPECT_LT(last, 20 + b.text_width());
+}
+
 TEST_F(ButtonTest, label_button_draws_text_when_exposed)
 {
     tiny::LabelButton b(100, 28, "Menu Item");

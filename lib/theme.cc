@@ -35,7 +35,13 @@ void Theme::scale(double factor)
     wm_panel_login_width = scaled(120, factor);
     wm_menu_width = scaled(120, factor);
     wm_menu_item_height = scaled(20, factor);
-    wm_dock_menu_width = scaled(180, factor);
+    wm_popup_item_height = scaled(30, factor);
+    wm_menu_padding = scaled(12, factor);
+    wm_dock_dots = scaled(10, factor);
+    wm_dock_dot = scaled(4, factor);
+    wm_dock_line = scaled(1, factor);
+    wm_dock_marker = scaled(3, factor);
+    wm_dock_drag = scaled(6, factor);
     wm_launcher_cell_width = scaled(64, factor);
     wm_launcher_label = scaled(40, factor);
     wm_launcher_icon = scaled(48, factor);

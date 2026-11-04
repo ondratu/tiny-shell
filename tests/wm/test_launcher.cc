@@ -500,6 +500,78 @@ TEST_F(LauncherTest, there_is_no_action_of_an_unknown_application_or_number)
     EXPECT_FALSE(launcher.launch_action("nothing.desktop", 0));
 }
 
+TEST_F(LauncherTest, the_right_button_on_an_application_tells_the_menu)
+{
+    launcher.popup();
+    std::vector<std::string> ids;
+    XButtonEvent where = {};
+    launcher.on_menu = [&](const std::string& id, const XButtonEvent& be) {
+        ids.push_back(id);
+        where = be;
+    };
+    XEvent e = make_event(ButtonPress);
+    e.xbutton.button = Button3;
+    e.xbutton.x = 5;
+    e.xbutton.y = 5;
+    e.xbutton.x_root = 123;
+
+    send(grid(), e); // the first cell is Alpha
+    pump_events();
+
+    EXPECT_EQ(ids, (std::vector<std::string>{"alpha.desktop"}));
+    EXPECT_EQ(where.x_root, 123);
+}
+
+TEST_F(LauncherTest, the_right_button_without_a_handler_is_ignored)
+{
+    launcher.popup();
+    XEvent e = make_event(ButtonPress);
+    e.xbutton.button = Button3;
+    e.xbutton.x = 5;
+    e.xbutton.y = 5;
+
+    send(grid(), e);
+
+    EXPECT_TRUE(launcher.is_open());
+}
+
+TEST_F(LauncherTest, hide_closes_an_open_launcher_only)
+{
+    launcher.hide(); // closed already
+    EXPECT_FALSE(launcher.is_open());
+
+    launcher.popup();
+    EXPECT_TRUE(launcher.is_open());
+    launcher.hide();
+
+    EXPECT_FALSE(launcher.is_open());
+}
+
+TEST_F(LauncherTest, refocus_gives_the_keyboard_to_the_search_field)
+{
+    launcher.popup();
+    XSetInputFocus(tiny::get_display(), PointerRoot, RevertToNone, CurrentTime);
+
+    launcher.refocus();
+
+    ::Window focus;
+    int revert;
+    XGetInputFocus(tiny::get_display(), &focus, &revert);
+    EXPECT_EQ(focus, entry());
+}
+
+TEST_F(LauncherTest, refocus_of_a_closed_launcher_does_nothing)
+{
+    XSetInputFocus(tiny::get_display(), PointerRoot, RevertToNone, CurrentTime);
+
+    launcher.refocus();
+
+    ::Window focus;
+    int revert;
+    XGetInputFocus(tiny::get_display(), &focus, &revert);
+    EXPECT_NE(focus, entry());
+}
+
 TEST_F(LauncherTest, an_application_started_by_its_id_is_a_recent_one)
 {
     ASSERT_TRUE(launcher.launch("beta.desktop"));

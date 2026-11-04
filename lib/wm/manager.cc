@@ -151,17 +151,30 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_dock.map_all();
 
     wm_dock.on_launch = [this](const std::string& id) {
+        wm_launcher.hide();
         wm_launcher.launch(id);
     };
     wm_dock.list_actions = [this](const std::string& id) {
         return wm_launcher.action_names(id);
     };
     wm_dock.on_action = [this](const std::string& id, size_t index) {
+        wm_launcher.hide();
         wm_launcher.launch_action(id, index);
     };
     wm_dock.on_toggle_favorite = [this](const std::string& id) {
         toggle_favorite(id);
     };
+    wm_dock.on_move_favorite = [this](const std::string& id, size_t place) {
+        move_favorite(id, place);
+    };
+    // the same menu as the icon of the dock has, over the launcher
+    wm_launcher.on_menu = [this](const std::string& id,
+                                 const XButtonEvent& be) {
+        wm_dock.popup_menu(id, be.x_root, be.y_root);
+    };
+    wm_launcher.add_nested(&wm_dock.get_menu());
+    wm_launcher.add_nested(&wm_dock.get_windows_menu());
+    wm_dock.on_menu_closed = [this] { wm_launcher.refocus(); };
     wm_dock.get_menu_button().on_click.connect(
             [this](tiny::Object* o, const XEvent& e, void* d) {
                 on_launcher(o, e, d);
@@ -985,6 +998,36 @@ void Manager::toggle_favorite(const std::string& id)
         favorites.push_back(id);
     } else {
         favorites.erase(it);
+    }
+    update_favorites();
+    if (favorites_changed) {
+        favorites_changed(favorites);
+    }
+}
+
+void Manager::move_favorite(const std::string& id, size_t place)
+{
+    // the favorites that are not installed are not in the dock, they keep their
+    // places in the list
+    std::vector<std::string> shown;
+    for (const std::string& favorite : favorites) {
+        if (wm_launcher.find_application(favorite) != nullptr) {
+            shown.push_back(favorite);
+        }
+    }
+    const auto it = std::find(shown.begin(), shown.end(), id);
+    if (it == shown.end()) {
+        return;
+    }
+    shown.erase(it);
+    shown.insert(shown.begin() + static_cast<std::ptrdiff_t>(
+                                         std::min(place, shown.size())),
+                 id);
+    auto next = shown.begin();
+    for (std::string& favorite : favorites) {
+        if (wm_launcher.find_application(favorite) != nullptr) {
+            favorite = *next++;
+        }
     }
     update_favorites();
     if (favorites_changed) {

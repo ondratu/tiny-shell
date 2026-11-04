@@ -37,12 +37,19 @@ class LabelButton : public Button {
 
     const std::string& get_text() const { return text; }
 
+    //! The width of the text in the font of the widgets
+    int text_width() const;
+
+    //! The text starts `padding` from the left (it is centered by default)
+    void set_text_padding(int padding) { text_padding = padding; }
+
   protected:
     void on_enter_notify(const XEvent& e, void* data) override;
     void on_leave_notify(const XEvent& e, void* data) override;
     virtual void on_expose(const XEvent& e, void* data);
 
     std::string text;
+    int text_padding = -1; //!< -1: centered
 };
 
 class MenuButton : public LabelButton {

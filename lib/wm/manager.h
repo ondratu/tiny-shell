@@ -146,6 +146,9 @@ class Manager : public tiny::Object {
     //! Add the application to the favorites, or remove it when it is one
     void toggle_favorite(const std::string& id);
 
+    //! A favorite was dragged to a place among the shown favorites
+    void move_favorite(const std::string& id, size_t place);
+
     //! Start a command of the user menu; an empty one does nothing
     void run_system_command(const std::string& command);
 

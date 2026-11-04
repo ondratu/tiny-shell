@@ -349,6 +349,31 @@ TEST_F(IconGridTest, other_buttons_do_not_activate)
     EXPECT_EQ(activated.calls, 0);
 }
 
+TEST_F(IconGridTest, the_right_button_selects_the_cell_and_tells_the_context)
+{
+    Recorder context;
+    grid.on_context.connect(context.slot());
+
+    send(grid.get_window(),
+         button(ButtonPress, Button3, 2 * cell_width + 5, cell_height + 5));
+
+    EXPECT_EQ(context.calls, 1);
+    EXPECT_EQ(grid.get_selected(),
+              grid.cell_at(2 * cell_width + 5, cell_height + 5));
+    EXPECT_EQ(activated.calls, 0);
+}
+
+TEST_F(IconGridTest, the_right_button_outside_of_the_cells_tells_nothing)
+{
+    Recorder context;
+    grid.on_context.connect(context.slot());
+    grid.set_items(2, numbered());
+
+    send(grid.get_window(), button(ButtonPress, Button3, 5 * cell_width, 5));
+
+    EXPECT_EQ(context.calls, 0);
+}
+
 TEST_F(IconGridTest, click_on_a_dot_goes_to_its_page)
 {
     click(112, rows * cell_height + dot + 2);

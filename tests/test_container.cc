@@ -607,6 +607,35 @@ TEST_F(PopoverTest, focus_out_unmaps_popover)
     EXPECT_FALSE(p.get_maped());
 }
 
+TEST_F(PopoverTest, focus_out_to_a_nested_popover_keeps_the_popover)
+{
+    tiny::Popover p(200, 100);
+    tiny::Popover sub(100, 50);
+    p.realize(root(), 0, 0);
+    sub.realize(root(), 0, 0);
+    p.add_nested(&sub);
+    p.popup(300, 50);
+    sub.popup(500, 50); // takes the focus
+
+    send_focus_out(p);
+
+    EXPECT_TRUE(p.get_maped());
+}
+
+TEST_F(PopoverTest, focus_out_to_a_popover_that_is_not_nested_closes_it)
+{
+    tiny::Popover p(200, 100);
+    tiny::Popover other(100, 50);
+    p.realize(root(), 0, 0);
+    other.realize(root(), 0, 0);
+    p.popup(300, 50);
+    other.popup(500, 50);
+
+    send_focus_out(p);
+
+    EXPECT_FALSE(p.get_maped());
+}
+
 TEST_F(PopoverTest, focus_out_to_a_child_keeps_the_popover)
 {
     tiny::Popover p(200, 100);
