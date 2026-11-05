@@ -14,8 +14,9 @@ class DockLine;
  * @short The main menu of the panel: the programs of the session and the
  * ways to leave it.
  *
- * The items are in groups with a line between them: Settings; Applications
- * and Terminal; Force Quit; Restart and Shutdown; Logout. The owner connects
+ * The items are in groups with a line between them: About; Settings;
+ * Applications and Terminal; Force Quit; Restart and Shutdown; Logout. The
+ * owner connects
  * `on_click` of the items (and hides the menu).
  */
 class MainMenu : public tiny::Popover {
@@ -26,6 +27,7 @@ class MainMenu : public tiny::Popover {
 
     void realize(::Window parent, int x = 0, int y = 0) override;
 
+    tiny::LabelButton about;
     tiny::LabelButton settings;
     tiny::LabelButton applications;
     tiny::LabelButton terminal;

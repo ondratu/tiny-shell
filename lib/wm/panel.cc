@@ -8,8 +8,8 @@ namespace tiny::wm {
 namespace {
 
 //! The number of the items and of the lines between their groups
-constexpr int main_menu_items = 7;
-constexpr int main_menu_lines = 4;
+constexpr int main_menu_items = 8;
+constexpr int main_menu_lines = 5;
 
 } // namespace
 
@@ -17,6 +17,8 @@ MainMenu::MainMenu():
     tiny::Popover(shell_theme.menu_width,
                   shell_theme.popup_item_height * main_menu_items +
                           shell_theme.menu_separator * main_menu_lines),
+    about(shell_theme.menu_width, shell_theme.popup_item_height,
+          "About Tiny Shell"),
     settings(shell_theme.menu_width, shell_theme.popup_item_height, "Settings"),
     applications(shell_theme.menu_width, shell_theme.popup_item_height,
                  "Applications"),
@@ -39,11 +41,10 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
     }
     tiny::Popover::realize(parent_arg, x, y);
 
-    tiny::LabelButton* const groups[][2] = {{&settings, nullptr},
-                                            {&applications, &terminal},
-                                            {&force_quit, nullptr},
-                                            {&restart, &shutdown},
-                                            {&logout, nullptr}};
+    tiny::LabelButton* const groups[][2] = {
+            {&about, nullptr},          {&settings, nullptr},
+            {&applications, &terminal}, {&force_quit, nullptr},
+            {&restart, &shutdown},      {&logout, nullptr}};
     const int separator = shell_theme.menu_separator;
     int top = 0;
     for (const auto& group : groups) {

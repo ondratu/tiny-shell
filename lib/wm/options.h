@@ -26,6 +26,9 @@ struct Options {
 Options parse_options(const std::vector<std::string>& args);
 
 //! The version, from `git describe` at the time of the build
+std::string version_number();
+
+//! The name of the program and its version, for `--version`
 std::string version_text();
 
 //! The usage with the list of the options

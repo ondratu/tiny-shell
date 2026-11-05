@@ -17,6 +17,8 @@
 #include "object.h"
 #include "spawn.h"
 #include "wm/manager.h"
+#include "wm/options.h"
+#include "wm/system_info.h"
 #include "wm/client.h"
 #include "x_util.h"
 
@@ -104,6 +106,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
+    wm_about.realize(root_arg, 0, 0);
+    wm_about.set_events();
 
     wm_unresponsive.realize(root_arg);
     wm_unresponsive.on_wait.connect([this](const XEvent&) {
@@ -211,6 +215,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         });
     };
     MainMenu& menu = wm_panel.menu_main;
+    connect_item(menu.about, "about");
     connect_item(menu.settings, "settings");
     connect_item(menu.applications, "applications");
     connect_item(menu.terminal, "terminal");
@@ -251,6 +256,8 @@ Manager::~Manager()
 
 void Manager::register_actions()
 {
+    actions.add("about",
+                [this] { wm_about.popup(version_number(), system_info()); });
     actions.add("settings", [this] { run_program({settings_command}); });
     actions.add("terminal", [this] { run_program(terminal_program); });
     actions.add("force-quit", [this] { run_program({force_quit_program}); });
@@ -288,6 +295,7 @@ void Manager::set_variant(Variant variant)
     wm_dock.get_windows_menu().restyle();
     wm_launcher.restyle();
     wm_run.restyle();
+    wm_about.restyle();
     wm_unresponsive.restyle();
     for (const auto& entry : wm_windows) {
         entry.second->restyle_frame();

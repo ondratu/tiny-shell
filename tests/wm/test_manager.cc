@@ -199,8 +199,8 @@ TEST_F(ManagerTest, the_actions_of_the_shell_are_registered_by_name)
 
     const std::vector<std::string> names = manager->get_actions().names();
     for (const char* name :
-         {"settings", "terminal", "force-quit", "restart", "shutdown", "logout",
-          "applications", "launcher", "run-dialog", "next-window",
+         {"about", "settings", "terminal", "force-quit", "restart", "shutdown",
+          "logout", "applications", "launcher", "run-dialog", "next-window",
           "prev-window", "theme-dark", "theme-light", "theme-toggle"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), name), names.end())
                 << name;
@@ -216,6 +216,19 @@ TEST_F(ManagerTest, an_action_can_end_the_manager_and_open_a_dialog)
 
     EXPECT_TRUE(manager->get_actions().run("logout"));
     EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, the_first_item_of_the_main_menu_opens_the_about_dialog)
+{
+    start();
+    ASSERT_FALSE(manager->wm_about.get_maped());
+
+    auto& about = manager->wm_panel.menu_main.about;
+    about.on_click(&about, make_event(ButtonRelease));
+
+    EXPECT_TRUE(manager->wm_about.get_maped());
+    EXPECT_EQ(manager->wm_about.line(0), "Tiny Shell");
+    EXPECT_EQ(manager->wm_about.line(2).rfind("Version ", 0), 0u);
 }
 
 TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
