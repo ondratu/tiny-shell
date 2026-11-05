@@ -672,3 +672,42 @@ TEST(ConfigTest, the_modes_of_the_wallpaper)
     EXPECT_TRUE(valid_wallpaper_mode("tile"));
     EXPECT_FALSE(valid_wallpaper_mode("stretch"));
 }
+
+TEST(ConfigTest, the_dock_hides_by_default)
+{
+    EXPECT_EQ(Config().dock_mode, tiny::wm::DockMode::AutoHide);
+    EXPECT_EQ(parse_config({}).dock_mode, tiny::wm::DockMode::AutoHide);
+}
+
+TEST(ConfigTest, reads_the_mode_of_the_dock)
+{
+    EXPECT_EQ(parse_config({{"a", "[dock]\nmode = on\n"}}).dock_mode,
+              tiny::wm::DockMode::On);
+    EXPECT_EQ(parse_config({{"a", "[dock]\nmode = off\n"}}).dock_mode,
+              tiny::wm::DockMode::Off);
+    EXPECT_EQ(parse_config({{"a", "[dock]\nmode = on\n"},
+                            {"b", "[dock]\nmode = autohide\n"}})
+                      .dock_mode,
+              tiny::wm::DockMode::AutoHide);
+}
+
+TEST(ConfigTest, a_wrong_mode_of_the_dock_is_a_problem_and_keeps_the_default)
+{
+    Strings problems;
+
+    const Config c = parse_config({{"a", "[dock]\nmode = never\n"}}, &problems);
+
+    EXPECT_EQ(c.dock_mode, tiny::wm::DockMode::AutoHide);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("mode"), std::string::npos);
+}
+
+TEST(ConfigTest, the_choices_of_the_dock_start_with_the_default)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::dock_choices();
+
+    ASSERT_EQ(choices.size(), 3u);
+    EXPECT_STREQ(choices[0].value, "");
+    EXPECT_STREQ(choices[1].value, "on");
+    EXPECT_STREQ(choices[2].value, "off");
+}

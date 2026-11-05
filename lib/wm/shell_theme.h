@@ -54,6 +54,7 @@ class ShellTheme {
     int panel = 30;
     int icon = 48;
     int dock_border = 5;
+    int dock_reveal = 5; //!< the strip at the screen edge that shows the dock
     int dock_attention_bar = 3; //!< under the icon that demands attention
     int panel_app_width = 200;
     int menu_width = 200;

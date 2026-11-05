@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "style.h"
+#include "wm/dock_mode.h"
 
 namespace tiny::wm {
 
@@ -40,6 +41,7 @@ namespace tiny::wm {
  * clock_format = %a %e %B %R
  *
  * [dock]
+ * mode = autohide
  * favorites = firefox.desktop;org.gnome.Nautilus.desktop
  * ```
  */
@@ -63,6 +65,8 @@ struct Config {
     std::string wallpaper_mode;
     //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
     std::string clock_format = "%a %e %B %R";
+    //! [dock] mode: autohide (the default), on or off
+    DockMode dock_mode = DockMode::AutoHide;
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
@@ -100,6 +104,12 @@ const char* xft_key(XftOption option);
 
 //! Whether the text is one of `xft_choices(option)`
 bool valid_xft(XftOption option, const std::string& text);
+
+/**
+ * @short The values that `[dock] mode` can have: "" (autohide, the default),
+ * "on" and "off", with the names a form shows.
+ */
+XftChoices dock_choices();
 
 /**
  * @short The ways a wallpaper covers the screen: fill, center and tile.

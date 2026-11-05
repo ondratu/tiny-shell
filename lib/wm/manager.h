@@ -20,6 +20,8 @@
 #include "wm/run_dialog.h"
 #include "wm/unresponsive_dialog.h"
 #include "wm/dock.h"
+#include "wm/dock_mode.h"
+#include "wm/dock_reveal.h"
 #include "wm/selection.h"
 #include "wm/work_area.h"
 
@@ -79,6 +81,17 @@ class Manager : public tiny::Object {
      * updated by a timer at the start of every minute.
      */
     void set_clock_format(const std::string& format);
+
+    /**
+     * @short When the dock is shown, see `DockMode`.
+     *
+     * With `AutoHide` the dock is hidden while the active window covers it,
+     * and shown again when the pointer reaches the bottom edge of the screen
+     * (until it leaves the dock).
+     */
+    void set_dock_mode(DockMode mode);
+
+    DockMode get_dock_mode() const { return dock_mode; }
 
     /**
      * @short The favorite applications of the dock, the ids of desktop files.
@@ -266,6 +279,10 @@ class Manager : public tiny::Object {
     //! Remember `_NET_WM_USER_TIME` of the window as the time of the user
     void note_user_time(const Window* window);
 
+    //! Show or hide the dock as its mode, the active window and the pointer
+    //! want (see `DockMode`); cheap when nothing changed
+    void update_dock_visibility();
+
     //! Add or remove the dock icon of the window, as its state wants
     void update_dock_entry(Window* window);
 
@@ -330,6 +347,9 @@ class Manager : public tiny::Object {
     Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
     Dock wm_dock;
+    DockReveal wm_dock_reveal{shell_theme.dock_reveal};
+    DockMode dock_mode = DockMode::AutoHide;
+    bool dock_revealed = false; //!< the pointer brought a hidden dock back
 
     Window* active = nullptr;
     Window* dragged = nullptr; //!< moved or resized by the manager

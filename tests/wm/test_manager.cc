@@ -4784,3 +4784,179 @@ TEST_F(ManagerTest,
     manager->set_variant(tiny::Variant::Dark);
     EXPECT_EQ(root_pixel(), 0x123456u);
 }
+
+// ---- the mode of the dock ----
+
+class DockModeTest : public ManagerTest {
+  protected:
+    // A client that lies over the dock, the active window
+    WmWindow* cover_the_dock()
+    {
+        XWindowAttributes root;
+        XGetWindowAttributes(dsp(), root_window(), &root);
+        clients.push_back(std::make_unique<FakeClient>(
+                0, root.height - 30, static_cast<unsigned>(root.width), 20));
+        clients.back()->map();
+        start();
+        pump_events();
+        WmWindow* covering = manager->wm_windows.at(clients.back()->window);
+        manager->active = covering;
+        manager->update_dock_visibility();
+        return covering;
+    }
+
+    bool dock_shown()
+    {
+        return attributes_of(manager->wm_dock).map_state != IsUnmapped;
+    }
+
+    bool strip_shown()
+    {
+        return attributes_of(manager->wm_dock_reveal).map_state != IsUnmapped;
+    }
+
+    void pointer_leaves_the_dock(int detail = NotifyAncestor)
+    {
+        XEvent e = make_event(LeaveNotify);
+        e.xcrossing.window = manager->wm_dock.get_window();
+        e.xcrossing.detail = detail;
+        send(manager->wm_dock.get_window(), e);
+    }
+};
+
+TEST_F(DockModeTest,
+       the_dock_hides_by_default_and_shows_while_nothing_covers_it)
+{
+    add_client();
+    start();
+    pump_events();
+
+    EXPECT_EQ(manager->get_dock_mode(), tiny::wm::DockMode::AutoHide);
+    EXPECT_TRUE(dock_shown());
+    EXPECT_FALSE(strip_shown());
+}
+
+TEST_F(DockModeTest, a_window_over_the_dock_hides_it)
+{
+    cover_the_dock();
+
+    EXPECT_FALSE(dock_shown());
+    EXPECT_TRUE(strip_shown());
+}
+
+TEST_F(DockModeTest, the_strip_is_at_the_bottom_edge_of_the_screen)
+{
+    cover_the_dock();
+    XWindowAttributes root;
+    XGetWindowAttributes(dsp(), root_window(), &root);
+
+    const XWindowAttributes strip = attributes_of(manager->wm_dock_reveal);
+
+    EXPECT_EQ(strip.x, 0);
+    EXPECT_EQ(strip.width, root.width);
+    EXPECT_EQ(strip.height, tiny::wm::shell_theme.dock_reveal);
+    EXPECT_EQ(strip.y + strip.height, root.height);
+}
+
+TEST_F(DockModeTest, the_pointer_at_the_edge_shows_the_dock)
+{
+    cover_the_dock();
+
+    send(manager->wm_dock_reveal, EnterNotify);
+
+    EXPECT_TRUE(dock_shown());
+    EXPECT_FALSE(strip_shown());
+}
+
+TEST_F(DockModeTest, leaving_the_dock_hides_it_again)
+{
+    cover_the_dock();
+    send(manager->wm_dock_reveal, EnterNotify);
+
+    pointer_leaves_the_dock();
+
+    EXPECT_FALSE(dock_shown());
+    EXPECT_TRUE(strip_shown());
+}
+
+TEST_F(DockModeTest, moving_over_the_icons_does_not_hide_the_dock)
+{
+    cover_the_dock();
+    send(manager->wm_dock_reveal, EnterNotify);
+
+    pointer_leaves_the_dock(NotifyInferior);
+
+    EXPECT_TRUE(dock_shown());
+}
+
+TEST_F(DockModeTest, an_open_menu_keeps_the_dock)
+{
+    cover_the_dock();
+    send(manager->wm_dock_reveal, EnterNotify);
+    manager->wm_dock.get_menu().set_items({"Close"});
+    manager->wm_dock.get_menu().map();
+
+    pointer_leaves_the_dock();
+
+    EXPECT_TRUE(dock_shown());
+    manager->wm_dock.get_menu().unmap();
+    manager->wm_dock.on_menu_closed();
+    EXPECT_FALSE(dock_shown());
+}
+
+TEST_F(DockModeTest, a_minimized_window_covers_nothing)
+{
+    WmWindow* covering = cover_the_dock();
+    ASSERT_FALSE(dock_shown());
+
+    covering->minimize();
+    manager->update_dock_visibility();
+
+    EXPECT_TRUE(dock_shown());
+}
+
+TEST_F(DockModeTest, the_dock_comes_back_when_the_window_goes)
+{
+    cover_the_dock();
+    ASSERT_FALSE(dock_shown());
+
+    const XErrors errors;
+    XDestroyWindow(clients.back()->display, clients.back()->window);
+    clients.back()->sync();
+    run_loop();
+
+    EXPECT_TRUE(dock_shown());
+}
+
+TEST_F(DockModeTest, the_mode_on_never_hides_the_dock)
+{
+    cover_the_dock();
+
+    manager->set_dock_mode(tiny::wm::DockMode::On);
+
+    EXPECT_TRUE(dock_shown());
+    EXPECT_FALSE(strip_shown());
+}
+
+TEST_F(DockModeTest, the_mode_off_never_shows_the_dock)
+{
+    add_client();
+    start();
+    pump_events();
+
+    manager->set_dock_mode(tiny::wm::DockMode::Off);
+
+    EXPECT_FALSE(dock_shown());
+    EXPECT_FALSE(strip_shown());
+}
+
+TEST_F(DockModeTest, the_dock_is_shown_again_when_the_mode_changes_back)
+{
+    add_client();
+    start();
+    manager->set_dock_mode(tiny::wm::DockMode::Off);
+
+    manager->set_dock_mode(tiny::wm::DockMode::AutoHide);
+
+    EXPECT_TRUE(dock_shown());
+}
