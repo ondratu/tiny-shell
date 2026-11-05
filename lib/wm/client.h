@@ -23,7 +23,16 @@ class Client : public tiny::Container, public Window {
     static Window* create(::Window root, ::Window child,
                           const XWindowAttributes& attrs,
                           unsigned long functions, unsigned long decorations,
-                          const tiny::Rect& area, bool fresh = true);
+                          const tiny::Rect& area, bool fresh = true,
+                          SymbolicIcons* icons = nullptr);
+
+    //! The icons of the buttons of the title bar; they must live longer
+    void set_icons(SymbolicIcons* icons)
+    {
+        cls_btn.set_icons(icons);
+        min_btn.set_icons(icons);
+        max_btn.set_icons(icons);
+    }
 
     void realize(::Window parent, int x, int y) override;
 

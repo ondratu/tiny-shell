@@ -1,6 +1,12 @@
 #include "wm_helpers.h"
 #include "wm/shell_theme.h"
 
+#include <unistd.h>
+
+#include <filesystem>
+#include <fstream>
+
+#include "wm/symbolic_icons.h"
 #include "wm/window_button.h"
 
 class WindowButtonTest : public ::testing::Test {
@@ -239,4 +245,73 @@ TEST_F(WindowButtonScaledTest, maximize_square_is_scaled)
     EXPECT_EQ(img.at(mid(), mid() - 6), fg());
     EXPECT_EQ(img.at(mid() - 6, mid()), fg());
     EXPECT_EQ(img.at(mid(), mid()), bg());
+}
+
+namespace {
+
+// A directory with a square for the icons of the buttons
+class ButtonIconFiles {
+  public:
+    ButtonIconFiles():
+        root(std::filesystem::temp_directory_path() /
+             ("tiny-buttons-" + std::to_string(getpid())))
+    {
+        std::filesystem::remove_all(root);
+        std::filesystem::create_directories(root / "tiny-shell/icons/white");
+        for (const char* name :
+             {"window-close", "window-minimize", "window-maximize"}) {
+            std::ofstream(root / "tiny-shell/icons/white" /
+                          (std::string(name) + "-symbolic.svg"))
+                    << "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+                       "width=\"16\" height=\"16\" viewBox=\"0 0 16 16\">"
+                       "<path fill=\"#ffffff\" d=\"M0 0H16V16H0Z\"/></svg>\n";
+        }
+    }
+
+    ~ButtonIconFiles() { std::filesystem::remove_all(root); }
+
+    std::filesystem::path root;
+};
+
+} // namespace
+
+TEST_F(WindowButtonTest, the_symbols_are_icons_when_the_files_are_there)
+{
+    const ButtonIconFiles files;
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.root.string()});
+    tiny::wm::CloseButton close;
+    tiny::wm::MaximizeButton maximize;
+    tiny::wm::MinimizeButton minimize;
+    for (tiny::wm::WindowButton* b :
+         {static_cast<tiny::wm::WindowButton*>(&close),
+          static_cast<tiny::wm::WindowButton*>(&maximize),
+          static_cast<tiny::wm::WindowButton*>(&minimize)}) {
+        b->set_icons(&icons);
+        b->realize(root_window(), 0, 0);
+        b->map();
+        send(*b, Expose);
+
+        const Image img = image_of(*b);
+        EXPECT_EQ(img.at(0, 0), bg());
+        // the square icon is wider than any of the symbols drawn with lines
+        EXPECT_EQ(img.at(icon() / 2 + 5, icon() / 2), fg());
+        EXPECT_EQ(img.at(icon() / 2 + 5, icon() / 2 + 5), fg());
+    }
+}
+
+TEST_F(WindowButtonTest, a_missing_icon_file_leaves_the_lines)
+{
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {"/nonexistent"});
+    tiny::wm::CloseButton b;
+    b.set_icons(&icons);
+    b.realize(root_window(), 0, 0);
+    b.map();
+
+    send(b, Expose);
+
+    const Image img = image_of(b);
+    EXPECT_EQ(img.at(icon() / 2, icon() / 2), fg()); // where the lines cross
+    EXPECT_EQ(img.at(icon() / 2 + 5, icon() / 2), bg());
 }

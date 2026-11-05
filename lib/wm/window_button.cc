@@ -45,6 +45,18 @@ void WindowButton::set_events(long mask)
     connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
+bool WindowButton::draw_icon(const std::string& name)
+{
+    if (icons == nullptr) {
+        return false;
+    }
+    const uint8_t state = get_theme_state();
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XClearWindow(display, window);
+    return icons->draw(window, name, shell_theme.win_icon * 3 / 4,
+                       get_style().get_fg(state), width, height);
+}
+
 void WindowButton::on_enter_notify(const XEvent& e, void* data)
 {
     tiny::Button::on_enter_notify(e, data);
@@ -63,6 +75,9 @@ CloseButton::~CloseButton() = default;
 
 void CloseButton::on_expose(const XEvent&, void*)
 {
+    if (draw_icon("window-close")) {
+        return;
+    }
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
 
@@ -92,6 +107,9 @@ MaximizeButton::~MaximizeButton() = default;
 
 void MaximizeButton::on_expose(const XEvent&, void*)
 {
+    if (draw_icon(restore ? "window-restore" : "window-maximize")) {
+        return;
+    }
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
 
@@ -143,6 +161,9 @@ MinimizeButton::~MinimizeButton() = default;
 
 void MinimizeButton::on_expose(const XEvent&, void*)
 {
+    if (draw_icon("window-minimize")) {
+        return;
+    }
     XWindowAttributes attrs;
     XGetWindowAttributes(display, window, &attrs);
 

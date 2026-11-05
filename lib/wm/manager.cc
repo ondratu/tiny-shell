@@ -1589,7 +1589,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
         window = Window::create(root, child, attrs, functions, work_area);
     } else {
         window = Client::create(root, child, attrs, functions, decorations,
-                                work_area, fresh);
+                                work_area, fresh, &wm_icons);
     }
 
     // the client survives a crash of the manager
