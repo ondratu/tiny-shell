@@ -591,7 +591,7 @@ TEST(ConfigTest, the_choices_of_the_rendering_start_with_the_default)
 
 TEST(ConfigTest, reads_the_format_of_the_clock)
 {
-    EXPECT_EQ(parse_config({}).clock_format, "%a %x %R");
+    EXPECT_EQ(parse_config({}).clock_format, "%a %e %B %R");
     EXPECT_EQ(parse_config({{"a", "[panel]\nclock_format = %H:%M\n"}})
                       .clock_format,
               "%H:%M");
@@ -606,7 +606,7 @@ TEST(ConfigTest, a_format_of_the_clock_with_a_control_character_is_refused)
     const Config c = parse_config({{"a", "[panel]\nclock_format = %H\t%M\n"}},
                                   &problems);
 
-    EXPECT_EQ(c.clock_format, "%a %x %R");
+    EXPECT_EQ(c.clock_format, "%a %e %B %R");
     ASSERT_EQ(problems.size(), 1u);
     EXPECT_NE(problems[0].find("a: [panel] clock_format must be"),
               std::string::npos);
