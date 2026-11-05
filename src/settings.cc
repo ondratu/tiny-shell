@@ -34,6 +34,7 @@
 #include <utility>
 #include <vector>
 
+#include "clipboard.h"
 #include "display.h"
 #include "spawn.h"
 #include "entry.h"
@@ -157,6 +158,16 @@ class SettingsApp : public tiny::XftWindow {
         if ((e.state & ControlMask) != 0) {
             if (symbol == XK_q || symbol == XK_w) {
                 quit();
+            } else if (symbol == XK_v || symbol == XK_V) {
+                paste(tiny::Clipboard::Which::Clipboard, e.time);
+            } else if ((symbol == XK_c || symbol == XK_C) &&
+                       !SettingsForm::is_choice(form.focus())) {
+                // there is no selection in a field: the whole text is copied
+                clipboard().own(tiny::Clipboard::Which::Clipboard,
+                                form.view() == SettingsForm::View::Form
+                                        ? form.text(form.focus())
+                                        : std::string(),
+                                e.time);
             } else if (symbol == XK_Page_Down || symbol == XK_Page_Up ||
                        symbol == XK_Tab || symbol == XK_ISO_Left_Tab) {
                 const bool back = symbol == XK_Page_Up ||
@@ -167,6 +178,10 @@ class SettingsApp : public tiny::XftWindow {
                     act();
                 }
             }
+            return;
+        }
+        if (symbol == XK_Insert && (e.state & ShiftMask) != 0) {
+            paste(tiny::Clipboard::Which::Clipboard, e.time);
             return;
         }
         static const std::pair<KeySym, SettingsForm::Key> keys[] = {
@@ -205,10 +220,25 @@ class SettingsApp : public tiny::XftWindow {
     {
         if (e.button == Button1) {
             form.press(e.x, e.y);
+        } else if (e.button == Button2) {
+            paste(tiny::Clipboard::Which::Primary, e.time);
         } else if ((e.button == Button4 || e.button == Button5) &&
                    form.wheel(e.button == Button4 ? -1 : 1)) {
             act();
         }
+    }
+
+    //! Type the text of a selection into the focused field (one line of it)
+    void paste(tiny::Clipboard::Which which, Time time)
+    {
+        clipboard().request(
+                which,
+                [this](const std::string& text) {
+                    if (form.type(tiny::single_line(text))) {
+                        update();
+                    }
+                },
+                time);
     }
 
     //! Paint after something changed, and act on what the user asked for

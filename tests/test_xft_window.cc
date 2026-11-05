@@ -1,5 +1,7 @@
 #include "helpers.h"
 
+#include <X11/Xatom.h>
+
 #include "xft_window.h"
 
 namespace {
@@ -18,6 +20,7 @@ class TestWindow : public tiny::XftWindow {
     using XftWindow::alloc_gray;
     using XftWindow::cached_fonts;
     using XftWindow::clip;
+    using XftWindow::clipboard;
     using XftWindow::close_fonts;
     using XftWindow::fit;
     using XftWindow::font;
@@ -336,4 +339,53 @@ TEST(XftWindowWrapTest, a_word_wider_than_the_line_is_cut)
         // never inside of a UTF-8 character
         EXPECT_NE(static_cast<unsigned char>(line.front()) & 0xC0, 0x80);
     }
+}
+
+TEST(XftWindowClipboardTest,
+     the_window_has_the_selections_and_handles_their_events)
+{
+    TestWindow w;
+    w.clipboard().own(tiny::Clipboard::Which::Primary, "text");
+    std::string got;
+    w.clipboard().request(tiny::Clipboard::Which::Primary,
+                          [&got](const std::string& t) { got = t; });
+    EXPECT_EQ(got, "text");
+
+    XEvent clear = server_event(SelectionClear);
+    clear.xselectionclear.window = w.get_window();
+    clear.xselectionclear.selection = XA_PRIMARY;
+    w.dispatch(clear);
+
+    EXPECT_FALSE(w.clipboard().owns(tiny::Clipboard::Which::Primary));
+}
+
+TEST(XftWindowClipboardTest, a_request_for_the_text_is_answered_by_dispatch)
+{
+    TestWindow w;
+    w.clipboard().own(tiny::Clipboard::Which::Clipboard, "copied");
+    const ::Window asker = XCreateSimpleWindow(
+            tiny::get_display(), root_window(), 0, 0, 5, 5, 0, 0, 0);
+    XConvertSelection(tiny::get_display(), tiny::get_display().CLIPBOARD,
+                      tiny::get_display().UTF8_STRING,
+                      tiny::get_display().TINY_SELECTION, asker, CurrentTime);
+    XSync(tiny::get_display(), False);
+
+    XEvent e;
+    while (XCheckTypedEvent(tiny::get_display(), SelectionRequest, &e)) {
+        w.dispatch(e); // what the loop of the program does
+    }
+    XSync(tiny::get_display(), False);
+
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long after;
+    unsigned char* data = nullptr;
+    XGetWindowProperty(tiny::get_display(), asker,
+                       tiny::get_display().TINY_SELECTION, 0, 100, True,
+                       AnyPropertyType, &type, &format, &count, &after, &data);
+    ASSERT_NE(data, nullptr);
+    EXPECT_EQ(std::string(reinterpret_cast<char*>(data), count), "copied");
+    XFree(data);
+    XDestroyWindow(tiny::get_display(), asker);
 }

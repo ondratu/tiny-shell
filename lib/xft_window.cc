@@ -44,6 +44,7 @@ XftWindow::~XftWindow()
         XFreePixmap(display, buffer);
     }
     input.reset(); // before the window it belongs to
+    selections.reset();
     if (window != None) {
         XDestroyWindow(display, window);
     }
@@ -83,6 +84,8 @@ void XftWindow::create(const Spec& spec)
     if (spec.input_method) {
         input = std::make_unique<InputMethod>(display, window, true);
     }
+
+    selections = std::make_unique<Clipboard>(display, window);
 
     new_buffer();
     draw = XftDrawCreate(display, buffer, DefaultVisual(display, screen),
@@ -142,6 +145,13 @@ void XftWindow::dispatch(XEvent& e)
             break;
         case ButtonRelease:
             on_button_release(e.xbutton);
+            break;
+        case SelectionNotify:
+        case SelectionRequest:
+        case SelectionClear:
+            if (selections) {
+                selections->handle(e);
+            }
             break;
         case ClientMessage:
             if (static_cast<Atom>(e.xclient.data.l[0]) == delete_window) {
