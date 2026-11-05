@@ -78,6 +78,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     screen_width = attrs.width;
     screen_height = attrs.height;
 
+    wm_panel.set_icons(&wm_icons);
     wm_panel.realize(root_arg, 0, 0);
     wm_panel.set_events();
     publish_panel_strut();

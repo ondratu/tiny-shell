@@ -20,6 +20,7 @@
 #include "wm/run_dialog.h"
 #include "wm/unresponsive_dialog.h"
 #include "wm/about_dialog.h"
+#include "wm/symbolic_icons.h"
 #include "wm/dock.h"
 #include "wm/dock_mode.h"
 #include "wm/dock_reveal.h"
@@ -343,6 +344,7 @@ class Manager : public tiny::Object {
     XErrorHandler old_error_handler = nullptr;
     ::Window check_window = None; //!< `_NET_SUPPORTING_WM_CHECK`
 
+    SymbolicIcons wm_icons{display, root, SymbolicIcons::default_dirs()};
     Panel wm_panel;
     std::unique_ptr<ClockLabel> wm_clock; //!< null: no clock
     tiny::Timers::Id clock_timer = 0;

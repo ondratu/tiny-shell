@@ -5,6 +5,7 @@
 
 #include "container.h"
 #include "button.h"
+#include "wm/symbolic_icons.h"
 
 namespace tiny::wm {
 
@@ -40,6 +41,32 @@ class MainMenu : public tiny::Popover {
     std::vector<std::unique_ptr<DockLine>> lines;
 };
 
+/**
+ * @short The button of the main menu: the logo of the shell that opens the
+ * menu.
+ *
+ * It is drawn from the icon `start-here` in the color of the text. Without
+ * the icon (the data files are not installed) it shows the text.
+ */
+class LogoButton : public tiny::MenuButton {
+  public:
+    LogoButton(int width, int height, const std::string& text);
+
+    ~LogoButton() override;
+
+    //! The icons to draw from, or null for the text; they must live longer
+    void set_icons(SymbolicIcons* icons_arg) { icons = icons_arg; }
+
+    //! Is there an icon to draw?
+    bool has_logo() const;
+
+  protected:
+    void on_expose(const XEvent& e, void* data) override;
+
+  private:
+    SymbolicIcons* icons = nullptr;
+};
+
 class Panel : public tiny::Box {
   public:
     //! Where an applet goes: the left one after the main menu button
@@ -50,6 +77,9 @@ class Panel : public tiny::Box {
     ~Panel() override;
 
     void realize(::Window root, int x = 0, int y = 0) override;
+
+    //! The icons for the logo; call before `realize()`, they must live longer
+    void set_icons(SymbolicIcons* icons) { logo.set_icons(icons); }
 
     /**
      * @short Put a small widget of a plugin (a clock, a monitor...) in the
@@ -63,7 +93,7 @@ class Panel : public tiny::Box {
     void add_applet(tiny::Widget* applet, Side side = Side::Right);
 
   private:
-    tiny::MenuButton btn_main;
+    LogoButton logo;
 
   public:
     MainMenu menu_main;

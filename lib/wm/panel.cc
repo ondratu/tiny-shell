@@ -68,9 +68,34 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
     }
 }
 
+LogoButton::LogoButton(int w, int h, const std::string& text_arg):
+    tiny::MenuButton(w, h, text_arg)
+{
+    name = "logo_button";
+}
+
+LogoButton::~LogoButton() = default;
+
+bool LogoButton::has_logo() const
+{
+    return icons != nullptr && !icons->find("start-here").empty();
+}
+
+void LogoButton::on_expose(const XEvent& e, void* data)
+{
+    if (!has_logo()) {
+        return tiny::MenuButton::on_expose(e, data);
+    }
+    const uint8_t state = get_theme_state();
+    XSetWindowBackground(display, window, get_style().get_bg(state));
+    XClearWindow(display, window);
+    icons->draw(window, "start-here", height * 3 / 5, get_style().get_fg(state),
+                width, height);
+}
+
 Panel::Panel():
     tiny::Box(tiny::Box::Type::Horizontal, 0, shell_theme.panel),
-    btn_main(shell_theme.panel_app_width, shell_theme.panel, "Main Menu")
+    logo(shell_theme.panel_app_width, shell_theme.panel, "Main Menu")
 {
     name = "wm_panel";
 }
@@ -88,9 +113,12 @@ void Panel::realize(::Window root, int x, int y)
 
     menu_main.realize(root);
 
-    push_start(&btn_main);
+    if (logo.has_logo()) { // a square with the logo instead of the text
+        logo.resize(height, height);
+    }
+    push_start(&logo);
 
-    btn_main.set_popover(&menu_main);
+    logo.set_popover(&menu_main);
 }
 
 void Panel::add_applet(tiny::Widget* applet, Side side)
