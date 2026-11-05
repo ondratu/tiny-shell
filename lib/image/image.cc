@@ -69,6 +69,21 @@ Image premultiplied(const unsigned char* rgba, int width, int height)
     return image;
 }
 
+Image tint(const Image& image, uint32_t rgb)
+{
+    Image result;
+    result.width = image.width;
+    result.height = image.height;
+    result.pixels.reserve(image.pixels.size());
+    for (const uint32_t pixel : image.pixels) {
+        const uint32_t a = pixel >> 24;
+        const auto mul = [a](uint32_t c) { return (c * a + 127) / 255; };
+        result.pixels.push_back(a << 24 | mul(rgb >> 16 & 0xFF) << 16 |
+                                mul(rgb >> 8 & 0xFF) << 8 | mul(rgb & 0xFF));
+    }
+    return result;
+}
+
 namespace {
 
 std::optional<Image> load_png(const std::string& path)

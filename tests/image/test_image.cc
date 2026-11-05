@@ -352,3 +352,20 @@ TEST(ResizeImageTest, a_wrong_picture_or_size_gives_nothing)
     EXPECT_FALSE(tiny::image::resize_image(
             image, tiny::image::MAX_RESIZE_SIDE + 1, 1));
 }
+
+TEST(TintTest, keeps_the_alpha_and_changes_the_color)
+{
+    tiny::image::Image white;
+    white.width = 3;
+    white.height = 1;
+    // opaque, half transparent (premultiplied white) and empty
+    white.pixels = {0xFFFFFFFF, 0x80808080, 0x00000000};
+
+    const auto red = tiny::image::tint(white, 0xFF0000);
+
+    ASSERT_TRUE(red.valid());
+    EXPECT_EQ(red.width, 3);
+    EXPECT_EQ(red.at(0, 0), 0xFFFF0000u);
+    EXPECT_EQ(red.at(1, 0), 0x80800000u); // premultiplied: 0xFF * 0x80 / 0xFF
+    EXPECT_EQ(red.at(2, 0), 0x00000000u);
+}

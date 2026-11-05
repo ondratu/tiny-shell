@@ -53,6 +53,15 @@ Image premultiplied(const unsigned char* rgba, int width, int height);
 std::optional<Image> load_image(const std::string& path, int size);
 
 /**
+ * @short Paint the shape of the picture with one color.
+ *
+ * The alpha of every pixel stays, the color (0xRRGGBB) replaces the real one:
+ * a symbolic icon (a shape on a transparent background) gets the color of the
+ * text around it. The result is premultiplied like the input.
+ */
+Image tint(const Image& image, uint32_t rgb);
+
+/**
  * @short Scale the picture to exactly `width` x `height` pixels.
  *
  * The aspect ratio is not kept. Up it uses a bilinear filter, down the
