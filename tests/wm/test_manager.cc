@@ -4630,3 +4630,109 @@ TEST_F(ManagerTest, the_commands_of_the_main_menu_can_be_set)
     EXPECT_EQ(manager->restart_command, "my-restart");
     EXPECT_EQ(manager->shutdown_command, "my-shutdown");
 }
+
+namespace {
+
+//! The lines that a wallpaper program wrote, one for each of its runs
+size_t runs_of(const std::filesystem::path& marker)
+{
+    std::ifstream in(marker);
+    size_t lines = 0;
+    for (std::string line; std::getline(in, line);) {
+        ++lines;
+    }
+    return lines;
+}
+
+XConfigureEvent root_configure(::Window window, int width, int height)
+{
+    XConfigureEvent e = {};
+    e.type = ConfigureNotify;
+    e.window = window;
+    e.width = width;
+    e.height = height;
+    return e;
+}
+
+} // namespace
+
+TEST_F(ManagerTest,
+       the_wallpaper_program_runs_at_once_and_when_the_screen_changes)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-wallpaper-");
+    manager->set_wallpaper_command(
+            {"sh", "-c", "echo run >> " + marker.string()});
+    ASSERT_TRUE(wait_for([&] { return runs_of(marker) == 1; }));
+
+    const int width = manager->screen_width;
+    const int height = manager->screen_height;
+    ASSERT_GT(width, 0);
+    // nothing new: the same size, and a window that is not the root
+    manager->on_root_configure(root_configure(root_window(), width, height));
+    manager->on_root_configure(
+            root_configure(root_window() + 1, width + 1, height));
+    // the screen has another size (RandR)
+    manager->on_root_configure(
+            root_configure(root_window(), width + 10, height + 10));
+
+    EXPECT_TRUE(wait_for([&] { return runs_of(marker) == 2; }));
+    EXPECT_EQ(manager->screen_width, width + 10);
+    EXPECT_EQ(manager->screen_height, height + 10);
+    // the same size again is not a change
+    manager->on_root_configure(
+            root_configure(root_window(), width + 10, height + 10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_EQ(runs_of(marker), 2u);
+    std::filesystem::remove(marker);
+}
+
+TEST_F(ManagerTest, the_root_window_events_arrive_to_the_manager)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-wallpaper-event-");
+    manager->set_wallpaper_command(
+            {"sh", "-c", "echo run >> " + marker.string()});
+    ASSERT_TRUE(wait_for([&] { return runs_of(marker) == 1; }));
+
+    // what the server sends to the root when the screen changes its size
+    XEvent e = {};
+    e.xconfigure = root_configure(root_window(), manager->screen_width + 4,
+                                  manager->screen_height);
+    e.xconfigure.event = root_window();
+    XSendEvent(tiny::get_display(), root_window(), False, StructureNotifyMask,
+               &e);
+    run_loop();
+
+    EXPECT_TRUE(wait_for([&] { return runs_of(marker) == 2; }));
+    std::filesystem::remove(marker);
+}
+
+TEST_F(ManagerTest, no_wallpaper_program_means_a_screen_change_runs_nothing)
+{
+    start();
+    ASSERT_TRUE(manager->wallpaper_command.empty());
+    manager->on_root_configure(root_configure(root_window(), 1, 1));
+    EXPECT_EQ(manager->screen_width, 1); // it is only remembered
+}
+
+TEST_F(ManagerTest,
+       the_variant_changes_the_color_of_the_root_but_not_a_wallpaper)
+{
+    const VariantGuard guard;
+    start();
+    // a point in the middle: the panel and the dock are over the edges
+    auto root_pixel = [this] {
+        const int y = manager->screen_height / 2;
+        return Image(root_window(), 1, y + 1).at(0, y);
+    };
+
+    manager->set_variant(tiny::Variant::Light);
+    EXPECT_EQ(root_pixel(), tiny::wm::shell_theme.root_background & 0xFFFFFFu);
+
+    manager->wallpaper_command = {"true"};
+    XSetWindowBackground(tiny::get_display(), root_window(), 0x123456);
+    XClearWindow(tiny::get_display(), root_window());
+    manager->set_variant(tiny::Variant::Dark);
+    EXPECT_EQ(root_pixel(), 0x123456u);
+}

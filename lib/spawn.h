@@ -35,6 +35,16 @@ pid_t spawn_shell(const std::string& command);
  */
 pid_t spawn_command(const std::string& text);
 
+/**
+ * @short The program `name` that is next to the running program.
+ *
+ * When `argv0` has a directory (the build directory, an installation that is
+ * not in PATH) it is the path of `name` there, if that file can be executed;
+ * else just `name`, which is searched in PATH. The path is resolved, so a
+ * change of the working directory does not break it.
+ */
+std::string sibling_program(const char* argv0, const std::string& name);
+
 /// Collect finished children (SIGCHLD) so they do not stay as zombies.
 void reap_children();
 

@@ -9,9 +9,9 @@
 #include <vector>
 
 #include <unistd.h>
-#include <climits>
 
 #include "object.h"
+#include "spawn.h"
 #include "theme.h"
 #include "wm/shell_theme.h"
 #include "wm/config.h"
@@ -74,23 +74,6 @@ std::optional<int> print_and_exit(const tiny::wm::Options& options,
             break;
     }
     return std::nullopt;
-}
-
-//! `tiny-settings` next to the program when it was started with a path (the
-//! build directory), else the one in PATH
-std::string settings_program(const char* argv0)
-{
-    // a relative path would not lead to the program after a change of the
-    // working directory
-    char resolved[PATH_MAX];
-    const std::string program =
-            realpath(argv0, resolved) != nullptr ? resolved : argv0;
-    const size_t slash = program.rfind('/');
-    if (slash == std::string::npos) {
-        return "tiny-settings";
-    }
-    const std::string sibling = program.substr(0, slash + 1) + "tiny-settings";
-    return access(sibling.c_str(), X_OK) == 0 ? sibling : "tiny-settings";
 }
 
 //! True when nobody else has the redirect of the root window
@@ -201,7 +184,8 @@ int main(int argc, char** argv)
         manager.set_power_commands(config.reboot_command,
                                    config.poweroff_command);
         manager.set_terminal(config.terminal);
-        manager.set_settings_command(settings_program(argv[0]));
+        manager.set_settings_command(
+                tiny::sibling_program(argv[0], "tiny-settings"));
         const std::string user_file = tiny::wm::user_config_file(
                 getenv("XDG_CONFIG_HOME"), getenv("HOME"));
         manager.set_favorites(
@@ -218,6 +202,10 @@ int main(int argc, char** argv)
                     fprintf(stderr, "%s: the favorites are not saved: %s\n",
                             argv0.c_str(), error.c_str());
                 });
+        if (!config.wallpaper_file.empty()) {
+            manager.set_wallpaper_command(
+                    {tiny::sibling_program(argv[0], "tiny-wallpaper")});
+        }
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {

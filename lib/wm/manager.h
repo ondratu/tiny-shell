@@ -61,6 +61,16 @@ class Manager : public tiny::Object {
     }
 
     /**
+     * @short The program that draws the wallpaper, with its arguments.
+     *
+     * It is started now and each time the screen changes its size
+     * (`tiny-wallpaper`; it reads the size itself). An empty command means no
+     * wallpaper: the root window has the color of the theme, which changes
+     * with the variant of the theme. The picture does not.
+     */
+    void set_wallpaper_command(std::vector<std::string> command);
+
+    /**
      * @short The favorite applications of the dock, the ids of desktop files.
      *
      * Their icons stay in the dock when they do not run. An id that is not an
@@ -286,6 +296,7 @@ class Manager : public tiny::Object {
     void on_selection_clear(const XSelectionClearEvent& e);
 
     void on_property_notify(const XPropertyEvent& e);
+    void on_root_configure(const XConfigureEvent& e);
 
     void on_map_request(const XMapRequestEvent& e);
 
@@ -339,6 +350,9 @@ class Manager : public tiny::Object {
 
     // until there is a configuration the commands are the systemd ones
     std::string settings_command = "tiny-settings";
+    std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
+    int screen_width = 0; //!< the root window, to see a change
+    int screen_height = 0;
     std::string force_quit_program = "xkill";
     std::vector<std::string> terminal_program = {"xterm"};
     std::string restart_command = Config().reboot_command;

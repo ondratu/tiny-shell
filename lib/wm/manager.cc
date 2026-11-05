@@ -73,6 +73,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     // before the existing windows are added to the dock.
     XWindowAttributes attrs;
     XGetWindowAttributes(display_arg, root_arg, &attrs);
+    screen_width = attrs.width;
+    screen_height = attrs.height;
 
     wm_panel.realize(root_arg, 0, 0);
     wm_panel.set_events();
@@ -253,8 +255,10 @@ void Manager::register_actions()
 void Manager::set_variant(Variant variant)
 {
     shell_theme.set_variant(variant);
-    XSetWindowBackground(display, root, shell_theme.root_background);
-    XClearWindow(display, root);
+    if (wallpaper_command.empty()) { // a picture does not change with the theme
+        XSetWindowBackground(display, root, shell_theme.root_background);
+        XClearWindow(display, root);
+    }
     wm_panel.restyle();
     wm_panel.menu_main.restyle();
     wm_dock.restyle();
@@ -270,8 +274,10 @@ void Manager::set_variant(Variant variant)
 
 void Manager::set_events()
 {
+    // StructureNotify: the size of the screen (RandR) changes
     XSelectInput(display, root,
-                 SubstructureNotifyMask | SubstructureRedirectMask);
+                 SubstructureNotifyMask | SubstructureRedirectMask |
+                         StructureNotifyMask);
 
     // Alt + Tab
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab), Mod1Mask,
@@ -828,6 +834,9 @@ void Manager::main_loop()
             case ConfigureRequest: // need for resize requests from app windows
                 on_configure_request(event.xconfigurerequest);
                 break;
+            case ConfigureNotify: // the screen has a new size
+                on_root_configure(event.xconfigure);
+                break;
             default:
 #ifdef DEBUG
                 fprintf(stderr, "Unhandled event: %s (%lx)\n",
@@ -1324,6 +1333,23 @@ void Manager::run_system_command(const std::string& command)
     if (tiny::spawn_command(command) < 0) {
         tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
     }
+}
+
+void Manager::set_wallpaper_command(std::vector<std::string> command)
+{
+    wallpaper_command = std::move(command);
+    run_program(wallpaper_command);
+}
+
+void Manager::on_root_configure(const XConfigureEvent& e)
+{
+    if (e.window != root ||
+        (e.width == screen_width && e.height == screen_height)) {
+        return; // a window, or the root moved without a new size
+    }
+    screen_width = e.width;
+    screen_height = e.height;
+    run_program(wallpaper_command); // nothing when there is no wallpaper
 }
 
 void Manager::run_program(const std::vector<std::string>& argv)

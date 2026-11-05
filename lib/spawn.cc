@@ -5,7 +5,9 @@
 #include <unistd.h>
 
 #include <cctype>
+#include <climits>
 #include <cerrno>
+#include <cstdlib>
 #include <csignal>
 
 namespace tiny {
@@ -120,6 +122,19 @@ pid_t spawn_command(const std::string& text)
         }
     }
     return spawn(argv);
+}
+
+std::string sibling_program(const char* argv0, const std::string& name)
+{
+    char resolved[PATH_MAX];
+    const std::string program =
+            realpath(argv0, resolved) != nullptr ? resolved : argv0;
+    const size_t slash = program.rfind('/');
+    if (slash == std::string::npos) {
+        return name;
+    }
+    const std::string sibling = program.substr(0, slash + 1) + name;
+    return access(sibling.c_str(), X_OK) == 0 ? sibling : name;
 }
 
 void reap_children()
