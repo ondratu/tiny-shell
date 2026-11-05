@@ -18,8 +18,9 @@ constexpr bool sizes_ascend()
             return false;
         }
     }
-    return std::size(icon_sizes) > 0;
+    return true;
 }
+static_assert(std::size(icon_sizes) > 0, "there is a size to choose");
 static_assert(sizes_ascend(), "the icon sizes are a list that grows");
 constexpr int min_columns = 4;
 constexpr int min_rows = 2;
