@@ -111,8 +111,6 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
-    wm_about.realize(root_arg, 0, 0);
-    wm_about.set_events();
 
     wm_unresponsive.realize(root_arg);
     wm_unresponsive.on_wait.connect([this](const XEvent&) {
@@ -262,8 +260,7 @@ Manager::~Manager()
 
 void Manager::register_actions()
 {
-    actions.add("about",
-                [this] { wm_about.popup(version_number(), system_info()); });
+    actions.add("about", [this] { run_program({about_command}); });
     actions.add("settings", [this] { run_program({settings_command}); });
     actions.add("terminal", [this] { run_program(terminal_program); });
     actions.add("force-quit", [this] { run_program({force_quit_program}); });
@@ -301,7 +298,6 @@ void Manager::set_variant(Variant variant)
     wm_dock.get_windows_menu().restyle();
     wm_launcher.restyle();
     wm_run.restyle();
-    wm_about.restyle();
     wm_unresponsive.restyle();
     for (const auto& entry : wm_windows) {
         entry.second->restyle_frame();

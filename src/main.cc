@@ -186,6 +186,7 @@ int main(int argc, char** argv)
         manager.set_power_commands(config.reboot_command,
                                    config.poweroff_command);
         manager.set_terminal(config.terminal);
+        manager.set_about_command(tiny::sibling_program(argv[0], "tiny-about"));
         manager.set_settings_command(
                 tiny::sibling_program(argv[0], "tiny-settings"));
         const std::string user_file = tiny::wm::user_config_file(

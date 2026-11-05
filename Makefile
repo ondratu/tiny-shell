@@ -96,11 +96,12 @@ EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc
 TARGET = $(BUILD)/tiny-shell
 FONTS = $(BUILD)/tiny-fonts
 SETTINGS = $(BUILD)/tiny-settings
+ABOUT = $(BUILD)/tiny-about
 WALLPAPER = $(BUILD)/tiny-wallpaper
 
-PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER) $(EXAMPLES)
+PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
-    $(BUILD)/src/wallpaper.o \
+    $(BUILD)/src/about.o $(BUILD)/src/wallpaper.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
@@ -108,7 +109,7 @@ DEP = $(OBJ:.o=.d)
     lint-analyze asan cppcheck help layers install uninstall
 .DELETE_ON_ERROR:
 
-all: $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER)
+all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER)
 
 # A small binary without the debugging information, into build-release.
 # CI measures the size with -flto on top of this (see ci.yml).
@@ -124,7 +125,7 @@ release:
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
-INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER)
+INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER)
 
 install: all
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
@@ -140,7 +141,7 @@ uninstall:
 	    rm -f "$(DESTDIR)$(DATADIR)/$$f"; done
 
 help:
-	@echo "make            build tiny-shell, tiny-fonts, tiny-settings and tiny-wallpaper"
+	@echo "make            build tiny-shell, tiny-fonts, tiny-settings, tiny-about and tiny-wallpaper"
 	@echo "make layers     check that the widgets do not include the shell"
 	@echo "make release    build small stripped programs into build-release"
 	@echo "make install    install the programs and data/ (PREFIX=/usr/local, DESTDIR)"
@@ -185,7 +186,8 @@ $(SHELL_LIB): $(SHELL_OBJ)
 	$(AR) rcs $@ $^
 
 # tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc,
-# tiny-settings from src/settings.cc, tiny-wallpaper from src/wallpaper.cc,
+# tiny-settings from src/settings.cc, tiny-about from src/about.cc,
+# tiny-wallpaper from src/wallpaper.cc,
 # the examples from examples/<name>.cc
 $(TARGET): $(BUILD)/src/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
@@ -194,6 +196,9 @@ $(FONTS): $(BUILD)/src/fonts.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(SETTINGS): $(BUILD)/src/settings.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+$(ABOUT): $(BUILD)/src/about.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
