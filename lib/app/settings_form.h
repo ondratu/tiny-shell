@@ -232,8 +232,8 @@ class SettingsForm {
     //! Save; in the list of fonts it is Select
     Rect save_rect() const;
 
-    /// Where the small picture of the wallpaper is drawn: under the fields of
-    /// the Appearance, up to the message.
+    /// Where the small picture of the wallpaper is drawn: between the first and
+    /// the second field of the Appearance (above the path of the file).
     Rect thumbnail_rect() const;
 
     /// Where the problem, and under it the hint, are written.

@@ -268,7 +268,7 @@ sections and the fields of the chosen section:
 - **Fonts:** the font (a family or a list of families separated by commas, like
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
 - **Appearance:** the scale, the wallpaper and how it covers the screen (a
-  small picture of the file under the fields shows that the path is right), the
+  small picture of the file above the path shows that the path is right), the
   mode of the dock (Auto-hide, On, Off) and the format of the clock.
 - **Applications:** the terminal.
 

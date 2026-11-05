@@ -4874,6 +4874,22 @@ TEST_F(DockModeTest,
     EXPECT_GT(strip, frame);
 }
 
+TEST_F(DockModeTest, a_window_that_is_raised_later_does_not_hide_the_strip)
+{
+    WmWindow* covering = cover_the_dock();
+    ASSERT_TRUE(strip_shown());
+
+    XRaiseWindow(dsp(), covering->frame()); // like a full screen window does
+    XSync(dsp(), False);
+    run_loop();
+
+    const std::vector<::Window> order = children_of(root_window());
+    const auto strip = std::find(order.begin(), order.end(),
+                                 manager->wm_dock_reveal.get_window());
+    const auto frame = std::find(order.begin(), order.end(), covering->frame());
+    EXPECT_GT(strip, frame);
+}
+
 TEST_F(DockModeTest, the_strip_is_at_the_bottom_edge_of_the_screen)
 {
     cover_the_dock();

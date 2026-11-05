@@ -837,6 +837,14 @@ void Manager::main_loop()
             continue;
         }
 
+        // a window raised (a full screen one, a client that asks for it) must
+        // not hide the strip that shows the dock
+        if ((event.type == ConfigureNotify || event.type == MapNotify) &&
+            window != wm_dock_reveal.get_window() &&
+            wm_dock_reveal.get_maped()) {
+            XRaiseWindow(display, wm_dock_reveal.get_window());
+        }
+
         auto signal_id = std::make_pair(event.type, window);
 
         // call manager handlers first
