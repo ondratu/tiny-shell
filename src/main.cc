@@ -15,11 +15,11 @@
 #include "theme.h"
 #include "wm/shell_theme.h"
 #include "wm/config.h"
-#include "xdg/application_index.h"
 #include "wm/manager.h"
 #include "wm/options.h"
 #include "wm/selection.h"
 #include "wm/xresources.h"
+#include "xdg/application_index.h"
 
 namespace {
 
