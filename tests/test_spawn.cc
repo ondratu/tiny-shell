@@ -237,3 +237,28 @@ TEST(SpawnCommandTest, any_blank_separates_the_words)
     EXPECT_GT(tiny::spawn_command("true\r"), 0);
     EXPECT_GT(tiny::spawn_command("\vtrue\f"), 0);
 }
+
+TEST(SiblingProgramTest, a_program_next_to_the_running_one)
+{
+    const auto dir = std::filesystem::temp_directory_path() /
+                     ("tiny-sibling" + std::to_string(getpid()));
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    std::ofstream(dir / "main") << "#!/bin/sh\n";
+    std::ofstream(dir / "other") << "#!/bin/sh\n";
+    std::filesystem::permissions(dir / "other",
+                                 std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::add);
+    std::ofstream(dir / "data") << "text\n"; // not executable
+    const std::string main = (dir / "main").string();
+
+    // the path is resolved, so a change of the directory does not hurt
+    EXPECT_EQ(tiny::sibling_program(main.c_str(), "other"),
+              std::filesystem::canonical(dir / "other").string());
+    // the sibling is not there, or it can't be executed: PATH decides
+    EXPECT_EQ(tiny::sibling_program(main.c_str(), "absent"), "absent");
+    EXPECT_EQ(tiny::sibling_program(main.c_str(), "data"), "data");
+    // started from PATH: argv[0] is a bare name
+    EXPECT_EQ(tiny::sibling_program("tiny-no-such-program", "other"), "other");
+    std::filesystem::remove_all(dir);
+}
