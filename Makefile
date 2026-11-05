@@ -54,12 +54,14 @@ SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
 # -Os: small is the first goal. -fno-rtti: nothing uses dynamic_cast or typeid
 # (the typeinfo of the classes was 15 kB of the binary).
+# -fno-asynchronous-unwind-tables: exceptions work, only a debugger or a signal
+# handler can't unwind the stack without them (it was 9.5 kB of the binary).
 # The debugging information (-g) is for development: make DEBUG=1 (it makes
 # the libraries and the programs several times bigger).
 ifdef DEBUG
 CXXFLAGS ?= -Og -g
 else
-CXXFLAGS ?= -Os
+CXXFLAGS ?= -Os -fno-asynchronous-unwind-tables
 endif
 override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
@@ -104,7 +106,8 @@ all: $(TARGET) $(FONTS) $(SETTINGS)
 # CI measures the size with -flto on top of this (see ci.yml).
 RELEASE_DIR = build-release
 release:
-	$(MAKE) BUILD=$(RELEASE_DIR) CXXFLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections" \
+	$(MAKE) BUILD=$(RELEASE_DIR) CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -ffunction-sections \
+	    -fdata-sections" \
 	    LDFLAGS="-s -Wl,--gc-sections" all
 
 help:
