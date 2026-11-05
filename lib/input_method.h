@@ -21,7 +21,8 @@ std::string latin1_to_utf8(const char* bytes, int len);
 class InputMethod {
   public:
     //! `environment`: use the method that `XMODIFIERS` names (the programs that
-    //! filter the events with `XFilterEvent` do); else the default one
+    //! filter the events with `XFilterEvent` do), and the built-in one of
+    //! Xlib when that is not there; else the default one
     InputMethod(::Display* display, ::Window window, bool environment = false);
     ~InputMethod();
     InputMethod(const InputMethod&) = delete;
@@ -37,6 +38,8 @@ class InputMethod {
     void set_focus(bool focus) const;
 
   private:
+    void open(::Display* display, ::Window window);
+
     XIM xim = nullptr;
     XIC xic = nullptr;
 };

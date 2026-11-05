@@ -23,15 +23,34 @@ std::string latin1_to_utf8(const char* bytes, int len)
 InputMethod::InputMethod(::Display* display, ::Window window, bool environment)
 {
     if (environment) {
-        if (XSupportsLocale() == False) {
-            return;
+        if (XSupportsLocale() != False) {
+            XSetLocaleModifiers(""); // XMODIFIERS: ibus, fcitx, ...
+            open(display, window);
         }
-        XSetLocaleModifiers("");
+        if (xic == nullptr) {
+            // The method of the environment is not there (a nested X server
+            // has no ibus of the session) or the locale is not supported: the
+            // built-in method of Xlib still types every character, not only
+            // Latin-1.
+            XSetLocaleModifiers("@im=none");
+            open(display, window);
+        }
+        return;
     }
+    open(display, window);
+}
+
+void InputMethod::open(::Display* display, ::Window window)
+{
     xim = XOpenIM(display, nullptr, nullptr, nullptr);
-    if (xim != nullptr) {
-        xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                        XNClientWindow, window, XNFocusWindow, window, nullptr);
+    if (xim == nullptr) {
+        return;
+    }
+    xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                    XNClientWindow, window, XNFocusWindow, window, nullptr);
+    if (xic == nullptr) { // a method that can't do the style is no use
+        XCloseIM(xim);
+        xim = nullptr;
     }
 }
 
