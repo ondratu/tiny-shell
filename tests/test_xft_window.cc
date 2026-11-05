@@ -111,6 +111,57 @@ TEST(XftWindowTest, the_window_has_the_size_and_the_hints_of_the_spec)
     EXPECT_EQ(sizes.min_height, 30);
 }
 
+TEST(XftWindowTest, the_icon_is_published_as_not_premultiplied_argb)
+{
+    TestWindow w;
+    tiny::image::Image icon;
+    icon.width = 2;
+    icon.height = 1;
+    // opaque red, and half transparent white (premultiplied: 0x80 each)
+    icon.pixels = {0xFFFF0000, 0x80808080};
+
+    w.set_icon({icon, tiny::image::Image{}}); // an empty one is skipped
+
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0;
+    unsigned long left = 0;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(
+                      tiny::get_display(), w.get_window(),
+                      XInternAtom(tiny::get_display(), "_NET_WM_ICON", False),
+                      0, 100, False, XA_CARDINAL, &type, &format, &count, &left,
+                      &data),
+              Success);
+    ASSERT_EQ(format, 32);
+    ASSERT_EQ(count, 4u);
+    const auto* words = reinterpret_cast<const unsigned long*>(data);
+    EXPECT_EQ(words[0], 2u);
+    EXPECT_EQ(words[1], 1u);
+    EXPECT_EQ(words[2] & 0xFFFFFFFFu, 0xFFFF0000u);
+    EXPECT_EQ(words[3] & 0xFFFFFFFFu, 0x80FFFFFFu);
+    XFree(data);
+}
+
+TEST(XftWindowTest, an_icon_with_no_picture_publishes_nothing)
+{
+    TestWindow w;
+
+    w.set_icon({});
+
+    int format = 0;
+    Atom type = None;
+    unsigned long count = 0;
+    unsigned long left = 0;
+    unsigned char* data = nullptr;
+    XGetWindowProperty(tiny::get_display(), w.get_window(),
+                       XInternAtom(tiny::get_display(), "_NET_WM_ICON", False),
+                       0, 100, False, XA_CARDINAL, &type, &format, &count,
+                       &left, &data);
+    EXPECT_EQ(type, static_cast<Atom>(None));
+    XFree(data);
+}
+
 TEST(XftWindowTest, update_paints_and_shows_the_buffer_in_the_window)
 {
     TestWindow w;

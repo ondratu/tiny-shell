@@ -92,6 +92,37 @@ void XftWindow::create(const Spec& spec)
                          DefaultColormap(display, screen));
 }
 
+void XftWindow::set_icon(const std::vector<image::Image>& icons)
+{
+    // the format of the property: the width, the height and the pixels of
+    // every icon, the pixels as ARGB that is not premultiplied; Xlib wants
+    // `long` for a property of 32 bits
+    std::vector<long> data;
+    for (const image::Image& icon : icons) {
+        if (!icon.valid()) {
+            continue;
+        }
+        data.push_back(icon.width);
+        data.push_back(icon.height);
+        for (const uint32_t pixel : icon.pixels) {
+            const uint32_t a = pixel >> 24;
+            const auto plain = [a](uint32_t c) {
+                return a == 0 ? 0u : std::min(255u, (c * 255 + a / 2) / a);
+            };
+            data.push_back(static_cast<long>(
+                    a << 24 | plain(pixel >> 16 & 0xFF) << 16 |
+                    plain(pixel >> 8 & 0xFF) << 8 | plain(pixel & 0xFF)));
+        }
+    }
+    if (data.empty()) {
+        return;
+    }
+    XChangeProperty(display, window, atoms._NET_WM_ICON, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(data.data()),
+                    static_cast<int>(data.size()));
+}
+
 void XftWindow::new_buffer()
 {
     const Pixmap old = buffer;
