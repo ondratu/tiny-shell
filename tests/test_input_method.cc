@@ -123,7 +123,7 @@ TEST(EnvironmentInputMethodTest,
             GTEST_SKIP() << "no input method in this locale";
         }
         // the keyboard of the test server has no key for a Czech letter
-        XEvent e = key_event(window, XK_a);
+        const XEvent e = key_event(window, XK_a);
         KeySym symbol = NoSymbol;
         EXPECT_EQ(input.lookup(e.xkey, symbol), "a");
     }

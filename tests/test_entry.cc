@@ -497,7 +497,7 @@ TEST_F(EntryEditTest, shift_insert_pastes_the_clipboard)
 
 TEST_F(EntryEditTest, the_middle_button_pastes_the_primary_selection)
 {
-    tiny::Display& d = tiny::get_display();
+    const tiny::Display& d = tiny::get_display();
     const ::Window owner =
             XCreateSimpleWindow(d, root_window(), 0, 0, 5, 5, 0, 0, 0);
     tiny::Clipboard primary(d, owner);

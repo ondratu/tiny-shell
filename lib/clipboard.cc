@@ -64,7 +64,7 @@ Clipboard::Clipboard(::Display* display_arg, ::Window window_arg):
 
 Clipboard::~Clipboard()
 {
-    for (Slot* s : {&primary, &board}) {
+    for (const Slot* s : {&primary, &board}) {
         if (s->ours && XGetSelectionOwner(display, s->selection) == window) {
             XSetSelectionOwner(display, s->selection, None, CurrentTime);
         }

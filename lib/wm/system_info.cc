@@ -30,7 +30,7 @@ std::string unquoted(std::string_view value)
 
 std::string read_file(const char* path)
 {
-    std::ifstream in(path);
+    const std::ifstream in(path);
     std::stringstream text;
     text << in.rdbuf();
     return text.str();
