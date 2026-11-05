@@ -762,9 +762,10 @@ bool SettingsForm::request_save()
         if (!problem(f).empty()) {
             // show the field that is wrong; the message tells why
             const Section was = section_;
+            const Field before = focus_;
             section_ = section_of(f);
             focus_ = f;
-            return section_ != was;
+            return section_ != was || focus_ != before;
         }
     }
     result_ = Result::Saved;

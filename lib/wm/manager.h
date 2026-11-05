@@ -280,6 +280,9 @@ class Manager : public tiny::Object {
     //! Remember `_NET_WM_USER_TIME` of the window as the time of the user
     void note_user_time(const Window* window);
 
+    //! Where the dock is (it is centered at the bottom of the screen)
+    tiny::Rect dock_area() const;
+
     //! Show or hide the dock as its mode, the active window and the pointer
     //! want (see `DockMode`); cheap when nothing changed
     void update_dock_visibility();

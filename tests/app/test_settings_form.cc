@@ -1536,3 +1536,18 @@ TEST(SettingsFormClockDockTest, some_fields_have_a_hint)
     EXPECT_NE(std::string(SettingsForm::hint(Field::Dock)), "");
     EXPECT_STREQ(SettingsForm::hint(Field::Size), "");
 }
+
+TEST(SettingsFormSectionTest, a_wrong_field_in_the_same_section_gets_the_focus)
+{
+    SettingsForm form = make(V("Gamma", "xterm -e", "1"));
+    form.set_section(SettingsForm::Section::Fonts);
+    form.key(Key::Tab); // Size
+    for (const char c : std::string("abc")) {
+        form.type(std::string(1, c)); // a size that is not a number
+    }
+    form.key(Key::Up); // Font: focus away from the wrong field
+
+    EXPECT_TRUE(form.key(Key::Return)); // changed, so it is painted again
+    EXPECT_EQ(form.focus(), Field::Size);
+    EXPECT_EQ(form.result(), Result::Editing);
+}

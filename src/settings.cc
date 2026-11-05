@@ -161,13 +161,13 @@ class SettingsApp : public tiny::XftWindow {
             } else if (symbol == XK_v || symbol == XK_V) {
                 paste(tiny::Clipboard::Which::Clipboard, e.time);
             } else if ((symbol == XK_c || symbol == XK_C) &&
-                       !SettingsForm::is_choice(form.focus())) {
-                // there is no selection in a field: the whole text is copied
+                       form.view() == SettingsForm::View::Form &&
+                       !SettingsForm::is_choice(form.focus()) &&
+                       !form.text(form.focus()).empty()) {
+                // there is no selection in a field: the whole text is copied;
+                // nothing to copy leaves the clipboard as it is
                 clipboard().own(tiny::Clipboard::Which::Clipboard,
-                                form.view() == SettingsForm::View::Form
-                                        ? form.text(form.focus())
-                                        : std::string(),
-                                e.time);
+                                form.text(form.focus()), e.time);
             } else if (symbol == XK_Page_Down || symbol == XK_Page_Up ||
                        symbol == XK_Tab || symbol == XK_ISO_Left_Tab) {
                 const bool back = symbol == XK_Page_Up ||

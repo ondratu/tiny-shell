@@ -98,8 +98,12 @@ void Entry::on_key_press(const XEvent& e, void*)
         return paste(Clipboard::Which::Clipboard, e);
     }
     if (control && (keysym == XK_c || keysym == XK_C)) {
-        // there is no selection inside of the entry: the whole text is copied
-        clipboard->own(Clipboard::Which::Clipboard, field.text(), e.xkey.time);
+        // there is no selection inside of the entry: the whole text is copied;
+        // an empty entry leaves the clipboard as it is
+        if (!field.text().empty()) {
+            clipboard->own(Clipboard::Which::Clipboard, field.text(),
+                           e.xkey.time);
+        }
         return;
     }
 
