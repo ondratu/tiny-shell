@@ -19,7 +19,6 @@
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/unresponsive_dialog.h"
-#include "wm/about_dialog.h"
 #include "wm/symbolic_icons.h"
 #include "wm/dock.h"
 #include "wm/dock_mode.h"
@@ -57,6 +56,13 @@ class Manager : public tiny::Object {
             terminal_program.pop_back();
         }
         wm_launcher.set_terminal(std::move(command));
+    }
+
+    //! The program of the About item (`tiny-about` is searched in PATH by
+    //! default)
+    void set_about_command(std::string command)
+    {
+        about_command = std::move(command);
     }
 
     //! The program of the Settings item of the main menu (`tiny-settings`
@@ -350,7 +356,6 @@ class Manager : public tiny::Object {
     tiny::Timers::Id clock_timer = 0;
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
-    AboutDialog wm_about;
     Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
     Dock wm_dock;
@@ -392,6 +397,7 @@ class Manager : public tiny::Object {
 
     // until there is a configuration the commands are the systemd ones
     std::string settings_command = "tiny-settings";
+    std::string about_command = "tiny-about";
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
     int screen_width = 0; //!< the root window, to see a change
     int screen_height = 0;

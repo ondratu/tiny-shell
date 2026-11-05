@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=About Tiny Shell
+Comment=The version of Tiny Shell and of the system
+Exec=tiny-about
+Icon=tiny-shell
+Terminal=false
+NoDisplay=true
+StartupWMClass=TinyAbout

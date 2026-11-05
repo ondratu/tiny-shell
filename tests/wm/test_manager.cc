@@ -218,19 +218,6 @@ TEST_F(ManagerTest, an_action_can_end_the_manager_and_open_a_dialog)
     EXPECT_FALSE(manager->running);
 }
 
-TEST_F(ManagerTest, the_first_item_of_the_main_menu_opens_the_about_dialog)
-{
-    start();
-    ASSERT_FALSE(manager->wm_about.get_maped());
-
-    auto& about = manager->wm_panel.menu_main.about;
-    about.on_click(&about, make_event(ButtonRelease));
-
-    EXPECT_TRUE(manager->wm_about.get_maped());
-    EXPECT_EQ(manager->wm_about.line(0), "Tiny Shell");
-    EXPECT_EQ(manager->wm_about.line(2).rfind("Version ", 0), 0u);
-}
-
 TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
 {
     start();
@@ -398,6 +385,22 @@ std::filesystem::path marker_program(const std::filesystem::path& marker)
 }
 
 } // namespace
+
+TEST_F(ManagerTest, about_of_the_main_menu_starts_the_about_program)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-about-");
+    const auto program = marker_program(marker);
+    manager->set_about_command(program.string());
+
+    auto& about = manager->wm_panel.menu_main.about;
+    about.on_click(&about, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->running);
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
 
 TEST_F(ManagerTest, settings_of_the_main_menu_starts_the_settings_program)
 {
