@@ -161,7 +161,9 @@ void MenuButton::set_popover(Popover* popover_arg)
 void MenuButton::do_popup(Object*, const XEvent& e, void*)
 {
     if (popover && !popover->get_maped()) {
-        const int x = e.xbutton.x_root - e.xbutton.x + width / 2;
+        // popup() centers the popover under x
+        const int x = e.xbutton.x_root - e.xbutton.x +
+                      (popover_left ? popover->get_width() : width) / 2;
         // the border of the menu covers the edge of the button
         const int y =
                 e.xbutton.y_root - e.xbutton.y + height - popover->get_border();

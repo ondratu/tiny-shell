@@ -8,6 +8,16 @@
 
 namespace tiny::wm {
 
+uint32_t lighter(uint32_t rgb)
+{
+    uint32_t out = 0;
+    for (const unsigned shift : {16U, 8U, 0U}) {
+        const uint32_t channel = (rgb >> shift) & 0xFFU;
+        out |= ((channel + 0xFFU) / 2) << shift;
+    }
+    return out;
+}
+
 SymbolicIcons::SymbolicIcons(::Display* display_arg, ::Window root_arg,
                              std::vector<std::string> data_dirs):
     display(display_arg), root(root_arg), dirs(std::move(data_dirs))

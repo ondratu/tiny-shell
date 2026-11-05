@@ -287,12 +287,34 @@ TEST(PanelTest, the_logo_is_a_square_button_in_the_color_of_the_text)
     const ::Window main = child_at(panel.get_window(), 0, 0);
     ASSERT_NE(main, 0u);
     const int side = tiny::wm::shell_theme.panel;
-    EXPECT_EQ(attributes_of(main).width, side);
+    const int width = side * 3 / 5 * 2; // the icon and its half at both sides
+    EXPECT_EQ(attributes_of(main).width, width);
+    EXPECT_EQ(attributes_of(main).border_width, 0);
     send(main, make_event(Expose));
-    const Image img(main, side, side);
+    const Image img(main, width, side);
     const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
-    EXPECT_EQ(img.at(side / 2, side / 2), tiny::theme.widget.get_fg(normal));
+    EXPECT_EQ(img.at(width / 2, side / 2), tiny::theme.widget.get_fg(normal));
     EXPECT_EQ(img.at(0, 0), tiny::theme.widget.get_bg(normal));
+}
+
+TEST(PanelTest, the_menu_of_the_logo_starts_at_the_left_edge_of_the_screen)
+{
+    const IconFiles files({"start-here"});
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.dir()});
+    const WidgetFont font;
+    tiny::wm::Panel panel;
+    panel.set_icons(&icons);
+    panel.realize(root_window(), 0, 0);
+    panel.map_all();
+    const ::Window main = child_at(panel.get_window(), 0, 0);
+    ASSERT_NE(main, 0u);
+
+    send(main, make_event(EnterNotify));
+    send(main, make_event(ButtonRelease));
+
+    EXPECT_EQ(attributes_of(panel.menu_main).map_state, IsViewable);
+    EXPECT_EQ(attributes_of(panel.menu_main).x, 0);
 }
 
 TEST(PanelTest, without_the_logo_file_the_button_shows_the_text)

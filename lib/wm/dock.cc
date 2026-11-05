@@ -345,8 +345,8 @@ void DockIcon::on_expose(const XEvent&, void*)
     } else if (symbols != nullptr &&
                symbols->draw(window, "application-x-executable",
                              (dragging ? size / 2 : size) * 2 / 3,
-                             get_style().get_fg(get_theme_state()), width,
-                             size)) {
+                             lighter(get_style().get_fg(get_theme_state())),
+                             width, size)) {
         // the generic icon of an application that has none
     } else {
         // TODO: move to wm_window

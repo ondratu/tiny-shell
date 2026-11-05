@@ -116,11 +116,16 @@ void Panel::realize(::Window root, int x, int y)
     menu_main.realize(root);
 
     if (logo.has_logo()) { // a square with the logo instead of the text
-        logo.resize(height, height);
+        const int icon = height * 3 / 5;
+        logo.resize(icon * 2, height); // half of the icon at both sides
     }
     push_start(&logo);
+    if (logo.has_logo()) {
+        XSetWindowBorderWidth(display, logo.get_window(), 0);
+    }
 
     logo.set_popover(&menu_main);
+    logo.set_popover_left(true); // the menu starts at the edge of the screen
 }
 
 void Panel::add_applet(tiny::Widget* applet, Side side)
