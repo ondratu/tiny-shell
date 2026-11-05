@@ -61,14 +61,15 @@ std::string size_text(double size)
     return text;
 }
 
+//! All the fields, in the order of `SettingsForm::Field` (the order of the
+//! texts and of the targets)
 constexpr SettingsForm::Field fields[] = {
-        SettingsForm::Field::Font,      SettingsForm::Field::Size,
-        SettingsForm::Field::Style,     SettingsForm::Field::Terminal,
-        SettingsForm::Field::Scale,     SettingsForm::Field::Antialias,
-        SettingsForm::Field::Hinting,   SettingsForm::Field::Rgba,
-        SettingsForm::Field::Wallpaper, SettingsForm::Field::WallpaperMode};
-
-constexpr size_t field_count = std::size(fields);
+        SettingsForm::Field::Font,        SettingsForm::Field::Size,
+        SettingsForm::Field::Style,       SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale,       SettingsForm::Field::Antialias,
+        SettingsForm::Field::Hinting,     SettingsForm::Field::Rgba,
+        SettingsForm::Field::Wallpaper,   SettingsForm::Field::WallpaperMode,
+        SettingsForm::Field::ClockFormat, SettingsForm::Field::Dock};
 
 } // namespace
 
@@ -76,6 +77,7 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
 {
     Metrics m;
     m.margin = tiny::scaled(m.margin, factor);
+    m.sidebar_width = tiny::scaled(m.sidebar_width, factor);
     m.padding = tiny::scaled(m.padding, factor);
     m.label_width = tiny::scaled(m.label_width, factor);
     m.row_height = tiny::scaled(m.row_height, factor);
@@ -89,11 +91,12 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
 SettingsForm::SettingsForm(const Values& initial,
                            std::vector<std::string> families,
                            const Metrics& metrics, StylesFn styles_of):
-    fields_{TextField(initial.font),      TextField(initial.size),
-            TextField(initial.style),     TextField(initial.terminal),
-            TextField(initial.scale),     TextField(initial.antialias),
-            TextField(initial.hinting),   TextField(initial.rgba),
-            TextField(initial.wallpaper), TextField(initial.wallpaper_mode)},
+    fields_{TextField(initial.font),         TextField(initial.size),
+            TextField(initial.style),        TextField(initial.terminal),
+            TextField(initial.scale),        TextField(initial.antialias),
+            TextField(initial.hinting),      TextField(initial.rgba),
+            TextField(initial.wallpaper),    TextField(initial.wallpaper_mode),
+            TextField(initial.clock_format), TextField(initial.dock)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -113,29 +116,115 @@ void SettingsForm::resize(int width, int height)
 
 int SettingsForm::form_height() const
 {
-    // the fields, the message of two rows and the buttons
-    const auto rows = static_cast<int>(field_count) + 2 + 1;
+    // the rows of the longest section, the message of two rows and the buttons
+    size_t longest = 0;
+    for (const Section section :
+         {Section::Fonts, Section::Appearance, Section::Applications}) {
+        longest = std::max(longest, section_fields(section).size());
+    }
+    const auto rows = static_cast<int>(longest) + 2 + 1;
     return 2 * metrics_.margin + rows * metrics_.row_height +
-           static_cast<int>(field_count + 1) * metrics_.row_gap;
+           static_cast<int>(longest + 1) * metrics_.row_gap;
 }
 
 SettingsForm::Values SettingsForm::values() const
 {
-    return {text(Field::Font),      text(Field::Terminal),
-            text(Field::Scale),     text(Field::Size),
-            text(Field::Style),     text(Field::Antialias),
-            text(Field::Hinting),   text(Field::Rgba),
-            text(Field::Wallpaper), text(Field::WallpaperMode)};
+    return {text(Field::Font),        text(Field::Terminal),
+            text(Field::Scale),       text(Field::Size),
+            text(Field::Style),       text(Field::Antialias),
+            text(Field::Hinting),     text(Field::Rgba),
+            text(Field::Wallpaper),   text(Field::WallpaperMode),
+            text(Field::ClockFormat), text(Field::Dock)};
+}
+
+// The sections
+
+const char* SettingsForm::section_title(Section section)
+{
+    switch (section) {
+        case Section::Fonts:
+            return "Fonts";
+        case Section::Appearance:
+            return "Appearance";
+        case Section::Applications:
+            break;
+    }
+    return "Applications";
+}
+
+const std::vector<SettingsForm::Field>&
+SettingsForm::section_fields(Section section)
+{
+    static const std::vector<Field> fonts = {Field::Font,    Field::Size,
+                                             Field::Style,   Field::Antialias,
+                                             Field::Hinting, Field::Rgba};
+    static const std::vector<Field> appearance = {
+            Field::Scale, Field::Wallpaper, Field::WallpaperMode, Field::Dock,
+            Field::ClockFormat};
+    static const std::vector<Field> applications = {Field::Terminal};
+    switch (section) {
+        case Section::Fonts:
+            return fonts;
+        case Section::Appearance:
+            return appearance;
+        case Section::Applications:
+            break;
+    }
+    return applications;
+}
+
+SettingsForm::Section SettingsForm::section_of(Field field)
+{
+    for (const Section section : {Section::Fonts, Section::Appearance}) {
+        const std::vector<Field>& list = section_fields(section);
+        if (std::find(list.begin(), list.end(), field) != list.end()) {
+            return section;
+        }
+    }
+    return Section::Applications;
+}
+
+void SettingsForm::set_section(Section section)
+{
+    if (section == section_) {
+        return;
+    }
+    section_ = section;
+    focus_ = section_fields(section).front();
+    pressed_ = NoTarget;
+}
+
+const char* SettingsForm::hint(Field field)
+{
+    switch (field) {
+        case Field::ClockFormat:
+            return "A strftime format, e.g. %a %e %B %R; empty hides the "
+                   "clock.";
+        case Field::Dock:
+            return "Auto-hide: hidden under a window, the bottom edge shows "
+                   "it.";
+        case Field::Terminal:
+            return "The program and its arguments, e.g. xterm -e.";
+        case Field::Wallpaper:
+            return "The full path of a PNG or JPEG file.";
+        default:
+            break;
+    }
+    return "";
 }
 
 bool SettingsForm::is_choice(Field field)
 {
     return field == Field::Antialias || field == Field::Hinting ||
-           field == Field::Rgba || field == Field::WallpaperMode;
+           field == Field::Rgba || field == Field::WallpaperMode ||
+           field == Field::Dock;
 }
 
 wm::XftChoices SettingsForm::choices_of(Field field)
 {
+    if (field == Field::Dock) {
+        return wm::dock_choices();
+    }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
                                          : wm::xft_choices(xft_option(field));
 }
@@ -208,6 +297,15 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_wallpaper_mode(value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::Dock:
+            return wm::valid_dock_choice(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
+        case Field::ClockFormat:
+            return wm::valid_clock_format(value)
+                           ? ""
+                           : "The clock format must be a text without line "
+                             "breaks.";
         case Field::Scale:
             break;
     }
@@ -233,10 +331,11 @@ SettingsForm::Values SettingsForm::clean_values() const
         return std::string(trim(value));
     };
     const Values v = values();
-    return {clean(v.font),          clean(v.terminal), clean(v.scale),
-            clean(v.size),          clean(v.style),    clean(v.antialias),
-            clean(v.hinting),       clean(v.rgba),     clean(v.wallpaper),
-            clean(v.wallpaper_mode)};
+    // the clock format keeps its blanks: they are part of the format
+    return {clean(v.font),           clean(v.terminal), clean(v.scale),
+            clean(v.size),           clean(v.style),    clean(v.antialias),
+            clean(v.hinting),        clean(v.rgba),     clean(v.wallpaper),
+            clean(v.wallpaper_mode), v.clock_format,    clean(v.dock)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -256,18 +355,39 @@ int SettingsForm::shift(const TextField& field, int room) const
 
 // The form: the rows of the fields, then the message and the buttons
 
+//! The place of a field in its section, from the top (0 is the first)
+static int row_of(SettingsForm::Field field)
+{
+    const std::vector<SettingsForm::Field>& list =
+            SettingsForm::section_fields(SettingsForm::section_of(field));
+    return static_cast<int>(std::find(list.begin(), list.end(), field) -
+                            list.begin());
+}
+
+Rect SettingsForm::sidebar_rect() const
+{
+    return {0, 0, metrics_.sidebar_width, height_};
+}
+
+Rect SettingsForm::section_rect(Section section) const
+{
+    return {0,
+            metrics_.margin + static_cast<int>(section) * metrics_.row_height,
+            metrics_.sidebar_width, metrics_.row_height};
+}
+
 Rect SettingsForm::label_rect(Field field) const
 {
-    const int y =
-            metrics_.margin +
-            static_cast<int>(field) * (metrics_.row_height + metrics_.row_gap);
-    return {metrics_.margin, y, metrics_.label_width, metrics_.row_height};
+    const int y = metrics_.margin +
+                  row_of(field) * (metrics_.row_height + metrics_.row_gap);
+    return {metrics_.sidebar_width + metrics_.margin, y, metrics_.label_width,
+            metrics_.row_height};
 }
 
 Rect SettingsForm::field_rect(Field field) const
 {
     const Rect label = label_rect(field);
-    const int x = metrics_.margin + metrics_.label_width;
+    const int x = label.x + metrics_.label_width;
     // the font has the button that opens the list at its end
     const int reserved =
             field == Field::Font ? metrics_.choose_width + metrics_.row_gap : 0;
@@ -284,11 +404,10 @@ Rect SettingsForm::choose_rect() const
 
 Rect SettingsForm::message_rect() const
 {
-    const Rect last = label_rect(Field::WallpaperMode);
-    return {metrics_.margin + metrics_.label_width,
-            last.y + last.height + metrics_.row_gap,
-            std::max(1, width_ - 2 * metrics_.margin - metrics_.label_width),
-            2 * metrics_.row_height};
+    // over the buttons, the problem and under it the hint
+    const int x = metrics_.sidebar_width + metrics_.margin;
+    return {x, save_rect().y - metrics_.row_gap - 2 * metrics_.row_height,
+            std::max(1, width_ - x - metrics_.margin), 2 * metrics_.row_height};
 }
 
 Rect SettingsForm::save_rect() const
@@ -500,6 +619,7 @@ bool SettingsForm::choose()
 void SettingsForm::close_picker()
 {
     view_ = View::Form;
+    section_ = Section::Fonts;
     focus_ = Field::Font;
     pressed_ = NoTarget;
 }
@@ -535,12 +655,17 @@ size_t SettingsForm::target_at(int x, int y) const
                        ? FirstRow + row
                        : NoTarget;
     }
-    for (const Field f : fields) {
+    for (size_t i = 0; i < section_count; ++i) {
+        if (inside(section_rect(static_cast<Section>(i)), x, y)) {
+            return FirstSection + i;
+        }
+    }
+    for (const Field f : section_fields(section_)) {
         if (inside(field_rect(f), x, y)) {
             return FontField + static_cast<size_t>(f);
         }
     }
-    if (inside(choose_rect(), x, y)) {
+    if (section_ == Section::Fonts && inside(choose_rect(), x, y)) {
         return ChooseButton;
     }
     if (inside(cancel_rect(), x, y)) {
@@ -581,7 +706,9 @@ bool SettingsForm::act(size_t target, int x)
         case HintingField:
         case RgbaField:
         case WallpaperField:
-        case WallpaperModeField: {
+        case WallpaperModeField:
+        case ClockFormatField:
+        case DockField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
@@ -594,6 +721,11 @@ bool SettingsForm::act(size_t target, int x)
         }
         case ChooseButton:
             open_picker();
+            return true;
+        case FirstSection:
+        case FirstSection + 1:
+        case FirstSection + 2:
+            set_section(static_cast<Section>(target - FirstSection));
             return true;
         case CancelButton:
             if (view_ == View::Picker) {
@@ -626,8 +758,14 @@ bool SettingsForm::act(size_t target, int x)
 
 bool SettingsForm::request_save()
 {
-    if (!problem().empty()) {
-        return false; // the message under the fields tells why
+    for (const Field f : fields) {
+        if (!problem(f).empty()) {
+            // show the field that is wrong; the message tells why
+            const Section was = section_;
+            section_ = section_of(f);
+            focus_ = f;
+            return section_ != was;
+        }
     }
     result_ = Result::Saved;
     status_.clear();
@@ -700,25 +838,34 @@ bool SettingsForm::key(Key pressed)
 
 bool SettingsForm::form_key(Key pressed)
 {
-    const auto index = static_cast<size_t>(focus_);
+    // the fields of the section that shows are the ones to go through
+    const std::vector<Field>& list = section_fields(section_);
+    const auto place = static_cast<size_t>(
+            std::find(list.begin(), list.end(), focus_) - list.begin());
+    const auto at = [&](size_t index) { return list[index % list.size()]; };
     switch (pressed) {
         case Key::Tab:
-        case Key::BackTab:
-            focus_ = fields[pressed == Key::Tab
-                                    ? (index + 1) % field_count
-                                    : (index + field_count - 1) % field_count];
-            return true;
         case Key::Down:
             // like a combo box: the list of fonts opens from the font field
-            if (focus_ == Field::Font) {
+            if (pressed == Key::Down && focus_ == Field::Font) {
                 open_picker();
                 return true;
             }
-            focus_ = fields[(index + 1) % field_count];
+            focus_ = at(place + 1);
             return true;
+        case Key::BackTab:
         case Key::Up:
-            focus_ = fields[(index + field_count - 1) % field_count];
+            focus_ = at(place + list.size() - 1);
             return true;
+        case Key::NextSection:
+        case Key::PrevSection: {
+            const size_t now = static_cast<size_t>(section_);
+            set_section(static_cast<Section>(
+                    (now +
+                     (pressed == Key::NextSection ? 1 : section_count - 1)) %
+                    section_count));
+            return true;
+        }
         case Key::Return:
             return request_save();
         case Key::Escape:

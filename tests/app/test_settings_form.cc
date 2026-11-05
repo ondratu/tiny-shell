@@ -45,6 +45,15 @@ int center_y(const Rect& r)
     return r.y + r.height / 2;
 }
 
+//! The form with the focus on a field: its section shows, then Tab
+void focus_on(SettingsForm& form, Field field)
+{
+    form.set_section(SettingsForm::section_of(field));
+    while (form.focus() != field) {
+        form.key(Key::Tab);
+    }
+}
+
 //! A click in the middle of a rectangle
 bool click(SettingsForm& form, const Rect& r)
 {
@@ -87,22 +96,36 @@ TEST(SettingsFormTest, the_form_has_the_fields_one_under_another)
     const SettingsForm form = make();
 
     const Rect font = form.field_rect(Field::Font);
-    const Rect terminal = form.field_rect(Field::Terminal);
-    const Rect scale = form.field_rect(Field::Scale);
-    EXPECT_LT(font.y + font.height, terminal.y);
-    EXPECT_LT(terminal.y + terminal.height, scale.y);
-    EXPECT_EQ(form.label_rect(Field::Terminal).y, terminal.y);
+    const Rect size = form.field_rect(Field::Size);
+    const Rect rgba = form.field_rect(Field::Rgba);
+    EXPECT_LT(font.y + font.height, size.y);
+    EXPECT_LT(size.y + size.height, rgba.y);
+    EXPECT_EQ(form.label_rect(Field::Size).y, size.y);
     // the font field leaves room for the button that opens the list
     EXPECT_LT(font.x + font.width, form.choose_rect().x);
-    EXPECT_EQ(terminal.x + terminal.width,
+    EXPECT_EQ(size.x + size.width,
               form.choose_rect().x + form.choose_rect().width);
     // the buttons are at the bottom, Cancel left of Save
     EXPECT_LT(form.cancel_rect().x, form.save_rect().x);
-    EXPECT_GT(form.save_rect().y, scale.y);
+    EXPECT_GT(form.save_rect().y, rgba.y);
     EXPECT_LE(form.save_rect().y + form.save_rect().height, 600);
-    EXPECT_GT(form.message_rect().y, scale.y);
+    EXPECT_GT(form.message_rect().y, rgba.y);
     EXPECT_LT(form.message_rect().y + form.message_rect().height,
               form.save_rect().y + form.save_rect().height);
+}
+
+TEST(SettingsFormTest, the_fields_are_right_of_the_panel_with_the_sections)
+{
+    const SettingsForm form = make();
+
+    const int panel = form.sidebar_rect().width;
+    EXPECT_GT(panel, 0);
+    EXPECT_EQ(form.sidebar_rect().height, 600);
+    for (const Field f : {Field::Font, Field::Scale, Field::Terminal}) {
+        EXPECT_GE(form.label_rect(f).x, panel);
+        EXPECT_GE(form.field_rect(f).x, form.label_rect(f).x);
+    }
+    EXPECT_GT(form.message_rect().x, panel);
 }
 
 TEST(SettingsFormTest, the_form_height_shows_everything)
@@ -122,6 +145,7 @@ TEST(SettingsFormTest, a_tiny_window_does_not_make_negative_sizes)
     EXPECT_GE(form.field_rect(Field::Font).width, 1);
     EXPECT_GE(form.field_rect(Field::Terminal).width, 1);
     EXPECT_GE(form.message_rect().width, 1);
+    EXPECT_GE(form.section_rect(SettingsForm::Section::Fonts).height, 1);
     EXPECT_GE(form.search_rect().width, 1);
     EXPECT_GE(form.visible_rows(), 1u);
 }
@@ -132,13 +156,10 @@ TEST(SettingsFormTest, typing_goes_to_the_focused_field)
 
     EXPECT_TRUE(form.type("X"));
     EXPECT_EQ(form.text(Field::Font), "GammaX");
-    form.key(Key::Tab);
-    form.key(Key::Tab);
-    form.key(Key::Tab);
-    EXPECT_EQ(form.focus(), Field::Terminal);
+    focus_on(form, Field::Terminal);
     EXPECT_TRUE(form.type(" -x"));
     EXPECT_EQ(form.text(Field::Terminal), "xterm -e -x");
-    EXPECT_TRUE(form.key(Key::Tab));
+    focus_on(form, Field::Scale);
     EXPECT_TRUE(form.type("5"));
     EXPECT_EQ(form.text(Field::Scale), "15");
 }
@@ -167,29 +188,38 @@ TEST(SettingsFormTest, backspace_deletes_a_whole_utf8_character)
     EXPECT_TRUE(form.text(Field::Font).empty());
 }
 
-TEST(SettingsFormTest, tab_goes_round_the_fields_and_back_tab_the_other_way)
+TEST(SettingsFormTest, tab_goes_round_the_fields_of_the_section_and_back)
 {
     SettingsForm form = make();
 
-    for (const Field next :
-         {Field::Size, Field::Style, Field::Terminal, Field::Scale,
-          Field::Antialias, Field::Hinting, Field::Rgba, Field::Wallpaper,
-          Field::WallpaperMode, Field::Font}) {
+    for (const Field next : {Field::Size, Field::Style, Field::Antialias,
+                             Field::Hinting, Field::Rgba, Field::Font}) {
         form.key(Key::Tab);
         EXPECT_EQ(form.focus(), next);
     }
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::WallpaperMode);
+    EXPECT_EQ(form.focus(), Field::Rgba);
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::Wallpaper);
+    EXPECT_EQ(form.focus(), Field::Hinting);
+}
+
+TEST(SettingsFormTest, a_section_with_one_field_keeps_the_focus_on_it)
+{
+    SettingsForm form = make();
+    form.set_section(SettingsForm::Section::Applications);
+
+    form.key(Key::Tab);
+    EXPECT_EQ(form.focus(), Field::Terminal);
+    form.key(Key::BackTab);
+    EXPECT_EQ(form.focus(), Field::Terminal);
 }
 
 TEST(SettingsFormTest, the_arrows_move_between_the_fields)
 {
     SettingsForm form = make();
 
-    form.key(Key::Up); // round to the last
-    EXPECT_EQ(form.focus(), Field::WallpaperMode);
+    form.key(Key::Up); // round to the last of the section
+    EXPECT_EQ(form.focus(), Field::Rgba);
     form.key(Key::Down); // round to the first
     EXPECT_EQ(form.focus(), Field::Font);
     EXPECT_EQ(form.view(), View::Form);
@@ -213,10 +243,10 @@ TEST(SettingsFormTest, a_click_into_a_field_focuses_it)
 {
     SettingsForm form = make();
 
-    EXPECT_TRUE(click(form, form.field_rect(Field::Scale)));
-    EXPECT_EQ(form.focus(), Field::Scale);
-    EXPECT_TRUE(click(form, form.field_rect(Field::Terminal)));
-    EXPECT_EQ(form.focus(), Field::Terminal);
+    EXPECT_TRUE(click(form, form.field_rect(Field::Style)));
+    EXPECT_EQ(form.focus(), Field::Style);
+    EXPECT_TRUE(click(form, form.field_rect(Field::Size)));
+    EXPECT_EQ(form.focus(), Field::Size);
     EXPECT_TRUE(click(form, form.field_rect(Field::Font)));
     EXPECT_EQ(form.focus(), Field::Font);
 }
@@ -225,9 +255,9 @@ TEST(SettingsFormTest, a_press_that_moves_away_before_the_release_does_nothing)
 {
     SettingsForm form = make();
 
-    const Rect scale = form.field_rect(Field::Scale);
+    const Rect scale = form.field_rect(Field::Size);
     form.press(center_x(scale), center_y(scale));
-    const Rect terminal = form.field_rect(Field::Terminal);
+    const Rect terminal = form.field_rect(Field::Style);
     EXPECT_FALSE(form.release(center_x(terminal), center_y(terminal)));
     EXPECT_EQ(form.focus(), Field::Font);
     // a release without a press
@@ -248,9 +278,7 @@ TEST(SettingsFormTest, the_problems_of_the_fields_are_told)
 
     form.type("Gamma");
     EXPECT_EQ(form.problem(), form.problem(Field::Terminal));
-    for (int i = 0; i < 3; ++i) {
-        form.key(Key::Tab); // the size, the style, the terminal
-    }
+    focus_on(form, Field::Terminal);
     form.type("xterm -e");
     EXPECT_TRUE(form.problem(Field::Terminal).empty());
     EXPECT_EQ(form.problem(), form.problem(Field::Scale));
@@ -294,8 +322,9 @@ TEST(SettingsFormTest, nothing_is_saved_while_something_is_wrong)
 {
     SettingsForm form = make(V("Gamma", "xterm -e", "0"));
 
-    EXPECT_FALSE(click(form, form.save_rect()));
-    EXPECT_FALSE(form.key(Key::Return));
+    click(form, form.save_rect()); // shows the field that is wrong
+    EXPECT_EQ(form.result(), Result::Editing);
+    EXPECT_FALSE(form.key(Key::Return)); // already there
     EXPECT_EQ(form.result(), Result::Editing);
 }
 
@@ -660,6 +689,7 @@ SettingsForm make_measured()
 TEST(SettingsFormTest, a_click_puts_the_cursor_where_the_pointer_is)
 {
     SettingsForm form = make_measured();
+    form.set_section(SettingsForm::Section::Applications);
     const Rect r = form.field_rect(Field::Terminal);
     const int start = r.x + SettingsForm::Metrics().padding;
 
@@ -1098,14 +1128,6 @@ SettingsForm::Values with_rendering(const char* antialias, const char* hinting,
     return v;
 }
 
-//! The form with the focus on a field, reached by Tab
-void focus_on(SettingsForm& form, Field field)
-{
-    while (form.focus() != field) {
-        form.key(Key::Tab);
-    }
-}
-
 } // namespace
 
 TEST(SettingsFormTest, the_rendering_of_text_has_choices_under_the_fields)
@@ -1237,8 +1259,10 @@ TEST(SettingsFormTest, the_wallpaper_is_a_path_and_a_choice_of_the_placement)
     EXPECT_EQ(form.values().wallpaper, "~/a.jpg");
     EXPECT_EQ(form.values().wallpaper_mode, "tile");
     EXPECT_EQ(form.choice_label(Field::WallpaperMode), "Tile");
-    EXPECT_GT(form.field_rect(Field::Wallpaper).y,
-              form.field_rect(Field::Rgba).y);
+    EXPECT_EQ(SettingsForm::section_of(Field::Wallpaper),
+              SettingsForm::Section::Appearance);
+    EXPECT_EQ(SettingsForm::section_of(Field::WallpaperMode),
+              SettingsForm::Section::Appearance);
 
     // the arrows go through fill (""), center and tile
     focus_on(form, Field::WallpaperMode);
@@ -1279,10 +1303,236 @@ TEST(SettingsFormTest, a_click_on_the_placement_steps_through_the_values)
 {
     SettingsForm form = make(with_wallpaper("", ""));
     form.resize(500, form.form_height());
+    form.set_section(SettingsForm::Section::Appearance);
 
     const Rect r = form.field_rect(Field::WallpaperMode);
     form.press(r.x + r.width - 2, r.y + 2);
     EXPECT_TRUE(form.release(r.x + r.width - 2, r.y + 2));
     EXPECT_EQ(form.focus(), Field::WallpaperMode);
     EXPECT_EQ(form.text(Field::WallpaperMode), "center");
+}
+
+// The sections
+
+TEST(SettingsFormSectionTest, the_form_starts_in_the_fonts)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.section(), SettingsForm::Section::Fonts);
+}
+
+TEST(SettingsFormSectionTest, every_field_is_in_one_section)
+{
+    using Section = SettingsForm::Section;
+    size_t count = 0;
+    for (const Section section :
+         {Section::Fonts, Section::Appearance, Section::Applications}) {
+        for (const Field f : SettingsForm::section_fields(section)) {
+            EXPECT_EQ(SettingsForm::section_of(f), section);
+            ++count;
+        }
+    }
+    EXPECT_EQ(count, 12u);
+}
+
+TEST(SettingsFormSectionTest, the_sections_have_names)
+{
+    using Section = SettingsForm::Section;
+    EXPECT_STREQ(SettingsForm::section_title(Section::Fonts), "Fonts");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Appearance),
+                 "Appearance");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Applications),
+                 "Applications");
+}
+
+TEST(SettingsFormSectionTest, a_click_on_an_item_of_the_panel_shows_its_section)
+{
+    SettingsForm form = make();
+
+    EXPECT_TRUE(
+            click(form, form.section_rect(SettingsForm::Section::Appearance)));
+
+    EXPECT_EQ(form.section(), SettingsForm::Section::Appearance);
+    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_TRUE(click(form, form.field_rect(Field::ClockFormat)));
+    EXPECT_EQ(form.focus(), Field::ClockFormat);
+}
+
+TEST(SettingsFormSectionTest, the_items_of_the_panel_are_one_under_another)
+{
+    const SettingsForm form = make();
+    using Section = SettingsForm::Section;
+
+    const Rect first = form.section_rect(Section::Fonts);
+    const Rect second = form.section_rect(Section::Appearance);
+    const Rect third = form.section_rect(Section::Applications);
+    EXPECT_EQ(first.y + first.height, second.y);
+    EXPECT_EQ(second.y + second.height, third.y);
+    EXPECT_EQ(first.width, form.sidebar_rect().width);
+}
+
+TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
+{
+    SettingsForm form = make();
+    using Section = SettingsForm::Section;
+
+    EXPECT_TRUE(form.key(Key::NextSection));
+    EXPECT_EQ(form.section(), Section::Appearance);
+    EXPECT_TRUE(form.key(Key::NextSection));
+    EXPECT_EQ(form.section(), Section::Applications);
+    EXPECT_TRUE(form.key(Key::NextSection));
+    EXPECT_EQ(form.section(), Section::Fonts); // round
+    EXPECT_TRUE(form.key(Key::PrevSection));
+    EXPECT_EQ(form.section(), Section::Applications);
+}
+
+TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
+{
+    SettingsForm form = make();
+
+    form.set_section(SettingsForm::Section::Appearance);
+    EXPECT_EQ(form.focus(), Field::Scale);
+    form.set_section(SettingsForm::Section::Appearance); // the same one
+    form.key(Key::Tab);
+    form.set_section(SettingsForm::Section::Appearance);
+    EXPECT_NE(form.focus(), Field::Scale); // not moved again
+}
+
+TEST(SettingsFormSectionTest, the_button_that_opens_the_fonts_is_in_the_fonts)
+{
+    SettingsForm form = make();
+    const Rect choose = form.choose_rect();
+    form.set_section(SettingsForm::Section::Appearance);
+
+    // the place is a field of the other section, not the button
+    form.press(center_x(choose), center_y(choose));
+    form.release(center_x(choose), center_y(choose));
+
+    EXPECT_EQ(form.view(), View::Form);
+}
+
+TEST(SettingsFormSectionTest, saving_with_a_problem_shows_the_field_with_it)
+{
+    SettingsForm form = make(V("Gamma", "xterm -e", "big"));
+
+    EXPECT_TRUE(form.key(Key::Return));
+
+    EXPECT_EQ(form.result(), Result::Editing);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Appearance);
+    EXPECT_EQ(form.focus(), Field::Scale);
+}
+
+TEST(SettingsFormSectionTest, the_list_of_fonts_returns_to_the_fonts)
+{
+    SettingsForm form = make();
+    form.open_picker();
+
+    form.close_picker();
+
+    EXPECT_EQ(form.section(), SettingsForm::Section::Fonts);
+    EXPECT_EQ(form.focus(), Field::Font);
+}
+
+TEST(SettingsFormSectionTest, the_form_is_as_high_as_the_longest_section)
+{
+    SettingsForm form = make();
+    form.resize(500, form.form_height());
+
+    const Rect last = form.field_rect(Field::Rgba);
+    EXPECT_GT(form.message_rect().y, last.y + last.height);
+}
+
+// The clock and the dock
+
+TEST(SettingsFormClockDockTest, the_values_come_from_the_start)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.clock_format = "%R";
+    v.dock = "on";
+    const SettingsForm form = make(v);
+
+    EXPECT_EQ(form.values().clock_format, "%R");
+    EXPECT_EQ(form.values().dock, "on");
+    EXPECT_EQ(form.choice_label(Field::Dock), "On");
+    EXPECT_TRUE(SettingsForm::is_choice(Field::Dock));
+    EXPECT_FALSE(SettingsForm::is_choice(Field::ClockFormat));
+}
+
+TEST(SettingsFormClockDockTest, the_dock_hides_by_default)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.choice_label(Field::Dock), "Auto-hide");
+}
+
+TEST(SettingsFormClockDockTest, the_arrows_go_through_the_modes_of_the_dock)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::Dock);
+
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::Dock), "on");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::Dock), "off");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::Dock), "");
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::Dock), "off");
+}
+
+TEST(SettingsFormClockDockTest, a_wrong_mode_of_the_dock_is_a_problem)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.dock = "never";
+
+    EXPECT_FALSE(make(v).problem(Field::Dock).empty());
+    v.dock = "autohide"; // the file's name is not a value of the form
+    EXPECT_FALSE(make(v).problem(Field::Dock).empty());
+}
+
+TEST(SettingsFormClockDockTest, the_format_of_the_clock_is_typed)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.clock_format = "";
+    SettingsForm form = make(v);
+
+    focus_on(form, Field::ClockFormat);
+    EXPECT_TRUE(form.type("%a %R"));
+
+    EXPECT_EQ(form.values().clock_format, "%a %R");
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormClockDockTest, an_empty_format_means_no_clock_and_is_right)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.clock_format = "";
+
+    EXPECT_TRUE(make(v).problem(Field::ClockFormat).empty());
+}
+
+TEST(SettingsFormClockDockTest, a_format_with_a_line_break_cannot_be_saved)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.clock_format = "%R\n%a";
+
+    const SettingsForm form = make(v);
+
+    EXPECT_FALSE(form.problem(Field::ClockFormat).empty());
+    EXPECT_FALSE(form.problem().empty());
+}
+
+TEST(SettingsFormClockDockTest, the_blanks_of_the_format_are_kept)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.clock_format = " %R ";
+
+    EXPECT_EQ(make(v).clean_values().clock_format, " %R ");
+}
+
+TEST(SettingsFormClockDockTest, some_fields_have_a_hint)
+{
+    EXPECT_NE(std::string(SettingsForm::hint(Field::ClockFormat)), "");
+    EXPECT_NE(std::string(SettingsForm::hint(Field::Dock)), "");
+    EXPECT_STREQ(SettingsForm::hint(Field::Size), "");
 }

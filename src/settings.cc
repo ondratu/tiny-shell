@@ -1,11 +1,13 @@
 // tiny-settings: changes the font, the terminal, the scale and the rendering
 // of text of tiny-shell.
 //
-// The form has the fields of the font, its size and style, the terminal and
-// the scale, and the choices of antialiasing, hinting and subpixel order of
-// the text of the programs (the arrows, Space and a click go through them);
-// a field has a cursor (the arrows, Home, End, Delete and the
-// pointer move it). The button next to the font opens a list of the fonts of
+// The form has a panel at the left with the sections: Fonts (the font, its
+// size and style, and the antialiasing, hinting and subpixel order of the text
+// of the programs), Appearance (the scale, the wallpaper, the mode of the dock
+// and the format of the clock) and Applications (the terminal). The choices
+// go through their values with the arrows, Space and a click; a field has a
+// cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
+// Down and Ctrl+Page Up go through the sections. The button next to the font opens a list of the fonts of
 // the system (type to search it) with the size and the style of the font and
 // a preview of a text in them. Save writes the values to the configuration
 // file of the user (never the global one) and closes the program; tiny-shell
@@ -99,10 +101,15 @@ class SettingsApp : public tiny::XftWindow {
                 config.xft_hinting,
                 config.xft_rgba,
                 config.wallpaper_file,
-                config.wallpaper_mode},
+                config.wallpaper_mode,
+                config.clock_format,
+                config.dock_mode == tiny::wm::DockMode::AutoHide
+                        ? ""
+                        : tiny::wm::dock_mode_name(config.dock_mode)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
+        sidebar(alloc_color(0xed, 0xed, 0xed)),
         field(alloc_color(0xff, 0xff, 0xff)),
         text_color(alloc_color(0x2e, 0x34, 0x36)),
         dim(alloc_color(0x6e, 0x74, 0x76)),
@@ -129,7 +136,7 @@ class SettingsApp : public tiny::XftWindow {
                 DisplayHeight(display, screen));
         form.resize(w, h);
         create({title, "tiny-settings", "TinySettings", w, h,
-                tiny::scaled(start_width, scale) / 2, form.form_height(), 0,
+                tiny::scaled(start_width, scale) * 3 / 4, form.form_height(), 0,
                 true});
     }
 
@@ -150,6 +157,15 @@ class SettingsApp : public tiny::XftWindow {
         if ((e.state & ControlMask) != 0) {
             if (symbol == XK_q || symbol == XK_w) {
                 quit();
+            } else if (symbol == XK_Page_Down || symbol == XK_Page_Up ||
+                       symbol == XK_Tab || symbol == XK_ISO_Left_Tab) {
+                const bool back = symbol == XK_Page_Up ||
+                                  symbol == XK_ISO_Left_Tab ||
+                                  (e.state & ShiftMask) != 0;
+                if (form.key(back ? SettingsForm::Key::PrevSection
+                                  : SettingsForm::Key::NextSection)) {
+                    act();
+                }
             }
             return;
         }
@@ -255,6 +271,14 @@ class SettingsApp : public tiny::XftWindow {
             if (v.wallpaper_mode != initial.wallpaper_mode) {
                 changed.push_back({"wallpaper", "mode", v.wallpaper_mode});
             }
+            if (v.clock_format != initial.clock_format) {
+                changed.push_back({"panel", "clock_format", v.clock_format});
+            }
+            if (v.dock != initial.dock) {
+                // the first choice, "", is auto-hide
+                changed.push_back(
+                        {"dock", "mode", v.dock.empty() ? "autohide" : v.dock});
+            }
             if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
                 publish_xft(v);
                 // a wallpaper that is removed goes at the next login: the
@@ -352,8 +376,8 @@ class SettingsApp : public tiny::XftWindow {
                                   message.height / 2};
         const tiny::Rect second = {message.x, message.y + message.height / 2,
                                    message.width, message.height / 2};
-        text_in(ui_font, error, first, 0, wrong);
-        text_in(ui_font, dim, second, 0, note);
+        text_in(ui_font, error, first, 0, fit(ui_font, wrong, message.width));
+        text_in(ui_font, dim, second, 0, fit(ui_font, note, message.width));
     }
 
     //! A choice: the name of its value, an arrow at each end (a click on the
@@ -374,9 +398,28 @@ class SettingsApp : public tiny::XftWindow {
                 next);
     }
 
+    //! The panel with the sections, the one that shows is marked
+    void paint_sidebar()
+    {
+        fill(sidebar, form.sidebar_rect());
+        fill(rule, {form.sidebar_rect().width - 1, 0, 1, height});
+        for (size_t i = 0; i < SettingsForm::section_count; ++i) {
+            const auto section = static_cast<SettingsForm::Section>(i);
+            const tiny::Rect r = form.section_rect(section);
+            if (section == form.section()) {
+                fill(selected, r);
+                fill(accent,
+                     {r.x, r.y, std::max(1, metrics.row_height / 8), r.height});
+            }
+            text_in(ui_font, text_color, r, metrics.margin,
+                    SettingsForm::section_title(section));
+        }
+    }
+
     void paint_form()
     {
-        const struct {
+        paint_sidebar();
+        static const struct {
             SettingsForm::Field id;
             const char* label;
         } rows[] = {{SettingsForm::Field::Font, "Font"},
@@ -388,8 +431,13 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Hinting, "Hinting"},
                     {SettingsForm::Field::Rgba, "Subpixel"},
                     {SettingsForm::Field::Wallpaper, "Wallpaper"},
-                    {SettingsForm::Field::WallpaperMode, "Placement"}};
+                    {SettingsForm::Field::WallpaperMode, "Placement"},
+                    {SettingsForm::Field::ClockFormat, "Clock"},
+                    {SettingsForm::Field::Dock, "Dock"}};
         for (const auto& row : rows) {
+            if (SettingsForm::section_of(row.id) != form.section()) {
+                continue;
+            }
             text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
             const tiny::Rect r = form.field_rect(row.id);
             if (SettingsForm::is_choice(row.id)) {
@@ -400,13 +448,16 @@ class SettingsApp : public tiny::XftWindow {
             paint_field(r, form.field(row.id), form.focus() == row.id,
                         !form.problem(row.id).empty());
         }
-        paint_button(form.choose_rect(), "Choose…", true);
+        if (form.section() == SettingsForm::Section::Fonts) {
+            paint_button(form.choose_rect(), "Choose…", true);
+        }
 
         std::string wrong = form.problem();
         if (wrong.empty()) {
             wrong = form.status();
         }
-        paint_message(wrong, hint);
+        const char* note = SettingsForm::hint(form.focus());
+        paint_message(wrong, *note != '\0' ? note : hint);
 
         paint_button(form.cancel_rect(), "Cancel", true);
         paint_button(form.save_rect(), "Save", form.problem().empty());
@@ -497,6 +548,7 @@ class SettingsApp : public tiny::XftWindow {
     std::string ui_family; //!< the family of `ui_font`
     XftFont* ui_font = nullptr;
     XftColor& background;
+    XftColor& sidebar;
     XftColor& field;
     XftColor& text_color;
     XftColor& dim;
