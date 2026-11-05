@@ -63,7 +63,7 @@ namespace tiny {
         case SelectionClear:
             return e.xselectionclear.window;
         case SelectionRequest:
-            return e.xselectionrequest.requestor; //!< diff
+            return e.xselectionrequest.owner; //!< diff
         case SelectionNotify:
             return e.xselection.requestor;
         case ColormapNotify:
