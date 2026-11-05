@@ -78,6 +78,12 @@ void DockButton::on_expose(const XEvent&, void*)
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
 
+    if (symbols != nullptr &&
+        symbols->draw(window, "view-app-grid", width * 2 / 3,
+                      get_style().get_fg(state), width, height)) {
+        XFreeGC(display, gc);
+        return;
+    }
     XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
 
@@ -337,6 +343,12 @@ void DockIcon::on_expose(const XEvent&, void*)
 
         XCopyArea(display, icon, window, gc, 0, 0, tiny::x_uint(width),
                   tiny::x_uint(size), 0, 0);
+    } else if (symbols != nullptr &&
+               symbols->draw(window, "application-x-executable",
+                             (dragging ? size / 2 : size) * 2 / 3,
+                             get_style().get_fg(get_theme_state()), width,
+                             size)) {
+        // the generic icon of an application that has none
     } else {
         // TODO: move to wm_window
         XSetForeground(display, gc, get_style().get_fg(get_theme_state()));
@@ -659,6 +671,7 @@ void Dock::rebuild()
         auto* task_icon =
                 favorite ? new DockIcon(windows, favorite->id, favorite->icon)
                          : new DockIcon(windows);
+        task_icon->set_icons(symbols);
         task_icon->set_draggable(favorite != nullptr);
         task_icon->on_click.connect([this, task_icon](const XEvent&) {
             if (!task_icon->get_task() && on_launch) {
@@ -917,6 +930,12 @@ void Dock::realize(::Window parent_arg, int x, int y)
     if (!tasks.empty() || !favorites.empty()) {
         rebuild(); // they came before the dock; it is moved by its size
     }
+}
+
+void Dock::set_icons(SymbolicIcons* symbolic)
+{
+    symbols = symbolic;
+    icon.set_icons(symbolic);
 }
 
 void Dock::resize(int w, int h)

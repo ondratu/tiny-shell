@@ -346,6 +346,15 @@ tiny::IconGrid::Item Launcher::item_of(size_t row)
     item.icon = icon.picture;
     item.icon_width = icon.width;
     item.icon_height = icon.height;
+    if (icon.picture == None && symbols != nullptr) { // the generic icon
+        const SymbolicIcons::Icon& generic =
+                symbols->get("application-x-executable", layout.icon,
+                             grid.get_style().get_fg(static_cast<uint8_t>(
+                                     tiny::Style::State::Normal)));
+        item.icon = generic.picture;
+        item.icon_width = generic.width;
+        item.icon_height = generic.height;
+    }
     return item;
 }
 

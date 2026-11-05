@@ -611,6 +611,28 @@ TEST_F(LauncherTest, an_icon_of_the_application_is_drawn)
     EXPECT_EQ(image.at(layout().cell_width / 2, top + size / 2), 0xFF0000u);
 }
 
+TEST_F(LauncherTest, an_application_with_no_icon_gets_the_generic_one)
+{
+    const IconFiles files({"application-x-executable"});
+    tiny::wm::SymbolicIcons symbols(tiny::get_display(), root_window(),
+                                    {files.dir()});
+    launcher.set_icons(&symbols);
+
+    launcher.popup();
+    send(grid(), make_event(Expose));
+
+    const int size = layout().icon;
+    const XftFont* text_font = tiny::theme.list.get_font();
+    const int content = size + tiny::theme.list.padding_width / 2 +
+                        text_font->ascent + text_font->descent;
+    const int top = (layout().cell_height - content) / 2;
+    const Image image(grid(), attributes_of(grid()).width,
+                      layout().cell_height);
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    EXPECT_EQ(image.at(layout().cell_width / 2, top + size / 2),
+              tiny::theme.list.get_fg(normal));
+}
+
 TEST_F(LauncherTest, the_cells_take_at_most_the_three_quarters_of_the_screen)
 {
     const XWindowAttributes root_attrs = attributes_of(root_window());

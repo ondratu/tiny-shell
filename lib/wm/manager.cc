@@ -83,6 +83,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_panel.set_events();
     publish_panel_strut();
 
+    wm_dock.set_icons(&wm_icons);
     wm_dock.realize(root_arg, attrs.width / 2,
                     attrs.height - wm_dock.get_height() -
                             shell_theme.dock_border);
@@ -128,6 +129,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         }
     });
 
+    wm_launcher.set_icons(&wm_icons);
     wm_launcher.realize(root_arg, 0, 0);
     wm_launcher.set_events();
     wm_launcher.keep_above(&wm_panel);

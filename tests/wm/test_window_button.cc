@@ -1,11 +1,6 @@
 #include "wm_helpers.h"
 #include "wm/shell_theme.h"
 
-#include <unistd.h>
-
-#include <filesystem>
-#include <fstream>
-
 #include "wm/symbolic_icons.h"
 #include "wm/window_button.h"
 
@@ -247,39 +242,12 @@ TEST_F(WindowButtonScaledTest, maximize_square_is_scaled)
     EXPECT_EQ(img.at(mid(), mid()), bg());
 }
 
-namespace {
-
-// A directory with a square for the icons of the buttons
-class ButtonIconFiles {
-  public:
-    ButtonIconFiles():
-        root(std::filesystem::temp_directory_path() /
-             ("tiny-buttons-" + std::to_string(getpid())))
-    {
-        std::filesystem::remove_all(root);
-        std::filesystem::create_directories(root / "tiny-shell/icons/white");
-        for (const char* name :
-             {"window-close", "window-minimize", "window-maximize"}) {
-            std::ofstream(root / "tiny-shell/icons/white" /
-                          (std::string(name) + "-symbolic.svg"))
-                    << "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-                       "width=\"16\" height=\"16\" viewBox=\"0 0 16 16\">"
-                       "<path fill=\"#ffffff\" d=\"M0 0H16V16H0Z\"/></svg>\n";
-        }
-    }
-
-    ~ButtonIconFiles() { std::filesystem::remove_all(root); }
-
-    std::filesystem::path root;
-};
-
-} // namespace
-
 TEST_F(WindowButtonTest, the_symbols_are_icons_when_the_files_are_there)
 {
-    const ButtonIconFiles files;
+    const IconFiles files(
+            {"window-close", "window-minimize", "window-maximize"});
     tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
-                                  {files.root.string()});
+                                  {files.dir()});
     tiny::wm::CloseButton close;
     tiny::wm::MaximizeButton maximize;
     tiny::wm::MinimizeButton minimize;
