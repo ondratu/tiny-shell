@@ -56,17 +56,21 @@ Implemented:
   stealing prevention, frame extents, the client lists), `_MOTIF_WM_HINTS`
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
-- **Shell:** top panel with the main menu (Settings, Applications, Terminal,
-  Force Quit, Restart, Shutdown, Logout) and the date and time at its right
-  end (the names and the order follow `LANG`), a dock with
+- **Shell:** top panel with the main menu (About, Settings, Applications,
+  Terminal, Force Quit, Restart, Shutdown, Logout) and the date and time at its
+  right end (the names and the order follow `LANG`), a dock with
   one icon for every application (a dot under it for every window) and the
   favorite applications, which stay there when they do not run and can be moved
-  by the mouse, a run dialog (Alt+F2), a full screen launcher with search
-  (Super).
-- **Settings:** `tiny-settings`, a small form that changes the font, the
-  terminal, the scale, the rendering of text (antialiasing, hinting,
-  subpixel order) and the wallpaper in the configuration file of the user
-  (see below).
+  by the mouse; the dock hides under the active window and the bottom edge of
+  the screen shows it (or it is always shown, or never); a run dialog
+  (Alt+F2), a full screen launcher with search (Super). Their text field has a
+  cursor (the arrows, Home, End, Delete and a click), Ctrl+V, Shift+Insert and
+  the middle button paste, Ctrl+C copies the text.
+- **Settings:** `tiny-settings`, a small form with the sections Fonts,
+  Appearance and Applications that changes the font, the rendering of text
+  (antialiasing, hinting, subpixel order), the scale, the wallpaper, the mode
+  of the dock, the format of the clock and the terminal in the configuration
+  file of the user (see below).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a
   transparent terminal can show it; tiny-shell runs it at the start and when
@@ -116,7 +120,8 @@ programs is done, only small details of it are left):
 - Written in C++17 (without RTTI), built with GNU make; two static libraries,
   the widgets and the shell
 - [Xlib](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html),
-  Xft (with fontconfig) and Xrender; nothing else is needed to run it
+  Xft (with fontconfig and FreeType, which Xft needs anyway) and Xrender;
+  nothing else is needed to run it
 - Tests use [googletest](https://github.com/google/googletest) and Xvfb
 
 ## Platforms
@@ -225,6 +230,10 @@ terminal = xterm -e
 clock_format = %a %e %B %R
 
 [dock]
+# When the dock is shown: autohide (the default: it is hidden while the active
+# window covers it, and the pointer at the bottom edge of the screen shows it
+# until the pointer leaves the dock), on (always) or off (never)
+mode = autohide
 # Applications that stay in the dock when they do not run: the ids of their
 # desktop files, separated by ;. The menu of the dock writes it (see below)
 favorites = firefox.desktop;org.gnome.Nautilus.desktop
@@ -253,12 +262,23 @@ does not show seconds. An empty format removes the clock.
 
 ### Settings
 
-`build/tiny-settings` (made by `make`) changes the font (with its size and
-style), the terminal, the scale, the rendering of text and the wallpaper. It shows the values in use now (the global
+`build/tiny-settings` (made by `make`) has a panel at the left with the
+sections and the fields of the chosen section:
+
+- **Fonts:** the font (a family or a list of families separated by commas, like
+  `DejaVu Sans,sans`), its size and style, and the rendering of text.
+- **Appearance:** the scale, the wallpaper and how it covers the screen, the
+  mode of the dock (Auto-hide, On, Off) and the format of the clock.
+- **Applications:** the terminal.
+
+A click on a section, or Ctrl+Page Down and Ctrl+Page Up, show it. The form shows the values in use now (the global
 file and the one of the user together). A field has a cursor: the arrows,
 Home, End, Backspace and Delete work, and a click puts the cursor where the
-pointer is. Tab moves between the fields. A field with a wrong value turns
-red and says what is wrong, and Save waits until it is right.
+pointer is. Ctrl+V, Shift+Insert and the middle button paste the text of the
+clipboard or of the selection (one line of it), Ctrl+C copies the text of the
+field. Tab moves between the fields of the section. A field with a wrong value
+turns red and says what is wrong, and Save waits until it is right (and shows the
+section where the wrong field is).
 
 The button Choose... (or Down in the font field) shows a list of the fonts of
 the system: type to search it, move with the arrows, Page Up and Page Down.
@@ -339,6 +359,10 @@ into `tiny-wallpaper` only, so `tiny-shell` does not carry the JPEG code.
 The button Main Menu at the left of the panel opens a menu with these items,
 in groups:
 
+- **About Tiny Shell** shows a dialog with the version, the name of the system
+  (`PRETTY_NAME` of `/etc/os-release`, or the name of `uname`) and the kernel
+  with the kind of the processor. A click outside of it or the button Close
+  hides it.
 - **Settings** starts `tiny-settings` (the one next to `tiny-shell` when it was
   started with a path, else the one in `PATH`).
 - **Applications** opens the launcher; **Terminal** starts the terminal of
@@ -352,6 +376,13 @@ reported on stderr.
 
 ### The dock and the favorite applications
 
+`[dock] mode` (or the setting Dock in `tiny-settings`) says when the dock is
+shown. **autohide** (the default) hides it while the active window covers any
+part of it, and brings it back when the pointer reaches the bottom edge of the
+screen (a strip of a few pixels, scaled with `[theme] scale`); it hides again
+when the pointer leaves it, but not while a menu of the dock is open or an icon
+is dragged. **on** always shows it, **off** never does.
+
 The dock has one icon for every application. All the windows of an application
 (it is found by `WM_CLASS`, see below; windows of an unknown application are
 grouped by their class) share the icon, and a small dot under it stands for
@@ -363,7 +394,7 @@ Click the icon of a favorite that does not run to start it. Click the icon of
 an application that runs to focus its window; when it has more windows, every
 next click goes to the next one. Drag the icon of a favorite to move it: a mark
 shows where it will be put, the icon is drawn smaller meanwhile, and the new
-order is saved.
+order is saved; Escape cancels the drag and nothing moves.
 
 Click the right button on an icon to open its menu:
 
@@ -390,9 +421,13 @@ list that `fc-list : family` prints, read from fontconfig. Every family is a
 cell with "Aa" in the family (black on white) and its name under it. Scroll
 with the wheel or the keys, click a family (or press Return) to see its
 specimen: the small letters, the capitals, the digits and the signs, then one
-sentence in 8, 12, 16, 20, 24, 32, 64 and 128 pixels. Escape, backspace or the
-button at the top return to the list, Ctrl+Q and Ctrl+W quit. The sizes
-follow `[theme] scale`.
+sentence in 8, 12, 16, 20, 24, 32, 64 and 128 pixels. The button Info (or I) at
+the top right shows what is known about the family: the styles, the format,
+the languages, the files of its faces and, from the font file itself, the full
+name, the version, the designer, the license and the copyright. The header has
+the breadcrumbs "‹ Fonts ‹ Family": a click on Fonts goes to the list, a
+click on the family back to the specimen. Escape and backspace go one step
+back, Ctrl+Q and Ctrl+W quit. The sizes follow `[theme] scale`.
 
 ### Command line
 

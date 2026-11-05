@@ -14,7 +14,8 @@ messages, issues and documentation.
 1. **Small.** Small source, small binary, small memory footprint. A feature
    that costs a lot of any of them needs a good reason.
 2. **Few dependencies.** The shell runs with libX11, Xft and Xrender, and
-   fontconfig that Xft needs anyway (and the C and C++ standard libraries).
+   fontconfig and FreeType that Xft needs anyway (and the C and C++ standard
+   libraries).
    See [Dependencies](#dependencies).
 3. **Standards first.** Use ICCCM, EWMH and freedesktop.org specifications as
    written. Applications and external tools must work without being told
@@ -156,8 +157,9 @@ costs a lot of code or memory (see the goals above).
 
 ## Dependencies
 
-- Allowed without discussion: libX11, Xft, Xrender, fontconfig (Xft uses it, we
-  use it for the list of fonts), and (when needed for a
+- Allowed without discussion: libX11, Xft, Xrender, fontconfig and FreeType (Xft
+  uses them; we use fontconfig for the list of fonts and FreeType to read the
+  `name` table of a font file), and (when needed for a
   feature) Xrandr or Xext extensions that are on every Xorg system.
 - Everything else needs a discussion first and must be **optional at build
   time** (a make variable, with the feature compiled out when it is off).
