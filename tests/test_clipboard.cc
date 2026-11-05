@@ -198,7 +198,7 @@ TEST(ClipboardTest, targets_lists_the_text_formats)
                        True, AnyPropertyType, &type, &format, &count, &after,
                        &data);
     ASSERT_NE(data, nullptr);
-    EXPECT_EQ(type, static_cast<Atom>(XA_ATOM));
+    EXPECT_EQ(type, XA_ATOM);
     EXPECT_EQ(count, 3u);
     XFree(data);
 }

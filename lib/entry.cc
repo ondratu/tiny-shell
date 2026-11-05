@@ -45,8 +45,9 @@ void Entry::set_events(long mask)
     connect(FocusOut, [this](const XEvent& e) { on_focus_out(e, nullptr); });
     connect(ButtonPress,
             [this](const XEvent& e) { on_button_press(e, nullptr); });
-    for (const int type : {SelectionNotify, SelectionRequest, SelectionClear}) {
-        connect(static_cast<uint16_t>(type), [this](const XEvent& e) {
+    for (const int event :
+         {SelectionNotify, SelectionRequest, SelectionClear}) {
+        connect(static_cast<uint16_t>(event), [this](const XEvent& e) {
             if (clipboard) {
                 clipboard->handle(e);
             }

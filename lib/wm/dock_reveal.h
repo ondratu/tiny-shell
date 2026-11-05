@@ -13,7 +13,7 @@ namespace tiny::wm {
  */
 class DockReveal : public tiny::Widget {
   public:
-    explicit DockReveal(int height);
+    explicit DockReveal(int strip);
     ~DockReveal() override;
 
     void set_events(long mask = 0) override;
