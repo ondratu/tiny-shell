@@ -1,8 +1,14 @@
 #include "wm_helpers.h"
 #include "wm/shell_theme.h"
 
+#include <unistd.h>
+
+#include <filesystem>
+#include <fstream>
+
 #include "label.h"
 #include "wm/panel.h"
+#include "wm/symbolic_icons.h"
 
 // ---- MainMenu ----
 
@@ -268,4 +274,65 @@ TEST(PanelAppletTest, a_null_or_added_applet_is_refused)
     panel.add_applet(&label);
 
     EXPECT_EQ(attributes_of(label).x, x);
+}
+
+// ---- The logo ----
+
+namespace {
+
+// A directory with a square as the logo
+class LogoFiles {
+  public:
+    LogoFiles():
+        root(std::filesystem::temp_directory_path() /
+             ("tiny-logo-" + std::to_string(getpid())))
+    {
+        std::filesystem::remove_all(root);
+        std::filesystem::create_directories(root / "tiny-shell/icons/white");
+        std::ofstream(root / "tiny-shell/icons/white/start-here-symbolic.svg")
+                << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" "
+                   "height=\"16\" viewBox=\"0 0 16 16\"><path "
+                   "fill=\"#ffffff\" d=\"M0 0H16V16H0Z\"/></svg>\n";
+    }
+
+    ~LogoFiles() { std::filesystem::remove_all(root); }
+
+    std::filesystem::path root;
+};
+
+} // namespace
+
+TEST(PanelTest, the_logo_is_a_square_button_in_the_color_of_the_text)
+{
+    const LogoFiles files;
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.root.string()});
+    tiny::wm::Panel panel;
+    panel.set_icons(&icons);
+
+    panel.realize(root_window(), 0, 0);
+    panel.map_all();
+
+    const ::Window main = child_at(panel.get_window(), 0, 0);
+    ASSERT_NE(main, 0u);
+    const int side = tiny::wm::shell_theme.panel;
+    EXPECT_EQ(attributes_of(main).width, side);
+    send(main, make_event(Expose));
+    const Image img(main, side, side);
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    EXPECT_EQ(img.at(side / 2, side / 2), tiny::theme.widget.get_fg(normal));
+    EXPECT_EQ(img.at(0, 0), tiny::theme.widget.get_bg(normal));
+}
+
+TEST(PanelTest, without_the_logo_file_the_button_shows_the_text)
+{
+    const LogoFiles files;
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {"/nonexistent"});
+    tiny::wm::Panel panel;
+    panel.set_icons(&icons);
+
+    panel.realize(root_window(), 0, 0);
+
+    EXPECT_EQ(attributes_of(child_at(panel.get_window(), 0, 0)).width, 200);
 }
