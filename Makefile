@@ -1,7 +1,7 @@
 # Requires GNU make (wildcard, shell, pattern rules).
 #
 # Override from the command line or environment as usual, e.g.:
-#   make CXX=clang++ CXXFLAGS="-O2 -g"
+#   make CXX=clang++ CXXFLAGS="-O2"   (or DEBUG=1 for a build to debug)
 # Everything is built into $(BUILD) (build/ by default).
 
 -include local/config.mk
@@ -54,7 +54,13 @@ SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 
 # -Os: small is the first goal. -fno-rtti: nothing uses dynamic_cast or typeid
 # (the typeinfo of the classes was 15 kB of the binary).
-CXXFLAGS ?= -Os -g
+# The debugging information (-g) is for development: make DEBUG=1 (it makes
+# the libraries and the programs several times bigger).
+ifdef DEBUG
+CXXFLAGS ?= -Og -g
+else
+CXXFLAGS ?= -Os
+endif
 override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
     $(HARDENING)
@@ -98,7 +104,7 @@ all: $(TARGET) $(FONTS) $(SETTINGS)
 # CI measures the size with -flto on top of this (see ci.yml).
 RELEASE_DIR = build-release
 release:
-	$(MAKE) BUILD=$(RELEASE_DIR) CXXFLAGS="-Os -ffunction-sections -fdata-sections" \
+	$(MAKE) BUILD=$(RELEASE_DIR) CXXFLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections" \
 	    LDFLAGS="-s -Wl,--gc-sections" all
 
 help:
@@ -115,7 +121,7 @@ help:
 	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
-	@echo "Variables: CXX, CXXFLAGS, BUILD, STRICT=1 (warnings are errors),"
+	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
 
 examples: $(EXAMPLES)
