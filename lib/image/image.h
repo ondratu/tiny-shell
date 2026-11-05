@@ -14,6 +14,9 @@ constexpr int MAX_ICON_SIZE = 512;
 /// it is shown): 1024 x 1024 pixels are 4 MB.
 constexpr int MAX_SOURCE_SIZE = 1024;
 
+/// The longest side that `resize_image` makes (and a photo is read with).
+constexpr int MAX_RESIZE_SIDE = 16384;
+
 /// A decoded picture: premultiplied ARGB, the format of Xrender.
 struct Image {
     int width = 0;
@@ -35,6 +38,9 @@ struct Image {
     }
 };
 
+/// Non-premultiplied RGBA bytes (`width` * `height` * 4 of them) to a picture.
+Image premultiplied(const unsigned char* rgba, int width, int height);
+
 /**
  * @short Load a PNG, an XPM or an SVG file (by the extension).
  *
@@ -45,6 +51,15 @@ struct Image {
  * bigger than MAX_SOURCE_SIZE and for a text file (SVG, XPM) of megabytes.
  */
 std::optional<Image> load_image(const std::string& path, int size);
+
+/**
+ * @short Scale the picture to exactly `width` x `height` pixels.
+ *
+ * The aspect ratio is not kept. Up it uses a bilinear filter, down the
+ * average of the covered pixels (see `scale_image`). Returns nothing for an
+ * empty picture or a side out of 1..MAX_RESIZE_SIDE.
+ */
+std::optional<Image> resize_image(const Image& image, int width, int height);
 
 /**
  * @short Scale the picture so that its longer side is `size` pixels.
