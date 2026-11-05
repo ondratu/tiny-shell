@@ -16,12 +16,16 @@ namespace tiny::app {
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has text fields (the font, its size and style, the terminal, the
- * scale), choices (antialiasing, hinting and subpixel order of the text: the
- * left and right arrows, Space and a click go through the values), a button
- * that opens the list of fonts, and the buttons Cancel and Save. The fields
- * are edited with a cursor: the arrows, Home, End, Backspace and Delete work,
- * and a click puts the cursor where the pointer is.
+ * The form has a panel at its left with the sections (Fonts, Appearance,
+ * Applications) and the fields of the chosen section: text fields (the font,
+ * its size and style, the scale, the format of the clock, the wallpaper, the
+ * terminal), choices (antialiasing, hinting and subpixel order of the text,
+ * the placement of the wallpaper, the mode of the dock: the left and right
+ * arrows, Space and a click go through the values), a button that opens the
+ * list of fonts, and the buttons Cancel and Save. The fields are edited with a
+ * cursor: the arrows, Home, End, Backspace and Delete work, and a click puts
+ * the cursor where the pointer is. Tab goes through the fields of the section,
+ * Ctrl+Page Down and Ctrl+Page Up through the sections.
  *
  * The list of fonts replaces the form: a search field above the families, one
  * family selected, and under the list the size and the style of the font and
@@ -41,6 +45,9 @@ class SettingsForm {
   public:
     enum class View { Form, Picker };
 
+    //! The groups of the settings, in the panel at the left
+    enum class Section { Fonts, Appearance, Applications };
+
     enum class Field {
         Font,
         Size,
@@ -51,7 +58,9 @@ class SettingsForm {
         Hinting,
         Rgba,
         Wallpaper, //!< the path of a PNG or JPEG, typed (there is no browser)
-        WallpaperMode //!< a choice: fill, center or tile
+        WallpaperMode, //!< a choice: fill, center or tile
+        ClockFormat,   //!< a `strftime()` format; empty is no clock
+        Dock           //!< a choice: auto-hide, on or off
     };
 
     //! What has the keyboard in the list of fonts
@@ -71,7 +80,9 @@ class SettingsForm {
         Delete,
         Escape,
         Tab,
-        BackTab //!< Shift+Tab
+        BackTab,     //!< Shift+Tab
+        NextSection, //!< Ctrl+Page Down
+        PrevSection  //!< Ctrl+Page Up
     };
 
     //! Editing goes on until the user saves (Saved) or gives up (Cancelled)
@@ -93,21 +104,26 @@ class SettingsForm {
         // keeps -Wmissing-field-initializers quiet where a form is made
         std::string wallpaper{};
         std::string wallpaper_mode{};
+        //! The format of the clock of the panel ("" is no clock) and the mode
+        //! of the dock ("" is auto-hide, then "on" and "off")
+        std::string clock_format{};
+        std::string dock{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
     //! The sizes of the parts, at the scale 1
     struct Metrics {
         int margin = 16;
-        int padding = 8;        //!< inside of a field, left and right
-        int label_width = 90;   //!< the labels left of the fields
-        int row_height = 34;    //!< a field, a button, a row of the list
-        int row_gap = 14;       //!< between the fields
-        int button_width = 100; //!< Save and Cancel
-        int choose_width = 120; //!< the button that opens the list of fonts
-        int text_size = 15;     //!< the font of the text, in pixels
-        int scroll_step = 3;    //!< the rows of one notch of the wheel
-        int preview_rows = 3;   //!< the height of the preview, in rows
+        int sidebar_width = 150; //!< the panel with the sections
+        int padding = 8;         //!< inside of a field, left and right
+        int label_width = 90;    //!< the labels left of the fields
+        int row_height = 34;     //!< a field, a button, a row of the list
+        int row_gap = 14;        //!< between the fields
+        int button_width = 100;  //!< Save and Cancel
+        int choose_width = 120;  //!< the button that opens the list of fonts
+        int text_size = 15;      //!< the font of the text, in pixels
+        int scroll_step = 3;     //!< the rows of one notch of the wheel
+        int preview_rows = 3;    //!< the height of the preview, in rows
 
         //! Every size multiplied by the factor and rounded
         static Metrics scaled(double factor);
@@ -137,6 +153,32 @@ class SettingsForm {
     Result result() const { return result_; }
 
     Field focus() const { return focus_; }
+
+    // The sections
+
+    static constexpr size_t section_count = 3;
+
+    /// The section that shows.
+    Section section() const { return section_; }
+
+    /// Show a section; the focus goes to its first field.
+    void set_section(Section section);
+
+    /// The name of a section, as the panel shows it.
+    static const char* section_title(Section section);
+
+    /// The fields of a section, from the top.
+    static const std::vector<Field>& section_fields(Section section);
+
+    /// The section a field is in.
+    static Section section_of(Field field);
+
+    /// The panel with the sections, and the item of one of them.
+    Rect sidebar_rect() const;
+    Rect section_rect(Section section) const;
+
+    /// A short help for a field; empty when it has none.
+    static const char* hint(Field field);
 
     /// The texts of the fields.
     Values values() const;
@@ -287,13 +329,16 @@ class SettingsForm {
         RgbaField,
         WallpaperField,
         WallpaperModeField,
+        ClockFormatField,
+        DockField,
         ChooseButton,
         CancelButton,
         SaveButton,
         SearchBox,
         SizeBox,
         StyleBox,
-        FirstRow //!< and the rows of the list from here
+        FirstSection, //!< and the other sections: `FirstSection` + number
+        FirstRow = FirstSection + section_count //!< and the rows of the list
     };
 
     //! The values of a choice
@@ -318,7 +363,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 10> fields_;
+    std::array<TextField, 12> fields_;
     TextField search_;
     TextField pick_size_;
     std::string pick_style_;
@@ -333,6 +378,7 @@ class SettingsForm {
     View view_ = View::Form;
     Result result_ = Result::Editing;
     Field focus_ = Field::Font;
+    Section section_ = Section::Fonts;
     Pane pane_ = Pane::Search;
     int width_ = 1;
     int height_ = 1;

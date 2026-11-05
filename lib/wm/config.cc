@@ -141,6 +141,20 @@ XftChoices dock_choices()
     return {std::begin(modes), std::end(modes)};
 }
 
+bool valid_dock_choice(const std::string& text)
+{
+    const XftChoices choices = dock_choices();
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+bool valid_clock_format(const std::string& text)
+{
+    return std::none_of(text.begin(), text.end(), [](char c) {
+        return std::iscntrl(static_cast<unsigned char>(c)) != 0;
+    });
+}
+
 bool valid_wallpaper_mode(const std::string& text)
 {
     const XftChoices choices = wallpaper_choices();
@@ -299,7 +313,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         }
     }
     if (const auto value = ini.get("panel", "clock_format")) {
-        if (valid_font_style(*value)) { // no control character
+        if (valid_clock_format(*value)) {
             config.clock_format = *value;
         } else {
             problem("[panel] clock_format must be a text without control "

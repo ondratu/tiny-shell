@@ -111,6 +111,17 @@ bool valid_xft(XftOption option, const std::string& text);
  */
 XftChoices dock_choices();
 
+//! Whether the text is one of the values of `dock_choices()`
+bool valid_dock_choice(const std::string& text);
+
+/**
+ * @short Whether the text is a format of the clock that can be saved.
+ *
+ * Empty (no clock) or a `strftime()` format without a control character (a
+ * line break would break the file).
+ */
+bool valid_clock_format(const std::string& text);
+
 /**
  * @short The ways a wallpaper covers the screen: fill, center and tile.
  *
