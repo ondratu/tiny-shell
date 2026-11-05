@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "display.h"
+#include "spawn.h"
 #include "entry.h"
 #include "app/settings_form.h"
 #include "text.h"
@@ -82,9 +83,11 @@ const std::string& xft_value(const SettingsForm::Values& v,
 class SettingsApp : public tiny::XftWindow {
   public:
     SettingsApp(tiny::Display& display_arg, const tiny::wm::Config& config,
-                std::string file_arg, std::vector<std::string> families):
+                std::string file_arg, std::string wallpaper_program_arg,
+                std::vector<std::string> families):
         XftWindow(display_arg),
         file(std::move(file_arg)),
+        wallpaper_program(std::move(wallpaper_program_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
         initial{config.font,
@@ -94,7 +97,9 @@ class SettingsApp : public tiny::XftWindow {
                 config.font_style,
                 config.xft_antialias,
                 config.xft_hinting,
-                config.xft_rgba},
+                config.xft_rgba,
+                config.wallpaper_file,
+                config.wallpaper_mode},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -241,8 +246,24 @@ class SettingsApp : public tiny::XftWindow {
             if (v.terminal != initial.terminal) {
                 changed.push_back({"commands", "terminal", v.terminal});
             }
+            const bool wallpaper_changed =
+                    v.wallpaper != initial.wallpaper ||
+                    v.wallpaper_mode != initial.wallpaper_mode;
+            if (v.wallpaper != initial.wallpaper) {
+                changed.push_back({"wallpaper", "file", v.wallpaper});
+            }
+            if (v.wallpaper_mode != initial.wallpaper_mode) {
+                changed.push_back({"wallpaper", "mode", v.wallpaper_mode});
+            }
             if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
                 publish_xft(v);
+                // a wallpaper that is removed goes at the next login: the
+                // color of the theme belongs to tiny-shell
+                if (wallpaper_changed && !v.wallpaper.empty() &&
+                    tiny::spawn({wallpaper_program}) < 0) {
+                    fprintf(stderr, "%s: can't run %s\n", "tiny-settings",
+                            wallpaper_program.c_str());
+                }
                 return true;
             }
         }
@@ -365,7 +386,9 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Scale, "Scale"},
                     {SettingsForm::Field::Antialias, "Antialias"},
                     {SettingsForm::Field::Hinting, "Hinting"},
-                    {SettingsForm::Field::Rgba, "Subpixel"}};
+                    {SettingsForm::Field::Rgba, "Subpixel"},
+                    {SettingsForm::Field::Wallpaper, "Wallpaper"},
+                    {SettingsForm::Field::WallpaperMode, "Placement"}};
         for (const auto& row : rows) {
             text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
             const tiny::Rect r = form.field_rect(row.id);
@@ -466,6 +489,7 @@ class SettingsApp : public tiny::XftWindow {
     }
 
     std::string file; //!< of the user, empty when its place is not known
+    std::string wallpaper_program; //!< draws the wallpaper after it is saved
     double scale;
     SettingsForm::Metrics metrics;
     SettingsForm::Values initial; //!< what the files say now
@@ -490,11 +514,13 @@ int main(int argc, char** argv)
         const bool help = std::strcmp(argv[1], "--help") == 0;
         fprintf(help ? stdout : stderr,
                 "usage: %s\nChanges the font (its size and style), the "
-                "terminal, the scale of tiny-shell and the rendering of text "
-                "(antialiasing, hinting, subpixel order).\nThe settings are "
-                "written to the configuration file of the user and are used\n"
-                "after the next login; the rendering of text is also used "
-                "by the programs that start later.\n",
+                "terminal, the scale of tiny-shell, the rendering of text "
+                "(antialiasing, hinting, subpixel order) and the wallpaper "
+                "(the path of a PNG or JPEG and how it covers the screen).\n"
+                "The settings are written to the configuration file of the "
+                "user and are used\nafter the next login; the rendering of "
+                "text is also used by the programs that start later and the "
+                "wallpaper is drawn at once.\n",
                 argv[0]);
         return help ? EXIT_SUCCESS : 2;
     }
@@ -516,6 +542,7 @@ int main(int argc, char** argv)
         SettingsApp app(tiny::get_display(), config,
                         tiny::wm::user_config_file(getenv("XDG_CONFIG_HOME"),
                                                    getenv("HOME")),
+                        tiny::sibling_program(argv[0], "tiny-wallpaper"),
                         tiny::xdg::font_families());
         app.run();
     } catch (const std::exception& e) {

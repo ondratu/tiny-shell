@@ -47,9 +47,11 @@ class SettingsForm {
         Style,
         Terminal,
         Scale,
-        Antialias, //!< from here a field is a choice, see `xft_option()`
+        Antialias, //!< a choice, see `xft_option()`
         Hinting,
-        Rgba
+        Rgba,
+        Wallpaper, //!< the path of a PNG or JPEG, typed (there is no browser)
+        WallpaperMode //!< a choice: fill, center or tile
     };
 
     //! What has the keyboard in the list of fonts
@@ -86,6 +88,12 @@ class SettingsForm {
         std::string antialias;
         std::string hinting;
         std::string rgba;
+        //! The path of the wallpaper ("" is none) and how it covers the screen
+        // NOLINTBEGIN(readability-redundant-member-init) ; the initializer
+        // keeps -Wmissing-field-initializers quiet where a form is made
+        std::string wallpaper{};
+        std::string wallpaper_mode{};
+        // NOLINTEND(readability-redundant-member-init)
     };
 
     //! The sizes of the parts, at the scale 1
@@ -139,7 +147,8 @@ class SettingsForm {
     /// Whether the field is a choice of a few values (it has no cursor).
     static bool is_choice(Field field);
 
-    /// The option of `[xft]` that a choice sets; the field must be a choice.
+    /// The option of `[xft]` that a choice sets; the field must be Antialias,
+    /// Hinting or Rgba.
     static wm::XftOption xft_option(Field field);
 
     /// The name of the value of a choice, as the user sees it.
@@ -276,6 +285,8 @@ class SettingsForm {
         AntialiasField,
         HintingField,
         RgbaField,
+        WallpaperField,
+        WallpaperModeField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -285,6 +296,8 @@ class SettingsForm {
         FirstRow //!< and the rows of the list from here
     };
 
+    //! The values of a choice
+    static wm::XftChoices choices_of(Field field);
     TextField& field_ref(Field field);
     size_t target_at(int x, int y) const;
     bool act(size_t target, int x);
@@ -305,7 +318,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 8> fields_;
+    std::array<TextField, 10> fields_;
     TextField search_;
     TextField pick_size_;
     std::string pick_style_;

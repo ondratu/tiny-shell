@@ -62,10 +62,11 @@ std::string size_text(double size)
 }
 
 constexpr SettingsForm::Field fields[] = {
-        SettingsForm::Field::Font,    SettingsForm::Field::Size,
-        SettingsForm::Field::Style,   SettingsForm::Field::Terminal,
-        SettingsForm::Field::Scale,   SettingsForm::Field::Antialias,
-        SettingsForm::Field::Hinting, SettingsForm::Field::Rgba};
+        SettingsForm::Field::Font,      SettingsForm::Field::Size,
+        SettingsForm::Field::Style,     SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale,     SettingsForm::Field::Antialias,
+        SettingsForm::Field::Hinting,   SettingsForm::Field::Rgba,
+        SettingsForm::Field::Wallpaper, SettingsForm::Field::WallpaperMode};
 
 constexpr size_t field_count = std::size(fields);
 
@@ -88,10 +89,11 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
 SettingsForm::SettingsForm(const Values& initial,
                            std::vector<std::string> families,
                            const Metrics& metrics, StylesFn styles_of):
-    fields_{TextField(initial.font),    TextField(initial.size),
-            TextField(initial.style),   TextField(initial.terminal),
-            TextField(initial.scale),   TextField(initial.antialias),
-            TextField(initial.hinting), TextField(initial.rgba)},
+    fields_{TextField(initial.font),      TextField(initial.size),
+            TextField(initial.style),     TextField(initial.terminal),
+            TextField(initial.scale),     TextField(initial.antialias),
+            TextField(initial.hinting),   TextField(initial.rgba),
+            TextField(initial.wallpaper), TextField(initial.wallpaper_mode)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -119,14 +121,23 @@ int SettingsForm::form_height() const
 
 SettingsForm::Values SettingsForm::values() const
 {
-    return {text(Field::Font),    text(Field::Terminal), text(Field::Scale),
-            text(Field::Size),    text(Field::Style),    text(Field::Antialias),
-            text(Field::Hinting), text(Field::Rgba)};
+    return {text(Field::Font),      text(Field::Terminal),
+            text(Field::Scale),     text(Field::Size),
+            text(Field::Style),     text(Field::Antialias),
+            text(Field::Hinting),   text(Field::Rgba),
+            text(Field::Wallpaper), text(Field::WallpaperMode)};
 }
 
 bool SettingsForm::is_choice(Field field)
 {
-    return field >= Field::Antialias;
+    return field == Field::Antialias || field == Field::Hinting ||
+           field == Field::Rgba || field == Field::WallpaperMode;
+}
+
+wm::XftChoices SettingsForm::choices_of(Field field)
+{
+    return field == Field::WallpaperMode ? wm::wallpaper_choices()
+                                         : wm::xft_choices(xft_option(field));
 }
 
 wm::XftOption SettingsForm::xft_option(Field field)
@@ -144,7 +155,7 @@ wm::XftOption SettingsForm::xft_option(Field field)
 
 std::string SettingsForm::choice_label(Field field) const
 {
-    for (const wm::XftChoice& c : wm::xft_choices(xft_option(field))) {
+    for (const wm::XftChoice& c : choices_of(field)) {
         if (text(field) == c.value) {
             return c.label;
         }
@@ -188,6 +199,15 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_xft(xft_option(field), value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::Wallpaper:
+            return wm::valid_wallpaper_file(value)
+                           ? ""
+                           : "The wallpaper must be a path without line "
+                             "breaks.";
+        case Field::WallpaperMode:
+            return wm::valid_wallpaper_mode(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::Scale:
             break;
     }
@@ -213,9 +233,10 @@ SettingsForm::Values SettingsForm::clean_values() const
         return std::string(trim(value));
     };
     const Values v = values();
-    return {clean(v.font),    clean(v.terminal), clean(v.scale),
-            clean(v.size),    clean(v.style),    clean(v.antialias),
-            clean(v.hinting), clean(v.rgba)};
+    return {clean(v.font),          clean(v.terminal), clean(v.scale),
+            clean(v.size),          clean(v.style),    clean(v.antialias),
+            clean(v.hinting),       clean(v.rgba),     clean(v.wallpaper),
+            clean(v.wallpaper_mode)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -263,7 +284,7 @@ Rect SettingsForm::choose_rect() const
 
 Rect SettingsForm::message_rect() const
 {
-    const Rect last = label_rect(Field::Rgba);
+    const Rect last = label_rect(Field::WallpaperMode);
     return {metrics_.margin + metrics_.label_width,
             last.y + last.height + metrics_.row_gap,
             std::max(1, width_ - 2 * metrics_.margin - metrics_.label_width),
@@ -558,7 +579,9 @@ bool SettingsForm::act(size_t target, int x)
         case ScaleField:
         case AntialiasField:
         case HintingField:
-        case RgbaField: {
+        case RgbaField:
+        case WallpaperField:
+        case WallpaperModeField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
@@ -659,7 +682,7 @@ bool SettingsForm::edit(TextField& field, Key pressed)
 //! The next (or the previous) value of a choice; the first one is the default
 void SettingsForm::step_choice(Field field, int direction)
 {
-    const wm::XftChoices choices = wm::xft_choices(xft_option(field));
+    const wm::XftChoices choices = choices_of(field);
     const auto n = static_cast<long>(choices.size());
     const auto* const found = std::find_if(
             choices.begin(), choices.end(),

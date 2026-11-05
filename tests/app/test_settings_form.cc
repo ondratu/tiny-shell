@@ -173,14 +173,15 @@ TEST(SettingsFormTest, tab_goes_round_the_fields_and_back_tab_the_other_way)
 
     for (const Field next :
          {Field::Size, Field::Style, Field::Terminal, Field::Scale,
-          Field::Antialias, Field::Hinting, Field::Rgba, Field::Font}) {
+          Field::Antialias, Field::Hinting, Field::Rgba, Field::Wallpaper,
+          Field::WallpaperMode, Field::Font}) {
         form.key(Key::Tab);
         EXPECT_EQ(form.focus(), next);
     }
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::Rgba);
+    EXPECT_EQ(form.focus(), Field::WallpaperMode);
     form.key(Key::BackTab);
-    EXPECT_EQ(form.focus(), Field::Hinting);
+    EXPECT_EQ(form.focus(), Field::Wallpaper);
 }
 
 TEST(SettingsFormTest, the_arrows_move_between_the_fields)
@@ -188,7 +189,7 @@ TEST(SettingsFormTest, the_arrows_move_between_the_fields)
     SettingsForm form = make();
 
     form.key(Key::Up); // round to the last
-    EXPECT_EQ(form.focus(), Field::Rgba);
+    EXPECT_EQ(form.focus(), Field::WallpaperMode);
     form.key(Key::Down); // round to the first
     EXPECT_EQ(form.focus(), Field::Font);
     EXPECT_EQ(form.view(), View::Form);
@@ -1125,7 +1126,7 @@ TEST(SettingsFormTest, the_rendering_of_text_has_choices_under_the_fields)
     EXPECT_EQ(form.clean_values().rgba, "rgb");
     EXPECT_GT(form.field_rect(Field::Antialias).y,
               form.field_rect(Field::Scale).y);
-    EXPECT_GT(form.message_rect().y, form.field_rect(Field::Rgba).y);
+    EXPECT_GT(form.message_rect().y, form.field_rect(Field::WallpaperMode).y);
     EXPECT_EQ(SettingsForm::xft_option(Field::Hinting),
               tiny::wm::XftOption::Hinting);
     EXPECT_EQ(SettingsForm::xft_option(Field::Antialias),
@@ -1213,4 +1214,75 @@ TEST(SettingsFormTest, a_choice_that_was_changed_clears_the_failed_write)
     form.key(Key::Right);
 
     EXPECT_TRUE(form.status().empty());
+}
+
+namespace {
+
+SettingsForm::Values with_wallpaper(const char* file, const char* mode)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.wallpaper = file;
+    v.wallpaper_mode = mode;
+    return v;
+}
+
+} // namespace
+
+TEST(SettingsFormTest, the_wallpaper_is_a_path_and_a_choice_of_the_placement)
+{
+    SettingsForm form = make(with_wallpaper("~/a.jpg", "tile"));
+
+    EXPECT_FALSE(SettingsForm::is_choice(Field::Wallpaper));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::WallpaperMode));
+    EXPECT_EQ(form.values().wallpaper, "~/a.jpg");
+    EXPECT_EQ(form.values().wallpaper_mode, "tile");
+    EXPECT_EQ(form.choice_label(Field::WallpaperMode), "Tile");
+    EXPECT_GT(form.field_rect(Field::Wallpaper).y,
+              form.field_rect(Field::Rgba).y);
+
+    // the arrows go through fill (""), center and tile
+    focus_on(form, Field::WallpaperMode);
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::WallpaperMode), "");
+    EXPECT_EQ(form.choice_label(Field::WallpaperMode), "Fill");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::WallpaperMode), "center");
+    form.key(Key::Left);
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::WallpaperMode), "tile");
+}
+
+TEST(SettingsFormTest, the_path_of_the_wallpaper_is_typed)
+{
+    SettingsForm form = make(with_wallpaper("", ""));
+
+    focus_on(form, Field::Wallpaper);
+    EXPECT_TRUE(form.type("/p/a.png"));
+    EXPECT_EQ(form.clean_values().wallpaper, "/p/a.png");
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormTest, a_path_with_a_line_break_cannot_be_saved)
+{
+    SettingsForm form = make(with_wallpaper("/a\nb", ""));
+
+    EXPECT_FALSE(form.problem(Field::Wallpaper).empty());
+    EXPECT_FALSE(form.problem().empty());
+    form = make(with_wallpaper("pics/a.png", ""));
+    EXPECT_FALSE(form.problem(Field::Wallpaper).empty());
+    form = make(with_wallpaper("", "stretch"));
+    EXPECT_FALSE(form.problem(Field::WallpaperMode).empty());
+    EXPECT_FALSE(form.problem().empty());
+}
+
+TEST(SettingsFormTest, a_click_on_the_placement_steps_through_the_values)
+{
+    SettingsForm form = make(with_wallpaper("", ""));
+    form.resize(500, form.form_height());
+
+    const Rect r = form.field_rect(Field::WallpaperMode);
+    form.press(r.x + r.width - 2, r.y + 2);
+    EXPECT_TRUE(form.release(r.x + r.width - 2, r.y + 2));
+    EXPECT_EQ(form.focus(), Field::WallpaperMode);
+    EXPECT_EQ(form.text(Field::WallpaperMode), "center");
 }
