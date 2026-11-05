@@ -45,7 +45,7 @@ void WindowButton::set_events(long mask)
     connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
 }
 
-bool WindowButton::draw_icon(const std::string& name)
+bool WindowButton::draw_icon(const std::string& icon_name)
 {
     if (icons == nullptr) {
         return false;
@@ -53,7 +53,7 @@ bool WindowButton::draw_icon(const std::string& name)
     const uint8_t state = get_theme_state();
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
-    return icons->draw(window, name, shell_theme.win_icon * 3 / 4,
+    return icons->draw(window, icon_name, shell_theme.win_icon * 3 / 4,
                        get_style().get_fg(state), width, height);
 }
 

@@ -13,8 +13,8 @@ std::vector<std::string> about_lines(const std::string& version,
                                                ? ""
                                                : " (" + info.machine + ")"));
     }
-    lines.push_back(about_license);
-    lines.push_back(about_project);
+    lines.emplace_back(about_license);
+    lines.emplace_back(about_project);
     return lines;
 }
 

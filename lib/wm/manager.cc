@@ -1401,8 +1401,8 @@ void Manager::run_wallpaper()
 {
     std::vector<std::string> argv = wallpaper_command;
     if (!argv.empty() && wallpaper_follows_theme) {
-        argv.push_back("--style");
-        argv.push_back(variant_name(tiny::theme.get_variant()));
+        argv.emplace_back("--style");
+        argv.emplace_back(variant_name(tiny::theme.get_variant()));
     }
     run_program(argv); // nothing when there is no wallpaper
 }
