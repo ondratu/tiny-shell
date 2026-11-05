@@ -4876,7 +4876,7 @@ TEST_F(DockModeTest,
 
 TEST_F(DockModeTest, a_window_that_is_raised_later_does_not_hide_the_strip)
 {
-    WmWindow* covering = cover_the_dock();
+    const WmWindow* covering = cover_the_dock();
     ASSERT_TRUE(strip_shown());
 
     XRaiseWindow(dsp(), covering->frame()); // like a full screen window does
