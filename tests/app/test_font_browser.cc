@@ -19,6 +19,7 @@ FontBrowser::Metrics metrics()
     m.cell_height = 50;
     m.margin = 10;
     m.header = 20;
+    m.search = 0; // the tests of the grid have no search bar
     m.back_width = 40;
     return m;
 }
@@ -613,4 +614,140 @@ TEST(FontBrowserInfoTest, the_wheel_and_the_cells_work_after_the_info)
 
     EXPECT_EQ(b.view(), View::Overview);
     EXPECT_NE(b.cell_at(15, 15), b.families().size());
+}
+
+// The search
+
+namespace {
+
+//! Like `browser()`, with a search bar of 20 pixels
+FontBrowser searching(size_t count = 10)
+{
+    FontBrowser::Metrics m = metrics();
+    m.search = 20;
+    FontBrowser b(names(count), m);
+    b.resize(320, 140);
+    return b;
+}
+
+} // namespace
+
+TEST(FontBrowserSearchTest, the_cells_start_under_the_search_bar)
+{
+    const FontBrowser b = searching();
+
+    EXPECT_EQ(b.top(), 20);
+    EXPECT_EQ(b.cell_rect(0).y, 20 + 10);
+    EXPECT_EQ(b.cell_at(110, 35), 1u);
+    EXPECT_EQ(b.cell_at(110, 10), b.families().size()); // in the bar
+    EXPECT_EQ(b.search_rect().y, 5);
+    EXPECT_EQ(b.search_rect().height, 10);
+}
+
+TEST(FontBrowserSearchTest, typing_keeps_the_families_with_the_text)
+{
+    FontBrowser b = searching();
+
+    EXPECT_TRUE(b.type("t 3"));
+
+    EXPECT_EQ(b.families(), (std::vector<std::string>{"Font 3"}));
+    EXPECT_EQ(b.search_field().text(), "t 3");
+}
+
+TEST(FontBrowserSearchTest, the_case_of_letters_does_not_matter)
+{
+    FontBrowser b = searching();
+
+    b.type("FONT 1");
+
+    EXPECT_EQ(b.families(), (std::vector<std::string>{"Font 1"}));
+}
+
+TEST(FontBrowserSearchTest, backspace_takes_a_character_back)
+{
+    FontBrowser b = searching();
+    b.type("Font 12");
+    ASSERT_TRUE(b.families().empty());
+
+    EXPECT_TRUE(b.key(Key::Back));
+
+    EXPECT_EQ(b.families().size(), 1u);
+    EXPECT_FALSE(searching().key(Key::Back)); // nothing to take
+}
+
+TEST(FontBrowserSearchTest, escape_clears_the_search)
+{
+    FontBrowser b = searching();
+    b.type("5");
+
+    EXPECT_TRUE(b.key(Key::Escape));
+
+    EXPECT_EQ(b.families().size(), 10u);
+    EXPECT_FALSE(b.key(Key::Escape));
+}
+
+TEST(FontBrowserSearchTest, control_characters_are_not_typed)
+{
+    FontBrowser b = searching();
+
+    EXPECT_FALSE(b.type("\r\t\x7f"));
+    EXPECT_FALSE(b.type(""));
+    EXPECT_EQ(b.families().size(), 10u);
+}
+
+TEST(FontBrowserSearchTest, the_selected_family_stays_when_it_still_matches)
+{
+    FontBrowser b = searching();
+    b.key(Key::End); // Font 9
+
+    b.type("9");
+
+    EXPECT_EQ(b.family(), "Font 9");
+}
+
+TEST(FontBrowserSearchTest, a_selection_that_is_gone_goes_to_the_first_family)
+{
+    FontBrowser b = searching();
+    b.key(Key::End);
+
+    b.type("1");
+
+    EXPECT_EQ(b.selected(), 0u);
+    EXPECT_EQ(b.family(), "Font 1");
+}
+
+TEST(FontBrowserSearchTest, a_search_without_a_match_has_nothing_to_open)
+{
+    FontBrowser b = searching();
+    b.type("zzz");
+
+    EXPECT_TRUE(b.families().empty());
+    EXPECT_FALSE(b.key(Key::Return));
+    EXPECT_EQ(b.view(), View::Overview);
+}
+
+TEST(FontBrowserSearchTest,
+     the_detail_does_not_take_the_typing_and_keeps_the_search)
+{
+    FontBrowser b = searching();
+    b.type("Font 4");
+    b.open(0);
+
+    EXPECT_FALSE(b.type("x"));
+    b.back();
+
+    EXPECT_EQ(b.view(), View::Overview);
+    EXPECT_EQ(b.search_field().text(), "Font 4");
+    EXPECT_EQ(b.families().size(), 1u);
+}
+
+TEST(FontBrowserSearchTest, the_scrolling_goes_to_the_top_with_a_new_search)
+{
+    FontBrowser b = searching();
+    b.wheel(100);
+    ASSERT_GT(b.scroll(), 0);
+
+    b.type("Font");
+
+    EXPECT_EQ(b.scroll(), 0);
 }

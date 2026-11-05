@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "text_field.h"
 #include "widget.h"
 
 namespace tiny::app {
@@ -12,7 +13,8 @@ namespace tiny::app {
 /**
  * @short What the font viewer shows and where, without any drawing.
  *
- * Three views. The overview is a grid of cells, one for every font family, in
+ * Three views. The overview has a search field at the top (the typing goes to
+ * it; only the families that have the text in their name show) and a grid of cells, one for every font family, in
  * a column count that fits the width of the window; the cells scroll. The
  * detail is the specimen of one family under a header with a button back and
  * a button Info; the specimen scrolls. The info is the information about the
@@ -55,6 +57,7 @@ class FontBrowser {
         int name_size = 13;         //!< the font of the names and the header
         int name_baseline = 170;    //!< from the top of a cell
         int header = 40;            //!< the height of the header of the detail
+        int search = 44;            //!< the height of the search field bar
         int back_width = 110;       //!< the width of the back button
         int info_width = 90;        //!< the width of the button Info
         int charset_size = 28;      //!< the lines of the letters and the digits
@@ -100,9 +103,22 @@ class FontBrowser {
 
     int content_height() const;
 
-    /// Where the scrolling area starts (under the header in the detail and
-    /// the info).
-    int top() const { return view_ == View::Overview ? 0 : metrics_.header; }
+    /// Where the scrolling area starts: under the header (the search field in
+    /// the overview, the breadcrumbs in the detail and the info).
+    int top() const
+    {
+        return view_ == View::Overview ? metrics_.search : metrics_.header;
+    }
+
+    /// The search field of the overview.
+    Rect search_rect() const;
+
+    /// The text of the search and its cursor.
+    const TextField& search_field() const { return search_; }
+
+    /// Typed text (UTF-8) goes to the search of the overview; true when the
+    /// list changed.
+    bool type(const std::string& typed);
 
     /// The height of the scrolling area.
     int view_height() const;
@@ -159,7 +175,11 @@ class FontBrowser {
     int step() const;
     int grid_left() const;
 
-    std::vector<std::string> families_;
+    void search();
+
+    std::vector<std::string> all_;      //!< every family
+    std::vector<std::string> families_; //!< the ones that match the search
+    TextField search_;
     Metrics metrics_;
     View view_ = View::Overview;
     int width_ = 1;
