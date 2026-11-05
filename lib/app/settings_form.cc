@@ -402,6 +402,19 @@ Rect SettingsForm::choose_rect() const
             metrics_.choose_width, metrics_.row_height};
 }
 
+Rect SettingsForm::thumbnail_rect() const
+{
+    const int x =
+            metrics_.sidebar_width + metrics_.margin + metrics_.label_width;
+    const auto rows =
+            static_cast<int>(section_fields(Section::Appearance).size());
+    const int y =
+            metrics_.margin + rows * (metrics_.row_height + metrics_.row_gap);
+    const int bottom = message_rect().y - metrics_.row_gap;
+    return {x, y, std::max(1, width_ - x - metrics_.margin),
+            std::max(1, bottom - y)};
+}
+
 Rect SettingsForm::message_rect() const
 {
     // over the buttons, the problem and under it the hint

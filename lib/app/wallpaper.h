@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,18 @@ std::string wallpaper_usage(const char* program);
  */
 bool set_root_pixmap(::Display* display, ::Window root,
                      const image::Image& picture);
+
+/**
+ * @short A small picture of a wallpaper file for the settings.
+ *
+ * The photo is scaled, with its aspect ratio kept, to fit `max_width` x
+ * `max_height` (never bigger than the photo is) and put over white, so every
+ * pixel is opaque. `~/` in the path is the `home`. Returns nothing for a file
+ * that is not a PNG or JPEG that can be read, and for a size under 1 pixel.
+ */
+std::optional<image::Image> wallpaper_thumbnail(const std::string& file,
+                                                const char* home, int max_width,
+                                                int max_height);
 
 /**
  * @short Load the photo and make it the wallpaper of the screen.

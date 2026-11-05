@@ -1551,3 +1551,27 @@ TEST(SettingsFormSectionTest, a_wrong_field_in_the_same_section_gets_the_focus)
     EXPECT_EQ(form.focus(), Field::Size);
     EXPECT_EQ(form.result(), Result::Editing);
 }
+
+TEST(SettingsFormSectionTest,
+     the_thumbnail_of_the_wallpaper_is_under_the_fields)
+{
+    const SettingsForm form = make();
+
+    const Rect thumb = form.thumbnail_rect();
+    const Rect clock = form.field_rect(Field::ClockFormat);
+    EXPECT_GT(thumb.y, clock.y + clock.height);
+    EXPECT_LT(thumb.y + thumb.height, form.message_rect().y);
+    EXPECT_EQ(thumb.x, clock.x);
+    EXPECT_GE(thumb.width, 1);
+    EXPECT_GE(thumb.height, 1);
+}
+
+TEST(SettingsFormSectionTest,
+     a_tiny_window_has_a_thumbnail_of_one_pixel_at_least)
+{
+    SettingsForm form = make();
+    form.resize(0, 0);
+
+    EXPECT_GE(form.thumbnail_rect().width, 1);
+    EXPECT_GE(form.thumbnail_rect().height, 1);
+}

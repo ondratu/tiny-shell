@@ -1,5 +1,7 @@
 #include "app/wallpaper.h"
 
+#include <algorithm>
+
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/Xrender.h>
@@ -174,6 +176,40 @@ bool set_root_pixmap(::Display* display, ::Window root,
     XUngrabServer(display);
     XSync(display, False);
     return true;
+}
+
+std::optional<image::Image> wallpaper_thumbnail(const std::string& file,
+                                                const char* home, int max_width,
+                                                int max_height)
+{
+    if (max_width < 1 || max_height < 1) {
+        return std::nullopt;
+    }
+    const auto photo = image::load_photo(expand_home(file, home));
+    if (!photo || !photo->valid()) {
+        return std::nullopt;
+    }
+    // the longer side that makes both sides fit, never more than the photo
+    const long long w = photo->width;
+    const long long h = photo->height;
+    long long side =
+            w >= h ? std::min<long long>(max_width, max_height * w / h)
+                   : std::min<long long>(max_height, max_width * h / w);
+    side = std::clamp<long long>(
+            side, 1, std::min<long long>(std::max(w, h), image::MAX_ICON_SIZE));
+    auto small = image::scale_image(*photo, static_cast<int>(side));
+    if (!small) {
+        return std::nullopt;
+    }
+    for (uint32_t& pixel : small->pixels) { // premultiplied: over white
+        const uint32_t missing = 255 - (pixel >> 24);
+        const auto channel = [&](int shift) {
+            return std::min<uint32_t>(255, ((pixel >> shift) & 0xff) + missing);
+        };
+        pixel = 0xff000000u | (channel(16) << 16) | (channel(8) << 8) |
+                channel(0);
+    }
+    return small;
 }
 
 bool apply_wallpaper(::Display* display, ::Window root, const std::string& file,

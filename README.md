@@ -267,7 +267,8 @@ sections and the fields of the chosen section:
 
 - **Fonts:** the font (a family or a list of families separated by commas, like
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
-- **Appearance:** the scale, the wallpaper and how it covers the screen, the
+- **Appearance:** the scale, the wallpaper and how it covers the screen (a
+  small picture of the file under the fields shows that the path is right), the
   mode of the dock (Auto-hide, On, Off) and the format of the clock.
 - **Applications:** the terminal.
 
@@ -418,7 +419,8 @@ file but not shown.
 
 `build/tiny-fonts` (made by `make`) shows the font families of the system, the
 list that `fc-list : family` prints, read from fontconfig. Every family is a
-cell with "Aa" in the family (black on white) and its name under it. Scroll
+cell with "Aa" in the family (black on white) and its name under it. Type at
+the top to search the families (Escape clears the search). Scroll
 with the wheel or the keys, click a family (or press Return) to see its
 specimen: the small letters, the capitals, the digits and the signs, then one
 sentence in 8, 12, 16, 20, 24, 32, 64 and 128 pixels. The button Info (or I) at
