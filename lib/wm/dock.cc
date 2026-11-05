@@ -123,6 +123,7 @@ DockIcon::~DockIcon()
     if (event_done) {
         disconnect(ButtonPress);
         disconnect(MotionNotify);
+        disconnect(KeyPress);
     }
     if (target != None) {
         XRenderFreePicture(display, target);
@@ -137,7 +138,7 @@ bool DockIcon::contains(const Window* window_arg) const
 
 void DockIcon::set_events(long mask)
 {
-    DockButton::set_events(mask);
+    DockButton::set_events(mask | KeyPressMask); // Escape cancels a drag
 
     // the same grab as the button has, with the press and the moves for a drag
     XGrabButton(display, Button1, AnyModifier, window, false,
@@ -148,12 +149,34 @@ void DockIcon::set_events(long mask)
 
     connect(ButtonPress, [this](const XEvent& e) { on_button_press(e); });
     connect(MotionNotify, [this](const XEvent& e) { on_motion(e); });
+    // the keyboard is grabbed for the time of a drag, so the keys come here
+    connect(KeyPress, [this](const XEvent& e) { on_key_press(e); });
+}
+
+void DockIcon::on_key_press(const XEvent& e)
+{
+    if (!dragging || XLookupKeysym(const_cast<XKeyEvent*>(&e.xkey), 0) !=
+                             static_cast<KeySym>(XK_Escape)) {
+        return;
+    }
+    dragging = false;
+    pressed = false;
+    cancelled = true;
+    XUngrabKeyboard(display, CurrentTime);
+    on_expose(e, nullptr); // full size again, it stays where it is
+    if (on_cancel) {
+        on_cancel(*this);
+    }
+    if (track) {
+        track(-1);
+    }
 }
 
 void DockIcon::on_button_press(const XEvent& e)
 {
     pressed = draggable && e.xbutton.button == Button1;
     dragging = false;
+    cancelled = false;
     press_x = e.xbutton.x_root;
 }
 
@@ -168,6 +191,9 @@ void DockIcon::on_motion(const XEvent& e)
             return;
         }
         dragging = true;
+        // Escape cancels the drag; the keys come here while the button is down
+        XGrabKeyboard(display, window, False, GrabModeAsync, GrabModeAsync,
+                      CurrentTime);
         if (track) {
             track(1); // the icon must live until the drop
         }
@@ -209,7 +235,12 @@ void DockIcon::handle_release(const XEvent& e, void* data)
     const bool was_dragging = dragging;
     pressed = false;
     dragging = false;
+    if (cancelled) { // Escape ended it: the release is not a click either
+        cancelled = false;
+        return;
+    }
     if (was_dragging) { // not a click
+        XUngrabKeyboard(display, CurrentTime);
         on_expose(e, nullptr);
         if (on_drop) {
             on_drop(*this, e.xbutton.x_root);
@@ -643,6 +674,7 @@ void Dock::rebuild()
         task_icon->on_drop = [this](const DockIcon& dragged, int x_root) {
             drop(dragged, x_root);
         };
+        task_icon->on_cancel = [this](const DockIcon&) { mark.unmap(); };
         task_icon->track = [this](int change) { track_handler(change); };
         icons.push_back(task_icon);
         icon_x.push_back(get_start_offset() + border);

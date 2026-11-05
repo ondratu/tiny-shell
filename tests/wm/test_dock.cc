@@ -591,6 +591,52 @@ TEST_F(DockIconDragTest, the_release_drops_the_icon_and_is_not_a_click)
     EXPECT_EQ(click.calls, 0);
 }
 
+TEST_F(DockIconDragTest, escape_cancels_the_drag_and_the_release_does_nothing)
+{
+    int cancelled = 0;
+    icon->on_cancel = [&cancelled](const tiny::wm::DockIcon&) { ++cancelled; };
+    press(100);
+    move(150);
+    ASSERT_TRUE(icon->is_dragging());
+
+    send(icon->get_window(), key_event(icon->get_window(), XK_Escape));
+
+    EXPECT_FALSE(icon->is_dragging());
+    EXPECT_TRUE(icon->is_cancelled());
+    EXPECT_EQ(cancelled, 1);
+    move(200); // the button is still down: no more drag
+    EXPECT_EQ(dragged.size(), 1u);
+    release(210);
+    EXPECT_TRUE(dropped.empty());
+    EXPECT_EQ(click.calls, 0);
+    EXPECT_FALSE(icon->is_cancelled());
+}
+
+TEST_F(DockIconDragTest, a_new_press_after_a_cancel_drags_again)
+{
+    press(100);
+    move(150);
+    send(icon->get_window(), key_event(icon->get_window(), XK_Escape));
+    release(150);
+
+    press(100);
+    move(150);
+
+    EXPECT_TRUE(icon->is_dragging());
+}
+
+TEST_F(DockIconDragTest, other_keys_and_keys_without_a_drag_do_nothing)
+{
+    send(icon->get_window(), key_event(icon->get_window(), XK_Escape));
+    EXPECT_FALSE(icon->is_cancelled());
+
+    press(100);
+    move(150);
+    send(icon->get_window(), key_event(icon->get_window(), XK_a));
+
+    EXPECT_TRUE(icon->is_dragging());
+}
+
 TEST_F(DockIconDragTest, the_release_without_a_drag_is_a_click)
 {
     press(100);
@@ -1969,6 +2015,23 @@ TEST_F(DockGroupsTest, the_only_favorite_has_no_place_to_go)
     move(first, center_of(0) + 100);
 
     EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+}
+
+TEST_F(DockGroupsTest, escape_during_a_drag_takes_the_mark_away_and_moves_nothing)
+{
+    set({"a.desktop", "b.desktop"});
+    int moved = 0;
+    dock.on_move_favorite = [&moved](const std::string&, size_t) { ++moved; };
+    const ::Window first = icon_at(0);
+    press(first, center_of(0));
+    move(first, center_of(1) + 1);
+    ASSERT_NE(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+
+    send(first, key_event(first, XK_Escape));
+    release(first, center_of(1) + 1);
+
+    EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
+    EXPECT_EQ(moved, 0);
 }
 
 TEST_F(DockGroupsTest, a_drop_without_a_handler_is_ignored)
