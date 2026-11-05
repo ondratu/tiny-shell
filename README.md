@@ -91,7 +91,7 @@ Implemented:
   manager against Xvfb.
 
 Planned, grouped by importance (what a window manager must do for other
-programs is done, so there is no "must" list):
+programs is done, only small details of it are left):
 
 ### Should: what people expect from a desktop
 
@@ -138,7 +138,8 @@ sudo apt install build-essential pkg-config \
 
 make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
-make DEBUG=1         # with the debugging information (-Og -g), much bigger
+make DEBUG=1         # into build-debug/, with the debugging information (-Og -g), much bigger,
+                     # and with diagnostic messages on stderr (TINY_LOG)
 ```
 
 To run the tests (they need `xvfb` and googletest):
@@ -243,7 +244,7 @@ stderr and leaves the old file as it was. The file says so at the top.
 The date and the time are at the right end of the panel. The text is made by
 `strftime()` from `[panel] clock_format`, so the names of the days and months
 and the order of the date follow the language of the session (`LC_TIME`, set by
-`LANG` or `LC_ALL`): `%e` is the day, `%B` the name of the month (`út 5 listopadu 15:33`
+`LANG` or `LC_ALL`): `%e` is the day, `%B` the name of the month (`čt 5 listopadu 15:33`
 in Czech, `Thu 5 November 15:33` in English) and `%R` is `HH:MM`. The default
 is `%a %e %B %R`, without the year. The clock is as wide as the widest text of the format in a year, so
 the panel does not move, and it changes at the start of every minute, so it
