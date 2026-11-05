@@ -527,7 +527,6 @@ void Manager::restack_layers()
     for (const auto& dock : wm_docks) {
         XRaiseWindow(display, dock.first);
     }
-    XRaiseWindow(display, wm_dock_reveal.get_window()); // over everything
     // the focused window last, so it stays on top of the others in its layer
     const auto raise_if = [this](Window* window, bool layer) {
         if (layer && !window->get_minimized()) {
@@ -554,6 +553,9 @@ void Manager::restack_layers()
     if (asked) {
         wm_unresponsive.place_over(asked->frame()); // follows its window
     }
+    // over everything, also over a maximized or full screen window, or the
+    // pointer at the edge of the screen would not reach it
+    XRaiseWindow(display, wm_dock_reveal.get_window());
 }
 
 void Manager::request_frame_extents(::Window child)
