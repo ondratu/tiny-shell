@@ -179,8 +179,8 @@ std::string default_wallpaper(Variant variant,
                               const std::vector<std::string>& data_dirs)
 {
     const std::string name = variant == Variant::Light
-                                     ? "tiny-shell-krajina-liska-1920x1080.png"
-                                     : "tiny-shell-noc-1920x1080.png";
+                                     ? "tiny-shell-landscape-fox-1920x1080.png"
+                                     : "tiny-shell-night-1920x1080.png";
     for (const std::string& dir : data_dirs) {
         std::string file = dir + "/backgrounds/tiny-shell/";
         file += name;
