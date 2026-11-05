@@ -316,3 +316,65 @@ TEST_F(WallpaperTest, a_file_that_is_not_a_picture_is_told)
                                  (dir / "missing.jpg").string(), Fit::Fill,
                                  nullptr)); // the reason is optional
 }
+
+// The thumbnail for the settings
+
+TEST_F(WallpaperTest, the_thumbnail_fits_the_box_and_is_opaque)
+{
+    const auto thumb =
+            tiny::app::wallpaper_thumbnail(write_png(), nullptr, 100, 100);
+
+    ASSERT_TRUE(thumb.has_value());
+    EXPECT_TRUE(thumb->valid());
+    EXPECT_LE(thumb->width, 100);
+    EXPECT_LE(thumb->height, 100);
+    for (const uint32_t pixel : thumb->pixels) {
+        EXPECT_EQ(pixel >> 24, 255u);
+    }
+}
+
+TEST_F(WallpaperTest, the_thumbnail_is_never_bigger_than_the_photo)
+{
+    const auto photo = tiny::image::load_photo(write_png());
+    ASSERT_TRUE(photo.has_value());
+
+    const auto thumb =
+            tiny::app::wallpaper_thumbnail(write_png(), nullptr, 4000, 4000);
+
+    ASSERT_TRUE(thumb.has_value());
+    EXPECT_LE(thumb->width, photo->width);
+    EXPECT_LE(thumb->height, photo->height);
+}
+
+TEST_F(WallpaperTest, the_thumbnail_keeps_the_aspect_ratio_in_a_narrow_box)
+{
+    const auto photo = tiny::image::load_photo(write_png());
+    ASSERT_TRUE(photo.has_value());
+
+    const auto thumb =
+            tiny::app::wallpaper_thumbnail(write_png(), nullptr, 1, 1000);
+
+    ASSERT_TRUE(thumb.has_value());
+    EXPECT_EQ(thumb->width, 1);
+}
+
+TEST_F(WallpaperTest, the_thumbnail_of_a_home_path_is_found)
+{
+    write_png();
+
+    const auto thumb = tiny::app::wallpaper_thumbnail(
+            "~/a.png", dir.string().c_str(), 50, 50);
+
+    EXPECT_TRUE(thumb.has_value());
+}
+
+TEST_F(WallpaperTest, there_is_no_thumbnail_of_what_is_not_a_picture)
+{
+    std::ofstream(dir / "t.txt") << "text";
+
+    EXPECT_FALSE(tiny::app::wallpaper_thumbnail((dir / "t.txt").string(),
+                                                nullptr, 50, 50));
+    EXPECT_FALSE(tiny::app::wallpaper_thumbnail("/no/such/file.png", nullptr,
+                                                50, 50));
+    EXPECT_FALSE(tiny::app::wallpaper_thumbnail(write_png(), nullptr, 0, 50));
+}

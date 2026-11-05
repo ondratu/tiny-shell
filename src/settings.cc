@@ -30,6 +30,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -39,6 +40,7 @@
 #include "spawn.h"
 #include "entry.h"
 #include "app/settings_form.h"
+#include "app/wallpaper.h"
 #include "text.h"
 #include "text_field.h"
 #include "style.h"
@@ -446,9 +448,84 @@ class SettingsApp : public tiny::XftWindow {
         }
     }
 
+    //! The small picture of the wallpaper, so the user sees that the path is
+    //! right; it is read when the field is left (not at every key: a photo
+    //! takes a moment to decode)
+    void refresh_thumbnail()
+    {
+        const std::string path(
+                tiny::trim(form.text(SettingsForm::Field::Wallpaper)));
+        const tiny::Rect r = form.thumbnail_rect();
+        if (path == thumb_path && r.width == thumb_box.width &&
+            r.height == thumb_box.height) {
+            return;
+        }
+        thumb_path = path;
+        thumb_box = r;
+        thumb.reset();
+        if (!path.empty()) {
+            thumb = tiny::app::wallpaper_thumbnail(path, getenv("HOME"),
+                                                   r.width, r.height);
+        }
+    }
+
+    void paint_thumbnail()
+    {
+        if (form.focus() != SettingsForm::Field::Wallpaper) {
+            refresh_thumbnail();
+        }
+        const tiny::Rect r = form.thumbnail_rect();
+        fill(field, r);
+        frame(rule, r);
+        const bool current =
+                thumb_path ==
+                tiny::trim(form.text(SettingsForm::Field::Wallpaper));
+        if (thumb && current) {
+            put_picture(*thumb, r);
+        } else {
+            std::string why = "Leave the field to see the picture";
+            if (form.text(SettingsForm::Field::Wallpaper).empty()) {
+                why = "No wallpaper";
+            } else if (current) {
+                why = "Not a PNG or JPEG that can be read";
+            }
+            text_in(ui_font, dim, r, metrics.padding, why);
+        }
+    }
+
+    //! Draw an opaque picture in the middle of a rectangle
+    void put_picture(const tiny::image::Image& picture, const tiny::Rect& r)
+    {
+        Visual* visual = DefaultVisual(display, screen);
+        if (visual->c_class != TrueColor ||
+            DefaultDepth(display, screen) < 24) {
+            return;
+        }
+        XImage* image = XCreateImage(
+                display, visual,
+                static_cast<unsigned>(DefaultDepth(display, screen)), ZPixmap,
+                0, nullptr, static_cast<unsigned>(picture.width),
+                static_cast<unsigned>(picture.height), 32, 0);
+        if (image == nullptr) {
+            return;
+        }
+        std::vector<uint32_t> pixels = picture.pixels; // 0xAARRGGBB
+        image->data = reinterpret_cast<char*>(pixels.data());
+        XPutImage(display, buffer, DefaultGC(display, screen), image, 0, 0,
+                  r.x + (r.width - picture.width) / 2,
+                  r.y + (r.height - picture.height) / 2,
+                  static_cast<unsigned>(picture.width),
+                  static_cast<unsigned>(picture.height));
+        image->data = nullptr; // the vector owns it
+        XDestroyImage(image);
+    }
+
     void paint_form()
     {
         paint_sidebar();
+        if (form.section() == SettingsForm::Section::Appearance) {
+            paint_thumbnail();
+        }
         static const struct {
             SettingsForm::Field id;
             const char* label;
@@ -569,6 +646,9 @@ class SettingsApp : public tiny::XftWindow {
         paint_button(form.save_rect(), "Select", form.pick_problem().empty());
     }
 
+    std::string thumb_path;              //!< what `thumb` is the picture of
+    tiny::Rect thumb_box = {0, 0, 0, 0}; //!< and the box it was made for
+    std::optional<tiny::image::Image> thumb;
     std::string file; //!< of the user, empty when its place is not known
     std::string wallpaper_program; //!< draws the wallpaper after it is saved
     double scale;
