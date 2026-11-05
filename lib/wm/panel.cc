@@ -68,6 +68,16 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
     }
 }
 
+namespace {
+
+//! The logo is three fifths of the height of the panel
+int logo_size(int panel_height)
+{
+    return panel_height * 3 / 5;
+}
+
+} // namespace
+
 LogoButton::LogoButton(int w, int h, const std::string& text_arg):
     tiny::MenuButton(w, h, text_arg)
 {
@@ -80,7 +90,7 @@ bool LogoButton::has_logo() const
 {
     // get() remembers the answer, also for an icon that is not there
     return icons != nullptr &&
-           icons->get("start-here", height * 3 / 5, 0).picture != None;
+           icons->get("start-here", logo_size(height), 0).picture != None;
 }
 
 void LogoButton::on_expose(const XEvent& e, void* data)
@@ -91,8 +101,8 @@ void LogoButton::on_expose(const XEvent& e, void* data)
     const uint8_t state = get_theme_state();
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
-    icons->draw(window, "start-here", height * 3 / 5, get_style().get_fg(state),
-                width, height);
+    icons->draw(window, "start-here", logo_size(height),
+                get_style().get_fg(state), width, height);
 }
 
 Panel::Panel():
@@ -116,7 +126,7 @@ void Panel::realize(::Window root, int x, int y)
     menu_main.realize(root);
 
     if (logo.has_logo()) { // a square with the logo instead of the text
-        const int icon = height * 3 / 5;
+        const int icon = logo_size(height);
         logo.resize(icon * 2, height); // half of the icon at both sides
     }
     push_start(&logo);
