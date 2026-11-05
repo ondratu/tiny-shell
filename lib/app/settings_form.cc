@@ -61,6 +61,9 @@ std::string size_text(double size)
     return text;
 }
 
+//! The rows of the Appearance that the picture of the wallpaper takes
+constexpr size_t thumbnail_rows = 3;
+
 //! All the fields, in the order of `SettingsForm::Field` (the order of the
 //! texts and of the targets)
 constexpr SettingsForm::Field fields[] = {
@@ -120,7 +123,10 @@ int SettingsForm::form_height() const
     size_t longest = 0;
     for (const Section section :
          {Section::Fonts, Section::Appearance, Section::Applications}) {
-        longest = std::max(longest, section_fields(section).size());
+        longest = std::max(
+                longest,
+                section_fields(section).size() +
+                        (section == Section::Appearance ? thumbnail_rows : 0));
     }
     const auto rows = static_cast<int>(longest) + 2 + 1;
     return 2 * metrics_.margin + rows * metrics_.row_height +
@@ -360,8 +366,13 @@ static int row_of(SettingsForm::Field field)
 {
     const std::vector<SettingsForm::Field>& list =
             SettingsForm::section_fields(SettingsForm::section_of(field));
-    return static_cast<int>(std::find(list.begin(), list.end(), field) -
-                            list.begin());
+    const auto row = static_cast<int>(
+            std::find(list.begin(), list.end(), field) - list.begin());
+    // the picture of the wallpaper is under the first field of the appearance
+    return row >= 1 && SettingsForm::section_of(field) ==
+                                   SettingsForm::Section::Appearance
+                   ? row + static_cast<int>(thumbnail_rows)
+                   : row;
 }
 
 Rect SettingsForm::sidebar_rect() const
@@ -404,15 +415,12 @@ Rect SettingsForm::choose_rect() const
 
 Rect SettingsForm::thumbnail_rect() const
 {
-    const int x =
-            metrics_.sidebar_width + metrics_.margin + metrics_.label_width;
-    const auto rows =
-            static_cast<int>(section_fields(Section::Appearance).size());
-    const int y =
-            metrics_.margin + rows * (metrics_.row_height + metrics_.row_gap);
-    const int bottom = message_rect().y - metrics_.row_gap;
-    return {x, y, std::max(1, width_ - x - metrics_.margin),
-            std::max(1, bottom - y)};
+    // the rows between the first field and the wallpaper
+    const Rect first = field_rect(Field::Scale);
+    const Rect after = field_rect(Field::Wallpaper);
+    const int y = first.y + first.height + metrics_.row_gap;
+    return {first.x, y, first.width,
+            std::max(1, after.y - metrics_.row_gap - y)};
 }
 
 Rect SettingsForm::message_rect() const
