@@ -12,6 +12,10 @@
 
 namespace tiny::wm {
 
+//! The color halfway to white: the generic icon of an application without
+//! an icon is not to be as strong as the text
+uint32_t lighter(uint32_t rgb);
+
 /**
  * @short The symbolic icons of the shell (the logo, the buttons of a window,
  * the generic application): one color shapes that take the color of the text.
@@ -23,10 +27,6 @@ namespace tiny::wm {
  * so: the caller draws what it drew before. An icon is made once for a name,
  * a size and a color and kept until the object dies.
  */
-//! The color halfway to white: the generic icon of an application without
-//! an icon is not to be as strong as the text
-uint32_t lighter(uint32_t rgb);
-
 class SymbolicIcons {
   public:
     //! A made icon; the object owns the X resources
