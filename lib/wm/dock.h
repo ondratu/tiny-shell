@@ -102,6 +102,13 @@ class DockIcon : public DockButton {
     /// The drag ended with the release of the button at this root x
     std::function<void(const DockIcon&, int)> on_drop;
 
+    /// Escape cancelled the drag: nothing moves, the release that follows is
+    /// not a click
+    std::function<void(const DockIcon&)> on_cancel;
+
+    /// Whether the drag was cancelled and its button is still down
+    bool is_cancelled() const { return cancelled; }
+
     /// Told +1 when a release of a button is being handled and -1 when it is
     /// done; the dock must not delete the icon in between. The last thing the
     /// icon does is the -1, so the call may delete it.
@@ -112,6 +119,7 @@ class DockIcon : public DockButton {
   protected:
     void on_button_press(const XEvent& e);
     void on_motion(const XEvent& e);
+    void on_key_press(const XEvent& e);
     void on_button_release(const XEvent& e, void* data) override;
     void on_expose(const XEvent& e, void* data) override;
 
@@ -132,7 +140,8 @@ class DockIcon : public DockButton {
     bool draggable = false;
     bool pressed = false; //!< the left button is down on a draggable icon
     bool dragging = false;
-    int press_x = 0; //!< the root x of the press
+    bool cancelled = false; //!< Escape ended the drag, the button is down yet
+    int press_x = 0;        //!< the root x of the press
 };
 
 //! A favorite application of the dock, the icon is not owned
