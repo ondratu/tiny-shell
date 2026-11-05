@@ -52,10 +52,12 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   the tests of the widgets link only this library). `libtiny-shell.a` is the
   window manager and the shell (`lib/wm/`), the freedesktop.org files
   (`lib/xdg/`) and the logic of the programs (`lib/app/`). `src/main.cc` is the
-  window manager itself, `src/fonts.cc` is the font viewer `tiny-fonts` and
-  `src/settings.cc` is the settings form `tiny-settings`; these two are
-  windows of `tiny::XftWindow` (the window, the pixmap, the colors, the font
-  cache and the loop are there) and their logic is in `lib/app/font_browser.*`
+  window manager itself, `src/fonts.cc` is the font viewer `tiny-fonts`,
+  `src/settings.cc` is the settings form `tiny-settings` and `src/wallpaper.cc`
+  draws the wallpaper (`tiny-wallpaper`; its logic is in `lib/app/wallpaper.*`
+  and the decoder of photos in `lib/image/photo.*`). The first two are windows
+  of `tiny::XftWindow` (the window, the pixmap, the colors, the font cache and
+  the loop are there) and their logic is in `lib/app/font_browser.*`
   and `lib/app/settings_form.*`. `tests/` are the unit tests (they mirror
   `lib/`), `examples/` are small toolkit programs (`make examples`) and a
   default session, `tools/` are development scripts.
