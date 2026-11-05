@@ -317,3 +317,38 @@ TEST(ScaleImageTest, average_of_equal_pixels_is_the_pixel)
         EXPECT_EQ(pixel, 0x80402010U);
     }
 }
+
+TEST(ResizeImageTest, scales_to_the_exact_size_without_the_aspect_ratio)
+{
+    tiny::image::Image image;
+    image.width = 2;
+    image.height = 2;
+    image.pixels = {0xffff0000, 0xffff0000, 0xffff0000, 0xffff0000};
+
+    const auto wide = tiny::image::resize_image(image, 6, 1);
+    if (!wide) {
+        FAIL() << "the image was not loaded";
+    }
+    EXPECT_EQ(wide->width, 6);
+    EXPECT_EQ(wide->height, 1);
+    EXPECT_EQ(wide->at(5, 0), 0xffff0000u);
+
+    const auto same = tiny::image::resize_image(image, 2, 2);
+    if (!same) {
+        FAIL() << "the image was not loaded";
+    }
+    EXPECT_EQ(same->pixels, image.pixels);
+}
+
+TEST(ResizeImageTest, a_wrong_picture_or_size_gives_nothing)
+{
+    tiny::image::Image image;
+    image.width = 1;
+    image.height = 1;
+    image.pixels = {0xff000000};
+    EXPECT_FALSE(tiny::image::resize_image(tiny::image::Image{}, 1, 1));
+    EXPECT_FALSE(tiny::image::resize_image(image, 0, 1));
+    EXPECT_FALSE(tiny::image::resize_image(image, 1, 0));
+    EXPECT_FALSE(tiny::image::resize_image(
+            image, tiny::image::MAX_RESIZE_SIDE + 1, 1));
+}

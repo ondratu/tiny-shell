@@ -49,8 +49,9 @@ bool has_extension(const std::string& path, const char* extension)
             });
 }
 
-// non-premultiplied RGBA bytes -> premultiplied ARGB
-Image convert(const unsigned char* rgba, int width, int height)
+} // namespace
+
+Image premultiplied(const unsigned char* rgba, int width, int height)
 {
     const size_t count =
             static_cast<size_t>(width) * static_cast<size_t>(height);
@@ -68,6 +69,8 @@ Image convert(const unsigned char* rgba, int width, int height)
     return image;
 }
 
+namespace {
+
 std::optional<Image> load_png(const std::string& path)
 {
     int width = 0;
@@ -83,7 +86,7 @@ std::optional<Image> load_png(const std::string& path)
     if (!data) {
         return std::nullopt;
     }
-    return convert(data.get(), width, height);
+    return premultiplied(data.get(), width, height);
 }
 
 std::optional<Image> load_xpm(const std::string& path)
@@ -128,7 +131,7 @@ std::optional<Image> load_svg(const std::string& path, int size)
                                     static_cast<size_t>(height) * 4);
     nsvgRasterize(rasterizer.get(), svg.get(), 0, 0, scale, rgba.data(), width,
                   height, width * 4);
-    return convert(rgba.data(), width, height);
+    return premultiplied(rgba.data(), width, height);
 }
 
 } // namespace
@@ -212,41 +215,53 @@ uint32_t average(const Image& image, double x0, double y0, double x1, double y1)
 
 } // namespace
 
+std::optional<Image> resize_image(const Image& image, int width, int height)
+{
+    if (width < 1 || height < 1 || width > MAX_RESIZE_SIDE ||
+        height > MAX_RESIZE_SIDE || !image.valid()) {
+        return std::nullopt;
+    }
+    if (image.width == width && image.height == height) {
+        return image;
+    }
+
+    // the pixel of the result covers the source area of the same part of the
+    // picture, not of the same size when the rounding changed the ratio
+    const double step_x = static_cast<double>(image.width) / width;
+    const double step_y = static_cast<double>(image.height) / height;
+    Image out;
+    out.width = width;
+    out.height = height;
+    out.pixels.resize(static_cast<size_t>(width) * static_cast<size_t>(height));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // smaller in a direction: the average of the covered pixels, else
+            // the bilinear filter
+            const uint32_t pixel =
+                    step_x >= 1 && step_y >= 1
+                            ? average(image, x * step_x, y * step_y,
+                                      (x + 1) * step_x, (y + 1) * step_y)
+                            : bilinear(image, (x + 0.5) * step_x - 0.5,
+                                       (y + 0.5) * step_y - 0.5);
+            out.pixels[static_cast<size_t>(y) * static_cast<size_t>(width) +
+                       static_cast<size_t>(x)] = pixel;
+        }
+    }
+    return out;
+}
+
 std::optional<Image> scale_image(const Image& image, int size)
 {
     if (size < 1 || size > MAX_ICON_SIZE || !image.valid()) {
         return std::nullopt;
     }
-    if (std::max(image.width, image.height) == size) {
-        return image;
-    }
-
     const double ratio =
             static_cast<double>(size) /
             static_cast<double>(std::max(image.width, image.height));
-    Image out;
-    out.width = std::max(1, static_cast<int>(std::lround(image.width * ratio)));
-    out.height =
-            std::max(1, static_cast<int>(std::lround(image.height * ratio)));
-    out.pixels.resize(static_cast<size_t>(out.width) *
-                      static_cast<size_t>(out.height));
-
-    // the pixel of the result covers the source area of the same part of the
-    // picture, not of the same size when the rounding changed the ratio
-    const double step_x = static_cast<double>(image.width) / out.width;
-    const double step_y = static_cast<double>(image.height) / out.height;
-    for (int y = 0; y < out.height; ++y) {
-        for (int x = 0; x < out.width; ++x) {
-            const uint32_t pixel =
-                    ratio < 1 ? average(image, x * step_x, y * step_y,
-                                        (x + 1) * step_x, (y + 1) * step_y)
-                              : bilinear(image, (x + 0.5) / ratio - 0.5,
-                                         (y + 0.5) / ratio - 0.5);
-            out.pixels[static_cast<size_t>(y) * static_cast<size_t>(out.width) +
-                       static_cast<size_t>(x)] = pixel;
-        }
-    }
-    return out;
+    return resize_image(
+            image,
+            std::max(1, static_cast<int>(std::lround(image.width * ratio))),
+            std::max(1, static_cast<int>(std::lround(image.height * ratio))));
 }
 
 } // namespace tiny::image
