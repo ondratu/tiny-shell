@@ -10,6 +10,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # Applications and icons of the packages. The specification names only
 # /usr/local/share and /usr/share; other systems install elsewhere (pkgsrc
 # uses /usr/pkg/share).
+# (tools/run-xephyr.sh sets it to the data/ of the repository first.)
 if [ -z "$XDG_DATA_DIRS" ]; then
     for dir in /usr/local/share /usr/pkg/share /usr/share; do
         [ -d "$dir" ] && XDG_DATA_DIRS="${XDG_DATA_DIRS:+$XDG_DATA_DIRS:}$dir"
