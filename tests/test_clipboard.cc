@@ -156,7 +156,7 @@ TEST(ClipboardTest, the_old_target_string_gets_latin1)
 {
     Holder owner;
     owner.clipboard.own(tiny::Clipboard::Which::Clipboard,
-                        "caf\xC3\xA9 \xC4\x9B");
+                        "ab\xC3\xA9 \xC4\x9B");
     const Atom property = tiny::get_display().TINY_SELECTION;
     XConvertSelection(tiny::get_display(), tiny::get_display().CLIPBOARD,
                       XA_STRING, property, owner.window, CurrentTime);
@@ -173,7 +173,7 @@ TEST(ClipboardTest, the_old_target_string_gets_latin1)
                        True, AnyPropertyType, &type, &format, &count, &after,
                        &data);
     ASSERT_NE(data, nullptr);
-    EXPECT_EQ(std::string(reinterpret_cast<char*>(data), count), "caf\xE9 ?");
+    EXPECT_EQ(std::string(reinterpret_cast<char*>(data), count), "ab\xE9 ?");
     XFree(data);
 }
 

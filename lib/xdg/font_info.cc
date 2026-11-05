@@ -198,10 +198,11 @@ std::string font_name_text(int platform, const std::string& bytes)
 std::vector<InfoRow> font_file_info(const std::string& file, int face_index)
 {
     // the order of the rows is the order of the name ids of the table
-    static const struct {
-        FT_UShort id;
-        const char* label;
-    } wanted[] = {
+    struct Wanted {
+        FT_UShort id = 0;
+        const char* label = "";
+    };
+    static const Wanted wanted[] = {
             {4, "Full name"},    {5, "Version"},      {6, "PostScript name"},
             {9, "Designer"},     {8, "Manufacturer"}, {12, "Designer URL"},
             {11, "Vendor URL"},  {10, "Description"}, {13, "License"},
@@ -214,12 +215,12 @@ std::vector<InfoRow> font_file_info(const std::string& file, int face_index)
     FT_Face face = nullptr;
     if (FT_New_Face(library, file.c_str(), face_index, &face) == 0) {
         const FT_UInt count = FT_Get_Sfnt_Name_Count(face);
-        for (const auto& [id, label] : wanted) {
+        for (const auto& entry : wanted) {
             std::string text;
             for (FT_UInt i = 0; i < count && text.empty(); ++i) {
                 FT_SfntName name;
                 if (FT_Get_Sfnt_Name(face, i, &name) != 0 ||
-                    name.name_id != id || !is_english(name)) {
+                    name.name_id != entry.id || !is_english(name)) {
                     continue;
                 }
                 text = font_name_text(
@@ -228,7 +229,7 @@ std::vector<InfoRow> font_file_info(const std::string& file, int face_index)
                                     name.string_len));
             }
             if (!text.empty()) {
-                rows.push_back({label, text, false});
+                rows.push_back({entry.label, text, false});
             }
         }
         FT_Done_Face(face);
@@ -305,7 +306,7 @@ std::vector<InfoRow> font_info(const std::string& family)
     rows.push_back({"Files", "", true});
     for (int i = 0; i < faces->nfont; ++i) {
         const FcPattern* face = faces->fonts[i];
-        std::string style = string_of(face, FC_STYLE);
+        const std::string style = string_of(face, FC_STYLE);
         rows.push_back({style.empty() ? "Regular" : style,
                         string_of(face, FC_FILE), false});
     }

@@ -303,23 +303,24 @@ class FontsApp : public tiny::XftWindow {
              tiny::xdg::font_info(browser.family())) {
             if (row.heading) {
                 y += line_height / 2;
-                info_lines.push_back({row.label, true, true, y + ascent});
+                info_lines.push_back(
+                        {row.label, true, y + ascent, std::string()});
                 y += line_height + metrics.line_gap;
                 continue;
             }
             bool first = true;
             for (const std::string& part :
                  wrap(ui_font, row.value, value_room)) {
-                info_lines.push_back({first ? row.label : std::string(), first,
-                                      false, y + ascent});
-                info_lines.back().value = part;
+                info_lines.push_back({first ? row.label : std::string(), false,
+                                      y + ascent, part});
                 first = false;
                 y += line_height;
             }
             y += metrics.line_gap;
         }
         if (info_lines.empty()) {
-            info_lines.push_back({"No information", false, false, y + ascent});
+            info_lines.push_back(
+                    {"No information", false, y + ascent, std::string()});
             y += line_height;
         }
         browser.set_detail_height(y + metrics.margin);
@@ -380,14 +381,14 @@ class FontsApp : public tiny::XftWindow {
     XftColor& selected;
     XftColor& rule;
     XftColor& dim;
-    //! A line of the info: the label (only in the first line of a row), the
-    //! text of the value, and the baseline in the content
+    //! A line of the info: the label (only in the first line of a row), if it
+    //! is the title of a group, the baseline in the content and the text of the
+    //! value
     struct InfoLine {
         std::string label;
-        bool labeled;
-        bool heading;
-        int baseline;
-        std::string value = {};
+        bool heading = false;
+        int baseline = 0;
+        std::string value;
     };
     std::string info_measured; //!< the family that `info_lines` belong to
     std::vector<InfoLine> info_lines;

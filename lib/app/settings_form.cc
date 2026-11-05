@@ -657,7 +657,7 @@ size_t SettingsForm::target_at(int x, int y) const
     }
     for (size_t i = 0; i < section_count; ++i) {
         if (inside(section_rect(static_cast<Section>(i)), x, y)) {
-            return FirstSection + i;
+            return SectionFonts + i;
         }
     }
     for (const Field f : section_fields(section_)) {
@@ -722,10 +722,10 @@ bool SettingsForm::act(size_t target, int x)
         case ChooseButton:
             open_picker();
             return true;
-        case FirstSection:
-        case FirstSection + 1:
-        case FirstSection + 2:
-            set_section(static_cast<Section>(target - FirstSection));
+        case SectionFonts:
+        case SectionAppearance:
+        case SectionApplications:
+            set_section(static_cast<Section>(target - SectionFonts));
             return true;
         case CancelButton:
             if (view_ == View::Picker) {
@@ -859,7 +859,7 @@ bool SettingsForm::form_key(Key pressed)
             return true;
         case Key::NextSection:
         case Key::PrevSection: {
-            const size_t now = static_cast<size_t>(section_);
+            const auto now = static_cast<size_t>(section_);
             set_section(static_cast<Section>(
                     (now +
                      (pressed == Key::NextSection ? 1 : section_count - 1)) %

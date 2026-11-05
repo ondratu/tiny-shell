@@ -337,8 +337,10 @@ class SettingsForm {
         SearchBox,
         SizeBox,
         StyleBox,
-        FirstSection, //!< and the other sections: `FirstSection` + number
-        FirstRow = FirstSection + section_count //!< and the rows of the list
+        SectionFonts, //!< the items of the panel, in the order of `Section`
+        SectionAppearance,
+        SectionApplications,
+        FirstRow //!< and the rows of the list from here
     };
 
     //! The values of a choice

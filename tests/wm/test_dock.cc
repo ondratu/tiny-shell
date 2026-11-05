@@ -2017,7 +2017,8 @@ TEST_F(DockGroupsTest, the_only_favorite_has_no_place_to_go)
     EXPECT_EQ(attributes_of(dock.get_mark()).map_state, IsUnmapped);
 }
 
-TEST_F(DockGroupsTest, escape_during_a_drag_takes_the_mark_away_and_moves_nothing)
+TEST_F(DockGroupsTest,
+       escape_during_a_drag_takes_the_mark_away_and_moves_nothing)
 {
     set({"a.desktop", "b.desktop"});
     int moved = 0;
