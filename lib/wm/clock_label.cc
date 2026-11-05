@@ -1,6 +1,3 @@
-#include <set>
-#include <vector>
-
 #include "wm/clock_label.h"
 #include "wm/shell_theme.h"
 
@@ -9,13 +6,13 @@ namespace tiny::wm {
 namespace {
 
 constexpr int seconds_in_day = 24 * 60 * 60;
-constexpr std::time_t start_of_year = 1704110400; // 2024-01-01 12:00 UTC
+constexpr std::time_t start_of_year = 1704067200; // 2024-01-01 00:00 UTC
 
 //! The width of the widest text of the format in a (leap) year and a day
 int widest_text(const std::string& format, XftFont* font, ::Display* display)
 {
-    std::set<std::string> texts;
     // the times of the day with the digits that differ in width, AM and PM
+    int rv = 0;
     constexpr int times[] = {0,
                              8 * 3600 + 8 * 60,
                              11 * 3600 + 11 * 60,
@@ -24,18 +21,15 @@ int widest_text(const std::string& format, XftFont* font, ::Display* display)
                              22 * 3600 + 22 * 60};
     for (int day = 0; day < 366; ++day) {
         for (const int time : times) {
-            texts.insert(ClockLabel::format_time(
-                    format, start_of_year - 12 * 3600 +
-                                    std::time_t{day} * seconds_in_day + time));
+            const std::string text = ClockLabel::format_time(
+                    format,
+                    start_of_year + std::time_t{day} * seconds_in_day + time);
+            XGlyphInfo extents;
+            XftTextExtentsUtf8(display, font,
+                               reinterpret_cast<const FcChar8*>(text.c_str()),
+                               static_cast<int>(text.size()), &extents);
+            rv = std::max(rv, static_cast<int>(extents.xOff));
         }
-    }
-    int rv = 0;
-    for (const std::string& text : texts) {
-        XGlyphInfo extents;
-        XftTextExtentsUtf8(display, font,
-                           reinterpret_cast<const FcChar8*>(text.c_str()),
-                           static_cast<int>(text.size()), &extents);
-        rv = std::max(rv, static_cast<int>(extents.xOff));
     }
     return rv;
 }
@@ -57,20 +51,24 @@ std::string ClockLabel::format_time(const std::string& format, std::time_t time)
 {
     std::tm local{};
     if (localtime_r(&time, &local) == nullptr) {
-        return "";
+        return {};
     }
-    std::vector<char> buffer(1024);
+    char buffer[1024];
     // 0 is also the result for an empty text, so an empty format is empty
+    // the format is the setting of the user, strftime() has no way to check it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
     const size_t size =
-            strftime(buffer.data(), buffer.size(), format.c_str(), &local);
-    return std::string(buffer.data(), size);
+            strftime(buffer, sizeof(buffer), format.c_str(), &local);
+#pragma GCC diagnostic pop
+    return {buffer, size};
 }
 
 void ClockLabel::update(Clock::time_point now)
 {
-    const std::string text = format_time(format, Clock::to_time_t(now));
-    if (text != get_text()) {
-        set_text(text);
+    const std::string shown = format_time(format, Clock::to_time_t(now));
+    if (shown != get_text()) {
+        set_text(shown);
     }
 }
 
