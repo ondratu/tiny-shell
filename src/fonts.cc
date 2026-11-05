@@ -2,8 +2,11 @@
 //
 // The overview is a grid with "Aa" in every font family and its name under it.
 // A click (or Return) on a family opens its specimen: the letters, the digits
-// and the signs, then a sentence in growing sizes. Escape, backspace or the
-// button at the top return to the overview. Ctrl+Q and Ctrl+W quit.
+// and the signs, then a sentence in growing sizes. The button Info (or I) at
+// the top right shows what is known about the family: the files, the
+// languages, the designer and the license. Escape or backspace go one step
+// back, the breadcrumbs at the top ("‹ Fonts ‹ Family") go to the overview or
+// to the specimen. Ctrl+Q and Ctrl+W quit.
 //
 // The list comes from fontconfig, the text is drawn by Xft into a pixmap
 // that is copied to the window, so the window does not flicker. What can be
@@ -28,6 +31,7 @@
 #include "style.h"
 #include "wm/config.h"
 #include "x_util.h"
+#include "xdg/font_info.h"
 #include "xdg/font_list.h"
 #include "xft_window.h"
 
@@ -54,7 +58,8 @@ class FontsApp : public tiny::XftWindow {
         black(alloc_gray(0)),
         white(alloc_gray(255)),
         selected(alloc_gray(0xe8)),
-        rule(alloc_gray(0xc8))
+        rule(alloc_gray(0xc8)),
+        dim(alloc_gray(0x6e))
     {
         // not in the cache of fonts: that is emptied while scrolling
         ui_font = XftFontOpen(display, screen, FC_FAMILY, XftTypeString, "sans",
@@ -79,7 +84,11 @@ class FontsApp : public tiny::XftWindow {
     }
 
   protected:
-    void on_resize(int w, int h) override { browser.resize(w, h); }
+    void on_resize(int w, int h) override
+    {
+        browser.resize(w, h);
+        info_measured.clear(); // wrapped to the old width
+    }
 
     void on_button_release(const XButtonEvent& e) override
     {
@@ -109,7 +118,8 @@ class FontsApp : public tiny::XftWindow {
                 {XK_Return, FontBrowser::Key::Return},
                 {XK_KP_Enter, FontBrowser::Key::Return},
                 {XK_BackSpace, FontBrowser::Key::Back},
-                {XK_Escape, FontBrowser::Key::Escape}};
+                {XK_Escape, FontBrowser::Key::Escape},
+                {XK_i, FontBrowser::Key::Info}};
         for (const auto& [code, key] : keys) {
             if (symbol == code) {
                 if (browser.key(key)) {
@@ -172,6 +182,11 @@ class FontsApp : public tiny::XftWindow {
     {
         if (browser.view() == FontBrowser::View::Overview) {
             measured.clear(); // the specimen is measured at every opening
+            info_measured.clear();
+        } else if (browser.view() == FontBrowser::View::Info) {
+            if (info_measured != browser.family()) {
+                measure_info();
+            }
         } else if (measured.empty()) {
             measure_detail();
         }
@@ -183,6 +198,8 @@ class FontsApp : public tiny::XftWindow {
         fill(white, {0, 0, width, height});
         if (browser.view() == FontBrowser::View::Detail) {
             paint_detail();
+        } else if (browser.view() == FontBrowser::View::Info) {
+            paint_info();
         } else {
             paint_overview();
         }
@@ -227,21 +244,118 @@ class FontsApp : public tiny::XftWindow {
         }
     }
 
-    void paint_detail()
+    //! The header of the detail and the info: the breadcrumbs at the left
+    //! ("‹ Fonts", in the info also "‹ Family"), the title in the middle and
+    //! the button Info at the right end (in the detail)
+    void paint_header(const std::string& heading, bool in_info)
     {
         const int head = metrics.header;
         if (ui_font != nullptr) {
             const int baseline =
                     (head + ui_font->ascent - ui_font->descent) / 2;
-            // "‹ " points back; the family is centered in the header
+            // "‹ " points back
             text_at(ui_font, black, metrics.margin, baseline,
                     "\xE2\x80\xB9 Fonts");
-            const int room = width - 2 * metrics.back_width;
-            const std::string name = fit(ui_font, browser.family(), room);
-            text_at(ui_font, black, (width - text_width(ui_font, name)) / 2,
-                    baseline, name);
+            int left = metrics.back_width;
+            if (in_info) {
+                const tiny::Rect crumb = browser.crumb_rect();
+                const std::string name =
+                        fit(ui_font, "\xE2\x80\xB9 " + browser.family(),
+                            crumb.width - metrics.margin);
+                text_at(ui_font, black, crumb.x + metrics.margin, baseline,
+                        name);
+                left = crumb.x + crumb.width;
+            } else {
+                const tiny::Rect info = browser.info_rect();
+                const std::string label = "Info";
+                text_at(ui_font, black,
+                        info.x + (info.width - text_width(ui_font, label)) / 2,
+                        baseline, label);
+                frame(rule,
+                      {info.x + metrics.margin / 2, head / 5,
+                       info.width - metrics.margin, head * 3 / 5},
+                      1);
+            }
+            const int room = width - 2 * left;
+            if (room > 0) {
+                const std::string name = fit(ui_font, heading, room);
+                text_at(ui_font, black, (width - text_width(ui_font, name)) / 2,
+                        baseline, name);
+            }
         }
         fill(rule, {0, head - 1, width, 1});
+    }
+
+    //! The rows of the info as lines of text: a title of a group, or a label
+    //! with the first line of the value, and the other lines of the value
+    void measure_info()
+    {
+        info_measured = browser.family();
+        info_lines.clear();
+        const int label_room = std::max(1, width / 4);
+        const int value_x = metrics.margin + label_room;
+        const int value_room = std::max(1, width - value_x - metrics.margin);
+        int y = metrics.margin;
+        const int line_height =
+                ui_font != nullptr ? ui_font->ascent + ui_font->descent : 1;
+        const int ascent = ui_font != nullptr ? ui_font->ascent : 1;
+        for (const tiny::xdg::InfoRow& row :
+             tiny::xdg::font_info(browser.family())) {
+            if (row.heading) {
+                y += line_height / 2;
+                info_lines.push_back({row.label, true, true, y + ascent});
+                y += line_height + metrics.line_gap;
+                continue;
+            }
+            bool first = true;
+            for (const std::string& part :
+                 wrap(ui_font, row.value, value_room)) {
+                info_lines.push_back({first ? row.label : std::string(), first,
+                                      false, y + ascent});
+                info_lines.back().value = part;
+                first = false;
+                y += line_height;
+            }
+            y += metrics.line_gap;
+        }
+        if (info_lines.empty()) {
+            info_lines.push_back({"No information", false, false, y + ascent});
+            y += line_height;
+        }
+        browser.set_detail_height(y + metrics.margin);
+    }
+
+    void paint_info()
+    {
+        const int head = metrics.header;
+        paint_header("Info", true);
+        if (ui_font == nullptr) {
+            return;
+        }
+        const int value_x = metrics.margin + std::max(1, width / 4);
+        clip({0, head, width, height - head});
+        for (const InfoLine& line : info_lines) {
+            const int baseline = head + line.baseline - browser.scroll();
+            if (baseline < head - ui_font->ascent ||
+                baseline > height + ui_font->descent) {
+                continue;
+            }
+            if (line.heading) {
+                text_at(ui_font, black, metrics.margin, baseline, line.label);
+                continue;
+            }
+            if (!line.label.empty()) {
+                text_at(ui_font, dim, metrics.margin, baseline, line.label);
+            }
+            text_at(ui_font, black, value_x, baseline, line.value);
+        }
+        unclip();
+    }
+
+    void paint_detail()
+    {
+        const int head = metrics.header;
+        paint_header(browser.family(), false);
 
         clip({0, head, width, height - head});
         for (size_t i = 0; i < lines.size() && i < baselines.size(); ++i) {
@@ -265,6 +379,18 @@ class FontsApp : public tiny::XftWindow {
     XftColor& white;
     XftColor& selected;
     XftColor& rule;
+    XftColor& dim;
+    //! A line of the info: the label (only in the first line of a row), the
+    //! text of the value, and the baseline in the content
+    struct InfoLine {
+        std::string label;
+        bool labeled;
+        bool heading;
+        int baseline;
+        std::string value = {};
+    };
+    std::string info_measured; //!< the family that `info_lines` belong to
+    std::vector<InfoLine> info_lines;
     std::string measured; //!< the family that `baselines` belong to
     std::vector<FontBrowser::Line> lines; //!< the specimen of `measured`
     std::vector<int> baselines;           //!< of the lines of the specimen

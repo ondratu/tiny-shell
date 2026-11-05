@@ -16,6 +16,8 @@ constexpr size_t nothing = static_cast<size_t>(-1);
 
 //! The header button back; no cell has this index
 constexpr size_t back_button = static_cast<size_t>(-2);
+constexpr size_t crumb_button = static_cast<size_t>(-3);
+constexpr size_t info_button = static_cast<size_t>(-4);
 
 bool inside(const Rect& r, int x, int y)
 {
@@ -36,6 +38,7 @@ FontBrowser::Metrics FontBrowser::Metrics::scaled(double factor)
     m.name_baseline = tiny::scaled(m.name_baseline, factor);
     m.header = tiny::scaled(m.header, factor);
     m.back_width = tiny::scaled(m.back_width, factor);
+    m.info_width = tiny::scaled(m.info_width, factor);
     m.charset_size = tiny::scaled(m.charset_size, factor);
     m.line_gap = tiny::scaled(m.line_gap, factor);
     m.small_size = tiny::scaled(m.small_size, factor);
@@ -76,6 +79,9 @@ int FontBrowser::content_height() const
 {
     if (view_ == View::Detail) {
         return detail_height_;
+    }
+    if (view_ == View::Info) {
+        return info_height_;
     }
     const auto count = static_cast<int>(families_.size());
     const int rows = (count + static_cast<int>(columns_) - 1) /
@@ -122,8 +128,8 @@ void FontBrowser::resize(int width, int height)
 
 void FontBrowser::set_detail_height(int height)
 {
-    detail_height_ = std::max(0, height);
-    if (view_ == View::Detail) {
+    (view_ == View::Info ? info_height_ : detail_height_) = std::max(0, height);
+    if (view_ != View::Overview) {
         scroll_to(scroll_);
     }
 }
@@ -171,10 +177,30 @@ Rect FontBrowser::back_rect() const
     return {0, 0, metrics_.back_width, metrics_.header};
 }
 
+Rect FontBrowser::crumb_rect() const
+{
+    return {metrics_.back_width, 0, 2 * metrics_.back_width, metrics_.header};
+}
+
+Rect FontBrowser::info_rect() const
+{
+    return {width_ - metrics_.info_width, 0, metrics_.info_width,
+            metrics_.header};
+}
+
 size_t FontBrowser::target_at(int x, int y) const
 {
-    if (view_ == View::Detail) {
-        return inside(back_rect(), x, y) ? back_button : nothing;
+    if (view_ != View::Overview) {
+        if (inside(back_rect(), x, y)) {
+            return back_button;
+        }
+        if (view_ == View::Info && inside(crumb_rect(), x, y)) {
+            return crumb_button;
+        }
+        if (view_ == View::Detail && inside(info_rect(), x, y)) {
+            return info_button;
+        }
+        return nothing;
     }
     const size_t index = cell_at(x, y);
     return index < families_.size() ? index : nothing;
@@ -192,7 +218,13 @@ bool FontBrowser::release(int x, int y)
         return false;
     }
     if (pressed == back_button) {
+        while (view_ != View::Overview) { // from the info too
+            back();
+        }
+    } else if (pressed == crumb_button) {
         back();
+    } else if (pressed == info_button) {
+        show_info();
     } else {
         open(pressed);
     }
@@ -226,7 +258,7 @@ bool FontBrowser::move_selection(size_t index)
 
 bool FontBrowser::key(Key key)
 {
-    if (view_ == View::Detail) {
+    if (view_ != View::Overview) {
         const int page = std::max(1, view_height() - step());
         switch (key) {
             case Key::Up:
@@ -245,6 +277,12 @@ bool FontBrowser::key(Key key)
             case Key::Escape:
                 back();
                 return true;
+            case Key::Info:
+                if (view_ == View::Detail) {
+                    show_info();
+                    return true;
+                }
+                return false;
             case Key::Left:
             case Key::Right:
             case Key::Return:
@@ -287,6 +325,7 @@ bool FontBrowser::key(Key key)
             return true;
         case Key::Back:
         case Key::Escape:
+        case Key::Info:
             return false;
     }
     return false;
@@ -304,9 +343,26 @@ void FontBrowser::open(size_t index)
     scroll_ = 0;
 }
 
+void FontBrowser::show_info()
+{
+    if (view_ != View::Detail) {
+        return;
+    }
+    detail_scroll_ = scroll_;
+    view_ = View::Info;
+    info_height_ = 0; // the owner measures it
+    scroll_ = 0;
+}
+
 void FontBrowser::back()
 {
     if (view_ == View::Overview) {
+        return;
+    }
+    if (view_ == View::Info) {
+        view_ = View::Detail;
+        scroll_ = 0;
+        scroll_to(detail_scroll_);
         return;
     }
     view_ = View::Overview;

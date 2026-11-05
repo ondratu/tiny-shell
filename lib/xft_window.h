@@ -93,6 +93,12 @@ class XftWindow {
     //! The text, cut with "…" when it is wider than `max_width`
     std::string fit(XftFont* f, const std::string& text, int max_width) const;
 
+    //! The text in lines that are not wider than `max_width`: a line breaks at
+    //! a space, a word that is wider than a line is cut. A line break of the
+    //! text starts a new line; there is always at least one line.
+    std::vector<std::string> wrap(XftFont* f, const std::string& text,
+                                  int max_width) const;
+
     void fill(const XftColor& color, const Rect& r);
     //! A frame of `line` pixels inside of the rectangle
     void frame(const XftColor& color, const Rect& r, int line);

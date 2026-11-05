@@ -487,3 +487,130 @@ TEST(FontBrowserTest, a_family_opened_again_has_no_height_until_it_is_set)
 
     EXPECT_EQ(b.content_height(), 0);
 }
+
+// The info about a family
+
+TEST(FontBrowserInfoTest, the_button_info_is_at_the_right_end_of_the_header)
+{
+    FontBrowser b = browser();
+    b.open(1);
+
+    const tiny::Rect r = b.info_rect();
+
+    EXPECT_EQ(r.x + r.width, 320);
+    EXPECT_EQ(r.height, 20);
+    b.press(r.x + 5, 5);
+    EXPECT_TRUE(b.release(r.x + 6, 6));
+    EXPECT_EQ(b.view(), View::Info);
+    EXPECT_EQ(b.family(), "Font 1");
+}
+
+TEST(FontBrowserInfoTest, the_overview_has_no_button_info)
+{
+    FontBrowser b = browser();
+
+    b.press(310, 5);
+
+    EXPECT_FALSE(b.release(310, 5));
+    EXPECT_EQ(b.view(), View::Overview);
+}
+
+TEST(FontBrowserInfoTest, the_key_i_opens_the_info_of_the_specimen_only)
+{
+    FontBrowser b = browser();
+    EXPECT_FALSE(b.key(Key::Info));
+    b.open(2);
+
+    EXPECT_TRUE(b.key(Key::Info));
+    EXPECT_EQ(b.view(), View::Info);
+    EXPECT_FALSE(b.key(Key::Info));
+}
+
+TEST(FontBrowserInfoTest, the_info_scrolls_under_the_header)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.show_info();
+    b.set_detail_height(300);
+
+    EXPECT_EQ(b.top(), 20);
+    EXPECT_EQ(b.view_height(), 100);
+    b.key(Key::End);
+    EXPECT_EQ(b.scroll(), 200);
+    b.key(Key::Home);
+    EXPECT_EQ(b.scroll(), 0);
+}
+
+TEST(FontBrowserInfoTest, escape_returns_to_the_specimen_where_it_was_left)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.set_detail_height(300);
+    b.key(Key::End);
+    ASSERT_EQ(b.scroll(), 200);
+    b.show_info();
+    b.set_detail_height(150);
+
+    EXPECT_TRUE(b.key(Key::Escape));
+
+    EXPECT_EQ(b.view(), View::Detail);
+    EXPECT_EQ(b.scroll(), 200);
+}
+
+TEST(FontBrowserInfoTest, the_family_in_the_breadcrumbs_returns_to_the_specimen)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.show_info();
+
+    const tiny::Rect r = b.crumb_rect();
+    b.press(r.x + 5, 5);
+    EXPECT_TRUE(b.release(r.x + 5, 5));
+
+    EXPECT_EQ(b.view(), View::Detail);
+}
+
+TEST(FontBrowserInfoTest, fonts_in_the_breadcrumbs_returns_to_the_overview)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.show_info();
+
+    b.press(5, 5);
+    EXPECT_TRUE(b.release(5, 5));
+
+    EXPECT_EQ(b.view(), View::Overview);
+}
+
+TEST(FontBrowserInfoTest, a_click_elsewhere_in_the_info_does_nothing)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.show_info();
+
+    b.press(315, 5); // the place of the button Info, which is not there
+    EXPECT_FALSE(b.release(315, 5));
+
+    EXPECT_EQ(b.view(), View::Info);
+}
+
+TEST(FontBrowserInfoTest, the_info_of_nothing_is_not_shown)
+{
+    FontBrowser b = browser();
+
+    b.show_info();
+
+    EXPECT_EQ(b.view(), View::Overview);
+}
+
+TEST(FontBrowserInfoTest, the_wheel_and_the_cells_work_after_the_info)
+{
+    FontBrowser b = browser();
+    b.open(1);
+    b.show_info();
+    b.back();
+    b.back();
+
+    EXPECT_EQ(b.view(), View::Overview);
+    EXPECT_NE(b.cell_at(15, 15), b.families().size());
+}

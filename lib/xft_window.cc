@@ -257,6 +257,65 @@ std::string XftWindow::fit(XftFont* f, const std::string& text,
     return ellipsis;
 }
 
+std::vector<std::string> XftWindow::wrap(XftFont* f, const std::string& text,
+                                         int max_width) const
+{
+    std::vector<std::string> lines(1);
+    const auto add_word = [&](const std::string& word) {
+        std::string& line = lines.back();
+        const std::string joined = line.empty() ? word : line + " " + word;
+        if (line.empty() || text_width(f, joined) <= max_width) {
+            line = joined;
+        } else {
+            lines.push_back(word);
+        }
+        // a word wider than the line is cut by characters
+        while (lines.back().size() > 1 &&
+               text_width(f, lines.back()) > max_width) {
+            std::string& last = lines.back();
+            size_t cut = last.size() - 1;
+            while (cut > 1 &&
+                   (text_width(f, last.substr(0, cut)) > max_width ||
+                    (static_cast<unsigned char>(last[cut]) & 0xC0) == 0x80)) {
+                --cut;
+            }
+            // at least one whole character stays on the line
+            while (cut < last.size() &&
+                   (static_cast<unsigned char>(last[cut]) & 0xC0) == 0x80) {
+                ++cut;
+            }
+            if (cut >= last.size()) {
+                break;
+            }
+            const std::string rest = last.substr(cut);
+            last.resize(cut);
+            lines.push_back(rest);
+        }
+    };
+
+    std::string word;
+    for (const char c : text) {
+        if (c == '\n') {
+            if (!word.empty()) {
+                add_word(word);
+                word.clear();
+            }
+            lines.emplace_back();
+        } else if (c == ' ') {
+            if (!word.empty()) {
+                add_word(word);
+                word.clear();
+            }
+        } else {
+            word += c;
+        }
+    }
+    if (!word.empty()) {
+        add_word(word);
+    }
+    return lines;
+}
+
 void XftWindow::fill(const XftColor& color, const Rect& r)
 {
     XftDrawRect(draw, &color, r.x, r.y, x_uint(r.width), x_uint(r.height));
