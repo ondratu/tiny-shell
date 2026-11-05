@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+Comment=Change the settings of Tiny Shell
+Exec=tiny-settings
+Icon=tiny-settings
+Terminal=false
+Categories=Settings;DesktopSettings;
+StartupWMClass=TinySettings
+Keywords=settings;preferences;theme;wallpaper;scale;clock;dock;

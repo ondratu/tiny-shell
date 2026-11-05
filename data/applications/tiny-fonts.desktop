@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Fonts
+Comment=Browse the installed fonts and see how they look
+Exec=tiny-fonts
+Icon=tiny-fonts
+Terminal=false
+Categories=Utility;Settings;
+StartupWMClass=TinyFonts
+Keywords=fonts;typeface;family;specimen;
