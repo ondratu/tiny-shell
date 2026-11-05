@@ -66,10 +66,24 @@ std::string xft_style(const std::string& style)
     return style.empty() ? "" : ":style=" + escaped(style);
 }
 
+std::string xft_family(const std::string& families)
+{
+    std::string rv;
+    for (const std::string& name : split(families, ',', true)) {
+        rv += (rv.empty() ? "" : ",") + escaped(name);
+    }
+    return rv;
+}
+
+std::string xft_pixel_name(const std::string& family, int pixels)
+{
+    return xft_family(family) + ":pixelsize=" + std::to_string(pixels);
+}
+
 std::string xft_name(const std::string& family, double size,
                      const std::string& style)
 {
-    const std::string name = escaped(family);
+    const std::string name = xft_family(family);
     char number[32];
     snprintf(number, sizeof number, "-%g", size);
     return name + number + style;

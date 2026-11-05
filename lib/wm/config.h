@@ -17,7 +17,7 @@ namespace tiny::wm {
  * ```
  * [theme]
  * scale = 1.5
- * font = Cantarell
+ * font = DejaVu Sans,sans
  * font_size = 12
  * font_style = Bold
  * style = dark
@@ -49,13 +49,14 @@ struct Config {
     std::string poweroff_command = "systemctl poweroff"; //!< [commands]
     std::vector<std::string> terminal = {"xterm", "-e"}; //!< [commands]
     std::string terminal_line = "xterm -e"; //!< the text of `terminal`
-    std::string font = "Cantarell"; //!< [theme] font, a family of fontconfig
-    double font_size = 12;          //!< [theme] font_size, points at scale 1
-    std::string font_style;         //!< [theme] font_style, "" is the default
-    std::string xft_antialias;      //!< [xft] antialias, "" is not set
-    std::string xft_hinting;        //!< [xft] hinting, "" is not set
-    std::string xft_rgba;           //!< [xft] rgba, "" is not set
-    Variant style = Variant::Dark;  //!< [theme] style, dark or light
+    std::string font =
+            "DejaVu Sans,sans";    //!< [theme] font, families of fontconfig
+    double font_size = 12;         //!< [theme] font_size, points at scale 1
+    std::string font_style;        //!< [theme] font_style, "" is the default
+    std::string xft_antialias;     //!< [xft] antialias, "" is not set
+    std::string xft_hinting;       //!< [xft] hinting, "" is not set
+    std::string xft_rgba;          //!< [xft] rgba, "" is not set
+    Variant style = Variant::Dark; //!< [theme] style, dark or light
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
     std::string wallpaper_file;
     //! [wallpaper] mode, one of `wallpaper_choices()`; "" is fill

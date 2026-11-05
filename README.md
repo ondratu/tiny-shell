@@ -182,9 +182,10 @@ on stderr and the default is used.
 [theme]
 # A number above 0, up to 16
 scale = 1.5
-# One family of the font of the shell (see tiny-fonts for the names); a
-# list of families is not supported
-font = Cantarell
+# The font of the shell: a family (see tiny-fonts for the names) or a list of
+# them, separated by commas; the next ones are used for the characters that the
+# first one does not have, and when it is not installed
+font = DejaVu Sans,sans
 # The size in points at the scale 1, from 4 to 96
 font_size = 12
 # The colors: dark (the default) or light

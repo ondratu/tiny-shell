@@ -43,7 +43,7 @@ TEST(ConfigTest, the_defaults_work_without_any_file)
     EXPECT_EQ(c.poweroff_command, "systemctl poweroff");
     EXPECT_EQ(c.terminal, (Strings{"xterm", "-e"}));
     EXPECT_EQ(c.terminal_line, "xterm -e");
-    EXPECT_EQ(c.font, "Cantarell");
+    EXPECT_EQ(c.font, "DejaVu Sans,sans");
     EXPECT_TRUE(c.favorites.empty());
 }
 
@@ -63,7 +63,7 @@ TEST(ConfigTest, an_empty_font_is_a_problem_and_keeps_the_default)
 
     const Config c = parse_config({{"a", "[theme]\nfont =\n"}}, &problems);
 
-    EXPECT_EQ(c.font, "Cantarell");
+    EXPECT_EQ(c.font, "DejaVu Sans,sans");
     ASSERT_EQ(problems.size(), 1u);
     EXPECT_NE(problems[0].find("font"), std::string::npos);
 }

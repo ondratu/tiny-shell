@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "style.h"
 #include "x_util.h"
 
 namespace tiny {
@@ -196,9 +197,9 @@ XftFont* XftWindow::font(const std::string& family, int pixel_size)
     if (found != fonts.end()) {
         return found->second;
     }
-    XftFont* opened = XftFontOpen(display, screen, FC_FAMILY, XftTypeString,
-                                  family.c_str(), FC_PIXEL_SIZE, XftTypeDouble,
-                                  static_cast<double>(pixel_size), nullptr);
+    // by the name: the family may be a list ("DejaVu Sans,sans")
+    XftFont* opened = XftFontOpenName(
+            display, screen, xft_pixel_name(family, pixel_size).c_str());
     fonts[key] = opened;
     return opened;
 }

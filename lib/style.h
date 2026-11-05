@@ -13,14 +13,27 @@ namespace tiny {
 int scaled(int value, double factor);
 
 /**
+ * @short The families of a font for Xft: the names separated by commas, the
+ * first that is installed is used and the next ones fill in the characters it
+ * has not (`DejaVu Sans,sans`).
+ *
+ * The blanks around a name and an empty name are dropped; the characters that
+ * the fontconfig syntax gives a meaning (`\`, `-` and `:`) are escaped in a
+ * name, so any name of an installed font opens that font.
+ */
+std::string xft_family(const std::string& families);
+
+/**
  * @short The name of a font for Xft: `family-size:style`.
  *
- * The characters that the fontconfig syntax gives a meaning (`\`, `-`, `:`
- * and `,`) are escaped in the family, so any name of an installed font opens
- * that font. `style` is added as it is (e.g. ":bold").
+ * The family is a list, see `xft_family`. `style` is added as it is (e.g.
+ * ":bold").
  */
 std::string xft_name(const std::string& family, double size,
                      const std::string& style = "");
+
+//! The name of a font for Xft with the size in pixels: `family:pixelsize=n`
+std::string xft_pixel_name(const std::string& family, int pixels);
 
 /**
  * @short The part of an Xft name that asks for a style by its name
@@ -135,7 +148,7 @@ class Style {
     int padding_width = 1;
 
   protected:
-    std::string font_family = "Cantarell";
+    std::string font_family = "DejaVu Sans,sans";
     std::string font_style; // e.g. ":bold"
     double font_size = 12;
     XftFont* font = nullptr;

@@ -256,7 +256,8 @@ TEST(ThemeFontTest, xft_name_has_the_family_the_size_and_the_style)
 
 TEST(ThemeFontTest, xft_name_escapes_what_fontconfig_would_read)
 {
-    EXPECT_EQ(tiny::xft_name("A-B:C,D\\E", 9), "A\\-B\\:C\\,D\\\\E-9");
+    EXPECT_EQ(tiny::xft_name("A-B:C", 9), "A\\-B\\:C-9");
+    EXPECT_EQ(tiny::xft_name("D\\E", 9), "D\\\\E-9");
     EXPECT_EQ(tiny::xft_name("Noto Sans Mono", 9), "Noto Sans Mono-9");
 }
 
@@ -375,4 +376,27 @@ TEST(ThemeVariantTest, going_back_to_dark_restores_the_colors)
     EXPECT_EQ(t.widget.selected_bg, original.selected_bg);
     EXPECT_EQ(t.entry.normal_bg, entry.normal_bg);
     EXPECT_EQ(t.entry.normal_br, entry.normal_br);
+}
+
+TEST(ThemeFontTest, a_list_of_families_is_kept_as_a_list)
+{
+    EXPECT_EQ(tiny::xft_family("DejaVu Sans,sans"), "DejaVu Sans,sans");
+    EXPECT_EQ(tiny::xft_name("DejaVu Sans,sans", 12), "DejaVu Sans,sans-12");
+}
+
+TEST(ThemeFontTest, the_blanks_and_empty_names_of_a_list_are_dropped)
+{
+    EXPECT_EQ(tiny::xft_family(" A , ,B ,"), "A,B");
+    EXPECT_EQ(tiny::xft_family(""), "");
+}
+
+TEST(ThemeFontTest, every_name_of_a_list_is_escaped)
+{
+    EXPECT_EQ(tiny::xft_family("A-B,C:D"), "A\\-B,C\\:D");
+}
+
+TEST(ThemeFontTest, the_pixel_name_has_the_size_in_pixels)
+{
+    EXPECT_EQ(tiny::xft_pixel_name("DejaVu Sans,sans", 14),
+              "DejaVu Sans,sans:pixelsize=14");
 }
