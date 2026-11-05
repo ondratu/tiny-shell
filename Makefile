@@ -90,9 +90,11 @@ EXAMPLES = $(patsubst examples/%.cc,$(BUILD)/examples/%,$(wildcard examples/*.cc
 TARGET = $(BUILD)/tiny-shell
 FONTS = $(BUILD)/tiny-fonts
 SETTINGS = $(BUILD)/tiny-settings
+WALLPAPER = $(BUILD)/tiny-wallpaper
 
-PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(EXAMPLES)
+PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
+    $(BUILD)/src/wallpaper.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
@@ -100,7 +102,7 @@ DEP = $(OBJ:.o=.d)
     lint-analyze asan cppcheck help layers
 .DELETE_ON_ERROR:
 
-all: $(TARGET) $(FONTS) $(SETTINGS)
+all: $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER)
 
 # A small binary without the debugging information, into build-release.
 # CI measures the size with -flto on top of this (see ci.yml).
@@ -111,7 +113,7 @@ release:
 	    LDFLAGS="-s -Wl,--gc-sections" all
 
 help:
-	@echo "make            build tiny-shell, tiny-fonts and tiny-settings"
+	@echo "make            build tiny-shell, tiny-fonts, tiny-settings and tiny-wallpaper"
 	@echo "make layers     check that the widgets do not include the shell"
 	@echo "make release    build small stripped programs into build-release"
 	@echo "make examples   build the toolkit examples"
@@ -154,7 +156,8 @@ $(SHELL_LIB): $(SHELL_OBJ)
 	$(AR) rcs $@ $^
 
 # tiny-shell is built from src/main.cc, tiny-fonts from src/fonts.cc,
-# tiny-settings from src/settings.cc, the examples from examples/<name>.cc
+# tiny-settings from src/settings.cc, tiny-wallpaper from src/wallpaper.cc,
+# the examples from examples/<name>.cc
 $(TARGET): $(BUILD)/src/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -162,6 +165,9 @@ $(FONTS): $(BUILD)/src/fonts.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(SETTINGS): $(BUILD)/src/settings.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+$(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(EXAMPLES): %: %.o $(LIB)
