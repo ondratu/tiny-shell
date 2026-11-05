@@ -140,6 +140,9 @@ costs a lot of code or memory (see the goals above).
   and `Light`; a color belongs to `Style::colorize()`, never to a constructor
   or a widget, so that the variant can change while the shell runs
   (`Widget::restyle()`).
+- **Quiet by default.** A message for developers ("unhandled property") is
+  written with `TINY_LOG()`, which prints only in a `make DEBUG=1` build. A
+  problem the user can act on goes to `tiny::error()`.
 - **Standards are data.** Atoms, window types and states are listed in one
   place (`display.h`). Do not spread `XInternAtom` calls over the code.
 - **Decide without X when you can.** What can be decided without a display
@@ -188,7 +191,7 @@ costs a lot of code or memory (see the goals above).
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr
 make                  # build (no debugging information)
-make DEBUG=1          # build with -Og -g, for gdb
+make DEBUG=1          # build with -Og -g, for gdb, and with TINY_LOG() messages
 make check            # unit tests (run against Xvfb)
 make help             # all the targets and variables
 tools/run-xephyr.sh   # run the window manager in a nested Xephyr

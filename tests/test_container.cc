@@ -348,7 +348,7 @@ TEST_F(BoxTest, remove_unknown_widget_changes_nothing)
     EXPECT_EQ(attributes_of(a).x, 5);
 }
 
-TEST_F(BoxTest, remove_from_vertical_box_is_not_implemented)
+TEST_F(BoxTest, remove_from_vertical_box_is_quiet_in_a_normal_build)
 {
     tiny::Box box(tiny::Box::Type::Vertical, 100, 100);
     realize(box);
@@ -359,7 +359,11 @@ TEST_F(BoxTest, remove_from_vertical_box_is_not_implemented)
     box.remove(&a);
     const std::string out = ::testing::internal::GetCapturedStderr();
 
+#ifdef TINY_DEBUG
     EXPECT_NE(out.find("Not implemented yet"), std::string::npos);
+#else
+    EXPECT_TRUE(out.empty());
+#endif
 }
 
 TEST_F(BoxTest, delete_through_base_pointer)

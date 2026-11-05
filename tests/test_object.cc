@@ -270,11 +270,24 @@ TEST(LogTest, error_prints_formatted_message_to_stderr)
 TEST(LogTest, log_prints_function_and_message)
 {
     ::testing::internal::CaptureStderr();
-    TINY_LOG("hello %d", 1);
+    tiny::log(__FILE__, __func__, __LINE__, "hello %d", 1);
     const std::string out = ::testing::internal::GetCapturedStderr();
 
     EXPECT_NE(out.find("hello 1"), std::string::npos);
     EXPECT_NE(out.find("TestBody"), std::string::npos);
+}
+
+TEST(LogTest, the_log_macro_prints_only_in_a_debug_build)
+{
+    ::testing::internal::CaptureStderr();
+    TINY_LOG("macro %d", 2);
+    const std::string out = ::testing::internal::GetCapturedStderr();
+
+#ifdef TINY_DEBUG
+    EXPECT_NE(out.find("macro 2"), std::string::npos);
+#else
+    EXPECT_TRUE(out.empty());
+#endif
 }
 
 TEST(HandlersTest, a_missing_handler_is_ignored_and_not_created)
