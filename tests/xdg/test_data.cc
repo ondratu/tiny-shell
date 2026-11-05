@@ -22,7 +22,10 @@ TEST(DataTest, the_desktop_files_are_applications_with_an_icon_that_is_there)
     for (const auto& file : fs::directory_iterator(data / "applications")) {
         const auto entry =
                 tiny::xdg::read_desktop_entry(file.path().string(), "");
-        ASSERT_TRUE(entry) << file.path();
+        if (!entry) {
+            ADD_FAILURE() << file.path();
+            continue;
+        }
         ++found;
         EXPECT_EQ(entry->type, "Application") << file.path();
         EXPECT_FALSE(entry->name.empty()) << file.path();

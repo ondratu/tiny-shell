@@ -283,7 +283,7 @@ class Dock : public tiny::Box {
 
     //! The icons of the launcher button and of an application without an
     //! icon; they must live longer than the dock
-    void set_icons(SymbolicIcons* icons);
+    void set_icons(SymbolicIcons* symbolic);
 
     const tiny::Style& get_style() const override { return shell_theme.dock; }
 

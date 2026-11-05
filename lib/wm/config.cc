@@ -182,7 +182,8 @@ std::string default_wallpaper(Variant variant,
                                      ? "tiny-shell-krajina-liska-1920x1080.png"
                                      : "tiny-shell-noc-1920x1080.png";
     for (const std::string& dir : data_dirs) {
-        const std::string file = dir + "/backgrounds/tiny-shell/" + name;
+        std::string file = dir + "/backgrounds/tiny-shell/";
+        file += name;
         if (std::filesystem::is_regular_file(file)) {
             return file;
         }

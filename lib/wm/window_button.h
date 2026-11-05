@@ -26,7 +26,7 @@ class WindowButton : public tiny::Button {
   protected:
     //! Paint the background and the icon; false (and the background only)
     //! when there is no icon to draw
-    bool draw_icon(const std::string& name);
+    bool draw_icon(const std::string& icon_name);
 
     void on_enter_notify(const XEvent& e, void* data) override;
     void on_leave_notify(const XEvent& e, void* data) override;

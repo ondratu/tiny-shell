@@ -11,6 +11,7 @@
 #include <X11/keysym.h>
 
 #include <algorithm>
+#include <cmath>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
@@ -148,7 +149,7 @@ class AboutApp : public tiny::XftWindow {
   private:
     int px(int value) const
     {
-        return std::max(1, static_cast<int>(value * factor + 0.5));
+        return std::max(1, static_cast<int>(std::lround(value * factor)));
     }
 
     tiny::Rect button_rect() const
