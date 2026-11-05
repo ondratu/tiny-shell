@@ -78,7 +78,9 @@ LogoButton::~LogoButton() = default;
 
 bool LogoButton::has_logo() const
 {
-    return icons != nullptr && !icons->find("start-here").empty();
+    // get() remembers the answer, also for an icon that is not there
+    return icons != nullptr &&
+           icons->get("start-here", height * 3 / 5, 0).picture != None;
 }
 
 void LogoButton::on_expose(const XEvent& e, void* data)

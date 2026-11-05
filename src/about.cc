@@ -161,17 +161,14 @@ class AboutApp : public tiny::XftWindow {
     //! The icon `tiny-shell` of the hicolor theme, if it is installed
     void load_logo()
     {
-        const std::string with_local = tiny::xdg::data_dirs_with(
-                getenv("XDG_DATA_DIRS"), tiny::xdg::local_share_dir);
-        const tiny::xdg::IconTheme theme(
-                tiny::xdg::icon_dirs(getenv("XDG_DATA_HOME"),
-                                     with_local.empty() ? nullptr
-                                                        : with_local.c_str(),
-                                     getenv("HOME")),
-                tiny::xdg::pixmap_dirs(getenv("XDG_DATA_HOME"),
-                                       with_local.empty() ? nullptr
-                                                          : with_local.c_str(),
-                                       getenv("HOME")));
+        const auto dirs = tiny::xdg::default_data_dirs();
+        std::vector<std::string> icon_dirs;
+        std::vector<std::string> pixmaps;
+        for (const std::string& dir : dirs) {
+            icon_dirs.push_back(dir + "/icons");
+            pixmaps.push_back(dir + "/pixmaps");
+        }
+        const tiny::xdg::IconTheme theme(icon_dirs, pixmaps);
         const int size = px(logo_size);
         const std::string file = theme.find("tiny-shell", size);
         const auto loaded = file.empty() ? std::nullopt

@@ -72,7 +72,6 @@ void DockButton::on_button_release(const XEvent& e, void*)
 
 void DockButton::on_expose(const XEvent&, void*)
 {
-    GC gc = XCreateGC(display, window, 0, nullptr);
     const uint8_t state = get_theme_state();
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
@@ -81,9 +80,9 @@ void DockButton::on_expose(const XEvent&, void*)
     if (symbols != nullptr &&
         symbols->draw(window, "view-app-grid", width * 2 / 3,
                       get_style().get_fg(state), width, height)) {
-        XFreeGC(display, gc);
         return;
     }
+    GC gc = XCreateGC(display, window, 0, nullptr);
     XSetForeground(display, gc, get_style().get_fg(state));
     XSetLineAttributes(display, gc, 1, LineSolid, CapButt, JoinBevel);
 
