@@ -72,10 +72,15 @@ class MenuButton : public LabelButton {
 
     void set_popover(Popover* popover);
 
+    //! Open the popover with its left edge at the left edge of the button,
+    //! not centered under it
+    void set_popover_left(bool left) { popover_left = left; }
+
   private:
     virtual void do_popup(Object* o, const XEvent& e, void* data);
 
     Popover* popover = nullptr;
+    bool popover_left = false;
 };
 
 } // namespace tiny

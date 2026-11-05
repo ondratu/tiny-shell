@@ -78,3 +78,10 @@ TEST_F(SymbolicIconsTest, draws_in_the_middle_in_the_color)
     EXPECT_EQ(img.at(1, 1), 0x000000u); // outside of the icon
     XDestroyWindow(dpy, w);
 }
+
+TEST(LighterTest, goes_halfway_to_white)
+{
+    EXPECT_EQ(tiny::wm::lighter(0x000000), 0x7F7F7Fu);
+    EXPECT_EQ(tiny::wm::lighter(0xFFFFFF), 0xFFFFFFu);
+    EXPECT_EQ(tiny::wm::lighter(0x102030), 0x878F97u);
+}

@@ -202,7 +202,7 @@ TEST_F(DockIconTest, without_icon_draws_the_generic_application_icon)
     const Image img(icon->get_window(), icon_size(), icon_size());
     const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
     EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2),
-              tiny::wm::shell_theme.dock.get_fg(normal)); // not hollow
+              tiny::wm::lighter(tiny::wm::shell_theme.dock.get_fg(normal)));
 }
 
 TEST_F(DockIconTest, draws_the_icon_of_the_task)

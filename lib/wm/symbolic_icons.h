@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 
@@ -22,6 +23,10 @@ namespace tiny::wm {
  * so: the caller draws what it drew before. An icon is made once for a name,
  * a size and a color and kept until the object dies.
  */
+//! The color halfway to white: the generic icon of an application without
+//! an icon is not to be as strong as the text
+uint32_t lighter(uint32_t rgb);
+
 class SymbolicIcons {
   public:
     //! A made icon; the object owns the X resources

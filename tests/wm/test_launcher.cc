@@ -630,7 +630,7 @@ TEST_F(LauncherTest, an_application_with_no_icon_gets_the_generic_one)
                       layout().cell_height);
     const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
     EXPECT_EQ(image.at(layout().cell_width / 2, top + size / 2),
-              tiny::theme.list.get_fg(normal));
+              tiny::wm::lighter(tiny::theme.list.get_fg(normal)));
 }
 
 TEST_F(LauncherTest, the_cells_take_at_most_the_three_quarters_of_the_screen)
