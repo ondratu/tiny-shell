@@ -168,6 +168,11 @@ TEST(WallpaperArgsTest, arguments)
     EXPECT_TRUE(r.mode.empty()); // fill is the default
     EXPECT_EQ(r.file, "-");
 
+    r = parse_wallpaper_args({"-s", "light"});
+    EXPECT_EQ(r.style, "light");
+    EXPECT_EQ(parse_wallpaper_args({"--style", "dark", "a.png"}).style, "dark");
+    EXPECT_TRUE(parse_wallpaper_args({"a.png"}).style.empty());
+
     EXPECT_TRUE(parse_wallpaper_args({"-h"}).help);
     EXPECT_TRUE(parse_wallpaper_args({"--help"}).help);
 }
@@ -176,6 +181,8 @@ TEST(WallpaperArgsTest, wrong_arguments_are_told)
 {
     EXPECT_FALSE(parse_wallpaper_args({"-m"}).error.empty());
     EXPECT_FALSE(parse_wallpaper_args({"-m", "stretch"}).error.empty());
+    EXPECT_FALSE(parse_wallpaper_args({"-s"}).error.empty());
+    EXPECT_FALSE(parse_wallpaper_args({"-s", "blue"}).error.empty());
     EXPECT_FALSE(parse_wallpaper_args({"--bad"}).error.empty());
     EXPECT_FALSE(parse_wallpaper_args({"a.png", "b.png"}).error.empty());
 }

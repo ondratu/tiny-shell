@@ -47,6 +47,7 @@
 #include "wm/config.h"
 #include "wm/xresources.h"
 #include "x_util.h"
+#include "xdg/application_index.h"
 #include "xdg/font_list.h"
 #include "xft_window.h"
 
@@ -103,7 +104,8 @@ class SettingsApp : public tiny::XftWindow {
                 config.xft_antialias,
                 config.xft_hinting,
                 config.xft_rgba,
-                config.wallpaper_file,
+                tiny::wm::wallpaper_of(config, config.style,
+                                       tiny::xdg::default_data_dirs()),
                 config.wallpaper_mode,
                 config.clock_format,
                 config.dock_mode == tiny::wm::DockMode::AutoHide

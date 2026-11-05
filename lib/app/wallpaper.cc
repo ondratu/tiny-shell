@@ -83,6 +83,15 @@ WallpaperRequest parse_wallpaper_args(const std::vector<std::string>& args)
             } else {
                 request.mode = args[i] == "fill" ? "" : args[i];
             }
+        } else if (arg == "-s" || arg == "--style") {
+            Variant variant{};
+            if (i + 1 == args.size()) {
+                request.error = arg + " needs a style";
+            } else if (!variant_from_name(args[++i], variant)) {
+                request.error = "the style must be dark or light";
+            } else {
+                request.style = args[i];
+            }
         } else if (arg.size() > 1 && arg[0] == '-') {
             request.error = "unknown option " + arg;
         } else if (!request.file.empty()) {
@@ -97,13 +106,16 @@ WallpaperRequest parse_wallpaper_args(const std::vector<std::string>& args)
 std::string wallpaper_usage(const char* program)
 {
     return std::string("Usage: ") + program +
-           " [-m MODE] [FILE]\n"
+           " [-m MODE] [-s STYLE] [FILE]\n"
            "\n"
            "Draws a PNG or JPEG file as the wallpaper of the screen (the\n"
            "root window and _XROOTPMAP_ID). Without a FILE and a MODE it\n"
-           "uses the [wallpaper] file and mode of tiny-shell.ini.\n"
+           "uses the [wallpaper] file and mode of tiny-shell.ini; when the\n"
+           "file is not there, the wallpaper of the style.\n"
            "\n"
            "  -m, --mode MODE  fill (default), center or tile\n"
+           "  -s, --style STYLE  the style whose wallpaper is the default,\n"
+           "                   dark or light (default: [theme] style)\n"
            "  -h, --help       print this help\n";
 }
 

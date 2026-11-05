@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -174,6 +175,28 @@ bool valid_wallpaper_file(const std::string& text)
            });
 }
 
+std::string default_wallpaper(Variant variant,
+                              const std::vector<std::string>& data_dirs)
+{
+    const std::string name = variant == Variant::Light
+                                     ? "tiny-shell-krajina-liska-1920x1080.png"
+                                     : "tiny-shell-noc-1920x1080.png";
+    for (const std::string& dir : data_dirs) {
+        const std::string file = dir + "/backgrounds/tiny-shell/" + name;
+        if (std::filesystem::is_regular_file(file)) {
+            return file;
+        }
+    }
+    return {};
+}
+
+std::string wallpaper_of(const Config& config, Variant variant,
+                         const std::vector<std::string>& data_dirs)
+{
+    return config.wallpaper_set ? config.wallpaper_file
+                                : default_wallpaper(variant, data_dirs);
+}
+
 std::vector<std::string> config_files(const char* config_home,
                                       const char* config_dirs, const char* home)
 {
@@ -277,6 +300,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     if (const auto value = ini.get("wallpaper", "file")) {
         if (valid_wallpaper_file(std::string(trim(*value)))) {
             config.wallpaper_file = std::string(trim(*value));
+            config.wallpaper_set = true;
         } else {
             problem("[wallpaper] file must be an absolute path or start with "
                     "~/");

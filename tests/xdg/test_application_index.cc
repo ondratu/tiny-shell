@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "helpers.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -55,6 +55,20 @@ class ApplicationIndexTest : public ::testing::Test {
 };
 
 } // namespace
+
+TEST(DataDirsTest, the_environment_and_the_local_directory_make_the_list)
+{
+    const EnvVar home("XDG_DATA_HOME", "/h/share");
+    const EnvVar dirs("XDG_DATA_DIRS", "/a:/b");
+
+    const auto list = tiny::xdg::default_data_dirs();
+
+    ASSERT_GE(list.size(), 4u);
+    EXPECT_EQ(list[0], "/h/share");
+    EXPECT_EQ(list[1], "/a");
+    EXPECT_EQ(list[2], "/b");
+    EXPECT_EQ(list[3], tiny::xdg::local_share_dir);
+}
 
 TEST(ApplicationDirsTest, defaults)
 {

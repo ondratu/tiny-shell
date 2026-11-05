@@ -61,6 +61,9 @@ struct Config {
     Variant style = Variant::Dark; //!< [theme] style, dark or light
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
     std::string wallpaper_file;
+    //! [wallpaper] file is in a file (empty or not). When it is not, the
+    //! wallpaper is the default one of the style: see `wallpaper_of()`.
+    bool wallpaper_set = false;
     //! [wallpaper] mode, one of `wallpaper_choices()`; "" is fill
     std::string wallpaper_mode;
     //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
@@ -132,6 +135,25 @@ XftChoices wallpaper_choices();
 
 //! Whether the text is one of `wallpaper_choices()` or "fill" (the same as "")
 bool valid_wallpaper_mode(const std::string& text);
+
+/**
+ * @short The wallpaper that the shell installs for a style: the landscape
+ * with the fox for the light one, the night for the dark one.
+ *
+ * It is `backgrounds/tiny-shell/tiny-shell-<name>-1920x1080.png` in the
+ * first of the data directories that has it; empty when none has (it is not
+ * installed).
+ */
+std::string default_wallpaper(Variant variant,
+                              const std::vector<std::string>& data_dirs);
+
+/**
+ * @short The wallpaper to draw: `[wallpaper] file` when the configuration has
+ * the key (an empty one is no wallpaper), else `default_wallpaper()` of the
+ * style.
+ */
+std::string wallpaper_of(const Config& config, Variant variant,
+                         const std::vector<std::string>& data_dirs);
 
 /**
  * @short Whether the text is a file of a wallpaper that can be saved.

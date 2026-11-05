@@ -18,6 +18,7 @@
 
 #include "app/wallpaper.h"
 #include "wm/config.h"
+#include "xdg/application_index.h"
 
 int main(int argc, char** argv)
 {
@@ -36,8 +37,15 @@ int main(int argc, char** argv)
     const tiny::wm::Config config = tiny::wm::load_config(
             tiny::wm::config_files(getenv("XDG_CONFIG_HOME"),
                                    getenv("XDG_CONFIG_DIRS"), getenv("HOME")));
+    tiny::Variant variant = config.style;
+    if (!request.style.empty()) {
+        tiny::variant_from_name(request.style, variant);
+    }
     const std::string file = tiny::app::expand_home(
-            request.file.empty() ? config.wallpaper_file : request.file,
+            request.file.empty()
+                    ? tiny::wm::wallpaper_of(config, variant,
+                                             tiny::xdg::default_data_dirs())
+                    : request.file,
             getenv("HOME"));
     if (file.empty()) {
         fprintf(stderr,
