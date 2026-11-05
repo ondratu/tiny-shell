@@ -4687,6 +4687,54 @@ TEST_F(ManagerTest,
     std::filesystem::remove(marker);
 }
 
+TEST_F(ManagerTest, the_clock_is_at_the_right_end_of_the_panel)
+{
+    start();
+
+    manager->set_clock_format("%H:%M");
+
+    ASSERT_NE(manager->wm_clock, nullptr);
+    EXPECT_EQ(manager->wm_clock->get_parent_window(),
+              manager->wm_panel.get_window());
+    EXPECT_EQ(attributes_of(*manager->wm_clock).x +
+                      manager->wm_clock->get_width() + 1,
+              attributes_of(manager->wm_panel).width);
+    EXPECT_EQ(manager->wm_clock->get_text().size(), 5u);
+    EXPECT_NE(manager->clock_timer, 0u);
+}
+
+TEST_F(ManagerTest, the_clock_is_changed_or_removed_by_the_format)
+{
+    start();
+    manager->set_clock_format("%Y");
+    EXPECT_EQ(manager->wm_clock->get_text().size(), 4u);
+
+    manager->set_clock_format("%H:%M");
+    EXPECT_EQ(manager->wm_clock->get_text().size(), 5u);
+
+    manager->set_clock_format("");
+    EXPECT_EQ(manager->wm_clock, nullptr);
+    EXPECT_EQ(manager->clock_timer, 0u);
+    EXPECT_TRUE(manager->timers.empty());
+}
+
+TEST_F(ManagerTest, the_clock_waits_for_the_next_minute)
+{
+    start();
+    manager->set_clock_format("%H:%M");
+    const auto first = manager->clock_timer;
+
+    // the timer is the one of the next minute, it is not due yet
+    EXPECT_GT(manager->timers.timeout_ms(), 0);
+    EXPECT_LE(manager->timers.timeout_ms(), 60000);
+    // when it is due it shows the time and sets the next one
+    EXPECT_EQ(manager->timers.run_due(tiny::Timers::Clock::now() +
+                                      std::chrono::seconds(61)),
+              1);
+    EXPECT_NE(manager->clock_timer, first);
+    EXPECT_GT(manager->timers.timeout_ms(), 0);
+}
+
 TEST_F(ManagerTest, the_root_window_events_arrive_to_the_manager)
 {
     start();

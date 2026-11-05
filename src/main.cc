@@ -118,6 +118,8 @@ int main(int argc, char** argv)
 
     // The names of the applications are sorted by the language of the user
     setlocale(LC_COLLATE, "");
+    // and the clock shows the days and the date the way the user reads them
+    setlocale(LC_TIME, "");
 
     try {
         tiny::Display::init();
@@ -206,6 +208,7 @@ int main(int argc, char** argv)
             manager.set_wallpaper_command(
                     {tiny::sibling_program(argv[0], "tiny-wallpaper")});
         }
+        manager.set_clock_format(config.clock_format);
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {

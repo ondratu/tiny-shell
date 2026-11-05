@@ -93,6 +93,9 @@ std::string info_text(const Config& config,
           "Wallpaper: " +
           (config.wallpaper_file.empty() ? "none" : config.wallpaper_file) +
           "\n"
+          "Clock: " +
+          (config.clock_format.empty() ? "none" : config.clock_format) +
+          "\n"
           "Terminal: " +
           config.terminal_line +
           "\n"

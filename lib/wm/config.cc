@@ -291,6 +291,14 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.terminal_line = *value;
         }
     }
+    if (const auto value = ini.get("panel", "clock_format")) {
+        if (valid_font_style(*value)) { // no control character
+            config.clock_format = *value;
+        } else {
+            problem("[panel] clock_format must be a text without control "
+                    "characters");
+        }
+    }
     if (const auto value = ini.get("dock", "favorites")) {
         config.favorites = split_ids(*value);
     }

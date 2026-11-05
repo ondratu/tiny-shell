@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #include <list>
 #include <string>
@@ -11,6 +12,7 @@
 #include "object.h"
 #include "timers.h"
 #include "wm/window.h"
+#include "wm/clock_label.h"
 #include "wm/panel.h"
 #include "wm/action_registry.h"
 #include "wm/config.h"
@@ -69,6 +71,14 @@ class Manager : public tiny::Object {
      * with the variant of the theme. The picture does not.
      */
     void set_wallpaper_command(std::vector<std::string> command);
+
+    /**
+     * @short Show the date and the time in the panel, at its right end.
+     *
+     * `format` is for `strftime()`; empty removes the clock. The clock is
+     * updated by a timer at the start of every minute.
+     */
+    void set_clock_format(const std::string& format);
 
     /**
      * @short The favorite applications of the dock, the ids of desktop files.
@@ -241,6 +251,9 @@ class Manager : public tiny::Object {
     //! Write `_NET_WM_STRUT_PARTIAL` of the panel
     void publish_panel_strut();
 
+    //! Show the time and wait for the next minute
+    void tick_clock();
+
     //! Compute the work area again; windows and _NET_WORKAREA follow it
     void update_work_area();
 
@@ -310,6 +323,8 @@ class Manager : public tiny::Object {
     ::Window check_window = None; //!< `_NET_SUPPORTING_WM_CHECK`
 
     Panel wm_panel;
+    std::unique_ptr<ClockLabel> wm_clock; //!< null: no clock
+    tiny::Timers::Id clock_timer = 0;
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
     Window* asked = nullptr; //!< the window of the unresponsive dialog

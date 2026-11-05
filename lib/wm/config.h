@@ -36,6 +36,9 @@ namespace tiny::wm {
  * poweroff = doas poweroff
  * terminal = xterm -e
  *
+ * [panel]
+ * clock_format = %a %x %R
+ *
  * [dock]
  * favorites = firefox.desktop;org.gnome.Nautilus.desktop
  * ```
@@ -57,6 +60,8 @@ struct Config {
     std::string wallpaper_file;
     //! [wallpaper] mode, one of `wallpaper_choices()`; "" is fill
     std::string wallpaper_mode;
+    //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
+    std::string clock_format = "%a %x %R";
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };

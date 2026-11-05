@@ -12,8 +12,8 @@ much as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog and an application launcher. A clock and a task bar are still
-> missing, see below.
+> dialog, an application launcher and a clock. A task bar is still missing,
+> see below.
 
 ## What it is
 
@@ -57,7 +57,8 @@ Implemented:
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
 - **Shell:** top panel with the main menu (Settings, Applications, Terminal,
-  Force Quit, Restart, Shutdown, Logout), a dock with
+  Force Quit, Restart, Shutdown, Logout) and the date and time at its right
+  end (the names and the order follow `LANG`), a dock with
   one icon for every application (a dot under it for every window) and the
   favorite applications, which stay there when they do not run and can be moved
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
@@ -94,7 +95,6 @@ programs is done, so there is no "must" list):
 
 ### Should: what people expect from a desktop
 
-- [ ] Clock (date and time) in the panel
 - [ ] Task bar in the panel (the "old style" task list), as an alternative to
       the dock
 - [ ] Applications of the launcher grouped by category
@@ -216,6 +216,12 @@ poweroff = systemctl poweroff
 # Terminal item of the main menu starts the program alone (xterm)
 terminal = xterm -e
 
+[panel]
+# The clock at the right end of the panel: a format of strftime(); empty is
+# no clock. The names of the days and the order of %x follow LC_TIME / LANG.
+# It changes at the start of every minute (the default is below)
+clock_format = %a %x %R
+
 [dock]
 # Applications that stay in the dock when they do not run: the ids of their
 # desktop files, separated by ;. The menu of the dock writes it (see below)
@@ -231,6 +237,17 @@ were in it, so **your comments are lost** and the sections come in the order
 of their names; the values of the global file are not copied into it. The
 new file replaces the old one in one step, and a failure is reported on
 stderr and leaves the old file as it was. The file says so at the top.
+
+### The clock
+
+The date and the time are at the right end of the panel. The text is made by
+`strftime()` from `[panel] clock_format`, so the names of the days and months
+and the order of the date follow the language of the session (`LC_TIME`, set by
+`LANG` or `LC_ALL`): `%x` is the date as the language writes it (`05.11.2026`
+in Czech, `11/05/2026` in English) and `%R` is `HH:MM`. The default is
+`%a %x %R`. The clock is as wide as the widest text of the format in a year, so
+the panel does not move, and it changes at the start of every minute, so it
+does not show seconds. An empty format removes the clock.
 
 ### Settings
 
