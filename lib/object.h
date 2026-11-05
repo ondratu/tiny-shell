@@ -7,7 +7,14 @@
 #include <map>
 #include <set>
 
+// Diagnostic messages for developers: only in a build made by `make DEBUG=1`
+// (TINY_DEBUG); otherwise they cost nothing and the program is quiet. A real
+// error is reported by tiny::error().
+#ifdef TINY_DEBUG
 #define TINY_LOG(...) tiny::log(__FILE__, __func__, __LINE__, __VA_ARGS__)
+#else
+#define TINY_LOG(...) ((void)0)
+#endif
 
 namespace tiny {
 

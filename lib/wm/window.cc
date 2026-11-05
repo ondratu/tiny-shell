@@ -274,6 +274,23 @@ bool has_resize_increment(const XSizeHints& hints)
 
 static bool read_user_time_window(::Window window, ::Window& named);
 
+// Names an atom in a debug message; in a normal build it asks the X server
+// for nothing.
+static void log_atom(::Display* display, const char* what, Atom atom)
+{
+#ifdef TINY_DEBUG
+    char* name = XGetAtomName(display, atom);
+    TINY_LOG("%s: %s", what, name ? name : "?");
+    if (name) {
+        XFree(name);
+    }
+#else
+    (void)display;
+    (void)what;
+    (void)atom;
+#endif
+}
+
 //! The bits of a Motif field that are allowed; `all` turns the bits around
 static unsigned long motif_allowed(unsigned long value, unsigned long all,
                                    unsigned long everything)
@@ -1342,7 +1359,6 @@ void Window::update_wm_states()
         return;
     }
 
-    char* atom_name;
     const Atom* atoms = reinterpret_cast<Atom*>(data);
     for (unsigned long i = 0; i < nitems; i++) {
         if (atoms[i] == dsp._NET_WM_STATE_MODAL) {
@@ -1398,9 +1414,7 @@ void Window::update_wm_states()
             continue;
         }
 
-        atom_name = XGetAtomName(dsp, atoms[i]);
-        TINY_LOG("Unsupported _NET_WM_STATE: %s", atom_name);
-        XFree(atom_name);
+        log_atom(dsp, "Unsupported _NET_WM_STATE", atoms[i]);
     }
     XFree(data);
 }
@@ -1698,9 +1712,7 @@ void Window::on_net_wm_state(const XClientMessageEvent& e)
                    atom == dsp._NET_WM_STATE_MAXIMIZED_HORZ) {
             resize_maximized = true; // only both directions at once
         } else {
-            char* atom_name = XGetAtomName(dsp, atom);
-            TINY_LOG("Unhandled _NET_WM_STATE request %s", atom_name);
-            XFree(atom_name);
+            log_atom(dsp, "Unhandled _NET_WM_STATE request", atom);
         }
     }
     if (!resize_maximized) {
@@ -1737,9 +1749,7 @@ void Window::on_client_message(const XEvent& e, void*)
         }
     }
 
-    char* atom_name = XGetAtomName(dsp, e.xclient.message_type);
-    TINY_LOG("Unhandled client message type %s", atom_name);
-    XFree(atom_name);
+    log_atom(dsp, "Unhandled client message type", e.xclient.message_type);
 }
 
 void Window::on_motion_notify(const XEvent& e, void*)
@@ -1849,9 +1859,7 @@ void Window::on_property_notify(const XEvent& e, void*)
         return;
     }
 
-    char* atom_name = XGetAtomName(dsp, e.xproperty.atom);
-    TINY_LOG("Unhandled property update: %s", atom_name);
-    XFree(atom_name);
+    log_atom(dsp, "Unhandled property update", e.xproperty.atom);
 }
 
 void Window::on_motif_hints_changed(unsigned long new_decorations)

@@ -6,7 +6,11 @@
 
 -include local/config.mk
 
+ifdef DEBUG
+BUILD ?= build-debug
+else
 BUILD ?= build
+endif
 
 # Clang is stricter, so it is the default compiler when it is installed (the
 # newest versioned one if there is no plain clang++); g++ otherwise.
@@ -60,6 +64,8 @@ SYS_CFLAGS := $(subst -I,-isystem ,$(PKG_CFLAGS))
 # the libraries and the programs several times bigger).
 ifdef DEBUG
 CXXFLAGS ?= -Og -g
+# TINY_LOG() prints only in this build
+override CXXFLAGS += -DTINY_DEBUG
 else
 CXXFLAGS ?= -Os -fno-asynchronous-unwind-tables
 endif
