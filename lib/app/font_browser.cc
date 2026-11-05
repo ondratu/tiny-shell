@@ -1,6 +1,7 @@
 #include "app/font_browser.h"
 
 #include <algorithm>
+#include <cctype>
 
 #include "style.h"
 
@@ -37,6 +38,7 @@ FontBrowser::Metrics FontBrowser::Metrics::scaled(double factor)
     m.name_size = tiny::scaled(m.name_size, factor);
     m.name_baseline = tiny::scaled(m.name_baseline, factor);
     m.header = tiny::scaled(m.header, factor);
+    m.search = tiny::scaled(m.search, factor);
     m.back_width = tiny::scaled(m.back_width, factor);
     m.info_width = tiny::scaled(m.info_width, factor);
     m.charset_size = tiny::scaled(m.charset_size, factor);
@@ -63,7 +65,10 @@ std::vector<FontBrowser::Line> FontBrowser::specimen(const Metrics& metrics)
 
 FontBrowser::FontBrowser(std::vector<std::string> families,
                          const Metrics& metrics):
-    families_(std::move(families)), metrics_(metrics), pressed_(nothing)
+    all_(std::move(families)),
+    families_(all_),
+    metrics_(metrics),
+    pressed_(nothing)
 {
     metrics_.cell_width = std::max(1, metrics_.cell_width);
     metrics_.cell_height = std::max(1, metrics_.cell_height);
@@ -139,7 +144,7 @@ Rect FontBrowser::cell_rect(size_t index) const
     const auto col = static_cast<int>(index % columns_);
     const auto row = static_cast<int>(index / columns_);
     return {grid_left() + col * metrics_.cell_width,
-            metrics_.margin + row * metrics_.cell_height - scroll_,
+            top() + metrics_.margin + row * metrics_.cell_height - scroll_,
             metrics_.cell_width, metrics_.cell_height};
 }
 
@@ -150,9 +155,9 @@ std::pair<size_t, size_t> FontBrowser::visible_cells() const
     }
     const int first_row =
             std::max(0, scroll_ - metrics_.margin) / metrics_.cell_height;
-    const int end_row =
-            (scroll_ + height_ - metrics_.margin + metrics_.cell_height - 1) /
-            metrics_.cell_height;
+    const int end_row = (scroll_ + view_height() - metrics_.margin +
+                         metrics_.cell_height - 1) /
+                        metrics_.cell_height;
     const size_t first = static_cast<size_t>(first_row) * columns_;
     const size_t end = static_cast<size_t>(std::max(end_row, 0)) * columns_;
     return {std::min(first, families_.size()), std::min(end, families_.size())};
@@ -161,7 +166,7 @@ std::pair<size_t, size_t> FontBrowser::visible_cells() const
 size_t FontBrowser::cell_at(int x, int y) const
 {
     const int column_x = x - grid_left();
-    const int row_y = y + scroll_ - metrics_.margin;
+    const int row_y = y - top() + scroll_ - metrics_.margin;
     if (view_ != View::Overview || column_x < 0 || row_y < 0) {
         return families_.size();
     }
@@ -244,8 +249,9 @@ bool FontBrowser::move_selection(size_t index)
     index = std::min(index, families_.size() - 1);
     const Rect cell = cell_rect(index);
     // the cell is brought into view with its margin, the first row to the top
-    const int top_edge = cell.y + scroll_ - metrics_.margin;
-    const int bottom_edge = cell.y + scroll_ + cell.height + metrics_.margin;
+    const int top_edge = cell.y + scroll_ - top() - metrics_.margin;
+    const int bottom_edge =
+            cell.y + scroll_ - top() + cell.height + metrics_.margin;
     if (top_edge < scroll_) {
         scroll_to(top_edge);
     } else if (bottom_edge > scroll_ + view_height()) {
@@ -323,12 +329,79 @@ bool FontBrowser::key(Key key)
             }
             open(selected_);
             return true;
-        case Key::Back:
-        case Key::Escape:
+        case Key::Back: { // the last character of the search
+            if (!search_.backspace()) {
+                return false;
+            }
+            search();
+            return true;
+        }
+        case Key::Escape: { // clears the search
+            if (search_.text().empty()) {
+                return false;
+            }
+            search_.set_text("");
+            search();
+            return true;
+        }
         case Key::Info:
             return false;
     }
     return false;
+}
+
+Rect FontBrowser::search_rect() const
+{
+    const int gap = metrics_.margin / 2;
+    return {metrics_.margin, gap, std::max(1, width_ - 2 * metrics_.margin),
+            std::max(1, metrics_.search - 2 * gap)};
+}
+
+bool FontBrowser::type(const std::string& typed)
+{
+    if (view_ != View::Overview) {
+        return false;
+    }
+    std::string text;
+    for (const char c : typed) { // no control characters
+        if (static_cast<unsigned char>(c) >= 0x20 && c != 0x7f) {
+            text += c;
+        }
+    }
+    if (!search_.insert(text)) {
+        return false;
+    }
+    search();
+    return true;
+}
+
+//! Whether `name` has `query` in it, the case of ASCII letters is ignored
+static bool has_text(const std::string& name, const std::string& query)
+{
+    return std::search(name.begin(), name.end(), query.begin(), query.end(),
+                       [](char a, char b) {
+                           return std::tolower(static_cast<unsigned char>(a)) ==
+                                  std::tolower(static_cast<unsigned char>(b));
+                       }) != name.end();
+}
+
+void FontBrowser::search()
+{
+    const std::string kept = family();
+    families_.clear();
+    for (const std::string& name : all_) {
+        if (has_text(name, search_.text())) {
+            families_.push_back(name);
+        }
+    }
+    // the selected family stays selected when it still matches
+    const auto found = std::find(families_.begin(), families_.end(), kept);
+    selected_ = found == families_.end()
+                        ? 0
+                        : static_cast<size_t>(found - families_.begin());
+    scroll_ = 0;
+    scroll_to(0);
+    move_selection(selected_);
 }
 
 void FontBrowser::open(size_t index)

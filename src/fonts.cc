@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "clipboard.h"
 #include "display.h"
 #include "app/font_browser.h"
 #include "style.h"
@@ -73,7 +74,7 @@ class FontsApp : public tiny::XftWindow {
                                DisplayHeight(display, screen) * 3 / 4);
         browser.resize(w, h);
         create({title, "tiny-fonts", "TinyFonts", w, h,
-                metrics.cell_width + 2 * margin, metrics.cell_height});
+                metrics.cell_width + 2 * margin, metrics.cell_height, 0, true});
     }
 
     ~FontsApp() override
@@ -100,10 +101,24 @@ class FontsApp : public tiny::XftWindow {
     void on_key(XKeyEvent& e) override
     {
         KeySym symbol = NoSymbol;
-        lookup(e, symbol);
-        if ((e.state & ControlMask) != 0 &&
-            (symbol == XK_q || symbol == XK_w)) {
-            quit();
+        const std::string typed = lookup(e, symbol);
+        if ((e.state & ControlMask) != 0) {
+            if (symbol == XK_q || symbol == XK_w) {
+                quit();
+            } else if (symbol == XK_v || symbol == XK_V) {
+                paste(tiny::Clipboard::Which::Clipboard, e.time);
+            }
+            return;
+        }
+        if (symbol == XK_Insert && (e.state & ShiftMask) != 0) {
+            paste(tiny::Clipboard::Which::Clipboard, e.time);
+            return;
+        }
+        if (browser.view() == FontBrowser::View::Detail && symbol == XK_i &&
+            (e.state & ControlMask) == 0) {
+            if (browser.key(FontBrowser::Key::Info)) {
+                update();
+            }
             return;
         }
         static const std::pair<KeySym, FontBrowser::Key> keys[] = {
@@ -118,8 +133,7 @@ class FontsApp : public tiny::XftWindow {
                 {XK_Return, FontBrowser::Key::Return},
                 {XK_KP_Enter, FontBrowser::Key::Return},
                 {XK_BackSpace, FontBrowser::Key::Back},
-                {XK_Escape, FontBrowser::Key::Escape},
-                {XK_i, FontBrowser::Key::Info}};
+                {XK_Escape, FontBrowser::Key::Escape}};
         for (const auto& [code, key] : keys) {
             if (symbol == code) {
                 if (browser.key(key)) {
@@ -128,12 +142,30 @@ class FontsApp : public tiny::XftWindow {
                 return;
             }
         }
+        if (browser.type(typed)) { // the search of the overview
+            update();
+        }
+    }
+
+    //! Type the text of a selection into the search
+    void paste(tiny::Clipboard::Which which, Time time)
+    {
+        clipboard().request(
+                which,
+                [this](const std::string& text) {
+                    if (browser.type(tiny::single_line(text))) {
+                        update();
+                    }
+                },
+                time);
     }
 
     void on_button_press(const XButtonEvent& e) override
     {
         if (e.button == Button1) {
             browser.press(e.x, e.y);
+        } else if (e.button == Button2) {
+            paste(tiny::Clipboard::Which::Primary, e.time);
         } else if ((e.button == Button4 || e.button == Button5) &&
                    browser.wheel(e.button == Button4 ? -1 : 1)) {
             update();
@@ -208,11 +240,39 @@ class FontsApp : public tiny::XftWindow {
         }
     }
 
+    //! The search field at the top: the text and a cursor, or a hint
+    void paint_search()
+    {
+        const tiny::Rect r = browser.search_rect();
+        fill(white, r);
+        frame(rule, r, 1);
+        if (ui_font == nullptr) {
+            return;
+        }
+        const std::string& text = browser.search_field().text();
+        const int padding = metrics.margin / 2;
+        const int room = r.width - 2 * padding;
+        if (text.empty()) {
+            text_in(ui_font, dim, r, padding, "Search fonts");
+        } else {
+            // a long text shows its end
+            const int shift = std::min(0, room - text_width(ui_font, text));
+            text_in(ui_font, black, r, padding, text, shift);
+        }
+        const int shown = std::min(room, text_width(ui_font, text));
+        fill(black, {r.x + padding + shown,
+                     r.y + (r.height - ui_font->ascent - ui_font->descent) / 2,
+                     1, ui_font->ascent + ui_font->descent});
+    }
+
     void paint_overview()
     {
         if (browser.families().empty()) {
+            paint_search();
             if (ui_font != nullptr) {
-                const std::string text = "No fonts found";
+                const std::string text = browser.search_field().text().empty()
+                                                 ? "No fonts found"
+                                                 : "No font matches";
                 text_at(ui_font, black, (width - text_width(ui_font, text)) / 2,
                         height / 2, text);
             }
@@ -245,6 +305,9 @@ class FontsApp : public tiny::XftWindow {
             }
             unclip();
         }
+        // the cells scroll under the bar
+        fill(white, {0, 0, width, browser.top()});
+        paint_search();
     }
 
     //! The header of the detail and the info: the breadcrumbs at the left
