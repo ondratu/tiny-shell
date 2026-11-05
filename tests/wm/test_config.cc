@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <csignal>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -621,6 +622,46 @@ TEST(ConfigTest, reads_the_wallpaper)
     EXPECT_EQ(c.wallpaper_mode, "tile");
     EXPECT_TRUE(parse_config({}).wallpaper_file.empty());
     EXPECT_TRUE(parse_config({}).wallpaper_mode.empty());
+}
+
+TEST(ConfigTest, a_wallpaper_that_is_set_is_told_even_when_it_is_empty)
+{
+    EXPECT_FALSE(parse_config({}).wallpaper_set);
+    EXPECT_TRUE(parse_config({{"a", "[wallpaper]\nfile = /a.png\n"}})
+                        .wallpaper_set);
+    EXPECT_TRUE(parse_config({{"a", "[wallpaper]\nfile =\n"}}).wallpaper_set);
+    EXPECT_FALSE(
+            parse_config({{"a", "[wallpaper]\nmode = tile\n"}}).wallpaper_set);
+}
+
+TEST(ConfigTest, the_default_wallpaper_is_the_fox_for_light_and_night_for_dark)
+{
+    const std::filesystem::path root =
+            std::filesystem::temp_directory_path() /
+            ("tiny-wallpapers-" + std::to_string(getpid()));
+    const std::filesystem::path dir = root / "backgrounds/tiny-shell";
+    std::filesystem::create_directories(dir);
+    std::ofstream(dir / "tiny-shell-krajina-liska-1920x1080.png") << "x";
+    std::ofstream(dir / "tiny-shell-noc-1920x1080.png") << "x";
+    const Strings dirs = {"/nonexistent", root.string()};
+
+    EXPECT_EQ(tiny::wm::default_wallpaper(tiny::Variant::Light, dirs),
+              (dir / "tiny-shell-krajina-liska-1920x1080.png").string());
+    EXPECT_EQ(tiny::wm::default_wallpaper(tiny::Variant::Dark, dirs),
+              (dir / "tiny-shell-noc-1920x1080.png").string());
+    EXPECT_EQ(
+            tiny::wm::default_wallpaper(tiny::Variant::Dark, {"/nonexistent"}),
+            "");
+
+    // the configuration wins, also with no wallpaper at all
+    const Config unset = parse_config({});
+    const Config set = parse_config({{"a", "[wallpaper]\nfile = /a.png\n"}});
+    const Config none = parse_config({{"a", "[wallpaper]\nfile =\n"}});
+    EXPECT_EQ(tiny::wm::wallpaper_of(unset, tiny::Variant::Dark, dirs),
+              (dir / "tiny-shell-noc-1920x1080.png").string());
+    EXPECT_EQ(tiny::wm::wallpaper_of(set, tiny::Variant::Dark, dirs), "/a.png");
+    EXPECT_EQ(tiny::wm::wallpaper_of(none, tiny::Variant::Dark, dirs), "");
+    std::filesystem::remove_all(root);
 }
 
 TEST(ConfigTest, fill_is_the_default_mode_of_the_wallpaper)

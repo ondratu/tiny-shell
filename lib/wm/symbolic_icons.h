@@ -40,9 +40,6 @@ class SymbolicIcons {
     SymbolicIcons& operator=(const SymbolicIcons&) = delete;
     ~SymbolicIcons();
 
-    //! The directories of the user and the system, `/usr/local/share` too
-    static std::vector<std::string> default_dirs();
-
     //! The path of the file of an icon, empty when there is none
     std::string find(std::string_view name) const;
 

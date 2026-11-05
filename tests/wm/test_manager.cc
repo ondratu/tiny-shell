@@ -4781,6 +4781,29 @@ TEST_F(ManagerTest, no_wallpaper_program_means_a_screen_change_runs_nothing)
 }
 
 TEST_F(ManagerTest,
+       a_wallpaper_of_the_style_is_drawn_again_when_the_style_changes)
+{
+    const VariantGuard guard;
+    start();
+    const auto marker = marker_file("tiny-manager-wallpaper-style-");
+    manager->set_variant(tiny::Variant::Dark);
+    manager->set_wallpaper_command(
+            {"sh", "-c", "echo \"$@\" >> " + marker.string(), "x"}, true);
+    ASSERT_TRUE(wait_for([&] { return runs_of(marker) == 1; }));
+
+    manager->set_variant(tiny::Variant::Light);
+
+    ASSERT_TRUE(wait_for([&] { return runs_of(marker) == 2; }));
+    std::ifstream in(marker);
+    std::string first;
+    std::string second;
+    std::getline(in, first);
+    std::getline(in, second);
+    EXPECT_EQ(first, "--style dark");
+    EXPECT_EQ(second, "--style light");
+}
+
+TEST_F(ManagerTest,
        the_variant_changes_the_color_of_the_root_but_not_a_wallpaper)
 {
     const VariantGuard guard;

@@ -78,10 +78,3 @@ TEST_F(SymbolicIconsTest, draws_in_the_middle_in_the_color)
     EXPECT_EQ(img.at(1, 1), 0x000000u); // outside of the icon
     XDestroyWindow(dpy, w);
 }
-
-TEST_F(SymbolicIconsTest, default_dirs_are_not_empty)
-{
-    const auto dirs = SymbolicIcons::default_dirs();
-
-    EXPECT_FALSE(dirs.empty());
-}

@@ -133,6 +133,15 @@ std::string data_dirs_with(const char* data_dirs, const std::string& dir)
     return std::string(data_dirs) + ":" + dir;
 }
 
+std::vector<std::string> default_data_dirs()
+{
+    const std::string with_local =
+            data_dirs_with(getenv("XDG_DATA_DIRS"), local_share_dir);
+    return data_dir_list(getenv("XDG_DATA_HOME"),
+                         with_local.empty() ? nullptr : with_local.c_str(),
+                         getenv("HOME"));
+}
+
 bool executable_exists(std::string_view program, std::string_view path)
 {
     if (program.empty()) {

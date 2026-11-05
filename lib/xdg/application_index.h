@@ -39,6 +39,16 @@ inline constexpr const char* local_share_dir = "/usr/local/share";
 std::string data_dirs_with(const char* data_dirs, const std::string& dir);
 
 /**
+ * @short The XDG data directories of this process: the ones of the
+ * environment, and `local_share_dir` after them.
+ *
+ * What `data_dir_list` gives for `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` (with the
+ * local directory at the end) and `$HOME`. For the files that the shell
+ * installs (icons, wallpapers).
+ */
+std::vector<std::string> default_data_dirs();
+
+/**
  * @short Does `program` exist as an executable file?
  *
  * A name with a slash is a path (relative to the working directory), other

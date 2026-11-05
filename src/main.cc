@@ -15,11 +15,11 @@
 #include "theme.h"
 #include "wm/shell_theme.h"
 #include "wm/config.h"
+#include "xdg/application_index.h"
 #include "wm/manager.h"
 #include "wm/options.h"
 #include "wm/selection.h"
 #include "wm/xresources.h"
-#include "xdg/application_index.h"
 
 namespace {
 
@@ -205,9 +205,13 @@ int main(int argc, char** argv)
                     fprintf(stderr, "%s: the favorites are not saved: %s\n",
                             argv0.c_str(), error.c_str());
                 });
-        if (!config.wallpaper_file.empty()) {
+        if (!tiny::wm::wallpaper_of(config, config.style,
+                                    tiny::xdg::default_data_dirs())
+                     .empty()) {
+            // without [wallpaper] file the wallpaper is the one of the style
             manager.set_wallpaper_command(
-                    {tiny::sibling_program(argv[0], "tiny-wallpaper")});
+                    {tiny::sibling_program(argv[0], "tiny-wallpaper")},
+                    !config.wallpaper_set);
         }
         manager.set_clock_format(config.clock_format);
         manager.set_dock_mode(config.dock_mode);

@@ -79,8 +79,13 @@ class Manager : public tiny::Object {
      * (`tiny-wallpaper`; it reads the size itself). An empty command means no
      * wallpaper: the root window has the color of the theme, which changes
      * with the variant of the theme. The picture does not.
+     *
+     * With `follows_theme` (the wallpaper is the default one of the style)
+     * the program is started again when the variant changes, with
+     * `--style dark` or `--style light`.
      */
-    void set_wallpaper_command(std::vector<std::string> command);
+    void set_wallpaper_command(std::vector<std::string> command,
+                               bool follows_theme = false);
 
     /**
      * @short Show the date and the time in the panel, at its right end.
@@ -211,6 +216,9 @@ class Manager : public tiny::Object {
 
     //! The application of the window (the id, the icon) for the dock
     void set_application_icon(Window* window);
+
+    //! Start the program of the wallpaper (nothing when there is none)
+    void run_wallpaper();
 
     //! Give the dock the favorites that are installed
     void update_favorites();
@@ -350,7 +358,7 @@ class Manager : public tiny::Object {
     XErrorHandler old_error_handler = nullptr;
     ::Window check_window = None; //!< `_NET_SUPPORTING_WM_CHECK`
 
-    SymbolicIcons wm_icons{display, root, SymbolicIcons::default_dirs()};
+    SymbolicIcons wm_icons{display, root, xdg::default_data_dirs()};
     Panel wm_panel;
     std::unique_ptr<ClockLabel> wm_clock; //!< null: no clock
     tiny::Timers::Id clock_timer = 0;
@@ -399,6 +407,7 @@ class Manager : public tiny::Object {
     std::string settings_command = "tiny-settings";
     std::string about_command = "tiny-about";
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
+    bool wallpaper_follows_theme = false;
     int screen_width = 0; //!< the root window, to see a change
     int screen_height = 0;
     std::string force_quit_program = "xkill";

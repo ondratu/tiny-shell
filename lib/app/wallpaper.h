@@ -23,11 +23,15 @@ std::string expand_home(const std::string& path, const char* home);
 struct WallpaperRequest {
     std::string file; //!< "" is the one of the configuration
     std::string mode; //!< "" is the one of the configuration
+    //! The style whose default wallpaper is drawn when there is no file in
+    //! the arguments and none in the configuration; "" is the style of the
+    //! configuration
+    std::string style;
     bool help = false;
     std::string error; //!< not empty: the arguments are wrong
 };
 
-/// `[-m fill|center|tile] [FILE]`, or `-h`.
+/// `[-m fill|center|tile] [-s dark|light] [FILE]`, or `-h`.
 WallpaperRequest parse_wallpaper_args(const std::vector<std::string>& args);
 
 std::string wallpaper_usage(const char* program);

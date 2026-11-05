@@ -2,13 +2,9 @@
 
 #include <filesystem>
 
-#include <cstdlib>
-
 #include "image/image.h"
 #include "image/pixmap.h"
 #include "x_util.h"
-#include "xdg/application_index.h"
-#include "xdg/dirs.h"
 
 namespace tiny::wm {
 
@@ -27,15 +23,6 @@ SymbolicIcons::~SymbolicIcons()
             XFreePixmap(display, icon.pixmap);
         }
     }
-}
-
-std::vector<std::string> SymbolicIcons::default_dirs()
-{
-    const std::string with_local =
-            xdg::data_dirs_with(getenv("XDG_DATA_DIRS"), xdg::local_share_dir);
-    return xdg::data_dir_list(getenv("XDG_DATA_HOME"),
-                              with_local.empty() ? nullptr : with_local.c_str(),
-                              getenv("HOME"));
 }
 
 std::string SymbolicIcons::find(std::string_view name) const

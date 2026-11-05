@@ -290,6 +290,8 @@ void Manager::set_variant(Variant variant)
     if (wallpaper_command.empty()) { // a picture does not change with the theme
         XSetWindowBackground(display, root, shell_theme.root_background);
         XClearWindow(display, root);
+    } else if (wallpaper_follows_theme) {
+        run_wallpaper();
     }
     wm_panel.restyle();
     wm_panel.menu_main.restyle();
@@ -1387,10 +1389,22 @@ void Manager::run_system_command(const std::string& command)
     }
 }
 
-void Manager::set_wallpaper_command(std::vector<std::string> command)
+void Manager::set_wallpaper_command(std::vector<std::string> command,
+                                    bool follows_theme)
 {
     wallpaper_command = std::move(command);
-    run_program(wallpaper_command);
+    wallpaper_follows_theme = follows_theme;
+    run_wallpaper();
+}
+
+void Manager::run_wallpaper()
+{
+    std::vector<std::string> argv = wallpaper_command;
+    if (!argv.empty() && wallpaper_follows_theme) {
+        argv.push_back("--style");
+        argv.push_back(variant_name(tiny::theme.get_variant()));
+    }
+    run_program(argv); // nothing when there is no wallpaper
 }
 
 void Manager::set_dock_mode(DockMode mode)
@@ -1494,7 +1508,7 @@ void Manager::on_root_configure(const XConfigureEvent& e)
     screen_width = e.width;
     screen_height = e.height;
     update_dock_visibility();
-    run_program(wallpaper_command); // nothing when there is no wallpaper
+    run_wallpaper();
 }
 
 void Manager::run_program(const std::vector<std::string>& argv)
