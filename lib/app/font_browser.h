@@ -12,10 +12,13 @@ namespace tiny::app {
 /**
  * @short What the font viewer shows and where, without any drawing.
  *
- * Two views. The overview is a grid of cells, one for every font family, in
+ * Three views. The overview is a grid of cells, one for every font family, in
  * a column count that fits the width of the window; the cells scroll. The
- * detail is the specimen of one family under a header with a button back;
- * the specimen scrolls. The owner (`tiny-fonts`) tells the size of the window,
+ * detail is the specimen of one family under a header with a button back and
+ * a button Info; the specimen scrolls. The info is the information about the
+ * family (the files, the languages, the designer, the license) under the
+ * header "‹ Fonts ‹ Family": a click on Fonts goes to the overview, a click on
+ * the family goes back to the specimen. The owner (`tiny-fonts`) tells the size of the window,
  * the height of the specimen (it depends on the metrics of the font, which
  * the browser does not know) and the input; it asks for the rectangles to
  * draw. All the numbers are in pixels.
@@ -25,7 +28,7 @@ namespace tiny::app {
  */
 class FontBrowser {
   public:
-    enum class View { Overview, Detail };
+    enum class View { Overview, Detail, Info };
 
     enum class Key {
         Left,
@@ -38,7 +41,8 @@ class FontBrowser {
         End,
         Return,
         Back, //!< backspace
-        Escape
+        Escape,
+        Info //!< the key I
     };
 
     //! The sizes of the parts, at the scale 1
@@ -52,6 +56,7 @@ class FontBrowser {
         int name_baseline = 170;    //!< from the top of a cell
         int header = 40;            //!< the height of the header of the detail
         int back_width = 110;       //!< the width of the back button
+        int info_width = 90;        //!< the width of the button Info
         int charset_size = 28;      //!< the lines of the letters and the digits
         int line_gap = 8;           //!< between the lines of the specimen
         int small_size = 8;         //!< the smallest line of text
@@ -78,7 +83,8 @@ class FontBrowser {
     /// The size of the window; the scrolling is kept inside of the content.
     void resize(int width, int height);
 
-    /// The height of the whole specimen (the lines and the margins).
+    /// The height of the whole specimen or, in the info, of the whole text
+    /// (the lines and the margins).
     void set_detail_height(int height);
 
     View view() const { return view_; }
@@ -94,8 +100,9 @@ class FontBrowser {
 
     int content_height() const;
 
-    /// Where the scrolling area starts (under the header in the detail).
-    int top() const { return view_ == View::Detail ? metrics_.header : 0; }
+    /// Where the scrolling area starts (under the header in the detail and
+    /// the info).
+    int top() const { return view_ == View::Overview ? 0 : metrics_.header; }
 
     /// The height of the scrolling area.
     int view_height() const;
@@ -111,8 +118,15 @@ class FontBrowser {
     /// The cell at the point, or the count of families when there is none.
     size_t cell_at(int x, int y) const;
 
-    /// The button back in the header of the detail.
+    /// The button back ("‹ Fonts") in the header of the detail and the info.
     Rect back_rect() const;
+
+    /// The name of the family in the header of the info ("‹ Family"): it goes
+    /// back to the specimen.
+    Rect crumb_rect() const;
+
+    /// The button Info at the right end of the header of the detail.
+    Rect info_rect() const;
 
     /// A button went down at the point.
     void press(int x, int y);
@@ -130,8 +144,12 @@ class FontBrowser {
     /// Show the detail of a family (nothing for an index out of the list).
     void open(size_t index);
 
-    /// Return to the overview, at the place where it was left.
+    /// One step back: the info returns to the specimen, the specimen to the
+    /// overview, at the place where it was left.
     void back();
+
+    /// Show the information about the family of the specimen.
+    void show_info();
 
   private:
     int max_scroll() const;
@@ -151,6 +169,8 @@ class FontBrowser {
     int scroll_ = 0;
     int overview_scroll_ = 0;
     int detail_height_ = 0;
+    int info_height_ = 0;
+    int detail_scroll_ = 0; //!< of the specimen, while the info shows
     size_t pressed_;
 };
 

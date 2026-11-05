@@ -27,6 +27,7 @@ class TestWindow : public tiny::XftWindow {
     using XftWindow::text_width;
     using XftWindow::unclip;
     using XftWindow::update;
+    using XftWindow::wrap;
 
   protected:
     void paint() override
@@ -274,4 +275,65 @@ TEST(XftWindowTest, a_font_of_size_zero_is_not_the_font_of_a_name)
     const XftFont* named = w.font_by_name("sans-10");
 
     EXPECT_NE(w.font("sans-10", 0), named);
+}
+
+TEST(XftWindowWrapTest, a_text_that_fits_is_one_line)
+{
+    TestWindow w;
+    XftFont* f = w.font("sans", 12);
+    ASSERT_NE(f, nullptr);
+
+    EXPECT_EQ(w.wrap(f, "one two", 10000),
+              (std::vector<std::string>{"one two"}));
+    EXPECT_EQ(w.wrap(f, "", 100), (std::vector<std::string>{""}));
+}
+
+TEST(XftWindowWrapTest, a_line_breaks_at_a_space)
+{
+    TestWindow w;
+    XftFont* f = w.font("sans", 12);
+    ASSERT_NE(f, nullptr);
+    const int one = w.text_width(f, "alpha beta");
+
+    const std::vector<std::string> lines =
+            w.wrap(f, "alpha beta gamma delta", one);
+
+    ASSERT_GE(lines.size(), 2u);
+    for (const std::string& line : lines) {
+        EXPECT_LE(w.text_width(f, line), one) << line;
+    }
+    std::string all;
+    for (const std::string& line : lines) {
+        all += (all.empty() ? "" : " ") + line;
+    }
+    EXPECT_EQ(all, "alpha beta gamma delta");
+}
+
+TEST(XftWindowWrapTest, a_line_break_of_the_text_starts_a_line)
+{
+    TestWindow w;
+    XftFont* f = w.font("sans", 12);
+    ASSERT_NE(f, nullptr);
+
+    EXPECT_EQ(w.wrap(f, "a\nb", 10000), (std::vector<std::string>{"a", "b"}));
+    EXPECT_EQ(w.wrap(f, "a\n\nb", 10000),
+              (std::vector<std::string>{"a", "", "b"}));
+}
+
+TEST(XftWindowWrapTest, a_word_wider_than_the_line_is_cut)
+{
+    TestWindow w;
+    XftFont* f = w.font("sans", 12);
+    ASSERT_NE(f, nullptr);
+    const int width = w.text_width(f, "WWWW");
+
+    const std::vector<std::string> lines = w.wrap(
+            f, "WWWWWWWWWWWW \xC4\x9B\xC4\x9B\xC4\x9B\xC4\x9B\xC4\x9B", width);
+
+    ASSERT_GT(lines.size(), 2u);
+    for (const std::string& line : lines) {
+        EXPECT_FALSE(line.empty());
+        // never inside of a UTF-8 character
+        EXPECT_NE(static_cast<unsigned char>(line.front()) & 0xC0, 0x80);
+    }
 }
