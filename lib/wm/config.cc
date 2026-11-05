@@ -127,6 +127,32 @@ bool valid_xft(XftOption option, const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
+XftChoices wallpaper_choices()
+{
+    static constexpr XftChoice modes[] = {
+            {"", "Fill"}, {"center", "Center"}, {"tile", "Tile"}};
+    return {std::begin(modes), std::end(modes)};
+}
+
+bool valid_wallpaper_mode(const std::string& text)
+{
+    const XftChoices choices = wallpaper_choices();
+    return text == "fill" ||
+           std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+bool valid_wallpaper_file(const std::string& text)
+{
+    // a relative path would lead to another file for a program that starts
+    // in another directory
+    const bool absolute = text.empty() || text[0] == '/' || text == "~" ||
+                          text.compare(0, 2, "~/") == 0;
+    return absolute && std::none_of(text.begin(), text.end(), [](char c) {
+               return std::iscntrl(static_cast<unsigned char>(c)) != 0;
+           });
+}
+
 std::vector<std::string> config_files(const char* config_home,
                                       const char* config_dirs, const char* home)
 {
@@ -225,6 +251,21 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     if (const auto value = ini.get("theme", "style")) {
         if (!variant_from_name(*value, config.style)) {
             problem("[theme] style must be dark or light");
+        }
+    }
+    if (const auto value = ini.get("wallpaper", "file")) {
+        if (valid_wallpaper_file(std::string(trim(*value)))) {
+            config.wallpaper_file = std::string(trim(*value));
+        } else {
+            problem("[wallpaper] file must be an absolute path or start with "
+                    "~/");
+        }
+    }
+    if (const auto value = ini.get("wallpaper", "mode")) {
+        if (valid_wallpaper_mode(*value)) {
+            config.wallpaper_mode = *value == "fill" ? "" : *value;
+        } else {
+            problem("[wallpaper] mode must be fill, center or tile");
         }
     }
     if (const auto value = ini.get("commands", "reboot"); value) {

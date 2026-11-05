@@ -96,6 +96,7 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     config.font = "My Font";
     config.terminal_line = "my-term -e";
     config.style = tiny::Variant::Light;
+    config.wallpaper_file = "/p/sky.jpg";
     const std::string text = tiny::wm::info_text(
             config, {"/etc/xdg/tiny-shell.ini"}, {"/a/applications"});
 
@@ -105,6 +106,10 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     EXPECT_NE(text.find("My Font"), std::string::npos);
     EXPECT_NE(text.find("my-term -e"), std::string::npos);
     EXPECT_NE(text.find("my-poweroff"), std::string::npos);
+    EXPECT_NE(text.find("Wallpaper: /p/sky.jpg"), std::string::npos);
+    EXPECT_NE(tiny::wm::info_text(tiny::wm::Config(), {}, {})
+                      .find("Wallpaper: none"),
+              std::string::npos);
     EXPECT_NE(text.find("/etc/xdg/tiny-shell.ini"), std::string::npos);
     EXPECT_NE(text.find("/a/applications"), std::string::npos);
     EXPECT_NE(text.find(tiny::wm::version_text()), std::string::npos);

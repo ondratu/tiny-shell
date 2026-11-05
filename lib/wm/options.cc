@@ -90,6 +90,9 @@ std::string info_text(const Config& config,
           config.font + " " + number_text(config.font_size) +
           (config.font_style.empty() ? "" : " " + config.font_style) +
           "\n"
+          "Wallpaper: " +
+          (config.wallpaper_file.empty() ? "none" : config.wallpaper_file) +
+          "\n"
           "Terminal: " +
           config.terminal_line +
           "\n"
