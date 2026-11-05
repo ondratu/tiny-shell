@@ -179,6 +179,12 @@ class AboutApp : public tiny::XftWindow {
         if (!loaded) {
             return;
         }
+        // the icon of the window: the shell may not find the desktop file
+        std::vector<tiny::image::Image> icons = {*loaded};
+        if (const auto small = tiny::image::load_image(file, 48)) {
+            icons.push_back(*small);
+        }
+        set_icon(icons);
         logo_pixmap = tiny::image::create_pixmap(
                 display, XDefaultRootWindow(display), *loaded);
         if (logo_pixmap != None) {

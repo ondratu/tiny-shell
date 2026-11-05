@@ -11,6 +11,7 @@
 
 #include "clipboard.h"
 #include "display.h"
+#include "image/image.h"
 #include "input_method.h"
 #include "widget.h"
 
@@ -43,6 +44,15 @@ class XftWindow {
     XftWindow(const XftWindow&) = delete;
     XftWindow& operator=(const XftWindow&) = delete;
     virtual ~XftWindow();
+
+    /**
+     * @short The icon of the window (`_NET_WM_ICON`), for the title bar and
+     * the dock of a window manager that shows it.
+     *
+     * Every picture is one size of the icon, the manager takes the best one.
+     * Call it after the window is made.
+     */
+    void set_icon(const std::vector<image::Image>& icons);
 
     //! Paint, show the window and handle the events until `quit()`
     void run();
