@@ -105,7 +105,7 @@ OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.
 DEP = $(OBJ:.o=.d)
 
 .PHONY: FORCE all release examples clean check coverage format lint lint-fast \
-    lint-analyze asan cppcheck help layers
+    lint-analyze asan cppcheck help layers install uninstall
 .DELETE_ON_ERROR:
 
 all: $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER)
@@ -118,10 +118,33 @@ release:
 	    -fdata-sections" \
 	    LDFLAGS="-s -Wl,--gc-sections" all
 
+# make install [PREFIX=/usr] [DESTDIR=staging]: the programs, and what is in
+# data/ (icons, desktop files, wallpapers) into share/. data/ has the layout
+# of the share directory, so a copy is all that it takes.
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+DATADIR ?= $(PREFIX)/share
+INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(WALLPAPER)
+
+install: all
+	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
+	for p in $(INSTALLED_PROGS); do \
+	    install -m 755 $$p $(DESTDIR)$(BINDIR)/ || exit 1; done
+	cp -R data/. $(DESTDIR)$(DATADIR)/
+	-gtk-update-icon-cache -q -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null
+	-update-desktop-database -q $(DESTDIR)$(DATADIR)/applications 2>/dev/null
+
+uninstall:
+	for p in $(INSTALLED_PROGS); do rm -f $(DESTDIR)$(BINDIR)/$$(basename $$p); done
+	cd data && find . -type f | while read -r f; do \
+	    rm -f "$(DESTDIR)$(DATADIR)/$$f"; done
+
 help:
 	@echo "make            build tiny-shell, tiny-fonts, tiny-settings and tiny-wallpaper"
 	@echo "make layers     check that the widgets do not include the shell"
 	@echo "make release    build small stripped programs into build-release"
+	@echo "make install    install the programs and data/ (PREFIX=/usr/local, DESTDIR)"
+	@echo "make uninstall  remove what install put there"
 	@echo "make examples   build the toolkit examples"
 	@echo "make check      run the unit tests (against Xvfb)"
 	@echo "make coverage   run the tests and print the coverage table"
