@@ -2,7 +2,7 @@
 
 namespace tiny::wm {
 
-DockReveal::DockReveal(int height): Widget(Type::Input, 1, height)
+DockReveal::DockReveal(int strip): Widget(Type::Input, 1, strip)
 {
     name = "dock-reveal";
 }
