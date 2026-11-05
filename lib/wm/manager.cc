@@ -98,7 +98,10 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     Object::connect_window(
             LeaveNotify, wm_dock.get_window(), [this](const XEvent& e) {
                 // moving between the icons of the dock is not leaving it
-                if (e.xcrossing.detail != NotifyInferior && dock_revealed) {
+                // (the grab of a menu is not leaving it either)
+                if (e.xcrossing.detail != NotifyInferior &&
+                    e.xcrossing.mode != NotifyGrab &&
+                    e.xcrossing.mode != NotifyUngrab && dock_revealed) {
                     dock_revealed = false;
                     update_dock_visibility();
                 }
@@ -838,7 +841,7 @@ void Manager::main_loop()
         if (tiny::handlers.count(signal_id)) {
             tiny::handlers.call_handler(signal_id, event);
             // the active window moved or got another size
-            if (event.type == ConfigureNotify && active &&
+            if (event.type == ConfigureNotify && active && !dragged &&
                 window == active->frame()) {
                 update_dock_visibility();
             }
@@ -1388,6 +1391,13 @@ void Manager::set_dock_mode(DockMode mode)
     update_dock_visibility();
 }
 
+tiny::Rect Manager::dock_area() const
+{
+    return {screen_width / 2 - wm_dock.get_width() / 2,
+            screen_height - wm_dock.get_height() - shell_theme.dock_border,
+            wm_dock.get_width(), wm_dock.get_height()};
+}
+
 void Manager::update_dock_visibility()
 {
     if (!wm_dock.get_realized()) {
@@ -1404,8 +1414,9 @@ void Manager::update_dock_visibility()
     };
     bool covered = false;
     if (dock_mode == DockMode::AutoHide && active && !active->get_minimized()) {
-        covered = overlaps(rect_of(active->frame()),
-                           rect_of(wm_dock.get_window()));
+        // the dock is centered at the bottom (`Dock::resize`): no request
+        const tiny::Rect dock_rect = dock_area();
+        covered = overlaps(rect_of(active->frame()), dock_rect);
     }
     bool shown = dock_shown(dock_mode, covered, dock_revealed);
     // a menu of the dock, or an icon that is being dragged, keeps it
@@ -1422,6 +1433,14 @@ void Manager::update_dock_visibility()
     }
     // the strip is there only while the dock hides
     const bool strip = dock_mode == DockMode::AutoHide && !shown;
+    if (strip) {
+        // as wide as the dock: the pointer that reveals it is then over it
+        // and leaves it, so it hides again
+        const tiny::Rect area = dock_area();
+        XMoveResizeWindow(display, wm_dock_reveal.get_window(), area.x,
+                          screen_height - shell_theme.dock_reveal,
+                          x_dim(area.width), x_dim(shell_theme.dock_reveal));
+    }
     if (strip && !wm_dock_reveal.get_maped()) {
         wm_dock_reveal.map();
         XRaiseWindow(display, wm_dock_reveal.get_window());
@@ -1465,9 +1484,6 @@ void Manager::on_root_configure(const XConfigureEvent& e)
     }
     screen_width = e.width;
     screen_height = e.height;
-    wm_dock_reveal.resize(screen_width, shell_theme.dock_reveal);
-    XMoveWindow(display, wm_dock_reveal.get_window(), 0,
-                screen_height - shell_theme.dock_reveal);
     update_dock_visibility();
     run_program(wallpaper_command); // nothing when there is no wallpaper
 }

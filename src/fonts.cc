@@ -187,8 +187,11 @@ class FontsApp : public tiny::XftWindow {
             if (info_measured != browser.family()) {
                 measure_info();
             }
-        } else if (measured.empty()) {
-            measure_detail();
+        } else {
+            info_measured.clear(); // the info is measured at every opening
+            if (measured.empty()) {
+                measure_detail();
+            }
         }
         // the fonts of the cells that show are never thrown away mid-paint
         const auto [first, end] = browser.visible_cells();

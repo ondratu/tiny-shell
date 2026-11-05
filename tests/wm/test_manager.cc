@@ -4865,10 +4865,25 @@ TEST_F(DockModeTest, the_strip_is_at_the_bottom_edge_of_the_screen)
 
     const XWindowAttributes strip = attributes_of(manager->wm_dock_reveal);
 
-    EXPECT_EQ(strip.x, 0);
-    EXPECT_EQ(strip.width, root.width);
+    const XWindowAttributes dock = attributes_of(manager->wm_dock);
+    EXPECT_EQ(strip.x, dock.x); // as wide as the dock
+    EXPECT_EQ(strip.width, dock.width);
     EXPECT_EQ(strip.height, tiny::wm::shell_theme.dock_reveal);
     EXPECT_EQ(strip.y + strip.height, root.height);
+}
+
+TEST_F(DockModeTest, leaving_by_a_grab_of_a_menu_does_not_hide_the_dock)
+{
+    cover_the_dock();
+    send(manager->wm_dock_reveal, EnterNotify);
+    XEvent e = make_event(LeaveNotify);
+    e.xcrossing.window = manager->wm_dock.get_window();
+    e.xcrossing.detail = NotifyAncestor;
+    e.xcrossing.mode = NotifyGrab;
+
+    send(manager->wm_dock.get_window(), e);
+
+    EXPECT_TRUE(dock_shown());
 }
 
 TEST_F(DockModeTest, the_pointer_at_the_edge_shows_the_dock)
