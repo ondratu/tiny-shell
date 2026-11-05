@@ -611,6 +611,41 @@ TEST_F(PopoverTest, focus_out_unmaps_popover)
     EXPECT_FALSE(p.get_maped());
 }
 
+TEST_F(PopoverTest, a_click_that_took_the_focus_does_not_open_it_again_at_once)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    focus_out(p);
+
+    p.popup(300, 50); // the same click
+
+    EXPECT_FALSE(p.get_maped());
+}
+
+TEST_F(PopoverTest, it_opens_again_after_the_delay)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+    p.popup(300, 50);
+    focus_out(p);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    p.popup(300, 50);
+
+    EXPECT_TRUE(p.get_maped());
+}
+
+TEST_F(PopoverTest, a_popover_that_was_never_closed_by_the_focus_opens_at_once)
+{
+    tiny::Popover p(200, 100);
+    p.realize(root(), 0, 0);
+
+    p.popup(300, 50);
+
+    EXPECT_TRUE(p.get_maped());
+}
+
 TEST_F(PopoverTest, focus_out_to_a_nested_popover_keeps_the_popover)
 {
     tiny::Popover p(200, 100);
