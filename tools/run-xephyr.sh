@@ -16,9 +16,15 @@ XEPHYR_SCREEN=1024x768
 mkdir -p local
 [ -f local/xinitrc ] || cp examples/xinitrc local/xinitrc
 
-make build/tiny-shell
+make
 TINY_SHELL=$PWD/build/tiny-shell
 export TINY_SHELL
+
+# The icons, desktop files and wallpapers of the repository, and the programs
+# that the desktop files start, without installing them
+XDG_DATA_DIRS="$PWD/data:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+PATH="$PWD/build:$PATH"
+export XDG_DATA_DIRS PATH
 
 xinit ./local/xinitrc -- "$(command -v Xephyr)" "$XEPHYR_DISPLAY" \
     -screen "$XEPHYR_SCREEN" -host-cursor -terminate
