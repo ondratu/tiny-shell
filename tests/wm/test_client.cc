@@ -2,9 +2,14 @@
 #include "wm_helpers.h"
 #include "wm/shell_theme.h"
 
+#include <unistd.h>
+
+#include <filesystem>
+#include <fstream>
 #include <memory>
 
 #include "wm/client.h"
+#include "wm/symbolic_icons.h"
 
 namespace {
 
@@ -435,6 +440,37 @@ TEST_F(ClientTest, lowering_puts_the_frame_and_its_shadow_at_the_bottom)
     ASSERT_GE(stack.size(), 2u);
     EXPECT_EQ(stack[0], win->shadow.get_window());
     EXPECT_EQ(stack[1], win->get_window());
+}
+
+TEST_F(ClientTest, the_buttons_of_the_title_bar_draw_the_icons_they_are_given)
+{
+    const std::filesystem::path dir =
+            std::filesystem::temp_directory_path() /
+            ("tiny-client-icons-" + std::to_string(getpid()));
+    std::filesystem::create_directories(dir / "tiny-shell/icons/white");
+    for (const char* name : {"window-close", "window-minimize",
+                             "window-maximize", "window-restore"}) {
+        std::ofstream(dir / "tiny-shell/icons/white" /
+                      (std::string(name) + "-symbolic.svg"))
+                << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" "
+                   "height=\"16\" viewBox=\"0 0 16 16\"><path "
+                   "fill=\"#ffffff\" d=\"M0 0H16V16H0Z\"/></svg>\n";
+    }
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {dir.string()});
+    Probe* w = build();
+
+    w->set_icons(&icons);
+    for (const tiny::Widget* b : {static_cast<tiny::Widget*>(&w->cls_btn),
+                                  static_cast<tiny::Widget*>(&w->min_btn),
+                                  static_cast<tiny::Widget*>(&w->max_btn)}) {
+        send(*b, Expose);
+        const int icon = tiny::wm::shell_theme.win_icon;
+        const Image img(b->get_window(), icon, icon);
+        EXPECT_EQ(img.at(icon / 2 + 5, icon / 2 + 5),
+                  tiny::wm::shell_theme.button.normal_fg);
+    }
+    std::filesystem::remove_all(dir);
 }
 
 TEST_F(ClientTest, create_places_a_window_under_the_panel)

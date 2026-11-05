@@ -104,7 +104,7 @@ static tiny::Rect first_place(const XWindowAttributes& attrs,
 Window* Client::create(::Window root, ::Window child,
                        const XWindowAttributes& attrs, unsigned long functions,
                        unsigned long decorations, const tiny::Rect& area,
-                       bool fresh)
+                       bool fresh, SymbolicIcons* icons)
 {
     XSizeHints hints = {};
     long supplied;
@@ -120,6 +120,7 @@ Window* Client::create(::Window root, ::Window child,
         XResizeWindow(win->dsp, child, tiny::x_dim(place.width),
                       tiny::x_dim(client_height));
     }
+    win->set_icons(icons);
     win->realize(root, place.x, place.y);
     win->on_focus_out(XEvent(), nullptr); // disable and GrabButton
     win->map_all();
