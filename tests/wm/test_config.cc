@@ -588,3 +588,64 @@ TEST(ConfigTest, the_choices_of_the_rendering_start_with_the_default)
     EXPECT_STREQ(xft_key(XftOption::Rgba), "rgba");
     EXPECT_TRUE(valid_xft(XftOption::Hinting, "full"));
 }
+
+TEST(ConfigTest, reads_the_wallpaper)
+{
+    const Config c = parse_config(
+            {{"a", "[wallpaper]\nfile = ~/Pictures/a b.jpg \nmode = tile\n"}});
+
+    EXPECT_EQ(c.wallpaper_file, "~/Pictures/a b.jpg");
+    EXPECT_EQ(c.wallpaper_mode, "tile");
+    EXPECT_TRUE(parse_config({}).wallpaper_file.empty());
+    EXPECT_TRUE(parse_config({}).wallpaper_mode.empty());
+}
+
+TEST(ConfigTest, fill_is_the_default_mode_of_the_wallpaper)
+{
+    EXPECT_TRUE(parse_config({{"a", "[wallpaper]\nmode = fill\n"}})
+                        .wallpaper_mode.empty());
+    EXPECT_TRUE(parse_config({{"a", "[wallpaper]\nmode =\n"}})
+                        .wallpaper_mode.empty());
+}
+
+TEST(ConfigTest,
+     a_wrong_mode_of_the_wallpaper_is_told_and_the_other_value_stays)
+{
+    Strings problems;
+    const Config c = parse_config({{"a", "[wallpaper]\nmode = center\n"},
+                                   {"b", "[wallpaper]\nmode = stretch\n"}},
+                                  &problems);
+
+    EXPECT_EQ(c.wallpaper_mode, "center");
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("b: [wallpaper] mode must be"),
+              std::string::npos);
+}
+
+TEST(ConfigTest, a_path_of_the_wallpaper_with_a_line_break_is_refused)
+{
+    // the ini reader has no line breaks in a value, so this is for the form
+    EXPECT_TRUE(tiny::wm::valid_wallpaper_file(""));
+    EXPECT_TRUE(tiny::wm::valid_wallpaper_file("/a/b c.png"));
+    EXPECT_TRUE(tiny::wm::valid_wallpaper_file("~/a.png"));
+    EXPECT_TRUE(tiny::wm::valid_wallpaper_file("~"));
+    EXPECT_FALSE(tiny::wm::valid_wallpaper_file("pics/a.png"));
+    EXPECT_FALSE(tiny::wm::valid_wallpaper_file("~other/a.png"));
+    EXPECT_FALSE(tiny::wm::valid_wallpaper_file("/a\nb"));
+    EXPECT_FALSE(tiny::wm::valid_wallpaper_file("/a\tb"));
+}
+
+TEST(ConfigTest, the_modes_of_the_wallpaper)
+{
+    using tiny::wm::valid_wallpaper_mode;
+    using tiny::wm::wallpaper_choices;
+
+    ASSERT_EQ(wallpaper_choices().size(), 3u);
+    EXPECT_STREQ(wallpaper_choices()[0].value, "");
+    EXPECT_STREQ(wallpaper_choices()[0].label, "Fill");
+    EXPECT_TRUE(valid_wallpaper_mode(""));
+    EXPECT_TRUE(valid_wallpaper_mode("fill"));
+    EXPECT_TRUE(valid_wallpaper_mode("center"));
+    EXPECT_TRUE(valid_wallpaper_mode("tile"));
+    EXPECT_FALSE(valid_wallpaper_mode("stretch"));
+}

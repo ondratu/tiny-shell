@@ -27,6 +27,10 @@ namespace tiny::wm {
  * hinting = slight
  * rgba = rgb
  *
+ * [wallpaper]
+ * file = ~/Pictures/mountains.jpg
+ * mode = fill
+ *
  * [commands]
  * reboot = sudo reboot
  * poweroff = doas poweroff
@@ -49,6 +53,10 @@ struct Config {
     std::string xft_hinting;        //!< [xft] hinting, "" is not set
     std::string xft_rgba;           //!< [xft] rgba, "" is not set
     Variant style = Variant::Dark;  //!< [theme] style, dark or light
+    //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
+    std::string wallpaper_file;
+    //! [wallpaper] mode, one of `wallpaper_choices()`; "" is fill
+    std::string wallpaper_mode;
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
@@ -86,6 +94,27 @@ const char* xft_key(XftOption option);
 
 //! Whether the text is one of `xft_choices(option)`
 bool valid_xft(XftOption option, const std::string& text);
+
+/**
+ * @short The ways a wallpaper covers the screen: fill, center and tile.
+ *
+ * The first one is "" (the default, fill). The type is the one of the options
+ * of `[xft]`, a value and the name that a form shows.
+ */
+XftChoices wallpaper_choices();
+
+//! Whether the text is one of `wallpaper_choices()` or "fill" (the same as "")
+bool valid_wallpaper_mode(const std::string& text);
+
+/**
+ * @short Whether the text is a file of a wallpaper that can be saved.
+ *
+ * Empty (no wallpaper) or an absolute path (or `~/...`) without a control
+ * character, because the program that draws it starts in another directory.
+ * Whether the
+ * file exists is not checked: it can be on a disk that is not mounted yet.
+ */
+bool valid_wallpaper_file(const std::string& text);
 
 /**
  * @short The scale from the text of a setting.
