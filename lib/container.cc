@@ -1,7 +1,9 @@
-#include <algorithm>
 #include <X11/cursorfont.h>
 
 #include <sys/time.h>
+
+#include <cassert>
+#include <algorithm>
 
 #include "container.h"
 
@@ -67,6 +69,7 @@ void Container::map_all()
 
 void Container::add(Widget* widget, int x, int y, int gravity)
 {
+    assert(widget != nullptr);
     if (!is_realized) {
         return error("tiny::Container must be realized");
     }

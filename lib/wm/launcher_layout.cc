@@ -11,6 +11,16 @@ namespace tiny::wm {
 namespace {
 
 constexpr int icon_sizes[] = {16, 24, 32, 48, 64, 96, 128, 256, 512};
+constexpr bool sizes_ascend()
+{
+    for (size_t i = 1; i < std::size(icon_sizes); ++i) {
+        if (icon_sizes[i - 1] >= icon_sizes[i]) {
+            return false;
+        }
+    }
+    return std::size(icon_sizes) > 0;
+}
+static_assert(sizes_ascend(), "the icon sizes are a list that grows");
 constexpr int min_columns = 4;
 constexpr int min_rows = 2;
 

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
@@ -681,6 +682,9 @@ void Dock::drag(const DockIcon& dragged, int x_root)
         return;
     }
     const size_t place = drop_place(dragged, x_root);
+    // the place is one of the gaps between the other favorites, and each of
+    // them has two edges
+    assert(place * 2 <= edges.size());
     const int border = shell_theme.dock_border;
     int x;
     if (place == 0) {
