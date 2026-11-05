@@ -63,8 +63,13 @@ Implemented:
   by the mouse, a run dialog (Alt+F2), a full screen launcher with search
   (Super).
 - **Settings:** `tiny-settings`, a small form that changes the font, the
-  terminal, the scale and the rendering of text (antialiasing, hinting,
-  subpixel order) in the configuration file of the user (see below).
+  terminal, the scale, the rendering of text (antialiasing, hinting,
+  subpixel order) and the wallpaper in the configuration file of the user
+  (see below).
+- **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
+  root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a
+  transparent terminal can show it; tiny-shell runs it at the start and when
+  the screen changes its size (see below).
 - **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
   and shows a specimen of each one (see below).
 - **Look:** two built-in themes, dark (the default) and light, chosen by
@@ -131,7 +136,7 @@ files of `x11`, `xft` and `xrender`.
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libfontconfig-dev
 
-make                 # build/tiny-shell, build/tiny-settings, build/tiny-fonts
+make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
 make DEBUG=1         # with the debugging information (-Og -g), much bigger
 ```
@@ -197,6 +202,12 @@ hinting = slight
 # The order of the subpixels of the display: none, rgb, bgr, vrgb or vbgr
 rgba = rgb
 
+[wallpaper]
+# A PNG or JPEG file; empty (or no key) is no wallpaper. ~/ is the home.
+file = ~/Pictures/mountains.jpg
+# fill (the default), center or tile
+mode = fill
+
 [commands]
 # Restart and Shutdown in the main menu (these are the defaults)
 reboot = systemctl reboot
@@ -224,7 +235,7 @@ stderr and leaves the old file as it was. The file says so at the top.
 ### Settings
 
 `build/tiny-settings` (made by `make`) changes the font (with its size and
-style), the terminal, the scale and the rendering of text. It shows the values in use now (the global
+style), the terminal, the scale, the rendering of text and the wallpaper. It shows the values in use now (the global
 file and the one of the user together). A field has a cursor: the arrows,
 Home, End, Backspace and Delete work, and a click puts the cursor where the
 pointer is. Tab moves between the fields. A field with a wrong value turns
@@ -255,13 +266,54 @@ values of the file there when it starts, before it opens its first font.
 GTK programs read their own channels (XSETTINGS, GSettings), which are not
 set by this.
 
+The row Wallpaper is the path of a PNG or JPEG file, typed or pasted (there is
+no file browser: it would be a program of its own, and Xlib has none). The row
+Placement is a choice like the three above: Fill, Center or Tile. When one of
+them changed, Save starts `tiny-wallpaper` at once, so you see the picture
+without a new login. To remove a wallpaper, clear the row: the plain color of
+the theme is back after the next login.
+
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
 `font_style`, `[theme] scale`, `[commands] terminal`, `[xft] antialias`,
-`hinting`, `rgba`) to the file of the user, so the others still
+`hinting`, `rgba`, `[wallpaper] file`, `mode`) to the file of the user, so the others still
 come from the global file, in the way that is described above (the
 comments of the file are lost), and closes the program. Cancel or Escape
 closes it and writes nothing. tiny-shell reads the file only when it starts, so
 a change of the rest is seen after you log out and in again.
+
+### Wallpaper
+
+`build/tiny-wallpaper [-m fill|center|tile] [FILE]` draws a picture as the
+background of the root window. Without arguments it uses `[wallpaper] file` and
+`mode` of the configuration, so `tiny-shell` starts it that way when a file is
+set, and again each time the size of the screen changes (RandR, a new monitor):
+the window manager only watches the size of the root window, it does not link
+the decoders. The modes:
+
+- **fill** (the default): the picture is scaled to cover the screen and the
+  part that sticks out is cut, from all the sides equally;
+- **center**: not scaled, in the middle of the screen, black around it (or cut
+  when it is bigger);
+- **tile**: not scaled, repeated from the top left corner.
+
+The formats are PNG and JPEG (baseline and progressive; the kind of the file
+is found by its content, not by the extension). A transparent part is shown
+black. A picture of more than 25 million pixels (a 5K screen has 14.7) or a
+file over 64 MB is refused with a message on stderr. The picture is decoded,
+drawn and freed: the program does not stay in memory. The pixmap stays in the X
+server as `_XROOTPMAP_ID` and `ESETROOT_PMAP_ID`, as `Esetroot` leaves it, and
+the next run frees the old one. A screen of several monitors is one picture
+over all of them. The picture does not change with the light and dark variants
+of the theme (the plain color does). The path must be absolute (or start with
+`~/`), because the program starts in another directory. tiny-shell watches the
+size of the screen only when a wallpaper is set in the file when it starts, so
+the first wallpaper that you set in `tiny-settings` is drawn at once, but it
+follows a change of the screen after the next login. A file that cannot be
+read is reported on stderr and the plain color stays.
+
+The decoder of photos is a second copy of `stb_image` in
+`lib/third_party/vendor_photo.cc`, with only PNG and JPEG on: it is linked
+into `tiny-wallpaper` only, so `tiny-shell` does not carry the JPEG code.
 
 ### The main menu
 
