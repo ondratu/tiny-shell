@@ -83,7 +83,24 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_dock.realize(root_arg, attrs.width / 2,
                     attrs.height - wm_dock.get_height() -
                             shell_theme.dock_border);
-    wm_dock.set_events();
+    wm_dock.set_events(LeaveWindowMask);
+    // the strip at the bottom of the screen that shows a hidden dock
+    wm_dock_reveal.realize(root_arg, 0, attrs.height - shell_theme.dock_reveal);
+    wm_dock_reveal.resize(attrs.width, shell_theme.dock_reveal);
+    wm_dock_reveal.set_events();
+    wm_dock_reveal.on_reach.connect([this](const XEvent&) {
+        dock_revealed = true;
+        update_dock_visibility();
+        restack_layers();
+    });
+    Object::connect_window(
+            LeaveNotify, wm_dock.get_window(), [this](const XEvent& e) {
+                // moving between the icons of the dock is not leaving it
+                if (e.xcrossing.detail != NotifyInferior && dock_revealed) {
+                    dock_revealed = false;
+                    update_dock_visibility();
+                }
+            });
 
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
@@ -152,6 +169,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_panel.map_all();
     wm_dock.map_all();
+    wm_dock_reveal.map();
+    update_dock_visibility();
 
     wm_dock.on_launch = [this](const std::string& id) {
         wm_launcher.hide();
@@ -177,7 +196,10 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     };
     wm_launcher.add_nested(&wm_dock.get_menu());
     wm_launcher.add_nested(&wm_dock.get_windows_menu());
-    wm_dock.on_menu_closed = [this] { wm_launcher.refocus(); };
+    wm_dock.on_menu_closed = [this] {
+        wm_launcher.refocus();
+        update_dock_visibility(); // a menu kept the dock shown
+    };
     register_actions();
     wm_dock.get_menu_button().on_click.connect(
             [this](const XEvent&) { actions.run("launcher"); });
@@ -494,6 +516,7 @@ void Manager::restack_layers()
     for (const auto& dock : wm_docks) {
         XRaiseWindow(display, dock.first);
     }
+    XRaiseWindow(display, wm_dock_reveal.get_window()); // over everything
     // the focused window last, so it stays on top of the others in its layer
     const auto raise_if = [this](Window* window, bool layer) {
         if (layer && !window->get_minimized()) {
@@ -806,6 +829,11 @@ void Manager::main_loop()
         // call manager handlers first
         if (tiny::handlers.count(signal_id)) {
             tiny::handlers.call_handler(signal_id, event);
+            // the active window moved or got another size
+            if (event.type == ConfigureNotify && active &&
+                window == active->frame()) {
+                update_dock_visibility();
+            }
             continue;
         }
 
@@ -896,6 +924,7 @@ void Manager::move_resize_to(int x_root, int y_root)
 {
     if (dragged) {
         dragged->drag_to(x_root, y_root);
+        update_dock_visibility();
     }
 }
 
@@ -909,6 +938,7 @@ void Manager::stop_move_resize(bool finish)
     XUngrabPointer(display, CurrentTime);
     if (finish) {
         window->end_drag();
+        update_dock_visibility(); // not in the destructor, `active` may be gone
     }
 }
 
@@ -1293,6 +1323,7 @@ void Manager::remember_active(Window* window, const XEvent& e)
     wm_dock.redraw(active, e);
     restack_layers();
     publish_clients();
+    update_dock_visibility();
 }
 
 void Manager::on_window_minimize(Window* window)
@@ -1302,7 +1333,8 @@ void Manager::on_window_minimize(Window* window)
     }
     update_dock_entry(window);
     if (window == active) {
-        publish_clients(); // _NET_ACTIVE_WINDOW
+        publish_clients();        // _NET_ACTIVE_WINDOW
+        update_dock_visibility(); // a minimized window covers nothing
     }
     // a dialog has no dock icon, so it goes and comes back with its parent
     Window* parent = parent_of(window);
@@ -1341,6 +1373,55 @@ void Manager::set_wallpaper_command(std::vector<std::string> command)
     run_program(wallpaper_command);
 }
 
+void Manager::set_dock_mode(DockMode mode)
+{
+    dock_mode = mode;
+    dock_revealed = false;
+    update_dock_visibility();
+}
+
+void Manager::update_dock_visibility()
+{
+    if (!wm_dock.get_realized()) {
+        return;
+    }
+    const auto rect_of = [this](::Window window) {
+        XWindowAttributes attrs;
+        if (window == None || !XGetWindowAttributes(display, window, &attrs)) {
+            return tiny::Rect{0, 0, 0, 0};
+        }
+        return tiny::Rect{attrs.x, attrs.y,
+                          attrs.width + 2 * attrs.border_width,
+                          attrs.height + 2 * attrs.border_width};
+    };
+    bool covered = false;
+    if (dock_mode == DockMode::AutoHide && active && !active->get_minimized()) {
+        covered = overlaps(rect_of(active->frame()),
+                           rect_of(wm_dock.get_window()));
+    }
+    bool shown = dock_shown(dock_mode, covered, dock_revealed);
+    // a menu of the dock, or an icon that is being dragged, keeps it
+    const bool busy = wm_dock.get_menu().get_maped() ||
+                      wm_dock.get_windows_menu().get_maped() ||
+                      (dock_revealed && is_button_down && is_button_down());
+    if (!shown && busy && wm_dock.get_maped()) {
+        shown = true;
+    }
+    if (shown && !wm_dock.get_maped()) {
+        wm_dock.map();
+    } else if (!shown && wm_dock.get_maped()) {
+        wm_dock.unmap();
+    }
+    // the strip is there only while the dock hides
+    const bool strip = dock_mode == DockMode::AutoHide && !shown;
+    if (strip && !wm_dock_reveal.get_maped()) {
+        wm_dock_reveal.map();
+        XRaiseWindow(display, wm_dock_reveal.get_window());
+    } else if (!strip && wm_dock_reveal.get_maped()) {
+        wm_dock_reveal.unmap();
+    }
+}
+
 void Manager::set_clock_format(const std::string& format)
 {
     timers.cancel(clock_timer);
@@ -1376,6 +1457,10 @@ void Manager::on_root_configure(const XConfigureEvent& e)
     }
     screen_width = e.width;
     screen_height = e.height;
+    wm_dock_reveal.resize(screen_width, shell_theme.dock_reveal);
+    XMoveWindow(display, wm_dock_reveal.get_window(), 0,
+                screen_height - shell_theme.dock_reveal);
+    update_dock_visibility();
     run_program(wallpaper_command); // nothing when there is no wallpaper
 }
 
@@ -1534,6 +1619,7 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
     delete window;
     wm_windows.erase(child);
     publish_clients();
+    update_dock_visibility(); // a covering window is gone
     // an unmap comes before the destroy, so a withdrawn parent is the same
     for (Window* dialog : dialogs) {
         if (!reframing) {

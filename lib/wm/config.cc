@@ -134,6 +134,13 @@ XftChoices wallpaper_choices()
     return {std::begin(modes), std::end(modes)};
 }
 
+XftChoices dock_choices()
+{
+    static constexpr XftChoice modes[] = {
+            {"", "Auto-hide"}, {"on", "On"}, {"off", "Off"}};
+    return {std::begin(modes), std::end(modes)};
+}
+
 bool valid_wallpaper_mode(const std::string& text)
 {
     const XftChoices choices = wallpaper_choices();
@@ -297,6 +304,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         } else {
             problem("[panel] clock_format must be a text without control "
                     "characters");
+        }
+    }
+    if (const auto value = ini.get("dock", "mode")) {
+        if (const auto mode = parse_dock_mode(*value)) {
+            config.dock_mode = *mode;
+        } else {
+            problem("[dock] mode must be autohide, on or off");
         }
     }
     if (const auto value = ini.get("dock", "favorites")) {

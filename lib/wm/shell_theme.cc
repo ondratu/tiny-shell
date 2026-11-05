@@ -30,6 +30,7 @@ void ShellTheme::scale_own(double factor)
     panel = scaled(30, factor);
     icon = scaled(48, factor);
     dock_border = scaled(5, factor);
+    dock_reveal = scaled(5, factor);
     dock_attention_bar = scaled(3, factor);
     panel_app_width = scaled(200, factor);
     menu_width = scaled(200, factor);
