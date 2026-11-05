@@ -33,6 +33,10 @@ class Display {
 
     // Types
     const Atom UTF8_STRING;
+    const Atom CLIPBOARD;
+    const Atom TARGETS;
+    const Atom INCR;
+    const Atom TINY_SELECTION; //!< the property where a selection is received
 
     // Manager selections (ICCCM 2.8)
     const Atom MANAGER;

@@ -151,7 +151,7 @@ TEST(WindowOfEventTest, drawable_and_requestor_events)
     EXPECT_EQ(tiny::window_of_event(e), 32u);
 
     e = make_event(SelectionRequest);
-    e.xselectionrequest.requestor = 33;
+    e.xselectionrequest.owner = 33;
     EXPECT_EQ(tiny::window_of_event(e), 33u);
 
     e = make_event(SelectionNotify);

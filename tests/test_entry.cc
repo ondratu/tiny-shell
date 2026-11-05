@@ -256,6 +256,7 @@ TEST_F(EntryTest, return_signals_activate_and_keeps_the_text)
 TEST_F(EntryTest, keys_that_move_in_a_list_or_a_grid_are_signaled_not_typed)
 {
     focus();
+    entry.pass_horizontal_keys();
     type_text(entry, "ab");
 
     for (const int sym :
@@ -362,4 +363,169 @@ TEST(EntryLifeTest, destructor_disconnects_the_handlers)
     EXPECT_FALSE(tiny::handlers.count({Expose, window}));
     EXPECT_FALSE(tiny::handlers.count({FocusIn, window}));
     EXPECT_FALSE(tiny::handlers.count({FocusOut, window}));
+}
+
+// Cursor, paste and copy
+
+class EntryEditTest : public EntryTest {
+  protected:
+    void SetUp() override
+    {
+        EntryTest::SetUp();
+        focus();
+    }
+
+    static XEvent button(const tiny::Entry& e, unsigned number, int x = 5)
+    {
+        XEvent ev = make_event(ButtonPress);
+        ev.xbutton.window = e.get_window();
+        ev.xbutton.button = number;
+        ev.xbutton.x = x;
+        return ev;
+    }
+
+    void settle()
+    {
+        for (int i = 0; i < 5; ++i) {
+            pump_events();
+        }
+    }
+};
+
+TEST_F(EntryEditTest, left_moves_the_cursor_and_typing_inserts_there)
+{
+    entry.set_text("ac");
+    type_key(entry, XK_Left);
+    type_key(entry, XK_b);
+
+    EXPECT_EQ(entry.get_text(), "abc");
+    EXPECT_EQ(entry.get_cursor(), 2u);
+}
+
+TEST_F(EntryEditTest, moving_the_cursor_is_not_a_change_of_the_text)
+{
+    entry.set_text("ab");
+    type_key(entry, XK_Left);
+    type_key(entry, XK_Home);
+    type_key(entry, XK_End);
+    type_key(entry, XK_Right);
+
+    EXPECT_EQ(changed.calls, 0);
+}
+
+TEST_F(EntryEditTest, home_and_end_move_the_cursor)
+{
+    entry.set_text("abc");
+    type_key(entry, XK_Home);
+    EXPECT_EQ(entry.get_cursor(), 0u);
+    type_key(entry, XK_End);
+    EXPECT_EQ(entry.get_cursor(), 3u);
+}
+
+TEST_F(EntryEditTest, delete_removes_the_character_after_the_cursor)
+{
+    entry.set_text("abc");
+    type_key(entry, XK_Home);
+    type_key(entry, XK_Delete);
+
+    EXPECT_EQ(entry.get_text(), "bc");
+    EXPECT_EQ(changed.calls, 1);
+}
+
+TEST_F(EntryEditTest, delete_at_the_end_changes_nothing)
+{
+    entry.set_text("abc");
+    type_key(entry, XK_Delete);
+
+    EXPECT_EQ(entry.get_text(), "abc");
+    EXPECT_EQ(changed.calls, 0);
+}
+
+TEST_F(EntryEditTest, the_arrows_go_to_a_grid_when_asked)
+{
+    entry.pass_horizontal_keys();
+    entry.set_text("ab");
+    type_key(entry, XK_Left);
+
+    EXPECT_EQ(keyed.calls, 1);
+    EXPECT_EQ(entry.get_cursor(), 2u);
+}
+
+TEST_F(EntryEditTest, up_and_down_always_go_to_on_key)
+{
+    type_key(entry, XK_Up);
+    type_key(entry, XK_Down);
+
+    EXPECT_EQ(keyed.calls, 2);
+}
+
+TEST_F(EntryEditTest, a_click_puts_the_cursor_between_the_characters)
+{
+    entry.set_text("abc");
+    send(entry.get_window(), button(entry, Button1, 0));
+    EXPECT_EQ(entry.get_cursor(), 0u);
+
+    send(entry.get_window(), button(entry, Button1, 90));
+    EXPECT_EQ(entry.get_cursor(), 3u);
+}
+
+TEST_F(EntryEditTest, copy_and_paste_between_two_entries)
+{
+    tiny::Entry other(100, 30);
+    other.realize(root_window(), 0, 0);
+    other.set_events();
+    other.map();
+    send(other, FocusIn);
+    other.set_text("p\xC5\x99\xC3\xADlis");
+    type_key(other, XK_c, ControlMask);
+
+    type_key(entry, XK_v, ControlMask);
+    settle();
+
+    EXPECT_EQ(entry.get_text(), "p\xC5\x99\xC3\xADlis");
+    EXPECT_EQ(changed.calls, 1);
+}
+
+TEST_F(EntryEditTest, shift_insert_pastes_the_clipboard)
+{
+    entry.set_text("a");
+    type_key(entry, XK_c, ControlMask); // our own text
+    type_key(entry, XK_Insert, ShiftMask);
+
+    EXPECT_EQ(entry.get_text(), "aa");
+}
+
+TEST_F(EntryEditTest, the_middle_button_pastes_the_primary_selection)
+{
+    tiny::Display& d = tiny::get_display();
+    const ::Window owner =
+            XCreateSimpleWindow(d, root_window(), 0, 0, 5, 5, 0, 0, 0);
+    tiny::Clipboard primary(d, owner);
+    for (const int type : {SelectionNotify, SelectionRequest, SelectionClear}) {
+        tiny::handlers.set_handler(
+                static_cast<uint16_t>(type), owner,
+                [&primary](const XEvent& e) { primary.handle(e); });
+    }
+    primary.own(tiny::Clipboard::Which::Primary, "line 1\nline 2");
+
+    entry.set_text(">");
+    send(entry.get_window(), button(entry, Button2));
+    settle();
+
+    EXPECT_EQ(entry.get_text(), ">line 1 line 2");
+    for (const int type : {SelectionNotify, SelectionRequest, SelectionClear}) {
+        tiny::handlers.unset_handler(static_cast<uint16_t>(type), owner);
+    }
+}
+
+TEST_F(EntryEditTest, paste_with_nothing_to_paste_changes_nothing)
+{
+    XSetSelectionOwner(tiny::get_display(), tiny::get_display().CLIPBOARD, None,
+                       CurrentTime);
+    entry.set_text("a");
+    type_key(entry, XK_v, ControlMask);
+    settle();
+
+    EXPECT_EQ(entry.get_text(), "a");
+    EXPECT_EQ(changed.calls, 0);
 }
