@@ -133,6 +133,7 @@ sudo apt install build-essential pkg-config \
 
 make                 # build/tiny-shell, build/tiny-settings, build/tiny-fonts
 make release         # the same, small and stripped, into build-release/
+make DEBUG=1         # with the debugging information (-Og -g), much bigger
 ```
 
 To run the tests (they need `xvfb` and googletest):

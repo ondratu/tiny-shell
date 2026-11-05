@@ -185,7 +185,8 @@ costs a lot of code or memory (see the goals above).
 ```sh
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr
-make                  # build
+make                  # build (no debugging information)
+make DEBUG=1          # build with -Og -g, for gdb
 make check            # unit tests (run against Xvfb)
 make help             # all the targets and variables
 tools/run-xephyr.sh   # run the window manager in a nested Xephyr
