@@ -1341,6 +1341,33 @@ void Manager::set_wallpaper_command(std::vector<std::string> command)
     run_program(wallpaper_command);
 }
 
+void Manager::set_clock_format(const std::string& format)
+{
+    timers.cancel(clock_timer);
+    clock_timer = 0;
+    if (wm_clock) { // the panel must not keep a pointer to the deleted label
+        wm_panel.remove(wm_clock.get());
+        wm_clock.reset();
+    }
+    if (format.empty()) {
+        return;
+    }
+    if (!wm_panel.get_realized()) {
+        return;
+    }
+    wm_clock = std::make_unique<ClockLabel>(format);
+    wm_panel.add_applet(wm_clock.get());
+    wm_clock->set_events();
+    tick_clock();
+}
+
+void Manager::tick_clock()
+{
+    wm_clock->update();
+    clock_timer = timers.after(ClockLabel::until_next_minute(),
+                               [this] { tick_clock(); });
+}
+
 void Manager::on_root_configure(const XConfigureEvent& e)
 {
     if (e.window != root ||

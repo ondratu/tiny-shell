@@ -589,6 +589,29 @@ TEST(ConfigTest, the_choices_of_the_rendering_start_with_the_default)
     EXPECT_TRUE(valid_xft(XftOption::Hinting, "full"));
 }
 
+TEST(ConfigTest, reads_the_format_of_the_clock)
+{
+    EXPECT_EQ(parse_config({}).clock_format, "%a %x %R");
+    EXPECT_EQ(parse_config({{"a", "[panel]\nclock_format = %H:%M\n"}})
+                      .clock_format,
+              "%H:%M");
+    // empty: no clock
+    EXPECT_TRUE(parse_config({{"a", "[panel]\nclock_format =\n"}})
+                        .clock_format.empty());
+}
+
+TEST(ConfigTest, a_format_of_the_clock_with_a_control_character_is_refused)
+{
+    std::vector<std::string> problems;
+    const Config c = parse_config({{"a", "[panel]\nclock_format = %H\t%M\n"}},
+                                  &problems);
+
+    EXPECT_EQ(c.clock_format, "%a %x %R");
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("a: [panel] clock_format must be"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, reads_the_wallpaper)
 {
     const Config c = parse_config(
