@@ -107,3 +107,27 @@ TEST_F(BuiltInInputMethodTest, focus_goes_to_the_input_context)
     input->set_focus(false);
     SUCCEED();
 }
+
+// The method of the environment can be missing (a nested X server): the
+// characters that are not Latin-1 must still be typed
+TEST(EnvironmentInputMethodTest,
+     a_missing_method_falls_back_to_the_built_in_one)
+{
+    setenv("XMODIFIERS", "@im=tiny-no-such-method", 1);
+    setlocale(LC_CTYPE, "C.UTF-8");
+    const ::Window window = XCreateSimpleWindow(
+            tiny::get_display(), root_window(), 0, 0, 10, 10, 0, 0, 0);
+    {
+        const tiny::InputMethod input(tiny::get_display(), window, true);
+        if (!input.available()) {
+            GTEST_SKIP() << "no input method in this locale";
+        }
+        // the keyboard of the test server has no key for a Czech letter
+        XEvent e = key_event(window, XK_a);
+        KeySym symbol = NoSymbol;
+        EXPECT_EQ(input.lookup(e.xkey, symbol), "a");
+    }
+    XDestroyWindow(tiny::get_display(), window);
+    unsetenv("XMODIFIERS");
+    setlocale(LC_CTYPE, "C");
+}
