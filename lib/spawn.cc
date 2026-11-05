@@ -43,7 +43,8 @@ void on_sigchld(int)
     }
 
     // nothing more can be done in the child if this write fails
-    static_cast<void>(write(report, &errno, sizeof(errno)));
+    const ssize_t written = write(report, &errno, sizeof(errno));
+    static_cast<void>(written);
     _exit(127);
 }
 
