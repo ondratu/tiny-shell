@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "clipboard.h"
 #include "display.h"
 #include "input_method.h"
 #include "widget.h"
@@ -111,6 +112,10 @@ class XftWindow {
     void text_in(XftFont* f, const XftColor& color, const Rect& r, int left,
                  const std::string& text, int shift = 0);
 
+    //! The selections of the window: paste and copy. The events are handled
+    //! by `dispatch()`.
+    Clipboard& clipboard() { return *selections; }
+
     //! The characters of a key in UTF-8, and its symbol
     std::string lookup(XKeyEvent& e, KeySym& symbol) const;
 
@@ -129,6 +134,7 @@ class XftWindow {
 
     Atom delete_window = None;
     std::unique_ptr<InputMethod> input;
+    std::unique_ptr<Clipboard> selections;
     std::vector<std::unique_ptr<XftColor>> colors; //!< the references stay
     //! (family, pixel size), or (Xft name, 0): a pixel size is never 0
     std::map<std::pair<std::string, int>, XftFont*> fonts;
