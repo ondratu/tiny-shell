@@ -9,6 +9,7 @@
 #include "wm/shell_theme.h"
 #include "container.h"
 #include "button.h"
+#include "wm/symbolic_icons.h"
 #include "wm/window.h"
 
 namespace tiny::wm {
@@ -24,10 +25,17 @@ class DockButton : public tiny::Widget {
 
     void redraw(const XEvent& e) { on_expose(e, nullptr); }
 
+    //! The icons for the symbols (the launcher, the application without an
+    //! icon); without them the button draws what it drew before. They must
+    //! live longer than the button.
+    void set_icons(SymbolicIcons* icons_arg) { symbols = icons_arg; }
+
     tiny::Signal on_click;
 
   protected:
     DockButton(int width, int height);
+
+    SymbolicIcons* symbols = nullptr;
 
     virtual void on_enter_notify(const XEvent& e, void* data);
     virtual void on_leave_notify(const XEvent& e, void* data);
@@ -273,6 +281,10 @@ class Dock : public tiny::Box {
     void realize(::Window parent, int x, int y) override;
     void resize(int width, int height) override;
 
+    //! The icons of the launcher button and of an application without an
+    //! icon; they must live longer than the dock
+    void set_icons(SymbolicIcons* icons);
+
     const tiny::Style& get_style() const override { return shell_theme.dock; }
 
     /// The button with the dots at the end of the dock (the launcher).
@@ -325,6 +337,7 @@ class Dock : public tiny::Box {
     void resize_to_children();
 
     DockButton icon;
+    SymbolicIcons* symbols = nullptr;
     DockMenu menu;
     DockMenu windows_menu;
     DockLine mark;

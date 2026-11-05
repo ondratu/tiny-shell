@@ -79,6 +79,23 @@ TEST_F(DockButtonTest, draws_grid_of_dots)
     EXPECT_EQ(img.at(0, 0), bg);
 }
 
+TEST_F(DockButtonTest, draws_the_icon_of_the_launcher_when_it_is_there)
+{
+    const IconFiles files({"view-app-grid"});
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.dir()});
+    button.set_icons(&icons);
+
+    send(button, Expose);
+
+    const Image img(button.get_window(), icon_size(), icon_size());
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    // a square is in the middle, there are no dots
+    EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2),
+              tiny::wm::shell_theme.dock.get_fg(normal));
+    EXPECT_EQ(img.at(0, 0), tiny::wm::shell_theme.dock.get_bg(normal));
+}
+
 TEST(DockButtonScaleTest, dots_are_scaled)
 {
     tiny::wm::shell_theme.scale(2);
@@ -171,6 +188,21 @@ TEST_F(DockIconTest, without_icon_draws_a_circle)
     const Image img(icon->get_window(), icon_size(), icon_size());
     EXPECT_NE(img.count_not(bg, icon_size()), 0u);
     EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2), bg); // hollow
+}
+
+TEST_F(DockIconTest, without_icon_draws_the_generic_application_icon)
+{
+    const IconFiles files({"application-x-executable"});
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.dir()});
+    icon->set_icons(&icons);
+
+    send(*icon, Expose);
+
+    const Image img(icon->get_window(), icon_size(), icon_size());
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    EXPECT_EQ(img.at(icon_size() / 2, icon_size() / 2),
+              tiny::wm::shell_theme.dock.get_fg(normal)); // not hollow
 }
 
 TEST_F(DockIconTest, draws_the_icon_of_the_task)

@@ -15,6 +15,7 @@
 #include "icon_grid.h"
 #include "wm/config.h"
 #include "wm/launcher_layout.h"
+#include "wm/symbolic_icons.h"
 #include "xdg/application_index.h"
 #include "xdg/icon_theme.h"
 
@@ -51,6 +52,10 @@ class Launcher : public tiny::Popover {
     /// The directory that is searched after $XDG_DATA_DIRS, even when the
     /// variable does not list it (e.g. "/usr/pkg/share:/usr/share" on NetBSD).
     void set_local_share(std::string dir) { local_share = std::move(dir); }
+
+    /// The icons of the symbols: an application with no icon gets the generic
+    /// one. They must live longer than the launcher.
+    void set_icons(SymbolicIcons* icons_arg) { symbols = icons_arg; }
 
     /// The program (and arguments) that runs the applications with
     /// `Terminal=true`, the command follows it.
@@ -155,6 +160,7 @@ class Launcher : public tiny::Popover {
     ::Window root_window = None;
     bool loaded = false;
     std::string local_share = xdg::local_share_dir;
+    SymbolicIcons* symbols = nullptr;
     xdg::ApplicationIndex index;
     std::unique_ptr<xdg::IconTheme> icon_theme;
     std::map<std::string, Icon> icons;        //!< by the id of the application
