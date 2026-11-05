@@ -54,13 +54,17 @@ Out of scope (see the README): a desktop environment, a compositor, Wayland.
   window manager and the shell (`lib/wm/`), the freedesktop.org files
   (`lib/xdg/`) and the logic of the programs (`lib/app/`). `src/main.cc` is the
   window manager itself, `src/fonts.cc` is the font viewer `tiny-fonts`,
-  `src/settings.cc` is the settings form `tiny-settings` and `src/wallpaper.cc`
-  draws the wallpaper (`tiny-wallpaper`; its logic is in `lib/app/wallpaper.*`
+  `src/settings.cc` is the settings form `tiny-settings`, `src/about.cc` is
+  the about window `tiny-about` (its lines are in `lib/app/about.*`) and
+  `src/wallpaper.cc` draws the wallpaper (`tiny-wallpaper`; its logic is in `lib/app/wallpaper.*`
   and the decoder of photos in `lib/image/photo.*`). The first two are windows
   of `tiny::XftWindow` (the window, the pixmap, the colors, the font cache and
   the loop are there) and their logic is in `lib/app/font_browser.*`
-  and `lib/app/settings_form.*`. `tests/` are the unit tests (they mirror
-  `lib/`), `examples/` are small toolkit programs (`make examples`) and a
+  and `lib/app/settings_form.*`. `data/` has the layout of the `share/` directory (symbolic icons,
+  application icons, desktop files, wallpapers) that `make install` copies to
+  `PREFIX`; the shell finds them in the XDG data directories and draws without
+  them when they are not installed. `tests/` are the unit tests (they
+  mirror `lib/`), `examples/` are small toolkit programs (`make examples`) and a
   default session, `tools/` are development scripts.
   Everything is built into `build/`. Files that belong to one machine (a
   session script, local settings) are not committed: they live in the ignored

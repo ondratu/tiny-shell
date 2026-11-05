@@ -56,8 +56,9 @@ Implemented:
   stealing prevention, frame extents, the client lists), `_MOTIF_WM_HINTS`
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
-- **Shell:** top panel with the main menu (About, Settings, Applications,
-  Terminal, Force Quit, Restart, Shutdown, Logout) and the date and time at its
+- **Shell:** top panel with the logo, which opens the main menu (About,
+  Settings, Applications, Terminal, Force Quit, Restart, Shutdown, Logout), and
+  the date and time at its
   right end (the names and the order follow `LANG`), a dock with
   one icon for every application (a dot under it for every window) and the
   favorite applications, which stay there when they do not run and can be moved
@@ -77,6 +78,11 @@ Implemented:
   the screen changes its size (see below).
 - **Fonts:** `tiny-fonts`, a small program that lists the fonts of the system
   and shows a specimen of each one (see below).
+- **Icons and wallpapers:** a set of symbolic icons (the logo, the buttons of
+  a window, the launcher, an application without an icon), the icons and
+  desktop files of `tiny-settings` and `tiny-fonts` (so the launcher lists them
+  and the dock shows their icons) and wallpapers for the light and the dark
+  style, installed by `make install` (see below).
 - **Look:** two built-in themes, dark (the default) and light, chosen by
   `[theme] style` and switchable while the shell runs (the actions
   `theme-dark`, `theme-light` and `theme-toggle`; no key or menu item is bound
@@ -141,11 +147,43 @@ files of `x11`, `xft` and `xrender`.
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libfontconfig-dev
 
-make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-wallpaper
+make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
 make DEBUG=1         # into build-debug/, with the debugging information (-Og -g), much bigger,
                      # and with diagnostic messages on stderr (TINY_LOG)
 ```
+
+### Installation
+
+```sh
+sudo make install                 # into /usr/local
+make install PREFIX=/usr DESTDIR=/tmp/stage   # a package: /tmp/stage/usr/...
+sudo make uninstall               # the same PREFIX
+```
+
+It installs the programs into `bin/` and the contents of `data/` into
+`share/`:
+
+- `share/tiny-shell/icons/white` and `black`: the symbolic icons of the shell.
+  The shell paints them with the color of the text, so it reads the `white`
+  ones; the `black` ones are for other programs. The Icon Naming Specification
+  names are used (`start-here` is the logo, `window-close`, `view-app-grid`,
+  `application-x-executable` is the icon of an application that has none), and
+  four names are the shell's own: `window`, `window-shade`, `window-switch`
+  and `workspace-switcher`. Without the files the shell draws the symbols as
+  before. `tools/icons/gen_icons.py` makes the set.
+- `share/icons/hicolor/scalable/apps`: `tiny-shell`, `tiny-settings` and
+  `tiny-fonts`, the icons of the windows of the programs.
+- `share/applications`: the desktop files of `tiny-settings`, `tiny-fonts` and
+  `tiny-about`, so that the launcher lists the first two and the dock finds the
+  icons of their windows (`StartupWMClass`).
+- `share/backgrounds/tiny-shell`: the wallpapers (a landscape, a landscape with
+  a fox, dusk and night, each in 1920x1080 and 3840x2160).
+
+The files are searched in `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` and
+`/usr/local/share`. To try the shell from the build directory with the data
+from the repository, run it with `XDG_DATA_DIRS=$PWD/data:/usr/share` and
+`build` in the `PATH` (the script `tools/run-xephyr.sh` does it).
 
 To run the tests (they need `xvfb` and googletest):
 
@@ -210,7 +248,8 @@ hinting = slight
 rgba = rgb
 
 [wallpaper]
-# A PNG or JPEG file; empty (or no key) is no wallpaper. ~/ is the home.
+# A PNG or JPEG file; empty is no wallpaper, no key is the wallpaper of the
+# style (see Wallpaper below). ~/ is the home.
 file = ~/Pictures/mountains.jpg
 # fill (the default), center or tile
 mode = fill
@@ -323,12 +362,20 @@ a change of the rest is seen after you log out and in again.
 
 ### Wallpaper
 
-`build/tiny-wallpaper [-m fill|center|tile] [FILE]` draws a picture as the
-background of the root window. Without arguments it uses `[wallpaper] file` and
-`mode` of the configuration, so `tiny-shell` starts it that way when a file is
-set, and again each time the size of the screen changes (RandR, a new monitor):
+`build/tiny-wallpaper [-m fill|center|tile] [-s dark|light] [FILE]` draws a
+picture as the background of the root window. Without arguments it uses
+`[wallpaper] file` and `mode` of the configuration, so `tiny-shell` starts it
+that way when a file is set, and again each time the size of the screen changes
+(RandR, a new monitor):
 the window manager only watches the size of the root window, it does not link
-the decoders. The modes:
+the decoders. When the configuration has no `[wallpaper] file` (an empty one
+means no wallpaper), the wallpaper is the one that `make install` puts in
+`share/backgrounds/tiny-shell`: the landscape with the fox
+(`tiny-shell-krajina-liska-1920x1080.png`) for the light style and the night
+(`tiny-shell-noc-1920x1080.png`) for the dark one. It changes with the style
+(also with the actions `theme-dark`, `theme-light` and `theme-toggle`: the
+shell starts the program again with `-s`); a wallpaper that is set in the file
+does not. The modes:
 
 - **fill** (the default): the picture is scaled to cover the screen and the
   part that sticks out is cut, from all the sides equally;
@@ -344,7 +391,7 @@ drawn and freed: the program does not stay in memory. The pixmap stays in the X
 server as `_XROOTPMAP_ID` and `ESETROOT_PMAP_ID`, as `Esetroot` leaves it, and
 the next run frees the old one. A screen of several monitors is one picture
 over all of them. The picture does not change with the light and dark variants
-of the theme (the plain color does). The path must be absolute (or start with
+of the theme when it is set in the file (the plain color does). The path must be absolute (or start with
 `~/`), because the program starts in another directory. tiny-shell watches the
 size of the screen only when a wallpaper is set in the file when it starts, so
 the first wallpaper that you set in `tiny-settings` is drawn at once, but it
@@ -357,13 +404,14 @@ into `tiny-wallpaper` only, so `tiny-shell` does not carry the JPEG code.
 
 ### The main menu
 
-The button Main Menu at the left of the panel opens a menu with these items,
-in groups:
+The logo at the left of the panel opens a menu with these items, in groups
+(without the installed icons the button is the text Main Menu):
 
-- **About Tiny Shell** shows a dialog with the version, the name of the system
-  (`PRETTY_NAME` of `/etc/os-release`, or the name of `uname`) and the kernel
-  with the kind of the processor. A click outside of it or the button Close
-  hides it.
+- **About Tiny Shell** starts `tiny-about`, a window with the logo, the
+  version, the name of the system (`PRETTY_NAME` of `/etc/os-release`, or the
+  name of `uname`), the kernel with the kind of the processor, the license and
+  the address of the project. It is a window of its own, so the dock shows the
+  logo for it. Escape, Return, Ctrl+Q and the button Close end it.
 - **Settings** starts `tiny-settings` (the one next to `tiny-shell` when it was
   started with a path, else the one in `PATH`).
 - **Applications** opens the launcher; **Terminal** starts the terminal of
