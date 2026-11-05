@@ -173,8 +173,9 @@ TEST_F(ListBoxTest, selected_row_has_the_selected_background)
 {
     list.select(1);
 
-    EXPECT_EQ(pixel(list_width - 2, 5), background(false));
-    EXPECT_EQ(pixel(list_width - 2, row_height + 5), background(true));
+    // away from the text and from the scroll bar at the right edge
+    EXPECT_EQ(pixel(list_width - 20, 5), background(false));
+    EXPECT_EQ(pixel(list_width - 20, row_height + 5), background(true));
 }
 
 TEST_F(ListBoxTest, rows_draw_their_text)
@@ -330,4 +331,59 @@ TEST_F(ListBoxTest, drawing_without_items_or_server_pictures_is_safe)
     send(empty, Expose);
 
     EXPECT_EQ(empty.get_count(), 0u);
+}
+
+// The scroll bar
+
+TEST_F(ListBoxTest, there_is_no_thumb_when_all_the_rows_fit)
+{
+    list.set_items(rows, numbered());
+
+    const tiny::Rect thumb = list.scroll_thumb();
+
+    EXPECT_EQ(thumb.width, 0);
+    EXPECT_EQ(thumb.height, 0);
+    // the second row, the first one is selected
+    EXPECT_EQ(pixel(list_width - 2, row_height + 5), background(false));
+}
+
+TEST_F(ListBoxTest, the_thumb_is_the_share_of_the_rows_that_show)
+{
+    const tiny::Rect thumb = list.scroll_thumb(); // 5 of 12 rows
+
+    EXPECT_EQ(thumb.y, 0);
+    EXPECT_EQ(thumb.height, rows * row_height * rows / 12);
+    EXPECT_EQ(thumb.x + thumb.width, list_width); // at the right edge
+}
+
+TEST_F(ListBoxTest, the_thumb_moves_with_the_scrolling_to_the_end)
+{
+    const int before = list.scroll_thumb().y;
+    list.select(11);
+    const tiny::Rect thumb = list.scroll_thumb();
+
+    EXPECT_GT(thumb.y, before);
+    EXPECT_EQ(thumb.y + thumb.height, rows * row_height); // at the bottom
+}
+
+TEST_F(ListBoxTest, the_thumb_is_drawn_and_has_the_color_of_the_text)
+{
+    send(list, Expose);
+    const tiny::Rect thumb = list.scroll_thumb();
+
+    const uint32_t color = pixel(thumb.x + thumb.width / 2, thumb.y + 1);
+
+    EXPECT_NE(color, background(false));
+    EXPECT_EQ(pixel(thumb.x + thumb.width / 2, thumb.y + thumb.height + 1),
+              background(false));
+}
+
+TEST_F(ListBoxTest, a_very_long_list_has_a_thumb_that_can_still_be_seen)
+{
+    list.set_items(100000, numbered());
+
+    const tiny::Rect thumb = list.scroll_thumb();
+
+    EXPECT_GE(thumb.height, 4);
+    EXPECT_LE(thumb.height, rows * row_height);
 }

@@ -106,6 +106,28 @@ void ListBox::scroll_to(size_t new_first)
     redraw();
 }
 
+Rect ListBox::scroll_thumb() const
+{
+    const size_t rows = visible_rows();
+    if (count <= rows) {
+        return {0, 0, 0, 0};
+    }
+    // as high as the share of the rows that show, but a few pixels at least
+    const int track = height;
+    const int bar = std::max(2, get_padding() / 2);
+    const int thumb_height =
+            std::clamp(static_cast<int>(static_cast<long long>(track) *
+                                        static_cast<long long>(rows) /
+                                        static_cast<long long>(count)),
+                       std::min(track, 4 * bar), track);
+    const int free_space = track - thumb_height;
+    const size_t last_first = count - rows;
+    const int y = static_cast<int>(static_cast<long long>(free_space) *
+                                   static_cast<long long>(first) /
+                                   static_cast<long long>(last_first));
+    return {width - bar, y, bar, thumb_height};
+}
+
 void ListBox::redraw()
 {
     if (is_maped) {
@@ -166,6 +188,14 @@ void ListBox::on_expose(const XEvent&, void*)
                           y + (row_height + font->ascent - font->descent) / 2,
                           reinterpret_cast<const FcChar8*>(item.text.c_str()),
                           static_cast<int>(item.text.size()));
+    }
+
+    // the position in a list that does not fit: a thumb at the right edge
+    if (count > visible_rows()) {
+        const Rect thumb = scroll_thumb();
+        XSetForeground(display, gc, style.get_fg(normal));
+        XFillRectangle(display, window, gc, thumb.x, thumb.y,
+                       x_dim(thumb.width), x_dim(thumb.height));
     }
 
     if (target != None) {

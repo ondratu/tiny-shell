@@ -64,6 +64,10 @@ class ListBox : public Widget {
     /// The row at the y coordinate of the widget, or the count when none.
     size_t row_at(int y) const;
 
+    /// The thumb of the scroll bar at the right edge, empty (zero size) when
+    /// all the rows fit. It only shows where the rows are.
+    Rect scroll_thumb() const;
+
     Signal on_activate;
 
   protected:

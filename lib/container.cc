@@ -1,7 +1,5 @@
 #include <X11/cursorfont.h>
 
-#include <sys/time.h>
-
 #include <cassert>
 #include <algorithm>
 
@@ -198,8 +196,7 @@ void ClickCatcher::set_events(long mask)
     connect(ButtonPress, [this](const XEvent& e) { on_press(this, e); });
 }
 
-Popover::Popover(Box::Type type_arg, int w, int h):
-    Box(type_arg, w, h), time_from_unmap(0)
+Popover::Popover(Box::Type type_arg, int w, int h): Box(type_arg, w, h)
 {
     name = "popover";
     catcher.on_press.connect([this](const XEvent& e) {
@@ -246,11 +243,10 @@ void Popover::set_events(long mask)
 
 void Popover::popup(int x, int y)
 {
-    struct timeval tp;
-    gettimeofday(&tp, nullptr);
-    const long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-
-    if (ms - time_from_unmap < 200) { // 200 ms timeout
+    // the click that closed it by taking the focus must not open it again;
+    // the clock does not jump with a change of the time of the day
+    using namespace std::chrono_literals;
+    if (closed_at && std::chrono::steady_clock::now() - *closed_at < 200ms) {
         return;
     }
 
@@ -338,9 +334,7 @@ void Popover::on_focus_out(const XEvent&, void*)
         return;
     }
 
-    struct timeval tp;
-    gettimeofday(&tp, nullptr);
-    time_from_unmap = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    closed_at = std::chrono::steady_clock::now();
     unmap();
 }
 

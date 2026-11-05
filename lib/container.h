@@ -1,6 +1,8 @@
 #pragma once
 
+#include <chrono>
 #include <list>
+#include <optional>
 #include <memory>
 #include <vector>
 
@@ -125,7 +127,8 @@ class Popover : public Box {
 
     ClickCatcher catcher;
     std::vector<const Popover*> nested;
-    long int time_from_unmap;
+    //! When a focus out closed it: a click that did that does not open it again
+    std::optional<std::chrono::steady_clock::time_point> closed_at;
 };
 
 } // namespace tiny
