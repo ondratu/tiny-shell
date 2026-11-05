@@ -19,6 +19,7 @@
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
 #include "wm/unresponsive_dialog.h"
+#include "wm/about_dialog.h"
 #include "wm/dock.h"
 #include "wm/dock_mode.h"
 #include "wm/dock_reveal.h"
@@ -111,7 +112,7 @@ class Manager : public tiny::Object {
     /**
      * @short What the menus and the keys ask for, by name.
      *
-     * The manager registers "settings", "applications", "launcher",
+     * The manager registers "about", "settings", "applications", "launcher",
      * "run-dialog", "terminal", "force-quit", "restart", "shutdown", "logout",
      * "next-window", "prev-window", "theme-dark", "theme-light" and
      * "theme-toggle"; more can be added (a script, the key bindings).
@@ -344,6 +345,7 @@ class Manager : public tiny::Object {
     tiny::Timers::Id clock_timer = 0;
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
+    AboutDialog wm_about;
     Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
     Dock wm_dock;

@@ -39,9 +39,14 @@ Options parse_options(const std::vector<std::string>& args)
     return rv;
 }
 
+std::string version_number()
+{
+    return TINY_SHELL_VERSION;
+}
+
 std::string version_text()
 {
-    return "tiny-shell " TINY_SHELL_VERSION;
+    return "tiny-shell " + version_number();
 }
 
 std::string usage_text(const std::string& program)

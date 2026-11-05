@@ -15,15 +15,17 @@ TEST(MainMenuTest, realize_stacks_the_items_in_groups_with_lines_between)
     const int item = tiny::wm::shell_theme.popup_item_height;
     const int gap = tiny::wm::shell_theme.menu_separator;
     const ::Window win = menu.get_window();
-    EXPECT_EQ(child_at(win, 0, 0), menu.settings.get_window());
-    EXPECT_EQ(child_at(win, 0, item + gap), menu.applications.get_window());
-    EXPECT_EQ(child_at(win, 0, 2 * item + gap), menu.terminal.get_window());
-    EXPECT_EQ(child_at(win, 0, 3 * item + 2 * gap),
+    EXPECT_EQ(child_at(win, 0, 0), menu.about.get_window());
+    EXPECT_EQ(child_at(win, 0, item + gap), menu.settings.get_window());
+    EXPECT_EQ(child_at(win, 0, 2 * item + 2 * gap),
+              menu.applications.get_window());
+    EXPECT_EQ(child_at(win, 0, 3 * item + 2 * gap), menu.terminal.get_window());
+    EXPECT_EQ(child_at(win, 0, 4 * item + 3 * gap),
               menu.force_quit.get_window());
-    EXPECT_EQ(child_at(win, 0, 4 * item + 3 * gap), menu.restart.get_window());
-    EXPECT_EQ(child_at(win, 0, 5 * item + 3 * gap), menu.shutdown.get_window());
-    EXPECT_EQ(child_at(win, 0, 6 * item + 4 * gap), menu.logout.get_window());
-    EXPECT_EQ(children_of(win).size(), 11u); // the items and the lines
+    EXPECT_EQ(child_at(win, 0, 5 * item + 4 * gap), menu.restart.get_window());
+    EXPECT_EQ(child_at(win, 0, 6 * item + 4 * gap), menu.shutdown.get_window());
+    EXPECT_EQ(child_at(win, 0, 7 * item + 5 * gap), menu.logout.get_window());
+    EXPECT_EQ(children_of(win).size(), 13u); // the items and the lines
 }
 
 TEST(MainMenuTest, is_as_high_as_the_items_and_the_gaps)
@@ -33,8 +35,8 @@ TEST(MainMenuTest, is_as_high_as_the_items_and_the_gaps)
     menu.realize(root_window());
 
     EXPECT_EQ(attributes_of(menu).height,
-              7 * tiny::wm::shell_theme.popup_item_height +
-                      4 * tiny::wm::shell_theme.menu_separator);
+              8 * tiny::wm::shell_theme.popup_item_height +
+                      5 * tiny::wm::shell_theme.menu_separator);
     EXPECT_EQ(attributes_of(menu).width, tiny::wm::shell_theme.menu_width);
 }
 
@@ -45,7 +47,7 @@ TEST(MainMenuTest, realize_twice_keeps_one_set_of_lines)
     menu.realize(root_window());
     menu.realize(root_window());
 
-    EXPECT_EQ(children_of(menu.get_window()).size(), 11u);
+    EXPECT_EQ(children_of(menu.get_window()).size(), 13u);
 }
 
 TEST(MainMenuTest, items_have_no_border)
@@ -64,6 +66,7 @@ TEST(MainMenuTest, buttons_have_labels)
 {
     const tiny::wm::MainMenu menu;
 
+    EXPECT_EQ(menu.about.get_text(), "About Tiny Shell");
     EXPECT_EQ(menu.settings.get_text(), "Settings");
     EXPECT_EQ(menu.applications.get_text(), "Applications");
     EXPECT_EQ(menu.terminal.get_text(), "Terminal");
@@ -229,7 +232,7 @@ TEST_F(PanelScaledTest, main_menu_is_scaled)
 
     const XWindowAttributes attrs = attributes_of(menu);
     EXPECT_EQ(attrs.width, 400);
-    EXPECT_EQ(attrs.height, 7 * 60 + 4 * 16);
+    EXPECT_EQ(attrs.height, 8 * 60 + 5 * 16);
 }
 
 TEST_F(PanelScaledTest, main_menu_buttons_are_scaled_and_stacked)
@@ -240,9 +243,9 @@ TEST_F(PanelScaledTest, main_menu_buttons_are_scaled_and_stacked)
 
     EXPECT_EQ(attributes_of(menu.logout).width, 400);
     EXPECT_EQ(attributes_of(menu.logout).height, 60);
-    EXPECT_EQ(child_at(menu.get_window(), 0, 4 * 60 + 3 * 16 + 60),
-              menu.shutdown.get_window());
     EXPECT_EQ(child_at(menu.get_window(), 0, 6 * 60 + 4 * 16),
+              menu.shutdown.get_window());
+    EXPECT_EQ(child_at(menu.get_window(), 0, 7 * 60 + 5 * 16),
               menu.logout.get_window());
 }
 
