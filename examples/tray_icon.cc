@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "button.h"
 #include "container.h"
@@ -33,10 +34,12 @@ constexpr const char* icon_name = "preferences-system";
 
 class TrayExample {
   public:
-    TrayExample():
+    //! `program` is the path the program was started by: the icons of the
+    //! repository are searched next to it (build/examples/ -> data/)
+    explicit TrayExample(const std::string& program):
         display(tiny::get_display()),
         root(XDefaultRootWindow(display)),
-        icons(display, root, tiny::xdg::default_data_dirs()),
+        icons(display, root, data_dirs(program)),
         menu(tiny::wm::shell_theme.menu_width,
              tiny::wm::shell_theme.popup_item_height),
         quit(tiny::wm::shell_theme.menu_width,
@@ -87,6 +90,16 @@ class TrayExample {
     }
 
   private:
+    static std::vector<std::string> data_dirs(const std::string& program)
+    {
+        std::vector<std::string> dirs = tiny::xdg::default_data_dirs();
+        const auto slash = program.rfind('/');
+        if (slash != std::string::npos) {
+            dirs.push_back(program.substr(0, slash) + "/../../data");
+        }
+        return dirs;
+    }
+
     Atom tray_selection() const
     {
         const std::string name =
@@ -138,14 +151,29 @@ class TrayExample {
             case ButtonPress:
                 if (e.xbutton.button == Button1 ||
                     e.xbutton.button == Button3) {
-                    // under the icon, which is at the top of the screen
-                    menu.popup(e.xbutton.x_root,
-                               e.xbutton.y_root - e.xbutton.y + height);
+                    open_menu();
                 }
                 break;
             default:
                 break;
         }
+    }
+
+    //! The menu is where the pointer is. The coordinates of the event are not
+    //! used: a program that shows the tray (and not tiny-shell) can send the
+    //! click on, with the position of the icon that it does not show.
+    void open_menu()
+    {
+        ::Window the_root;
+        ::Window child;
+        int x;
+        int y;
+        int window_x;
+        int window_y;
+        unsigned mask;
+        XQueryPointer(display, root, &the_root, &child, &x, &y, &window_x,
+                      &window_y, &mask);
+        menu.popup(x, y);
     }
 
     void draw()
@@ -154,6 +182,10 @@ class TrayExample {
         const unsigned long color = tiny::theme.widget.get_fg(0);
         if (!icons.draw(window, icon_name, std::min(width, height), color,
                         width, height)) { // the files are not installed
+            fprintf(stderr,
+                    "tray_icon: the icon %s-symbolic.svg is not found, set "
+                    "XDG_DATA_DIRS to the data of the repository\n",
+                    icon_name);
             XSetForeground(display, DefaultGC(display, 0), color);
             XFillRectangle(display, window, DefaultGC(display, 0), width / 4,
                            height / 4, tiny::x_dim(width / 2),
@@ -177,12 +209,12 @@ class TrayExample {
 
 } // namespace
 
-int main()
+int main(int, char* argv[])
 {
     tiny::Display::init();
     tiny::wm::shell_theme.init();
     {
-        TrayExample example;
+        TrayExample example(argv[0]);
         example.main_loop();
     }
     // The static styles close their fonts after the display is closed, which
