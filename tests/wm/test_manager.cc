@@ -6444,6 +6444,7 @@ TEST_F(TwoMonitorsTest, the_numbers_are_raised_over_a_window_that_comes_up)
     FakeClient& c = add_client(false);
     c.map();
     run_loop();
+    run_loop(); // the numbers are raised after the event that restacked
 
     ::Window root;
     ::Window parent;
@@ -6467,4 +6468,13 @@ TEST_F(TwoMonitorsTest, the_numbers_are_raised_over_a_window_that_comes_up)
         EXPECT_NE(std::find(allowed.begin(), allowed.end(), *it),
                   allowed.end());
     }
+}
+
+TEST_F(TwoMonitorsTest, the_panel_does_not_reach_the_next_monitor)
+{
+    split(0);
+
+    const XWindowAttributes panel = attributes_of(manager->wm_panel);
+    EXPECT_EQ(panel.border_width, 0);
+    EXPECT_LE(panel.x + panel.width, half);
 }

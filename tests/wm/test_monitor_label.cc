@@ -85,3 +85,12 @@ TEST_F(MonitorLabelTest, the_labels_follow_the_number_of_monitors)
     labels.hide();
     EXPECT_FALSE(labels.is_shown());
 }
+
+TEST_F(MonitorLabelTest, a_label_is_known_by_its_window)
+{
+    MonitorLabels labels;
+    labels.show(root_window(), {{"A", {0, 0, 640, 480}, true}}, 0);
+
+    EXPECT_TRUE(labels.owns(labels.get_labels()[0]->get_window()));
+    EXPECT_FALSE(labels.owns(root_window()));
+}

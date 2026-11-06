@@ -75,6 +75,9 @@ class MonitorLabels {
 
     bool is_shown() const { return !labels.empty(); }
 
+    //! Is the window one of the labels
+    bool owns(::Window window) const;
+
     //! Over all the windows again
     void raise();
 
