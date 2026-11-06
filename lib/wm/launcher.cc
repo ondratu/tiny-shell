@@ -81,6 +81,7 @@ Launcher::~Launcher()
 {
     free_icons();
     free_icons(display, window_icons);
+    free_icons(display, sized_icons);
 }
 
 void Launcher::realize(::Window root, int, int)
@@ -396,6 +397,17 @@ const Launcher::Icon& Launcher::application_icon(const xdg::Application& app)
                      .emplace(app.id,
                               load_icon(app.entry.icon, shell_theme.icon))
                      .first;
+    }
+    return it->second;
+}
+
+const Launcher::Icon& Launcher::application_icon(const xdg::Application& app,
+                                                 int size)
+{
+    const std::string key = app.id + '@' + std::to_string(size);
+    auto it = sized_icons.find(key);
+    if (it == sized_icons.end()) {
+        it = sized_icons.emplace(key, load_icon(app.entry.icon, size)).first;
     }
     return it->second;
 }

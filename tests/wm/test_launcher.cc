@@ -436,6 +436,29 @@ TEST_F(LauncherTest, the_application_of_a_window_gives_its_icon)
     EXPECT_EQ(launcher.application_icon("alpha", "Alpha").picture, None);
 }
 
+TEST_F(LauncherTest, the_icon_of_an_application_is_loaded_in_the_size_asked_for)
+{
+    fs::create_directories(root / "pixmaps");
+    std::ofstream(root / "pixmaps" / "delta.xpm")
+            << "/* XPM */\nstatic char * delta_xpm[] = {\n"
+               "\"2 2 1 1\",\n\"a c #FF0000\",\n\"aa\",\n\"aa\"};\n";
+    std::ofstream(root / "applications" / "cz.example.Delta.desktop")
+            << "[Desktop Entry]\nName=Delta\nType=Application\nIcon=delta\n"
+               "Exec=true\n";
+    const EnvVar dirs("XDG_DATA_DIRS", root.string());
+    const auto* app = launcher.find_application("cz.example.Delta.desktop");
+    ASSERT_NE(app, nullptr);
+
+    const auto& big = launcher.application_icon(*app, 128);
+
+    EXPECT_NE(big.picture, None);
+    EXPECT_EQ(&launcher.application_icon(*app, 128), &big); // cached
+    EXPECT_NE(&launcher.application_icon(*app, 64), &big);  // one per size
+    const auto* none = launcher.find_application("alpha.desktop");
+    ASSERT_NE(none, nullptr);
+    EXPECT_EQ(launcher.application_icon(*none, 128).picture, None);
+}
+
 TEST_F(LauncherTest,
        an_application_is_found_by_its_id_or_by_the_class_of_a_window)
 {
