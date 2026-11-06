@@ -18,6 +18,7 @@
 #include "spawn.h"
 #include "wm/manager.h"
 #include "wm/options.h"
+#include "wm/process.h"
 #include "wm/system_info.h"
 #include "wm/client.h"
 #include "x_util.h"
@@ -32,10 +33,11 @@ namespace {
 //! The self-pipe: a signal handler may only write to it, the loop reads it
 int quit_pipe[2] = {-1, -1};
 
-void on_quit_signal(int /*signal*/)
+//! The byte in the pipe is the number of the signal
+void on_quit_signal(int number)
 {
     const int saved_errno = errno;
-    const char byte = 1;
+    const char byte = static_cast<char>(number);
     if (write(quit_pipe[1], &byte, 1) < 0) {
         // the pipe is full, so the loop is going to wake up anyway
     }
@@ -254,19 +256,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
 Manager::~Manager()
 {
-    // Alt + Tab
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab), Mod1Mask,
-                       root);
-    // Shift + Alt + Tab
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
-                       ShiftMask | Mod1Mask, root);
-    // Alt + ; and Shift + Alt + ;
-    grab_semicolon(false);
-    // Alt + F2
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
-                       root);
+    grab_shortcuts(false);
     close_switcher(false);
-    grab_super(false);
     stop_move_resize(false);
     release_windows();
     clear_published();
@@ -334,32 +325,7 @@ void Manager::set_events()
                  SubstructureNotifyMask | SubstructureRedirectMask |
                          StructureNotifyMask);
 
-    // Alt + Tab
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab), Mod1Mask,
-                     root);
-    // Shift + Alt + Tab
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
-                     ShiftMask | Mod1Mask, root);
-    // Alt + ; and Shift + Alt + ;
-    grab_semicolon(true);
-    // Alt + F2
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
-    grab_super(true);
-}
-
-void Manager::grab_super(bool grab)
-{
-    // Super alone opens the launcher, so a shortcut with Super is not passed
-    // to an application
-    const KeySym supers[] = {XK_Super_L, XK_Super_R};
-    for (const KeySym super : supers) {
-        const KeyCode keycode = XKeysymToKeycode(display, super);
-        if (keycode == 0) { // the keyboard has no such key
-            continue;
-        }
-        grab ? tiny::x_grab_key(display, keycode, 0, root)
-             : tiny::x_ungrab_key(display, keycode, 0, root);
-    }
+    grab_shortcuts(true);
 }
 
 void Manager::set_supported()
@@ -427,6 +393,17 @@ void Manager::set_supported()
                     PropModeReplace,
                     reinterpret_cast<const unsigned char*>(name),
                     sizeof(name) - 1);
+    // who the window manager is, for `tiny-shell --reload` (and for a tool
+    // that wants to signal it)
+    const auto pid = static_cast<unsigned long>(getpid());
+    XChangeProperty(display, check_window, dsp._NET_WM_PID, XA_CARDINAL, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&pid), 1);
+    const std::string host = local_host_name();
+    XChangeProperty(display, check_window, XA_WM_CLIENT_MACHINE, XA_STRING, 8,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(host.c_str()),
+                    static_cast<int>(host.size()));
     for (const ::Window w : {root, check_window}) {
         XChangeProperty(display, w, dsp._NET_SUPPORTING_WM_CHECK, XA_WINDOW, 32,
                         PropModeReplace,
@@ -822,8 +799,25 @@ bool Manager::wait_for_event()
         }
         if (fds[1].revents & POLLIN) {
             char drain[16];
-            while (read(quit_pipe[0], drain, sizeof(drain)) > 0) {}
-            return false;
+            bool quit = false;
+            bool hangup = false;
+            for (ssize_t n;
+                 (n = read(quit_pipe[0], drain, sizeof(drain))) > 0;) {
+                for (ssize_t i = 0; i < n; ++i) {
+                    (drain[i] == SIGHUP ? hangup : quit) = true;
+                }
+            }
+            // SIGHUP reads the configuration again, but only when something
+            // can do it: it still ends a shell that has no configuration
+            if (hangup && !reload) {
+                quit = true;
+            }
+            if (quit) {
+                return false;
+            }
+            if (hangup) {
+                reload();
+            }
         }
         if (XPending(display) > 0) {
             return true;
@@ -1578,41 +1572,62 @@ bool Manager::is_alt(unsigned int keycode) const
            keycode == XKeysymToKeycode(display, XK_Alt_R);
 }
 
-void Manager::grab_semicolon(bool grab)
+void Manager::grab_shortcuts(bool grab)
 {
-    for (const KeyCode code : semicolons) { // the keys of the last grab
-        tiny::x_ungrab_key(display, code, Mod1Mask, root);
-        tiny::x_ungrab_key(display, code, Mod1Mask | ShiftMask, root);
+    for (const GrabbedKey& key : shortcut_keys) { // the keys of the last grab
+        tiny::x_ungrab_key(display, key.code, key.modifiers, root);
     }
+    shortcut_keys.clear();
     semicolons.clear();
     if (!grab) {
         return;
     }
+    const auto add = [this](KeyCode code, unsigned int modifiers) {
+        if (code != 0) { // the keyboard has no such key
+            shortcut_keys.push_back({code, modifiers});
+        }
+    };
+    const auto key_of = [this](KeySym keysym) {
+        return XKeysymToKeycode(display, keysym);
+    };
+    // Alt + Tab, Shift + Alt + Tab
+    add(key_of(XK_Tab), Mod1Mask);
+    add(key_of(XK_Tab), ShiftMask | Mod1Mask);
+    // Alt + F2
+    add(key_of(XK_F2), Mod1Mask);
+    // Super alone opens the launcher, so a shortcut with Super is not passed
+    // to an application
+    add(key_of(XK_Super_L), 0);
+    add(key_of(XK_Super_R), 0);
+
+    // Alt + ; and Shift + Alt + ; on the keys that make a semicolon
     int first = 0;
     int last = 0;
     XDisplayKeycodes(display, &first, &last);
     int per_key = 0;
     KeySym* map = XGetKeyboardMapping(display, static_cast<KeyCode>(first),
                                       last - first + 1, &per_key);
-    if (map == nullptr) {
-        return;
-    }
-    // Only the keys that type ; with no other modifier: the first level of
-    // the first two groups (the core mapping has them at 0 and 2). Alt + a key
-    // that has ; on a shifted level or behind AltGr is a shortcut of an
-    // application, or a character the user types with it.
-    for (int code = first; code <= last; ++code) {
-        for (int i = 0; i < per_key && i < 4; i += 2) {
-            if (map[(code - first) * per_key + i] == XK_semicolon) {
-                semicolons.push_back(static_cast<KeyCode>(code));
-                break;
+    if (map != nullptr) {
+        // Only the keys that type ; with no other modifier: the first level
+        // of the first two groups (the core mapping has them at 0 and 2).
+        // Alt + a key that has ; on a shifted level or behind AltGr is a
+        // shortcut of an application, or a character the user types with it.
+        for (int code = first; code <= last; ++code) {
+            for (int i = 0; i < per_key && i < 4; i += 2) {
+                if (map[(code - first) * per_key + i] == XK_semicolon) {
+                    semicolons.push_back(static_cast<KeyCode>(code));
+                    break;
+                }
             }
         }
+        XFree(map);
     }
-    XFree(map);
     for (const KeyCode code : semicolons) {
-        tiny::x_grab_key(display, code, Mod1Mask, root);
-        tiny::x_grab_key(display, code, Mod1Mask | ShiftMask, root);
+        add(code, Mod1Mask);
+        add(code, Mod1Mask | ShiftMask);
+    }
+    for (const GrabbedKey& key : shortcut_keys) {
+        tiny::x_grab_key(display, key.code, key.modifiers, root);
     }
 }
 
@@ -1628,9 +1643,11 @@ void Manager::on_mapping_notify(XMappingEvent& e)
     if (e.request == MappingPointer) {
         return;
     }
-    grab_semicolon(true); // the old keys are released first
-    grab_super(false);
-    grab_super(true);
+    // Tab, F2, ; and Super can be other keys now; the old ones are released
+    grab_shortcuts(true);
+    for (const auto& entry : wm_windows) {
+        entry.second->grab_close_key();
+    }
 }
 
 void Manager::open_switcher(bool windows, bool backwards)

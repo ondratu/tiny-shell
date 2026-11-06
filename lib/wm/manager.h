@@ -39,6 +39,13 @@ class Manager : public tiny::Object {
 
     void main_loop();
 
+    //! What SIGHUP (and `tiny-shell --reload`) does: the settings are read
+    //! again. Without it SIGHUP ends the shell like SIGTERM.
+    void set_reload(std::function<void()> handler)
+    {
+        reload = std::move(handler);
+    }
+
     //! The manager ends when another one takes this selection (`--replace`)
     void set_selection(const Selection* owned) { selection = owned; }
 
@@ -155,7 +162,8 @@ class Manager : public tiny::Object {
     //! The actions of the menus and the keys
     void register_actions();
 
-    //! SIGTERM, SIGHUP and SIGINT end the main loop like the logout does
+    //! SIGTERM and SIGINT end the main loop like the logout does, SIGHUP
+    //! calls `reload`
     void catch_quit_signals();
 
     void release_quit_signals();
@@ -183,9 +191,6 @@ class Manager : public tiny::Object {
 
     //! Hide the dialog; the window answered, is gone or the user chose
     void close_unresponsive_dialog();
-
-    //! Grab (or release) the Super keys that open the launcher
-    void grab_super(bool grab);
 
     //! Publish `_NET_SUPPORTED` and the window that proves the manager runs
     void set_supported();
@@ -216,10 +221,13 @@ class Manager : public tiny::Object {
 
     bool is_alt(unsigned int keycode) const;
 
-    //! Grab (or release) Alt + ; on every key that makes a semicolon with no
-    //! modifier in any group of the keyboard (the layout can have it on another
-    //! key); a key that makes it only with Shift or AltGr is left alone
-    void grab_semicolon(bool grab);
+    //! Grab (or release) the keys of the shortcuts of the manager: Alt + Tab,
+    //! Alt + F2, Super, and Alt + ; on every key that makes a semicolon with
+    //! no modifier in any group of the keyboard (the layout can have it on
+    //! another key; a key that makes it only with Shift or AltGr is left
+    //! alone). The keys of the last grab are released first, so it also
+    //! follows a change of the layout.
+    void grab_shortcuts(bool grab);
 
     //! The keyboard layout changed: the keys of the shortcuts are other ones
     void on_mapping_notify(XMappingEvent& e);
@@ -426,8 +434,13 @@ class Manager : public tiny::Object {
     unsigned drag_button = 0;  //!< its release ends the drag, 0: any
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
-    std::vector<KeyCode> semicolons; //!< the keys grabbed for Alt + ;
-    bool switcher_grabbed = false;   //!< the keyboard is ours for the switcher
+    struct GrabbedKey {
+        KeyCode code;
+        unsigned int modifiers;
+    };
+    std::vector<GrabbedKey> shortcut_keys; //!< what `grab_shortcuts` holds
+    std::vector<KeyCode> semicolons;       //!< the keys grabbed for Alt + ;
+    bool switcher_grabbed = false; //!< the keyboard is ours for the switcher
     //! Is Alt held (a test replaces it)
     std::function<bool()> is_alt_down;
     unsigned long last_user_time = 0; //!< of the last user action we know of
@@ -466,6 +479,7 @@ class Manager : public tiny::Object {
     int screen_width = 0; //!< the root window, to see a change
     int screen_height = 0;
     std::string force_quit_program = "xkill";
+    std::function<void()> reload;
     std::vector<std::string> terminal_program = {"xterm"};
     std::string restart_command = Config().reboot_command;
     std::string shutdown_command = Config().poweroff_command;

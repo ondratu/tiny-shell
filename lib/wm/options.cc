@@ -27,6 +27,10 @@ Options parse_options(const std::vector<std::string>& args)
             if (asked == Options::Action::Run) {
                 asked = Options::Action::Info;
             }
+        } else if (arg == "--reload") {
+            if (asked == Options::Action::Run) {
+                asked = Options::Action::Reload;
+            }
         } else {
             rv.action = Options::Action::Error;
             rv.error = arg.rfind('-', 0) == 0
@@ -62,12 +66,14 @@ std::string usage_text(const std::string& program)
            "                 selection of ICCCM); without it tiny-shell\n"
            "                 stops when another window manager runs\n"
            "      --info     describe tiny-shell and its settings\n"
+           "      --reload   tell the tiny-shell that runs to read the\n"
+           "                 settings again (the same as SIGHUP)\n"
            "  -V, --version  print the version\n"
            "  -h, --help     print this help\n"
            "\n"
-           "tiny-shell is stopped by SIGTERM, SIGHUP or SIGINT, and\n"
-           "another window manager can take over from it with its own\n"
-           "--replace.\n"
+           "tiny-shell is stopped by SIGTERM or SIGINT, and another\n"
+           "window manager can take over from it with its own --replace.\n"
+           "SIGHUP makes it read the settings again.\n"
            "\n"
            "The settings are read from tiny-shell.ini in $XDG_CONFIG_DIRS\n"
            "(/etc/xdg) and in $XDG_CONFIG_HOME (~/.config), the second one\n"

@@ -401,6 +401,10 @@ class Window {
     //! not answer `_NET_WM_PING` is not killed at once: `on_unresponsive`
     //! asks the user first
     virtual void close();
+
+    //! Grab Alt + F4 of the client on the key that has F4 now (the layout
+    //! can change); the key of the last grab is released
+    void grab_close_key();
     //! Send `WM_DELETE_WINDOW`; false (nothing sent) without that protocol
     bool ask_to_close();
 
@@ -571,6 +575,8 @@ class Window {
   protected:
     //! Handlers of the events of the client window, removed with the window
     tiny::EventConnections window_events;
+
+    KeyCode close_key = 0; //!< the key grabbed for Alt + F4
 
     /* event handlers */
     virtual void on_client_message(const XEvent& e, void* data);

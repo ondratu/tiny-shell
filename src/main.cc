@@ -17,6 +17,7 @@
 #include "wm/config.h"
 #include "wm/manager.h"
 #include "wm/options.h"
+#include "wm/reload.h"
 #include "wm/selection.h"
 #include "wm/xresources.h"
 #include "xdg/application_index.h"
@@ -34,6 +35,25 @@ int on_wm_detected(::Display* /*display*/, XErrorEvent* error)
         wm_detected = true;
     }
     return 0;
+}
+
+//! `--reload`: signal the tiny-shell that runs on the display
+int reload_running(const char* program)
+{
+    try {
+        tiny::Display::init();
+    } catch (const std::exception&) {
+        fprintf(stderr, "%s: can't open the X display\n", program);
+        return EXIT_FAILURE;
+    }
+    ::Display* display = tiny::get_display();
+    const std::string error =
+            tiny::wm::request_reload(display, XDefaultRootWindow(display));
+    if (!error.empty()) {
+        fprintf(stderr, "%s: %s\n", program, error.c_str());
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
 
 //! What the options ask to print, for the actions that do not need X; the
@@ -66,6 +86,8 @@ std::optional<int> print_and_exit(const tiny::wm::Options& options,
                   stdout);
             return EXIT_SUCCESS;
         }
+        case Action::Reload:
+            return reload_running(program);
         case Action::Error:
             fprintf(stderr, "%s: %s\nTry '%s --help'.\n", program,
                     options.error.c_str(), program);
@@ -87,6 +109,104 @@ bool root_is_free(::Display* display, ::Window root)
     XSelectInput(display, root, 0); // Reparent do UnmapWindow, do not track
     XSetErrorHandler(old);
     return !wm_detected;
+}
+
+//! Put the rendering of text of [xft] to the X resources, for the programs
+//! that are started after it
+void publish_xft(::Display* display, const tiny::wm::Config& config,
+                 const char* program)
+{
+    const auto resources = tiny::wm::xft_resources(config);
+    if (!resources.empty() &&
+        !tiny::wm::publish_resources(display, resources)) {
+        fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
+    }
+}
+
+//! Give the manager the settings that can change while it runs. `old` is the
+//! settings that it has now, null for a manager that has none yet.
+void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
+                  const tiny::wm::Config* old, const char* program)
+{
+    if (old != nullptr && old->style != config.style) {
+        manager.set_variant(config.style);
+    }
+    manager.set_power_commands(config.reboot_command, config.poweroff_command);
+    manager.set_terminal(config.terminal);
+    const std::string user_file = tiny::wm::user_config_file(
+            getenv("XDG_CONFIG_HOME"), getenv("HOME"));
+    manager.set_favorites(
+            config.favorites, [argv0 = std::string(program), user_file](
+                                      const std::vector<std::string>& list) {
+                std::string error;
+                if (user_file.empty()) {
+                    error = "neither XDG_CONFIG_HOME nor HOME is set";
+                } else if (tiny::wm::save_favorites(user_file, list, &error)) {
+                    return;
+                }
+                fprintf(stderr, "%s: the favorites are not saved: %s\n",
+                        argv0.c_str(), error.c_str());
+            });
+    if (old == nullptr || old->wallpaper_file != config.wallpaper_file ||
+        old->wallpaper_set != config.wallpaper_set ||
+        old->wallpaper_mode != config.wallpaper_mode) {
+        if (!tiny::wm::wallpaper_of(config, config.style,
+                                    tiny::xdg::default_data_dirs())
+                     .empty()) {
+            // without [wallpaper] file the wallpaper is the one of the style
+            manager.set_wallpaper_command(
+                    {tiny::sibling_program(program, "tiny-wallpaper")},
+                    !config.wallpaper_set);
+        }
+    }
+    const bool clock_changed =
+            old == nullptr || old->clock_format != config.clock_format;
+    if (clock_changed) {
+        manager.set_clock_format(config.clock_format);
+    }
+    if (clock_changed || old->system_tray != config.system_tray) {
+        // after the clock: it stays at the end
+        manager.set_system_tray(config.system_tray);
+    }
+    if (old == nullptr || old->dock_mode != config.dock_mode) {
+        manager.set_dock_mode(config.dock_mode);
+    }
+}
+
+//! SIGHUP and `--reload`: read the files again and apply what changed
+void reload_config(tiny::wm::Manager& manager, tiny::wm::Config& current,
+                   const char* program)
+{
+    const std::vector<std::string> files =
+            tiny::wm::config_files(getenv("XDG_CONFIG_HOME"),
+                                   getenv("XDG_CONFIG_DIRS"), getenv("HOME"));
+    std::vector<std::string> problems;
+    const tiny::wm::Config config = tiny::wm::load_config(files, &problems);
+    for (const std::string& problem : problems) {
+        fprintf(stderr, "%s: %s\n", program, problem.c_str());
+    }
+    if (config.scale != current.scale || config.font != current.font ||
+        config.font_size != current.font_size ||
+        config.font_style != current.font_style) {
+        fprintf(stderr, "%s: the scale and the font are used after a restart\n",
+                program);
+    }
+    if (config.xft_antialias != current.xft_antialias ||
+        config.xft_hinting != current.xft_hinting ||
+        config.xft_rgba != current.xft_rgba) {
+        publish_xft(tiny::get_display(), config, program);
+    }
+    apply_config(manager, config, &current, program);
+    // what only a restart applies stays as it was, so it is reported again
+    const double scale = current.scale;
+    const std::string font = current.font;
+    const double font_size = current.font_size;
+    const std::string font_style = current.font_style;
+    current = config;
+    current.scale = scale;
+    current.font = font;
+    current.font_size = font_size;
+    current.font_style = font_style;
 }
 
 } // namespace
@@ -129,11 +249,7 @@ int main(int argc, char** argv)
         // The rendering of text of [xft] goes to the X resources before the
         // first font is opened, so the shell and the programs started from it
         // use it; what is not set is left as the system has it
-        const auto resources = tiny::wm::xft_resources(config);
-        if (!resources.empty() &&
-            !tiny::wm::publish_resources(display, resources)) {
-            fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", argv[0]);
-        }
+        publish_xft(display, config, argv[0]);
 
         // The theme needs the display (the fonts are opened here)
         tiny::wm::ShellTheme& theme = tiny::wm::shell_theme;
@@ -183,40 +299,13 @@ int main(int argc, char** argv)
 
         tiny::wm::Manager manager(display, root);
         manager.set_selection(&selection);
-        manager.set_power_commands(config.reboot_command,
-                                   config.poweroff_command);
-        manager.set_terminal(config.terminal);
         manager.set_about_command(tiny::sibling_program(argv[0], "tiny-about"));
         manager.set_settings_command(
                 tiny::sibling_program(argv[0], "tiny-settings"));
-        const std::string user_file = tiny::wm::user_config_file(
-                getenv("XDG_CONFIG_HOME"), getenv("HOME"));
-        manager.set_favorites(
-                config.favorites,
-                [argv0 = std::string(argv[0]),
-                 user_file](const std::vector<std::string>& list) {
-                    std::string error;
-                    if (user_file.empty()) {
-                        error = "neither XDG_CONFIG_HOME nor HOME is set";
-                    } else if (tiny::wm::save_favorites(user_file, list,
-                                                        &error)) {
-                        return;
-                    }
-                    fprintf(stderr, "%s: the favorites are not saved: %s\n",
-                            argv0.c_str(), error.c_str());
-                });
-        if (!tiny::wm::wallpaper_of(config, config.style,
-                                    tiny::xdg::default_data_dirs())
-                     .empty()) {
-            // without [wallpaper] file the wallpaper is the one of the style
-            manager.set_wallpaper_command(
-                    {tiny::sibling_program(argv[0], "tiny-wallpaper")},
-                    !config.wallpaper_set);
-        }
-        manager.set_clock_format(config.clock_format);
-        manager.set_system_tray(
-                config.system_tray); // after the clock: it stays at the end
-        manager.set_dock_mode(config.dock_mode);
+        apply_config(manager, config, nullptr, argv[0]);
+        manager.set_reload([&manager, &config, program = argv[0]] {
+            reload_config(manager, config, program);
+        });
         selection.announce();
         manager.main_loop();
     } catch (const std::exception& e) {

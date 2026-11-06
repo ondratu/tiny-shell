@@ -20,6 +20,7 @@
 #include "wm/dock.h"
 #include "wm/panel.h"
 #include "wm/process.h"
+#include "wm/reload.h"
 #include "wm/run_dialog.h"
 #include "wm/window.h"
 #include "wm/client.h"
@@ -505,6 +506,7 @@ TEST_F(ManagerTest, applications_of_the_main_menu_opens_the_launcher)
 
 TEST_F(ManagerTest, signals_end_the_main_loop)
 {
+    // SIGHUP ends it only when nothing can read the settings again
     for (const int number : {SIGTERM, SIGHUP, SIGINT}) {
         start();
         ASSERT_TRUE(manager->running);
@@ -515,6 +517,57 @@ TEST_F(ManagerTest, signals_end_the_main_loop)
         EXPECT_FALSE(manager->running) << "signal " << number;
         manager.reset();
     }
+}
+
+TEST_F(ManagerTest, sighup_reads_the_settings_again_and_goes_on)
+{
+    start();
+    int reloaded = 0;
+    manager->set_reload([&] { ++reloaded; });
+    raise(SIGHUP); // the loop handles it first and goes on
+    std::thread stop([&] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        raise(SIGTERM);
+    });
+
+    manager->main_loop();
+    stop.join();
+
+    EXPECT_EQ(reloaded, 1);
+    EXPECT_FALSE(manager->running); // it was SIGTERM that ended it
+}
+
+TEST_F(ManagerTest, reload_finds_the_manager_and_signals_it)
+{
+    start();
+    int reloaded = 0;
+    manager->set_reload([&] {
+        ++reloaded;
+        manager->running = false;
+    });
+
+    EXPECT_EQ(tiny::wm::request_reload(tiny::get_display(), root_window()), "");
+    manager->main_loop();
+
+    EXPECT_EQ(reloaded, 1);
+}
+
+TEST_F(ManagerTest, reload_says_why_it_can_not_signal)
+{
+    // nobody
+    EXPECT_NE(tiny::wm::request_reload(tiny::get_display(), root_window()), "");
+
+    // another window manager: it has the window of the check, but its name
+    FakeClient other;
+    const Atom check = dsp()._NET_SUPPORTING_WM_CHECK;
+    XChangeProperty(other.display, root_window(), check, XA_WINDOW, 32,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&other.window), 1);
+    other.sync();
+    EXPECT_EQ(tiny::wm::request_reload(tiny::get_display(), root_window()),
+              "the window manager that runs is not tiny-shell");
+    XDeleteProperty(other.display, root_window(), check);
+    other.sync();
 }
 
 TEST_F(ManagerTest, adopts_the_mapped_windows)
@@ -5497,7 +5550,8 @@ TEST_F(ManagerSwitcherTest,
               AlreadyGrabbed);
 }
 
-TEST_F(ManagerSwitcherTest, alt_is_left_to_a_key_that_has_semicolon_only_shifted)
+TEST_F(ManagerSwitcherTest,
+       alt_is_left_to_a_key_that_has_semicolon_only_shifted)
 {
     start();
     ::Display* dsp = tiny::get_display();
@@ -5505,8 +5559,8 @@ TEST_F(ManagerSwitcherTest, alt_is_left_to_a_key_that_has_semicolon_only_shifted
     int last = 0;
     XDisplayKeycodes(dsp, &lowest, &last);
     const auto spare = static_cast<KeyCode>(last);
-    KeySym shifted[] = {XK_a, XK_semicolon, NoSymbol, NoSymbol, XK_b,
-                              XK_semicolon};
+    KeySym shifted[] = {XK_a,     XK_semicolon, NoSymbol,
+                        NoSymbol, XK_b,         XK_semicolon};
     XChangeKeyboardMapping(dsp, spare, 6, shifted, 1);
     XMappingEvent change = {};
     change.type = MappingNotify;
@@ -5528,6 +5582,116 @@ TEST_F(ManagerSwitcherTest, alt_is_left_to_a_key_that_has_semicolon_only_shifted
 
     KeySym none = NoSymbol;
     XChangeKeyboardMapping(dsp, spare, 1, &none, 1);
+}
+
+namespace {
+
+//! The layout puts a keysym to another key until the object is gone
+class MovedKey {
+  public:
+    MovedKey(KeySym keysym, KeyCode target_arg):
+        display(tiny::get_display()),
+        original((refresh(display), XKeysymToKeycode(display, keysym))),
+        target(target_arg)
+    {
+        int per_key = 0;
+        KeySym* map = XGetKeyboardMapping(display, original, 1, &per_key);
+        saved.assign(map, map + per_key);
+        XFree(map);
+        KeySym none = NoSymbol;
+        XChangeKeyboardMapping(display, original, 1, &none, 1);
+        XChangeKeyboardMapping(display, target, 1, &keysym, 1);
+    }
+
+    ~MovedKey()
+    {
+        KeySym none = NoSymbol;
+        XChangeKeyboardMapping(display, target, 1, &none, 1);
+        XChangeKeyboardMapping(display, original,
+                               static_cast<int>(saved.size()), saved.data(), 1);
+        refresh(display);
+    }
+
+    MovedKey(const MovedKey&) = delete;
+    MovedKey& operator=(const MovedKey&) = delete;
+
+    //! Tell the manager that the keyboard changed
+    void notify(tiny::wm::Manager& manager) const
+    {
+        XMappingEvent change = {};
+        change.type = MappingNotify;
+        change.display = display;
+        change.request = MappingKeyboard;
+        change.first_keycode = target;
+        change.count = 1;
+        manager.on_mapping_notify(change);
+        XSync(display, False); // the grabs are made before another client asks
+    }
+
+  private:
+    //! Xlib keeps the layout it saw; the test changes it without an event
+    static void refresh(::Display* display)
+    {
+        XMappingEvent change = {};
+        change.type = MappingNotify;
+        change.display = display;
+        change.request = MappingKeyboard;
+        change.first_keycode = 8;
+        change.count = 248;
+        XRefreshKeyboardMapping(&change);
+    }
+
+    ::Display* display;
+    KeyCode original;
+    KeyCode target;
+    std::vector<KeySym> saved;
+};
+
+} // namespace
+
+TEST_F(ManagerSwitcherTest, alt_tab_and_alt_f2_follow_a_change_of_the_layout)
+{
+    start();
+    int lowest = 0;
+    int last = 0;
+    XDisplayKeycodes(tiny::get_display(), &lowest, &last);
+    const auto tab_key = static_cast<KeyCode>(last); // the layout moves them
+    const auto f2_key = static_cast<KeyCode>(last - 1);
+    const MovedKey tab(XK_Tab, tab_key);
+    const MovedKey f2(XK_F2, f2_key);
+
+    tab.notify(*manager);
+    f2.notify(*manager);
+
+    for (const KeyCode key : {tab_key, f2_key}) {
+        const XErrors errors;
+        const FakeClient other;
+        XGrabKey(other.display, key, Mod1Mask, root_window(), True,
+                 GrabModeAsync, GrabModeAsync);
+        other.sync();
+        EXPECT_EQ(errors.errors(), 1) << "key " << int(key); // the manager
+    }
+}
+
+TEST_F(ManagerSwitcherTest, alt_f4_of_a_window_follows_a_change_of_the_layout)
+{
+    FakeClient& client = add_client();
+    start();
+    ASSERT_EQ(manager->wm_windows.size(), 1u);
+    int lowest = 0;
+    int last = 0;
+    XDisplayKeycodes(tiny::get_display(), &lowest, &last);
+    const auto spare = static_cast<KeyCode>(last);
+    const MovedKey f4(XK_F4, spare);
+
+    f4.notify(*manager);
+
+    const XErrors errors;
+    const FakeClient other;
+    XGrabKey(other.display, spare, Mod1Mask, client.window, True, GrabModeAsync,
+             GrabModeAsync);
+    other.sync();
+    EXPECT_EQ(errors.errors(), 1); // BadAccess: the manager has it
 }
 
 TEST_F(ManagerSwitcherTest, alt_semicolon_follows_a_change_of_the_layout)
