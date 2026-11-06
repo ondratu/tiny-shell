@@ -31,6 +31,16 @@ TEST(OptionsTest, help_version_and_info)
     EXPECT_EQ(parse_options({"--info"}).action, Options::Action::Info);
 }
 
+TEST(OptionsTest, reload)
+{
+    EXPECT_EQ(parse_options({"--reload"}).action, Options::Action::Reload);
+    // help and version are asked for more strongly
+    EXPECT_EQ(parse_options({"--reload", "--help"}).action,
+              Options::Action::Help);
+    EXPECT_EQ(parse_options({"--info", "--reload"}).action,
+              Options::Action::Info);
+}
+
 TEST(OptionsTest, help_wins_over_the_other_actions)
 {
     EXPECT_EQ(parse_options({"--version", "--help", "--info"}).action,
@@ -81,8 +91,8 @@ TEST(OptionsTest, usage_lists_every_option)
     const std::string text = tiny::wm::usage_text("tiny");
 
     EXPECT_EQ(text.rfind("Usage: tiny ", 0), 0u);
-    for (const char* option :
-         {"--replace", "--info", "--version", "--help", "-V", "-h"}) {
+    for (const char* option : {"--replace", "--info", "--reload", "--version",
+                               "--help", "-V", "-h"}) {
         EXPECT_NE(text.find(option), std::string::npos) << option;
     }
 }

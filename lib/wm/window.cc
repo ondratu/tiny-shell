@@ -1913,6 +1913,17 @@ void Window::on_key_release(const XEvent& e, void*)
     }
 }
 
+void Window::grab_close_key()
+{
+    if (close_key != 0) {
+        tiny::x_ungrab_key(dsp, close_key, Mod1Mask, child);
+    }
+    close_key = XKeysymToKeycode(dsp, XK_F4);
+    if (close_key != 0) {
+        tiny::x_grab_key(dsp, close_key, Mod1Mask, child);
+    }
+}
+
 void Window::set_events()
 {
     XSelectInput(dsp, child, PropertyChangeMask | FocusChangeMask);
@@ -1920,7 +1931,7 @@ void Window::set_events()
     XGrabButton(dsp, Button1, AnyModifier, child, true,
                 ButtonPressMask | ButtonReleaseMask, GrabModeSync, GrabModeSync,
                 None, None);
-    tiny::x_grab_key(dsp, XKeysymToKeycode(dsp, XK_F4), Mod1Mask, child);
+    grab_close_key();
 
     watch_user_time_window();
 

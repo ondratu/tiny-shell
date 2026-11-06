@@ -9,7 +9,7 @@ namespace tiny::wm {
 
 //! What the command line asks tiny-shell to do
 struct Options {
-    enum class Action { Run, Help, Version, Info, Error };
+    enum class Action { Run, Help, Version, Info, Reload, Error };
 
     Action action = Action::Run;
     bool replace = false; //!< take over from the running window manager
