@@ -63,6 +63,21 @@ TEST(MonitorsTest, the_whole_screen_around_two_monitors_is_not_a_monitor)
     EXPECT_EQ(list[1].name, "B");
 }
 
+TEST(MonitorsTest, a_monitor_is_not_lost_after_the_whole_screen_is_dropped)
+{
+    Monitors list = {monitor("screen", 0, 0, 1000, 500),
+                     monitor("A", 0, 0, 400, 500),
+                     monitor("B", 400, 0, 600, 500),
+                     monitor("Y", 400, 0, 300, 300)}; // Y is a clone inside B
+
+    order_monitors(list);
+
+    // the screen is gone, B stays: it is around Y only, and one is not two
+    ASSERT_EQ(list.size(), 2u);
+    EXPECT_EQ(list[0].name, "A");
+    EXPECT_EQ(list[1].name, "B");
+}
+
 TEST(MonitorsTest, the_screen_has_at_least_one)
 {
     const Monitors list = read_monitors(tiny::get_display(), root_window());
