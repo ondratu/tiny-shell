@@ -601,6 +601,27 @@ TEST(ConfigTest, reads_the_format_of_the_clock)
                         .clock_format.empty());
 }
 
+TEST(ConfigTest, the_system_tray_is_on_unless_it_is_turned_off)
+{
+    EXPECT_TRUE(parse_config({}).system_tray);
+    EXPECT_TRUE(
+            parse_config({{"a", "[panel]\nsystem_tray = yes\n"}}).system_tray);
+    EXPECT_FALSE(
+            parse_config({{"a", "[panel]\nsystem_tray = no\n"}}).system_tray);
+}
+
+TEST(ConfigTest, a_wrong_value_of_the_system_tray_is_refused)
+{
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[panel]\nsystem_tray = maybe\n"}}, &problems);
+
+    EXPECT_TRUE(c.system_tray);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("a: [panel] system_tray must be"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, a_format_of_the_clock_with_a_control_character_is_refused)
 {
     std::vector<std::string> problems;
