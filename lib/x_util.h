@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <X11/Xft/Xft.h>
+
+#include <string>
 
 namespace tiny {
 
@@ -119,5 +122,9 @@ void x_grab_key(::Display* display, int keycode, unsigned int modifiers,
 
 void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
                   ::Window window);
+
+/// The text that fits in the width, shortened with dots when it does not.
+std::string fit_text(::Display* display, XftFont* font, const std::string& text,
+                     int max_width);
 
 } // namespace tiny
