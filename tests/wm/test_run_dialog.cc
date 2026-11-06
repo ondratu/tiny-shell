@@ -5,6 +5,8 @@
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
+#include <sys/stat.h>
 #include <thread>
 
 #include "wm/run_dialog.h"
@@ -221,4 +223,112 @@ TEST_F(RunDialogTest, failed_start_keeps_the_dialog_and_the_text)
     // the text is still there: the next Return runs it and closes the dialog
     type_key(entry_of(dialog), XK_Return);
     EXPECT_EQ(attributes_of(dialog).map_state, IsUnmapped);
+}
+
+// ---- Tab ----
+
+namespace {
+
+// A dialog that knows these programs, and is shown
+struct CompletingDialog {
+    explicit CompletingDialog(std::vector<std::string> programs)
+    {
+        dialog.list_programs = [this, programs] {
+            ++reads;
+            return programs;
+        };
+        dialog.realize(root_window());
+        dialog.popup();
+    }
+
+    void tab() { type_key(entry_of(dialog), XK_Tab); }
+    void type(const std::string& text) { type_text(entry_of(dialog), text); }
+
+    tiny::wm::RunDialog dialog;
+    int reads = 0;
+};
+
+} // namespace
+
+TEST_F(RunDialogTest, tab_completes_the_name_of_a_program)
+{
+    CompletingDialog d({"tiny-edit", "firefox"});
+    d.type("fire");
+
+    d.tab();
+
+    EXPECT_EQ(d.dialog.get_text(), "firefox ");
+    d.type("--new-window");
+    EXPECT_EQ(d.dialog.get_text(), "firefox --new-window");
+}
+
+TEST_F(RunDialogTest, more_tabs_walk_through_the_programs)
+{
+    CompletingDialog d({"gdb", "gimp"});
+    d.type("g");
+
+    d.tab();
+    EXPECT_EQ(d.dialog.get_text(), "gdb");
+    d.tab();
+    EXPECT_EQ(d.dialog.get_text(), "gimp");
+}
+
+TEST_F(RunDialogTest, the_programs_are_read_at_the_first_tab_only)
+{
+    CompletingDialog d({"gdb", "gimp"});
+    EXPECT_EQ(d.reads, 0); // showing the dialog reads nothing
+
+    d.type("g");
+    d.tab();
+    d.tab();
+
+    EXPECT_EQ(d.reads, 1);
+}
+
+TEST_F(RunDialogTest, the_programs_are_read_again_when_the_dialog_is_shown)
+{
+    CompletingDialog d({"gdb"});
+    d.type("g");
+    d.tab();
+    ASSERT_EQ(d.reads, 1);
+
+    type_key(entry_of(d.dialog), XK_Escape);
+    d.dialog.popup();
+    d.type("g");
+    d.tab();
+
+    EXPECT_EQ(d.reads, 2);
+}
+
+TEST_F(RunDialogTest, tab_with_no_such_program_leaves_the_text)
+{
+    CompletingDialog d({"gdb"});
+    d.type("zz");
+
+    d.tab();
+
+    EXPECT_EQ(d.dialog.get_text(), "zz");
+}
+
+TEST_F(RunDialogTest, tab_takes_the_programs_from_the_path_by_default)
+{
+    const auto dir = std::filesystem::temp_directory_path() /
+                     ("tiny-test-complete-" + std::to_string(getpid()));
+    std::filesystem::create_directories(dir);
+    const auto program = dir / "tiny-test-completed-program";
+    std::ofstream(program) << "#!/bin/sh\n";
+    chmod(program.c_str(), 0755);
+    const char* old = getenv("PATH");
+    const std::string saved = old ? old : "";
+    setenv("PATH", dir.c_str(), 1);
+
+    tiny::wm::RunDialog dialog;
+    dialog.realize(root_window());
+    dialog.popup();
+    type_text(entry_of(dialog), "tiny-test-comp");
+    type_key(entry_of(dialog), XK_Tab);
+
+    setenv("PATH", saved.c_str(), 1);
+    std::filesystem::remove_all(dir);
+    EXPECT_EQ(dialog.get_text(), "tiny-test-completed-program ");
 }

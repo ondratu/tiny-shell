@@ -1,4 +1,5 @@
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 
 #include "spawn.h"
@@ -48,6 +49,8 @@ RunDialog::RunDialog():
     entry.on_cancel.connect([this](tiny::Object* o, const XEvent& e, void* d) {
         popover(o, e, d);
     });
+    entry.on_tab.connect(
+            [this](tiny::Object*, const XEvent&, void*) { complete(); });
 }
 
 RunDialog::~RunDialog() = default;
@@ -66,6 +69,7 @@ void RunDialog::realize(::Window root, int, int)
 
 void RunDialog::popup()
 {
+    programs_known = false;
     map_all();
     XRaiseWindow(display, window);
     entry.set_focus();
@@ -75,6 +79,24 @@ void RunDialog::popover(Object*, const XEvent&, void*)
 {
     entry.clear();
     unmap();
+}
+
+void RunDialog::complete()
+{
+    if (!programs_known) {
+        if (list_programs) {
+            completer.set_commands(list_programs());
+        } else {
+            const char* path = getenv("PATH");
+            completer.set_commands(list_commands(path ? path : ""));
+        }
+        programs_known = true;
+    }
+    const std::string text = entry.get_text();
+    const std::string completed = completer.next(text);
+    if (completed != text) {
+        entry.set_text(completed);
+    }
 }
 
 void RunDialog::run(Object* o, const XEvent& e, void* data)

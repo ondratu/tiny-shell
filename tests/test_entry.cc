@@ -10,6 +10,7 @@ class EntryTest : public ::testing::Test {
     Recorder activated;
     Recorder cancelled;
     Recorder keyed;
+    Recorder tabbed;
 
     void SetUp() override
     {
@@ -17,6 +18,7 @@ class EntryTest : public ::testing::Test {
         entry.on_activate.connect(activated.slot());
         entry.on_cancel.connect(cancelled.slot());
         entry.on_key.connect(keyed.slot());
+        entry.on_tab.connect(tabbed.slot());
         entry.realize(root_window(), 0, 0);
         entry.set_events();
     }
@@ -238,6 +240,18 @@ TEST_F(EntryTest, keys_without_text_are_ignored)
     EXPECT_EQ(entry.get_text(), "");
     EXPECT_EQ(changed.calls, 0);
     EXPECT_EQ(activated.calls, 0);
+}
+
+TEST_F(EntryTest, tab_is_told_to_the_owner_and_does_not_change_the_text)
+{
+    focus();
+    type_text(entry, "ab");
+
+    type_key(entry, XK_Tab);
+
+    EXPECT_EQ(tabbed.calls, 1);
+    EXPECT_EQ(entry.get_text(), "ab");
+    EXPECT_EQ(keyed.calls, 0);
 }
 
 TEST_F(EntryTest, return_signals_activate_and_keeps_the_text)
