@@ -257,7 +257,7 @@ layers:
 	    lib/image/*.cc || { echo "layers: the widgets include the shell" >&2; \
 	    exit 1; }
 
-check: layers $(BUILD)/.gtest_check $(TESTS)
+check: layers $(BUILD)/.gtest_check $(TESTS) $(TARGET)
 	@rc=0; for t in $(TESTS); do \
 	    echo "running $$t"; $(XVFB_RUN) $$t || rc=1; done; exit $$rc
 

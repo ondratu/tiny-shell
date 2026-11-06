@@ -86,6 +86,10 @@ class Style {
 
     void init();
 
+    //! Close the font; done by the destructor, but not when the display is
+    //! closed by then
+    void release();
+
     //! Set all the colors for the variant; the metrics and the font stay, so
     //! a style can change its look while widgets use it
     virtual void colorize(Variant variant);
@@ -152,6 +156,7 @@ class Style {
     std::string font_style; // e.g. ":bold"
     double font_size = 12;
     XftFont* font = nullptr;
+    unsigned font_serial = 0; //!< the display that opened the font
 
   private:
     bool base_set = false;

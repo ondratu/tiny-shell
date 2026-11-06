@@ -109,10 +109,17 @@ const char* variant_name(Variant variant)
 
 Style::~Style()
 {
-    if (font) {
+    release();
+}
+
+void Style::release()
+{
+    // The styles are globals: at the exit the display can be closed already,
+    // and closing a font of a closed display crashes
+    if (font != nullptr && Display::live_serial() == font_serial) {
         XftFontClose(get_display(), font);
-        font = nullptr;
     }
+    font = nullptr;
 }
 
 void Style::colorize(Variant variant)
@@ -165,10 +172,13 @@ void Style::init()
 {
     const int screen = 0; // XXX: this is zero for now
     const std::string name = xft_name(font_family, font_size, font_style);
-    font = XftFontOpenName(get_display(), screen, name.c_str());
-    if (font == nullptr) {
+    XftFont* opened = XftFontOpenName(get_display(), screen, name.c_str());
+    if (opened == nullptr) {
         throw std::runtime_error("Failed to load font " + name);
     }
+    release(); // init() again (another size) must not leak the old font
+    font = opened;
+    font_serial = Display::live_serial();
 }
 
 uint32_t Style::get_bg(uint8_t state) const {GET_STATE_UINT32_COLOR(state, bg)}

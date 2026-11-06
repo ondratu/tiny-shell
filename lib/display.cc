@@ -8,6 +8,13 @@ namespace tiny {
 
 std::shared_ptr<Display> display(nullptr);
 
+namespace {
+
+unsigned last_serial = 0;
+unsigned open_serial = 0; //!< of the display that is open now
+
+} // namespace
+
 Display::Display(::Display* display_arg):
     WM_TAKE_FOCUS(XInternAtom(display_arg, "WM_TAKE_FOCUS", 0)),
     WM_DELETE_WINDOW(XInternAtom(display_arg, "WM_DELETE_WINDOW", 0)),
@@ -119,12 +126,23 @@ Display::Display(::Display* display_arg):
     _NET_CURRENT_DESKTOP(XInternAtom(display_arg, "_NET_CURRENT_DESKTOP", 0)),
     _NET_NUMBER_OF_DESKTOPS(
             XInternAtom(display_arg, "_NET_NUMBER_OF_DESKTOPS", 0)),
-    display(display_arg)
-{}
+    display(display_arg),
+    serial(++last_serial)
+{
+    open_serial = serial;
+}
 
 Display::~Display()
 {
+    if (open_serial == serial) { // a newer display may be open already
+        open_serial = 0;
+    }
     XCloseDisplay(display);
+}
+
+unsigned Display::live_serial()
+{
+    return open_serial;
 }
 
 void Display::init(const char* display_name)

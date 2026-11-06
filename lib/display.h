@@ -12,6 +12,13 @@ class Display {
 
     static void init(const char* display = nullptr);
 
+    //! The number of the open display that `get_display()` returns, 0 when
+    //! there is none (it was closed, e.g. by the destructors of the globals).
+    //! Something that holds a resource of the display (a font) compares it
+    //! with the number it saw, and does not free the resource of a display
+    //! that is gone.
+    static unsigned live_serial();
+
     operator ::Display*() const { return display; }
 
     static const constexpr long _NET_WM_STATE_REMOVE = 0;
@@ -114,6 +121,7 @@ class Display {
 
   private:
     ::Display* display;
+    unsigned serial; //!< see `live_serial()`
 };
 
 Display& get_display();
