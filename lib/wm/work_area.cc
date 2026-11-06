@@ -48,23 +48,35 @@ Struts read_struts(::Window window)
 tiny::Rect compute_work_area(int screen_width, int screen_height,
                              const std::vector<Struts>& docks)
 {
+    return compute_monitor_area({0, 0, screen_width, screen_height},
+                                screen_width, screen_height, docks);
+}
+
+tiny::Rect compute_monitor_area(const tiny::Rect& monitor, int screen_width,
+                                int screen_height,
+                                const std::vector<Struts>& docks)
+{
     int left = 0;
     int right = 0;
     int top = 0;
     int bottom = 0;
     for (const Struts& s : docks) {
-        left = std::max(left, s.left);
-        right = std::max(right, s.right);
-        top = std::max(top, s.top);
-        bottom = std::max(bottom, s.bottom);
+        // the part of the strip along an edge of the screen that is on the
+        // monitor
+        left = std::max(left, s.left - monitor.x);
+        top = std::max(top, s.top - monitor.y);
+        right = std::max(right,
+                         monitor.x + monitor.width - (screen_width - s.right));
+        bottom = std::max(bottom, monitor.y + monitor.height -
+                                          (screen_height - s.bottom));
     }
-    // the docks cannot take the whole screen
-    top = std::min(top, std::max(screen_height - 1, 0));
-    bottom = std::min(bottom, std::max(screen_height - top - 1, 0));
-    left = std::min(left, std::max(screen_width - 1, 0));
-    right = std::min(right, std::max(screen_width - left - 1, 0));
-    return {left, top, screen_width - left - right,
-            screen_height - top - bottom};
+    // the docks cannot take the whole monitor
+    top = std::min(top, std::max(monitor.height - 1, 0));
+    bottom = std::min(bottom, std::max(monitor.height - top - 1, 0));
+    left = std::min(left, std::max(monitor.width - 1, 0));
+    right = std::min(right, std::max(monitor.width - left - 1, 0));
+    return {monitor.x + left, monitor.y + top, monitor.width - left - right,
+            monitor.height - top - bottom};
 }
 
 tiny::Rect inner_area(const tiny::Rect& area, int border)
