@@ -2,6 +2,10 @@
 
 #include "wm/monitors.h"
 
+#ifdef TINY_RANDR
+#include <X11/extensions/Xrandr.h>
+#endif
+
 using namespace tiny::wm;
 
 namespace {
@@ -236,3 +240,40 @@ TEST(MonitorsTest, the_events_of_randr_are_recognized_only_with_it)
     EXPECT_EQ(base.has_value(), has_randr());
     EXPECT_FALSE(is_monitor_event(make_event(Expose), base.value_or(100)));
 }
+
+#ifdef TINY_RANDR
+TEST(MonitorsTest, the_monitors_of_the_server_are_read)
+{
+    ::Display* display = tiny::get_display();
+    const ::Window root = root_window();
+    XWindowAttributes screen;
+    XGetWindowAttributes(display, root, &screen);
+    const int half = screen.width / 2;
+    // the server keeps a monitor of its own that covers the screen
+    const char* names[] = {"TinyTestA", "TinyTestB"};
+    for (int i = 0; i < 2; ++i) {
+        XRRMonitorInfo info = {};
+        info.name = XInternAtom(display, names[i], False);
+        info.x = i * half;
+        info.width = half;
+        info.height = screen.height;
+        info.mwidth = 100;
+        info.mheight = 100;
+        XRRSetMonitor(display, root, &info);
+    }
+    XSync(display, False);
+
+    const Monitors list = read_monitors(display, root);
+
+    for (const char* name : names) {
+        XRRDeleteMonitor(display, root, XInternAtom(display, name, False));
+    }
+    XSync(display, False);
+    ASSERT_EQ(list.size(), 2u);
+    EXPECT_EQ(list[0].name, "TinyTestA");
+    EXPECT_EQ(list[0].area.x, 0);
+    EXPECT_EQ(list[0].area.width, half);
+    EXPECT_EQ(list[1].name, "TinyTestB");
+    EXPECT_EQ(list[1].area.x, half);
+}
+#endif
