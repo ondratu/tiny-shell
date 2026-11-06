@@ -63,8 +63,7 @@ class SettingsForm {
         Dock,             //!< a choice: auto-hide, on or off
         PrimaryMonitor,   //!< auto (empty), a number or the name of an output
         SecondaryMonitor, //!< the same
-        MonitorPlacement, //!< a choice: keep, right, left, above or below
-        MonitorNumbers    //!< a choice: off or always shown
+        MonitorPlacement  //!< a choice: keep, right, left, above or below
     };
 
     //! What has the keyboard in the list of fonts
@@ -112,11 +111,10 @@ class SettingsForm {
         //! of the dock ("" is auto-hide, then "on" and "off")
         std::string clock_format{};
         std::string dock{};
-        //! The monitors of `[monitors]`: "" is auto, keep and no
+        //! The monitors of `[monitors]`: "" is auto and keep
         std::string primary_monitor{};
         std::string secondary_monitor{};
         std::string monitor_placement{};
-        std::string monitor_numbers{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -357,7 +355,6 @@ class SettingsForm {
         PrimaryMonitorField,
         SecondaryMonitorField,
         MonitorPlacementField,
-        MonitorNumbersField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -398,7 +395,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 16> fields_;
+    std::array<TextField, 15> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

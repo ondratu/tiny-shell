@@ -47,7 +47,6 @@ namespace tiny::wm {
  * primary = auto
  * secondary = 2
  * placement = right
- * numbers = no
  *
  * [dock]
  * mode = autohide
@@ -89,8 +88,6 @@ struct Config {
     //! [monitors] placement: where the secondary monitor is, seen from the
     //! primary one; `Keep` leaves the layout of the system alone
     Placement monitor_placement = Placement::Keep;
-    //! [monitors] numbers: show the number of every monitor in its corner
-    bool monitor_numbers = false;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
     //! [dock] favorites: ids of desktop files, `;` between them
@@ -148,9 +145,6 @@ XftChoices placement_choices();
 
 //! Whether the text is one of the values of `placement_choices()`
 bool valid_placement_choice(const std::string& text);
-
-//! The values of `[monitors] numbers`: "" (no) and "yes"
-XftChoices numbers_choices();
 
 /**
  * @short Whether the text is a format of the clock that can be saved.

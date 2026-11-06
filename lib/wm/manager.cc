@@ -297,7 +297,6 @@ void Manager::register_actions()
     actions.add("run-dialog", [this] { wm_run.popup(); });
     actions.add("next-window", [this] { activate_next_window(); });
     actions.add("prev-window", [this] { activate_prev_window(); });
-    actions.add("identify-monitors", [this] { show_monitor_numbers(); });
     actions.add("theme-dark", [this] { set_variant(Variant::Dark); });
     actions.add("theme-light", [this] { set_variant(Variant::Light); });
     actions.add("theme-toggle", [this] {
@@ -623,7 +622,7 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
                 monitor_numbers_owner = static_cast<::Window>(e.data.l[1]);
                 XSelectInput(display, monitor_numbers_owner,
                              StructureNotifyMask);
-                show_monitor_numbers(true);
+                show_monitor_numbers();
                 break;
             }
             case 2:
@@ -633,9 +632,7 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
                 break;
             default:
                 monitor_numbers_owner = None;
-                if (!monitor_numbers_configured) {
-                    hide_monitor_numbers();
-                }
+                hide_monitor_numbers();
                 break;
         }
         return true;
@@ -1640,8 +1637,7 @@ void Manager::on_monitors_changed(const XEvent& e)
 }
 
 void Manager::set_monitors(const std::string& primary,
-                           const std::string& secondary, Placement where,
-                           bool numbers)
+                           const std::string& secondary, Placement where)
 {
     primary_spec = primary;
     secondary_spec = secondary;
@@ -1650,34 +1646,15 @@ void Manager::set_monitors(const std::string& primary,
     placed_primary.clear();
     placed_secondary.clear();
     update_monitors(true);
-    monitor_numbers_configured = numbers;
-    if (numbers) {
-        show_monitor_numbers(true);
-    } else if (monitor_numbers_always && monitor_numbers_owner == None) {
-        hide_monitor_numbers();
-    }
 }
 
-void Manager::show_monitor_numbers(bool always)
+void Manager::show_monitor_numbers()
 {
-    using namespace std::chrono_literals;
-    timers.cancel(monitor_numbers_timer);
-    monitor_numbers_timer = 0;
-    monitor_numbers_always = always;
     monitor_labels.show(root, monitors, choice.primary, work_areas);
-    if (!always) {
-        monitor_numbers_timer = timers.after(4s, [this] {
-            monitor_numbers_timer = 0;
-            monitor_labels.hide();
-        });
-    }
 }
 
 void Manager::hide_monitor_numbers()
 {
-    timers.cancel(monitor_numbers_timer);
-    monitor_numbers_timer = 0;
-    monitor_numbers_always = false;
     monitor_labels.hide();
 }
 
@@ -2323,9 +2300,7 @@ void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
 {
     if (e.window == monitor_numbers_owner) { // the settings were closed
         monitor_numbers_owner = None;
-        if (!monitor_numbers_configured) {
-            hide_monitor_numbers();
-        }
+        hide_monitor_numbers();
     }
     untrack_dock(e.window);
     wm_desktops.erase(e.window);

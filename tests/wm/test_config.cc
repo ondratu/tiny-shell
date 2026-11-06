@@ -649,7 +649,6 @@ TEST(ConfigTest, the_monitors_are_chosen_by_the_shell_unless_they_are_set)
     EXPECT_EQ(c.monitor_primary, "auto");
     EXPECT_EQ(c.monitor_secondary, "auto");
     EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Keep);
-    EXPECT_FALSE(c.monitor_numbers);
 }
 
 TEST(ConfigTest, the_monitors_are_read)
@@ -662,7 +661,6 @@ TEST(ConfigTest, the_monitors_are_read)
     EXPECT_EQ(c.monitor_primary, "2");
     EXPECT_EQ(c.monitor_secondary, "HDMI-1");
     EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Over);
-    EXPECT_TRUE(c.monitor_numbers);
 }
 
 TEST(ConfigTest, an_empty_monitor_is_auto)
@@ -675,20 +673,16 @@ TEST(ConfigTest, an_empty_monitor_is_auto)
 TEST(ConfigTest, wrong_values_of_the_monitors_are_refused)
 {
     std::vector<std::string> problems;
-    const Config c =
-            parse_config({{"a", "[monitors]\nprimary = two monitors\n"
-                                "placement = diagonal\nnumbers = 1\n"}},
-                         &problems);
+    const Config c = parse_config({{"a", "[monitors]\nprimary = two monitors\n"
+                                         "placement = diagonal\n"}},
+                                  &problems);
 
     EXPECT_EQ(c.monitor_primary, "auto");
     EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Keep);
-    EXPECT_FALSE(c.monitor_numbers);
-    ASSERT_EQ(problems.size(), 3u);
+    ASSERT_EQ(problems.size(), 2u);
     EXPECT_NE(problems[0].find("[monitors] primary must be"),
               std::string::npos);
     EXPECT_NE(problems[1].find("[monitors] placement must be"),
-              std::string::npos);
-    EXPECT_NE(problems[2].find("[monitors] numbers must be"),
               std::string::npos);
 }
 
@@ -851,5 +845,4 @@ TEST(ConfigTest, the_choices_of_the_monitors_start_with_the_default)
     EXPECT_TRUE(tiny::wm::valid_placement_choice("above"));
     EXPECT_TRUE(tiny::wm::valid_placement_choice(""));
     EXPECT_FALSE(tiny::wm::valid_placement_choice("keep")); // "" is keep
-    EXPECT_EQ(std::string(tiny::wm::numbers_choices()[1].value), "yes");
 }

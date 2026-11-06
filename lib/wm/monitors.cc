@@ -10,6 +10,9 @@
 #ifdef TINY_RANDR
 #include <X11/extensions/Xrandr.h>
 #endif
+#ifdef TINY_XINERAMA
+#include <X11/extensions/Xinerama.h>
+#endif
 
 namespace tiny::wm {
 
@@ -162,11 +165,48 @@ Monitors randr_monitors(::Display* display, ::Window root)
     return monitors;
 }
 
+//! The screens that Xinerama reports (no names); none without it
+Monitors xinerama_monitors(::Display* display)
+{
+    Monitors monitors;
+#ifdef TINY_XINERAMA
+    int event_base = 0;
+    int error_base = 0;
+    if (XineramaQueryExtension(display, &event_base, &error_base) &&
+        XineramaIsActive(display)) {
+        int count = 0;
+        XineramaScreenInfo* info = XineramaQueryScreens(display, &count);
+        for (int i = 0; info != nullptr && i < count; ++i) {
+            if (info[i].width > 0 && info[i].height > 0) {
+                monitors.push_back({"",
+                                    {info[i].x_org, info[i].y_org,
+                                     info[i].width, info[i].height},
+                                    false});
+            }
+        }
+        if (info != nullptr) {
+            XFree(info);
+        }
+    }
+    order_monitors(monitors);
+#else
+    (void)display;
+#endif
+    return monitors;
+}
+
 } // namespace
 
 Monitors read_monitors(::Display* display, ::Window root)
 {
     Monitors monitors = randr_monitors(display, root);
+    if (monitors.size() < 2) {
+        // a nested server (Xephyr +xinerama) shows its screens only here
+        Monitors screens = xinerama_monitors(display);
+        if (screens.size() > 1) {
+            monitors = std::move(screens);
+        }
+    }
     if (monitors.empty()) {
         XWindowAttributes attrs = {};
         XGetWindowAttributes(display, root, &attrs);

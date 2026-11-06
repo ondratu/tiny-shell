@@ -119,8 +119,7 @@ class SettingsApp : public tiny::XftWindow {
                 SettingsForm::monitor_value(monitors, config.monitor_secondary),
                 config.monitor_placement == tiny::wm::Placement::Keep
                         ? ""
-                        : tiny::wm::placement_name(config.monitor_placement),
-                config.monitor_numbers ? "yes" : ""},
+                        : tiny::wm::placement_name(config.monitor_placement)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -344,10 +343,6 @@ class SettingsApp : public tiny::XftWindow {
                                    v.monitor_placement.empty()
                                            ? "keep"
                                            : v.monitor_placement});
-            }
-            if (v.monitor_numbers != initial.monitor_numbers) {
-                changed.push_back({"monitors", "numbers",
-                                   v.monitor_numbers.empty() ? "no" : "yes"});
             }
             if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
                 publish_xft(v);
@@ -607,8 +602,7 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Dock, "Dock"},
                     {SettingsForm::Field::PrimaryMonitor, "Primary"},
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
-                    {SettingsForm::Field::MonitorPlacement, "Position"},
-                    {SettingsForm::Field::MonitorNumbers, "Numbers"}};
+                    {SettingsForm::Field::MonitorPlacement, "Position"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

@@ -166,12 +166,6 @@ bool valid_placement_choice(const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
-XftChoices numbers_choices()
-{
-    static constexpr XftChoice numbers[] = {{"", "Off"}, {"yes", "Always"}};
-    return {std::begin(numbers), std::end(numbers)};
-}
-
 bool valid_clock_format(const std::string& text)
 {
     return std::none_of(text.begin(), text.end(), [](char c) {
@@ -405,13 +399,6 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         } else {
             problem("[monitors] placement must be keep, right, left, above or "
                     "below");
-        }
-    }
-    if (const auto value = ini.get("monitors", "numbers")) {
-        if (*value == "yes" || *value == "no") {
-            config.monitor_numbers = *value == "yes";
-        } else {
-            problem("[monitors] numbers must be yes or no");
         }
     }
     if (const auto value = ini.get("dock", "mode")) {

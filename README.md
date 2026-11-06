@@ -168,13 +168,14 @@ programs is done, only small details of it are left):
 ## Building
 
 Requirements: a C++17 compiler, GNU make, `pkg-config` and the development
-files of `x11`, `xft`, `xrender` and `xext`, and `xrandr` for several monitors
-(it is used when it is installed; `make RANDR=0` builds without it and the
-whole screen is one monitor).
+files of `x11`, `xft`, `xrender` and `xext`, and `xrandr` and `xinerama` for
+several monitors (they are used when they are installed; `make RANDR=0
+XINERAMA=0` builds without them and the whole screen is one monitor).
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libfontconfig-dev
+    libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev \
+    libxinerama-dev libfontconfig-dev
 
 make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
@@ -317,8 +318,6 @@ secondary = auto
 # Where the secondary monitor is, seen from the primary one: keep (as the
 # system has it), right, left, above or below. It runs xrandr.
 placement = keep
-# Show the number of every monitor in its corner while you set this up
-numbers = no
 
 [dock]
 # When the dock is shown: autohide (the default: it is hidden while the active
@@ -413,8 +412,7 @@ sections and the fields of the chosen section:
 - **Applications:** the terminal.
 - **Screens:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
-  one is (Keep, Right, Left, Above or Below the primary one) and whether the
-  numbers of the monitors stay shown (see Multiple monitors). While this
+  one is (Keep, Right, Left, Above or Below the primary one). While this
   section is shown, the number of every monitor is on its screen, over all the
   windows, and Save applies the monitors at once.
 
@@ -533,7 +531,10 @@ reported on stderr.
 ### Multiple monitors
 
 The monitors are the ones of RandR (`XRRGetMonitors`, also the ones that
-`xrandr --setmonitor` makes, e.g. to split a wide monitor). They are numbered
+`xrandr --setmonitor` makes, e.g. to split a wide monitor). When RandR knows
+only one, the screens of Xinerama are used (a nested Xephyr started with
+`+xinerama` has them only there; such monitors have no names, so the position
+cannot be changed). They are numbered
 from the left to the right, and from the top to the bottom when two start at the
 same place; a monitor that shows the same picture as another (a clone) is not
 counted. Without RandR the whole screen is one monitor.
@@ -559,14 +560,11 @@ counted. Without RandR the whole screen is one monitor.
   placement is not as asked, and not twice in a row. `secondary` must be the
   name of an output for it to work (the monitors that `--setmonitor` made are
   not outputs).
-- **Numbers.** While the section Screens of `tiny-settings` is shown, the
-  numbers are on the screens (the settings ask the shell for it with the
-  client message `_TINY_SHELL_MONITORS`, and they go away when the settings
-  are closed). `[monitors] numbers = yes` (or the setting Numbers) shows them
-  all the time. They show the number, the name and the size of every monitor in
-  its corner, over all the windows (the primary one says so). The action
-  `identify-monitors` shows them for four seconds. Use it to see which monitor
-  is 1 and which is 2 while you set the primary and the secondary monitor.
+- **Numbers.** Only `tiny-settings` shows them: while the section Screens is
+  shown, the number, the name and the size of every monitor are in its corner,
+  over all the windows (the primary one says so), and they go away when the
+  section is left or the settings are closed (the settings ask the shell for it
+  with the client message `_TINY_SHELL_MONITORS`).
 
 Save in `tiny-settings` makes the shell read `[monitors]` again at once (the
 same message), so the primary monitor and the position are changed without a
