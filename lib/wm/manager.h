@@ -527,8 +527,12 @@ class Manager : public tiny::Object {
     std::string secondary_spec = "auto";
     Placement placement = Placement::Keep;
     std::vector<std::string> placement_asked; //!< the last xrandr we started
-    std::optional<int> randr_base;            //!< RandR events, none: no RandR
-    MonitorLabels monitor_labels;             //!< the numbers on the monitors
+    //! The outputs that the placement moves, found once: a number names
+    //! another monitor after the layout changes
+    std::string placed_primary;
+    std::string placed_secondary;
+    std::optional<int> randr_base; //!< RandR events, none: no RandR
+    MonitorLabels monitor_labels;  //!< the numbers on the monitors
     bool monitor_numbers_always = false;
     tiny::Timers::Id monitor_numbers_timer = 0;
 

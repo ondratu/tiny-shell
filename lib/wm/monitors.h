@@ -118,7 +118,4 @@ size_t monitor_of(const Monitors& monitors, const tiny::Rect& frame);
 //! The monitor that has the point, the nearest one when it is outside
 size_t monitor_at(const Monitors& monitors, int x, int y);
 
-//! Where a window of `size` is centered over the area, kept inside of it
-tiny::Rect center_in(const tiny::Rect& area, int width, int height);
-
 } // namespace tiny::wm

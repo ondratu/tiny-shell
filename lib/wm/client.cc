@@ -561,6 +561,7 @@ void Client::place_fullscreen()
                       tiny::x_uint(area.height));
     XMoveResizeWindow(display, child, 0, 0, tiny::x_uint(area.width),
                       tiny::x_uint(area.height));
+    send_configure_notify(); // the client learns where it is now
 }
 
 tiny::Rect Client::frame_geometry() const

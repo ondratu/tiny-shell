@@ -86,11 +86,23 @@ void order_monitors(Monitors& monitors)
                 kept.begin(), kept.end(), [&monitor](const Monitor& other) {
                     return inside(monitor.area, other.area);
                 });
-        if (clone == kept.end()) {
-            kept.push_back(std::move(monitor));
-        } else if (monitor.primary) {
-            clone->primary = true; // the clone of the primary one is primary
+        if (clone != kept.end()) {
+            if (monitor.primary) {
+                clone->primary =
+                        true; // the clone of the primary one is primary
+            }
+            continue;
         }
+        // a bigger monitor that comes later replaces the clones inside of it
+        for (auto it = kept.begin(); it != kept.end();) {
+            if (inside(it->area, monitor.area)) {
+                monitor.primary = monitor.primary || it->primary;
+                it = kept.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        kept.push_back(std::move(monitor));
     }
     monitors = std::move(kept);
 }
@@ -111,11 +123,15 @@ Monitors randr_monitors(::Display* display, ::Window root)
 {
     Monitors monitors;
 #ifdef TINY_RANDR
-    int major = 0;
-    int minor = 0;
-    // the monitors are in RandR 1.5; an older server answers with an error
-    if (!XRRQueryVersion(display, &major, &minor) ||
-        major * 100 + minor < 105) {
+    // the monitors are in RandR 1.5; an older server answers with an error.
+    // The version does not change while the server runs.
+    static const bool has_monitors = [display] {
+        int major = 0;
+        int minor = 0;
+        return XRRQueryVersion(display, &major, &minor) != 0 &&
+               major * 100 + minor >= 105;
+    }();
+    if (!has_monitors) {
         return monitors;
     }
     int count = 0;
@@ -165,7 +181,9 @@ std::optional<int> select_monitor_events(::Display* display, ::Window root)
     int event_base = 0;
     int error_base = 0;
     if (XRRQueryExtension(display, &event_base, &error_base)) {
-        XRRSelectInput(display, root, RRScreenChangeNotifyMask);
+        XRRSelectInput(display, root,
+                       RRScreenChangeNotifyMask | RRCrtcChangeNotifyMask |
+                               RROutputChangeNotifyMask);
         return event_base;
     }
 #else
@@ -178,7 +196,8 @@ std::optional<int> select_monitor_events(::Display* display, ::Window root)
 bool is_monitor_event(const XEvent& e, int event_base)
 {
 #ifdef TINY_RANDR
-    return e.type == event_base + RRScreenChangeNotify;
+    return e.type == event_base + RRScreenChangeNotify ||
+           e.type == event_base + RRNotify;
 #else
     (void)e;
     (void)event_base;
@@ -372,13 +391,6 @@ size_t monitor_at(const Monitors& monitors, int x, int y)
         }
     }
     return best;
-}
-
-tiny::Rect center_in(const tiny::Rect& area, int width, int height)
-{
-    return {std::max(area.x, area.x + (area.width - width) / 2),
-            std::max(area.y, area.y + (area.height - height) / 2), width,
-            height};
 }
 
 } // namespace tiny::wm
