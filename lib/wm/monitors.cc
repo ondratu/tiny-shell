@@ -59,18 +59,22 @@ bool same_text(const std::string& a, const std::string& b)
 void order_monitors(Monitors& monitors)
 {
     // a monitor around two others is the whole screen, which a server may
-    // report beside the monitors that are set up in it
-    const auto around_others = [&monitors](const Monitor& whole) {
-        return std::count_if(monitors.begin(), monitors.end(),
-                             [&whole](const Monitor& other) {
-                                 return &other != &whole &&
-                                        inside(other.area, whole.area) &&
-                                        !same_area(other.area, whole.area);
-                             }) >= 2;
-    };
-    monitors.erase(
-            std::remove_if(monitors.begin(), monitors.end(), around_others),
-            monitors.end());
+    // report beside the monitors that are set up in it; the flags are made
+    // first, the vector does not change while they are
+    std::vector<bool> whole(monitors.size(), false);
+    for (size_t i = 0; i < monitors.size(); ++i) {
+        const auto inner = std::count_if(
+                monitors.begin(), monitors.end(), [&](const Monitor& other) {
+                    return &other != &monitors[i] &&
+                           inside(other.area, monitors[i].area) &&
+                           !same_area(other.area, monitors[i].area);
+                });
+        whole[i] = inner >= 2;
+    }
+    size_t at = 0;
+    monitors.erase(std::remove_if(monitors.begin(), monitors.end(),
+                                  [&](const Monitor&) { return whole[at++]; }),
+                   monitors.end());
     std::stable_sort(monitors.begin(), monitors.end(),
                      [](const Monitor& a, const Monitor& b) {
                          return a.area.x != b.area.x ? a.area.x < b.area.x
@@ -107,6 +111,13 @@ Monitors randr_monitors(::Display* display, ::Window root)
 {
     Monitors monitors;
 #ifdef TINY_RANDR
+    int major = 0;
+    int minor = 0;
+    // the monitors are in RandR 1.5; an older server answers with an error
+    if (!XRRQueryVersion(display, &major, &minor) ||
+        major * 100 + minor < 105) {
+        return monitors;
+    }
     int count = 0;
     // also the monitors without an output (`xrandr --setmonitor`)
     XRRMonitorInfo* info = XRRGetMonitors(display, root, False, &count);
@@ -141,7 +152,7 @@ Monitors read_monitors(::Display* display, ::Window root)
 {
     Monitors monitors = randr_monitors(display, root);
     if (monitors.empty()) {
-        XWindowAttributes attrs;
+        XWindowAttributes attrs = {};
         XGetWindowAttributes(display, root, &attrs);
         monitors.push_back({"", {0, 0, attrs.width, attrs.height}, true});
     }
