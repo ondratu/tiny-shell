@@ -216,8 +216,9 @@ class Manager : public tiny::Object {
 
     bool is_alt(unsigned int keycode) const;
 
-    //! Grab (or release) Alt + ; on every key that makes a semicolon in any
-    //! group of the keyboard (the layout can have it on another key)
+    //! Grab (or release) Alt + ; on every key that makes a semicolon with no
+    //! modifier in any group of the keyboard (the layout can have it on another
+    //! key); a key that makes it only with Shift or AltGr is left alone
     void grab_semicolon(bool grab);
 
     //! The keyboard layout changed: the keys of the shortcuts are other ones
