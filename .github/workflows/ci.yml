@@ -218,7 +218,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y $DEPS clang-19
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
-        # size with -flto (520 kB of code, with XSETTINGS, the reload, the
+        # size with -flto (550 kB of code, with the monitors, XSETTINGS, the reload, the
         # completion of the run dialog and the SYNC resize, with the clipboard and the cursor of the
         # entry, the about dialog, the modes of the dock, the clock of the panel, the configuration files and
         # their writing, the rendering of text published to the X resources, the main menu, the groups and the favorites of the dock, the launcher,
@@ -228,7 +228,7 @@ jobs:
         # functions of the event handlers) with a reserve; change it on
         # purpose.
         run: |
-          max=545000
+          max=570000
           make CXX=clang++-19 AR=llvm-ar-19 \
               CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell
