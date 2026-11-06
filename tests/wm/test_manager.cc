@@ -5501,9 +5501,9 @@ TEST_F(ManagerSwitcherTest, alt_semicolon_follows_a_change_of_the_layout)
 {
     start();
     ::Display* dsp = tiny::get_display();
-    int first = 0;
+    int lowest = 0;
     int last = 0;
-    XDisplayKeycodes(dsp, &first, &last);
+    XDisplayKeycodes(dsp, &lowest, &last);
     const auto spare = static_cast<KeyCode>(last); // the layout moves ; here
     KeySym semicolon = XK_semicolon;
     XChangeKeyboardMapping(dsp, spare, 1, &semicolon, 1);
