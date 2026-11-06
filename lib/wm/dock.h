@@ -178,6 +178,10 @@ struct DockGroup {
 std::vector<DockGroup> group_dock(const std::vector<std::string>& favorites,
                                   const std::vector<std::string>& task_keys);
 
+//! The windows of one application have one icon: its desktop file or, when
+//! it is unknown, the class of the window (empty: an application of its own)
+std::string task_key(const Window* task);
+
 //! Where a dragged favorite goes: the number of the other favorites whose
 //! center (in x) is left of `x`
 size_t drop_position(const std::vector<int>& centers, int x);

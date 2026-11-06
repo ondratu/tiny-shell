@@ -26,8 +26,7 @@ namespace tiny::wm {
  * first window, up goes back. Everything wraps around.
  *
  * The window is chosen at the end (`result()`): the first window of the
- * application, or the window with the cursor. The first window of all is the
- * current one, so nothing is switched when the cursor stays on it.
+ * application, or the window with the cursor.
  */
 class SwitcherModel {
   public:
@@ -77,8 +76,9 @@ class SwitcherModel {
     //! The windows of the application with the cursor
     const std::vector<size_t>& app_windows() const;
 
-    //! The window to switch to (an index into the keys), none when the cursor
-    //! is on the window that is current already or there is no window
+    //! The window with the cursor (an index into the keys), none when there is
+    //! no window; 0 is the window used last, which the owner knows to be the
+    //! current one or not
     std::optional<size_t> result() const;
 
   private:

@@ -224,7 +224,7 @@ TEST_F(SwitcherPanelTest, a_long_text_does_not_leave_the_cell)
 
 TEST_F(SwitcherPanelTest, an_application_without_an_icon_has_the_generic_one)
 {
-    IconFiles files{"application-x-executable"};
+    const IconFiles files{"application-x-executable"};
     tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
                                   {files.dir()});
     panel.set_icons(&icons);
@@ -237,10 +237,11 @@ TEST_F(SwitcherPanelTest, an_application_without_an_icon_has_the_generic_one)
 
 TEST_F(SwitcherPanelTest, the_old_icon_of_a_window_is_copied)
 {
-    Pixmap pixmap = XCreatePixmap(tiny::get_display(), root_window(),
-                                  tiny::x_uint(tiny::wm::shell_theme.icon),
-                                  tiny::x_uint(tiny::wm::shell_theme.icon),
-                                  XDefaultDepth(tiny::get_display(), 0));
+    const Pixmap pixmap =
+            XCreatePixmap(tiny::get_display(), root_window(),
+                          tiny::x_uint(tiny::wm::shell_theme.icon),
+                          tiny::x_uint(tiny::wm::shell_theme.icon),
+                          XDefaultDepth(tiny::get_display(), 0));
     GC gc = XCreateGC(tiny::get_display(), pixmap, 0, nullptr);
     XSetForeground(tiny::get_display(), gc, 0x00FF00);
     XFillRectangle(tiny::get_display(), pixmap, gc, 0, 0,
@@ -261,14 +262,14 @@ TEST_F(SwitcherPanelTest, the_mask_of_the_old_icon_leaves_the_background)
 {
     ::Display* dsp = tiny::get_display();
     const auto size = tiny::x_uint(tiny::wm::shell_theme.icon);
-    Pixmap pixmap = XCreatePixmap(dsp, root_window(), size, size,
-                                  XDefaultDepth(dsp, 0));
+    const Pixmap pixmap = XCreatePixmap(dsp, root_window(), size, size,
+                                        XDefaultDepth(dsp, 0));
     GC gc = XCreateGC(dsp, pixmap, 0, nullptr);
     XSetForeground(dsp, gc, 0x00FF00);
     XFillRectangle(dsp, pixmap, gc, 0, 0, size, size);
     XFreeGC(dsp, gc);
     // a mask with no bit set: nothing of the icon is shown
-    Pixmap mask = XCreatePixmap(dsp, root_window(), size, size, 1);
+    const Pixmap mask = XCreatePixmap(dsp, root_window(), size, size, 1);
     GC mask_gc = XCreateGC(dsp, mask, 0, nullptr);
     XSetForeground(dsp, mask_gc, 0);
     XFillRectangle(dsp, mask, mask_gc, 0, 0, size, size);

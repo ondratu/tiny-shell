@@ -37,13 +37,13 @@ void Switcher::open(const std::vector<Window*>& windows_arg, bool by_windows,
     std::vector<std::string> keys;
     keys.reserve(list.size());
     for (const Window* window : list) {
-        keys.push_back(window->get_app_id());
+        keys.push_back(task_key(window));
     }
-    model.emplace(keys);
+    SwitcherModel& state = model.emplace(keys);
     if (by_windows) {
-        model->start_windows(backwards);
+        state.start_windows(backwards);
     } else {
-        model->start_apps(backwards);
+        state.start_apps(backwards);
     }
 
     XWindowAttributes attrs;
@@ -52,7 +52,7 @@ void Switcher::open(const std::vector<Window*>& windows_arg, bool by_windows,
     screen_height = attrs.height;
 
     std::vector<SwitcherCell> cells;
-    for (const DockGroup& group : model->apps()) {
+    for (const DockGroup& group : state.apps()) {
         const Window& first = *list[group.tasks.front()];
         SwitcherCell cell =
                 icon_of ? icon_of(first, shell_theme.icon) : SwitcherCell();
@@ -65,17 +65,17 @@ void Switcher::open(const std::vector<Window*>& windows_arg, bool by_windows,
     apps.set_max_width(room);
     windows.set_max_width(room);
     windows_of.reset();
-    apps.set_cells(std::move(cells), model->get_app());
-    refresh();
+    apps.set_cells(std::move(cells), state.get_app());
+    refresh(state);
     apps.map();
     XRaiseWindow(tiny::get_display(), apps.get_window());
 }
 
-void Switcher::show_windows()
+void Switcher::show_windows(const SwitcherModel& state)
 {
-    if (windows_of != model->get_app()) {
+    if (windows_of != state.get_app()) {
         std::vector<SwitcherCell> cells;
-        for (const size_t task : model->app_windows()) {
+        for (const size_t task : state.app_windows()) {
             const Window& window = *list[task];
             SwitcherCell cell =
                     icon_of ? icon_of(window, shell_theme.switcher_window_icon)
@@ -83,18 +83,18 @@ void Switcher::show_windows()
             cell.text = menu_title(window.get_wm_name(), 200);
             cells.push_back(std::move(cell));
         }
-        windows_of = model->get_app();
-        windows.set_cells(std::move(cells), model->get_window());
+        windows_of = state.get_app();
+        windows.set_cells(std::move(cells), state.get_window());
     } else {
-        windows.select(model->get_window());
+        windows.select(state.get_window());
     }
 }
 
-void Switcher::refresh()
+void Switcher::refresh(const SwitcherModel& state)
 {
-    apps.select(model->get_app());
-    if (model->get_level() == SwitcherModel::Level::Windows) {
-        show_windows();
+    apps.select(state.get_app());
+    if (state.get_level() == SwitcherModel::Level::Windows) {
+        show_windows(state);
         place();
         windows.map();
         XRaiseWindow(tiny::get_display(), windows.get_window());
@@ -121,7 +121,7 @@ void Switcher::next_app(bool backwards)
         return;
     }
     model->next_app(backwards);
-    refresh();
+    refresh(*model);
 }
 
 void Switcher::arrow(Arrow direction)
@@ -143,7 +143,7 @@ void Switcher::arrow(Arrow direction)
             model->down();
             break;
     }
-    refresh();
+    refresh(*model);
 }
 
 void Switcher::next_window(bool backwards)
@@ -152,7 +152,7 @@ void Switcher::next_window(bool backwards)
         return;
     }
     model->next_window(backwards);
-    refresh();
+    refresh(*model);
 }
 
 Window* Switcher::close()

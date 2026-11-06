@@ -550,7 +550,7 @@ TEST_F(IconGridTest, set_geometry_is_at_least_one_cell)
 
 TEST(FitTextTest, a_text_that_fits_stays_as_it_is)
 {
-    WidgetFont font;
+    const WidgetFont font;
     ::Display* dsp = tiny::get_display();
     XftFont* xft = tiny::theme.widget.get_font();
 
@@ -559,7 +559,7 @@ TEST(FitTextTest, a_text_that_fits_stays_as_it_is)
 
 TEST(FitTextTest, a_longer_text_is_cut_and_ends_with_dots)
 {
-    WidgetFont font;
+    const WidgetFont font;
     ::Display* dsp = tiny::get_display();
     XftFont* xft = tiny::theme.widget.get_font();
 
@@ -572,7 +572,7 @@ TEST(FitTextTest, a_longer_text_is_cut_and_ends_with_dots)
 
 TEST(FitTextTest, a_utf8_character_is_never_cut_in_half)
 {
-    WidgetFont font;
+    const WidgetFont font;
     ::Display* dsp = tiny::get_display();
     XftFont* xft = tiny::theme.widget.get_font();
 
@@ -586,7 +586,7 @@ TEST(FitTextTest, a_utf8_character_is_never_cut_in_half)
 
 TEST(FitTextTest, nothing_fits_in_no_room)
 {
-    WidgetFont font;
+    const WidgetFont font;
     ::Display* dsp = tiny::get_display();
     XftFont* xft = tiny::theme.widget.get_font();
 

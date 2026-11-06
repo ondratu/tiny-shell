@@ -63,7 +63,7 @@ TEST(SwitcherModelTest, with_one_application_alt_tab_switches_nothing)
     model.start_apps(false);
 
     EXPECT_EQ(model.get_app(), 0u);
-    EXPECT_EQ(model.result(), std::nullopt);
+    EXPECT_EQ(model.result(), 0u);
 }
 
 TEST(SwitcherModelTest, tab_goes_through_the_applications_and_wraps_around)
@@ -75,7 +75,7 @@ TEST(SwitcherModelTest, tab_goes_through_the_applications_and_wraps_around)
     EXPECT_EQ(model.get_app(), 2u);
     model.next_app(false);
     EXPECT_EQ(model.get_app(), 0u);
-    EXPECT_EQ(model.result(), std::nullopt); // back on the current one
+    EXPECT_EQ(model.result(), 0u); // back on the current one
     model.next_app(true);
     EXPECT_EQ(model.get_app(), 2u);
 }
@@ -193,7 +193,7 @@ TEST(SwitcherModelTest, semicolon_with_one_window_stays_on_the_current_one)
     model.start_windows(false);
 
     EXPECT_EQ(model.get_window(), 0u);
-    EXPECT_EQ(model.result(), std::nullopt);
+    EXPECT_EQ(model.result(), 0u);
 }
 
 TEST(SwitcherModelTest, semicolon_walks_the_windows_of_the_application)

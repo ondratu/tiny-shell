@@ -34,7 +34,7 @@ void SwitcherPanel::set_events(long mask)
 
 int SwitcherPanel::get_cell_height() const
 {
-    XftFont* font = get_style().get_font();
+    const XftFont* font = tiny::theme.list.get_font(); // no virtual call here
     const int text = font ? font->ascent + font->descent : shell_theme.panel;
     const int gap = shell_theme.dock_border;
     // the icon, the dots, the text and a margin around them

@@ -62,7 +62,7 @@ class SwitcherPanel : public tiny::Widget {
 
     //! Replace the cells; the cursor is on `selected` (none: nowhere)
     void set_cells(std::vector<SwitcherCell> list,
-                   std::optional<size_t> selected);
+                   std::optional<size_t> cursor);
 
     //! Move the cursor
     void select(std::optional<size_t> cell);

@@ -52,7 +52,8 @@ class Switcher {
      * Alt + ; on the window used before in the current application. With
      * `backwards` it starts from the end.
      */
-    void open(const std::vector<Window*>& list, bool windows, bool backwards);
+    void open(const std::vector<Window*>& windows_arg, bool by_windows,
+              bool backwards);
 
     //! Tab and Shift + Tab: the next application
     void next_app(bool backwards);
@@ -64,8 +65,7 @@ class Switcher {
     //! The key for the windows (;): the next window of the application
     void next_window(bool backwards);
 
-    //! Hide the switcher; the window to switch to, null when the cursor is
-    //! on the current one
+    //! Hide the switcher; the window with the cursor (null when it is closed)
     Window* close();
 
     //! The window is gone: the switcher is closed (nothing is switched)
@@ -78,12 +78,12 @@ class Switcher {
 
   private:
     //! Show the cursor of the model in the panels
-    void refresh();
+    void refresh(const SwitcherModel& state);
 
     //! Put the panels in the middle of the screen
     void place();
 
-    void show_windows();
+    void show_windows(const SwitcherModel& state);
 
     std::optional<SwitcherModel> model;
     std::vector<Window*> list; //!< the windows, as the model counts them
