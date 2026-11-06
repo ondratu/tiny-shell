@@ -18,6 +18,9 @@
 #include <vector>
 
 #include "wm/dock.h"
+#ifdef TINY_RANDR
+#include <X11/extensions/Xrandr.h>
+#endif
 #include "wm/panel.h"
 #include "wm/process.h"
 #include "wm/reload.h"
@@ -6371,3 +6374,46 @@ TEST_F(TwoMonitorsTest, the_settings_turn_the_numbers_on_and_off)
     manager->set_monitors("auto", "auto", tiny::wm::Placement::Keep, false);
     EXPECT_FALSE(manager->get_monitor_labels().is_shown());
 }
+
+#ifdef TINY_RANDR
+TEST_F(ManagerTest, the_monitors_of_the_server_are_used_when_they_change)
+{
+    start();
+    ::Display* display = tiny::get_display();
+    const XWindowAttributes screen = attributes_of(root_window());
+    const int half = screen.width / 2;
+    const char* names[] = {"TinyTestA", "TinyTestB"};
+    for (int i = 0; i < 2; ++i) {
+        XRRMonitorInfo info = {};
+        info.name = XInternAtom(display, names[i], False);
+        info.x = i * half;
+        info.width = half;
+        info.height = screen.height;
+        info.mwidth = 100;
+        info.mheight = 100;
+        XRRSetMonitor(display, root_window(), &info);
+    }
+    XSync(display, False);
+
+    manager->set_monitors("TinyTestB", "auto", tiny::wm::Placement::Keep);
+
+    EXPECT_EQ(manager->get_monitors().size(), 2u);
+    EXPECT_EQ(manager->get_primary_monitor(), 1u);
+    EXPECT_EQ(attributes_of(manager->wm_panel).x, half);
+    EXPECT_EQ(attributes_of(manager->wm_panel).width, half);
+
+    // the same monitors: nothing is arranged again
+    manager->work_areas.clear();
+    manager->update_monitors();
+    EXPECT_TRUE(manager->work_areas.empty());
+
+    for (const char* name : names) {
+        XRRDeleteMonitor(display, root_window(),
+                         XInternAtom(display, name, False));
+    }
+    XSync(display, False);
+    manager->update_monitors();
+    EXPECT_EQ(manager->get_monitors().size(), 1u);
+    EXPECT_EQ(attributes_of(manager->wm_panel).x, 0);
+}
+#endif
