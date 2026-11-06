@@ -22,6 +22,7 @@ namespace tiny::wm {
  * font_size = 12
  * font_style = Bold
  * style = dark
+ * xsettings = yes
  *
  * [xft]
  * antialias = yes
@@ -60,6 +61,8 @@ struct Config {
     std::string xft_hinting;       //!< [xft] hinting, "" is not set
     std::string xft_rgba;          //!< [xft] rgba, "" is not set
     Variant style = Variant::Dark; //!< [theme] style, dark or light
+    //! [theme] xsettings: tell GTK and Qt the look (yes or no)
+    bool xsettings = true;
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
     std::string wallpaper_file;
     //! [wallpaper] file is in a file (empty or not). When it is not, the

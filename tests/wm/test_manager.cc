@@ -5748,6 +5748,132 @@ void request_tray_dock(FakeClient& program, ::Window tray, ::Window icon)
 
 } // namespace
 
+namespace {
+
+//! The theme name that a program reads from the manager of settings
+std::string theme_name_of(const tiny::wm::XSettings& owner)
+{
+    ::Display* display = tiny::get_display();
+    const Atom property = XInternAtom(display, "_XSETTINGS_SETTINGS", False);
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0;
+    unsigned long left = 0;
+    unsigned char* data = nullptr;
+    std::string text;
+    if (XGetWindowProperty(display, owner.get_window(), property, 0, 1 << 16,
+                           False, property, &type, &format, &count, &left,
+                           &data) == Success &&
+        data != nullptr) {
+        const std::string all(reinterpret_cast<char*>(data), count);
+        XFree(data);
+        for (const char* name : {"Adwaita-dark", "Adwaita"}) {
+            // the longer name first: "Adwaita" is in "Adwaita-dark"
+            if (all.find(name) != std::string::npos) {
+                text = name;
+                break;
+            }
+        }
+    }
+    return text;
+}
+
+auto theme_settings()
+{
+    return [](tiny::Variant variant) {
+        return std::vector<tiny::wm::XSetting>{tiny::wm::XSetting::string(
+                "Net/ThemeName",
+                variant == tiny::Variant::Dark ? "Adwaita-dark" : "Adwaita")};
+    };
+}
+
+} // namespace
+
+TEST_F(ManagerTest, there_are_no_settings_until_they_are_asked_for)
+{
+    start();
+
+    EXPECT_EQ(manager->get_xsettings(), nullptr);
+}
+
+TEST_F(ManagerTest, the_settings_are_published_for_the_programs)
+{
+    start();
+    manager->set_variant(tiny::Variant::Dark);
+
+    manager->set_xsettings(true, theme_settings());
+
+    ASSERT_NE(manager->get_xsettings(), nullptr);
+    EXPECT_EQ(theme_name_of(*manager->get_xsettings()), "Adwaita-dark");
+}
+
+TEST_F(ManagerTest, a_change_of_the_theme_reaches_the_programs_that_run)
+{
+    start();
+    manager->set_variant(tiny::Variant::Dark);
+    manager->set_xsettings(true, theme_settings());
+    const uint32_t serial = manager->get_xsettings()->get_serial();
+
+    manager->set_variant(tiny::Variant::Light);
+
+    EXPECT_GT(manager->get_xsettings()->get_serial(), serial);
+    EXPECT_EQ(theme_name_of(*manager->get_xsettings()), "Adwaita");
+    manager->set_variant(tiny::Variant::Dark);
+}
+
+TEST_F(ManagerTest, asking_for_the_settings_again_keeps_the_owner)
+{
+    start();
+    manager->set_xsettings(true, theme_settings());
+    const ::Window owner = manager->get_xsettings()->get_window();
+
+    manager->set_xsettings(true, theme_settings());
+
+    EXPECT_EQ(manager->get_xsettings()->get_window(), owner);
+}
+
+TEST_F(ManagerTest, the_settings_can_be_turned_off)
+{
+    start();
+    manager->set_xsettings(true, theme_settings());
+    ASSERT_NE(manager->get_xsettings(), nullptr);
+
+    manager->set_xsettings(false);
+
+    EXPECT_EQ(manager->get_xsettings(), nullptr);
+    manager->set_variant(tiny::Variant::Light); // nothing to publish
+    manager->set_variant(tiny::Variant::Dark);
+}
+
+TEST_F(ManagerTest, another_manager_of_settings_is_left_alone)
+{
+    start();
+    FakeClient daemon;
+    const Atom selection = XInternAtom(daemon.display, "_XSETTINGS_S0", False);
+    XSetSelectionOwner(daemon.display, selection, daemon.window, CurrentTime);
+    daemon.sync();
+
+    manager->set_xsettings(true, theme_settings());
+
+    EXPECT_EQ(manager->get_xsettings(), nullptr);
+    EXPECT_EQ(XGetSelectionOwner(tiny::get_display(), selection),
+              daemon.window);
+}
+
+TEST_F(ManagerTest, the_settings_end_when_a_daemon_takes_the_selection)
+{
+    start();
+    manager->set_xsettings(true, theme_settings());
+    XSelectionClearEvent lost = {};
+    lost.type = SelectionClear;
+    lost.window = manager->get_xsettings()->get_window();
+    lost.selection = XInternAtom(tiny::get_display(), "_XSETTINGS_S0", False);
+
+    manager->on_selection_clear(lost);
+
+    EXPECT_EQ(manager->get_xsettings(), nullptr);
+}
+
 TEST_F(ManagerTest, there_is_no_tray_until_it_is_asked_for)
 {
     start();
