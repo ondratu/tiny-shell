@@ -547,3 +547,48 @@ TEST_F(IconGridTest, set_geometry_is_at_least_one_cell)
 
     EXPECT_EQ(grid.per_page(), 1u);
 }
+
+TEST(FitTextTest, a_text_that_fits_stays_as_it_is)
+{
+    WidgetFont font;
+    ::Display* dsp = tiny::get_display();
+    XftFont* xft = tiny::theme.widget.get_font();
+
+    EXPECT_EQ(tiny::fit_text(dsp, xft, "Files", 10000), "Files");
+}
+
+TEST(FitTextTest, a_longer_text_is_cut_and_ends_with_dots)
+{
+    WidgetFont font;
+    ::Display* dsp = tiny::get_display();
+    XftFont* xft = tiny::theme.widget.get_font();
+
+    const std::string cut = tiny::fit_text(
+            dsp, xft, "A very long title of a window, longer than a cell", 60);
+
+    EXPECT_LT(cut.size(), 20u);
+    EXPECT_EQ(cut.substr(cut.size() - 3), "...");
+}
+
+TEST(FitTextTest, a_utf8_character_is_never_cut_in_half)
+{
+    WidgetFont font;
+    ::Display* dsp = tiny::get_display();
+    XftFont* xft = tiny::theme.widget.get_font();
+
+    const std::string cut =
+            tiny::fit_text(dsp, xft, "ěščřžýáíéúůěščřžýáíéúů", 50);
+
+    ASSERT_GT(cut.size(), 3u);
+    const std::string head = cut.substr(0, cut.size() - 3);
+    EXPECT_EQ(head.size() % 2, 0u); // every letter has two bytes
+}
+
+TEST(FitTextTest, nothing_fits_in_no_room)
+{
+    WidgetFont font;
+    ::Display* dsp = tiny::get_display();
+    XftFont* xft = tiny::theme.widget.get_font();
+
+    EXPECT_EQ(tiny::fit_text(dsp, xft, "Files", 0), "...");
+}

@@ -103,4 +103,32 @@ void x_ungrab_key(::Display* display, int keycode, unsigned int modifiers,
     XUngrabKey(display, keycode, modifiers | Mod2Mask | LockMask, window);
 }
 
+std::string fit_text(::Display* display, XftFont* font, const std::string& text,
+                     int max_width)
+{
+    const auto width_of = [&](const std::string& s) {
+        XGlyphInfo extents;
+        XftTextExtentsUtf8(display, font,
+                           reinterpret_cast<const FcChar8*>(s.c_str()),
+                           static_cast<int>(s.size()), &extents);
+        return extents.xOff;
+    };
+    if (width_of(text) <= max_width) {
+        return text;
+    }
+    std::string cut = text;
+    while (!cut.empty()) {
+        // remove the whole UTF-8 character, not only its last byte
+        while ((static_cast<unsigned char>(cut.back()) & 0xC0) == 0x80 &&
+               cut.size() > 1) {
+            cut.pop_back();
+        }
+        cut.pop_back();
+        if (width_of(cut + "...") <= max_width) {
+            break;
+        }
+    }
+    return cut + "...";
+}
+
 } // namespace tiny
