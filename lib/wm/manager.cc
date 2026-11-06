@@ -1619,12 +1619,15 @@ void Manager::close_switcher(bool switch_now)
         XUngrabKeyboard(display, CurrentTime);
         switcher_grabbed = false;
     }
+    if (!switch_now || target == nullptr) {
+        return;
+    }
     // the first window is the current one, unless it is minimized or nothing
     // has the focus
     const std::vector<Window*> recent = recent_windows();
     const bool current = !recent.empty() && recent.front() == target &&
                          active != nullptr && !target->get_minimized();
-    if (switch_now && target != nullptr && !current) {
+    if (!current) {
         focus_window(target);
     }
 }
