@@ -461,6 +461,9 @@ class Manager : public tiny::Object {
     bool has_user_time = false;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients
     std::set<::Window> wm_desktops;      //!< windows of the DESKTOP type
+    //! Windows of the popup types (menus, tooltips, notifications): above
+    //! the others, never framed or focused
+    std::set<::Window> wm_popups;
     tiny::Rect work_area = {0, 0, 0, 0};
 
     std::map<::Window, Window*> wm_windows;

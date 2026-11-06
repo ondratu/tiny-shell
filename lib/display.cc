@@ -96,6 +96,18 @@ Display::Display(::Display* display_arg):
             XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_SPLASH", 0)),
     _NET_WM_WINDOW_TYPE_DIALOG(
             XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DIALOG", 0)),
+    _NET_WM_WINDOW_TYPE_NOTIFICATION(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_NOTIFICATION", 0)),
+    _NET_WM_WINDOW_TYPE_POPUP_MENU(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_POPUP_MENU", 0)),
+    _NET_WM_WINDOW_TYPE_DROPDOWN_MENU(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", 0)),
+    _NET_WM_WINDOW_TYPE_TOOLTIP(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_TOOLTIP", 0)),
+    _NET_WM_WINDOW_TYPE_COMBO(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_COMBO", 0)),
+    _NET_WM_WINDOW_TYPE_DND(
+            XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_DND", 0)),
     _NET_WM_WINDOW_TYPE_NORMAL(
             XInternAtom(display_arg, "_NET_WM_WINDOW_TYPE_NORMAL", 0)),
     _NET_WM_STATE(XInternAtom(display_arg, "_NET_WM_STATE", 0)),
