@@ -224,6 +224,33 @@ TEST_F(DockIconTest, draws_the_icon_of_the_task)
     EXPECT_EQ(img.at(0, 0), 0xFF0000u);
 }
 
+// The mask of the icon is a clip of the GC: it must not cut off the dot of a
+// window that is not a favorite and has only the pixmap of its icon
+TEST_F(DockIconTest, the_dot_is_drawn_under_an_icon_with_a_mask)
+{
+    icon.reset();
+    task.reset();
+    client.set_icon_pixmap(icon_size(), true);
+    task = std::make_unique<WmWindow>(client.window, root_window(), 0xFFFF,
+                                      screen_area());
+    icon = std::make_unique<tiny::wm::DockIcon>(task.get());
+    icon->realize(root_window(), 0, 0);
+    icon->map_all();
+    ASSERT_NE(task->get_icon_mask(), 0u);
+
+    send(*icon, Expose);
+
+    const int dot = tiny::wm::shell_theme.dock_dot;
+    const int left = (icon_size() - dot) / 2;
+    const int top = icon_size() + std::max(0, border() - dot - 1);
+    const Image img(icon->get_window(), icon->get_width(), icon->get_height());
+    const auto state = static_cast<uint8_t>(
+            task->is_focused() ? tiny::Style::State::Hover
+                               : tiny::Style::State::Normal);
+    EXPECT_EQ(img.at(left + dot / 2, top + dot / 2),
+              tiny::wm::shell_theme.dock.get_fg(state));
+}
+
 TEST_F(DockIconTest, the_icon_of_the_application_is_preferred)
 {
     icon.reset();
