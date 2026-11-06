@@ -47,7 +47,7 @@ Implemented:
 - **Window manager:** reparenting frames drawn by tiny-shell (title, icon,
   close, minimize and maximize buttons), move and resize by the title bar,
   edges and corners, maximize, fullscreen (F11), minimize (also on request of
-  the client), shade, dialogs and modal dialogs, focus handling, Alt+Tab,
+  the client), shade, dialogs and modal dialogs, focus handling, a window switcher,
   windows adopted at start, clients survive a crash of the manager and are
   given back when it exits, applications that stop responding are found by
   `_NET_WM_PING` and the user chooses to wait or to force them to quit.
@@ -67,6 +67,17 @@ Implemented:
   (Alt+F2), a full screen launcher with search (Super). Their text field has a
   cursor (the arrows, Home, End, Delete and a click), Ctrl+V, Shift+Insert and
   the middle button paste, Ctrl+C copies the text.
+- **Window switcher:** Alt+Tab shows, while Alt is held, a panel in the middle
+  of the screen with an icon and the name of every running application (once,
+  with a dot for every window when it has more); the window is switched when
+  Alt is released, so the cursor can also stay where it was. The applications
+  are ordered by the use of their windows (the most recently used first), so
+  Alt+Tab alone goes to the window used before. Tab and Shift+Tab or the left
+  and right arrows move the cursor, the down arrow shows the windows of the
+  application with big icons and their titles (the left and right arrows
+  choose one, Tab still moves between the applications) and the up arrow goes
+  back; Escape cancels. Alt+; is the same for the windows of the current
+  application only.
 - **Settings:** `tiny-settings`, a small form with the sections Fonts,
   Appearance and Applications that changes the font, the rendering of text
   (antialiasing, hinting, subpixel order), the scale, the wallpaper, the mode
@@ -108,7 +119,6 @@ programs is done, only small details of it are left):
 - [ ] Task bar in the panel (the "old style" task list), as an alternative to
       the dock
 - [ ] Applications of the launcher grouped by category
-- [ ] Most recently used order for Alt+Tab
 - [ ] More in the configuration file: key bindings, panel layout, plugins
 - [ ] No flicker: double buffered drawing of the panel and the dock
 
