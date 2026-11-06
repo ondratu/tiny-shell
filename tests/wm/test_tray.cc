@@ -110,7 +110,7 @@ TEST_F(TrayTest, another_tray_is_not_replaced)
 
 TEST_F(TrayTest, the_programs_are_told_with_the_manager_message)
 {
-    FakeClient program;
+    const FakeClient program;
     XSelectInput(program.display, DefaultRootWindow(program.display),
                  StructureNotifyMask);
     program.sync();
@@ -163,7 +163,7 @@ TEST_F(TrayTest, the_icon_is_in_the_middle_of_its_place)
 TEST_F(TrayTest, the_program_is_told_that_it_is_embedded)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
     XEvent e;
     while (XCheckTypedEvent(program.display, ClientMessage, &e)) {}
 
@@ -181,8 +181,8 @@ TEST_F(TrayTest, the_program_is_told_that_it_is_embedded)
 TEST_F(TrayTest, the_icons_follow_to_the_left)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient first;
-    FakeClient second;
+    const FakeClient first;
+    const FakeClient second;
 
     request_dock(first.window);
     request_dock(second.window);
@@ -195,7 +195,7 @@ TEST_F(TrayTest, the_icons_follow_to_the_left)
 TEST_F(TrayTest, a_window_is_docked_once)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
 
     request_dock(program.window);
     request_dock(program.window);
@@ -208,7 +208,7 @@ TEST_F(TrayTest, a_window_that_is_not_there_is_ignored)
     ASSERT_TRUE(tray.acquire());
     ::Window gone;
     {
-        FakeClient program;
+        const FakeClient program;
         gone = program.window;
     }
     XSync(tiny::get_display(), False);
@@ -224,7 +224,7 @@ TEST_F(TrayTest, a_window_that_is_not_there_is_ignored)
 TEST_F(TrayTest, a_window_with_override_redirect_is_not_taken)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient menu;
+    const FakeClient menu;
     XSetWindowAttributes attrs = {};
     attrs.override_redirect = True;
     XChangeWindowAttributes(menu.display, menu.window, CWOverrideRedirect,
@@ -252,7 +252,7 @@ TEST_F(TrayTest, a_window_of_the_shell_is_not_taken)
 TEST_F(TrayTest, other_messages_are_ignored)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
     XEvent e = make_event(ClientMessage);
     e.xclient.window = tray.get_window();
     e.xclient.message_type = tiny::get_display()._NET_SYSTEM_TRAY_OPCODE;
@@ -317,9 +317,9 @@ TEST_F(TrayTest, a_program_hides_itself_with_the_embed_info)
 TEST_F(TrayTest, hiding_an_icon_moves_the_others_back)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient first;
+    const FakeClient first;
     FakeClient second;
-    FakeClient third;
+    const FakeClient third;
     request_dock(first.window);
     request_dock(second.window);
     request_dock(third.window);
@@ -338,7 +338,7 @@ TEST_F(TrayTest, hiding_an_icon_moves_the_others_back)
 TEST_F(TrayTest, other_changes_of_properties_are_ignored)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
     request_dock(program.window);
     XEvent e = make_event(PropertyNotify);
     e.xproperty.window = program.window;
@@ -352,8 +352,8 @@ TEST_F(TrayTest, other_changes_of_properties_are_ignored)
 TEST_F(TrayTest, a_destroyed_window_is_forgotten)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient first;
-    FakeClient second;
+    const FakeClient first;
+    const FakeClient second;
     request_dock(first.window);
     request_dock(second.window);
     const int first_x = attributes_of(*tray.find(first.window)).x;
@@ -370,7 +370,7 @@ TEST_F(TrayTest, a_destroyed_window_is_forgotten)
 TEST_F(TrayTest, a_window_that_is_taken_away_is_forgotten)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
     request_dock(program.window);
     XReparentWindow(program.display, program.window,
                     DefaultRootWindow(program.display), 5, 5);
@@ -386,7 +386,7 @@ TEST_F(TrayTest, a_window_that_is_taken_away_is_forgotten)
 TEST_F(TrayTest, the_own_reparenting_is_not_taking_away)
 {
     ASSERT_TRUE(tray.acquire());
-    FakeClient program;
+    const FakeClient program;
     request_dock(program.window);
 
     send(program.window, make_event(ReparentNotify));
