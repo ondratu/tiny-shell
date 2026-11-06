@@ -261,8 +261,7 @@ Manager::~Manager()
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
                        ShiftMask | Mod1Mask, root);
     // Alt + ; and Shift + Alt + ;
-    grab_alt(XK_semicolon, 0, false);
-    grab_alt(XK_semicolon, ShiftMask, false);
+    grab_semicolon(false);
     // Alt + F2
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
@@ -342,8 +341,7 @@ void Manager::set_events()
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
                      ShiftMask | Mod1Mask, root);
     // Alt + ; and Shift + Alt + ;
-    grab_alt(XK_semicolon, 0, true);
-    grab_alt(XK_semicolon, ShiftMask, true);
+    grab_semicolon(true);
     // Alt + F2
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
     grab_super(true);
@@ -885,6 +883,9 @@ void Manager::main_loop()
         }
 
         switch (event.type) {
+            case MappingNotify: // another layout: other keys for shortcuts
+                on_mapping_notify(event.xmapping);
+                break;
             case KeyPress: // shortcuts
                 on_key_press(event.xkey);
                 break;
@@ -1559,14 +1560,55 @@ bool Manager::is_alt(unsigned int keycode) const
            keycode == XKeysymToKeycode(display, XK_Alt_R);
 }
 
-void Manager::grab_alt(KeySym keysym, unsigned int extra, bool grab)
+void Manager::grab_semicolon(bool grab)
 {
-    const KeyCode code = XKeysymToKeycode(display, keysym);
-    if (code == 0) { // zero would be any key
+    for (const KeyCode code : semicolons) { // the keys of the last grab
+        tiny::x_ungrab_key(display, code, Mod1Mask, root);
+        tiny::x_ungrab_key(display, code, Mod1Mask | ShiftMask, root);
+    }
+    semicolons.clear();
+    if (!grab) {
         return;
     }
-    grab ? tiny::x_grab_key(display, code, Mod1Mask | extra, root)
-         : tiny::x_ungrab_key(display, code, Mod1Mask | extra, root);
+    int first = 0;
+    int last = 0;
+    XDisplayKeycodes(display, &first, &last);
+    int per_key = 0;
+    KeySym* map = XGetKeyboardMapping(display, static_cast<KeyCode>(first),
+                                      last - first + 1, &per_key);
+    if (map == nullptr) {
+        return;
+    }
+    for (int code = first; code <= last; ++code) {
+        for (int i = 0; i < per_key; ++i) {
+            if (map[(code - first) * per_key + i] == XK_semicolon) {
+                semicolons.push_back(static_cast<KeyCode>(code));
+                break;
+            }
+        }
+    }
+    XFree(map);
+    for (const KeyCode code : semicolons) {
+        tiny::x_grab_key(display, code, Mod1Mask, root);
+        tiny::x_grab_key(display, code, Mod1Mask | ShiftMask, root);
+    }
+}
+
+bool Manager::is_semicolon(unsigned int keycode) const
+{
+    return std::find(semicolons.begin(), semicolons.end(), keycode) !=
+           semicolons.end();
+}
+
+void Manager::on_mapping_notify(XMappingEvent& e)
+{
+    XRefreshKeyboardMapping(&e);
+    if (e.request == MappingPointer) {
+        return;
+    }
+    grab_semicolon(true); // the old keys are released first
+    grab_super(false);
+    grab_super(true);
 }
 
 void Manager::open_switcher(bool windows, bool backwards)
@@ -1594,7 +1636,7 @@ void Manager::on_switcher_key(const XKeyEvent& xkey)
     };
     if (is(XK_Tab) || is(XK_ISO_Left_Tab)) {
         wm_switcher.next_app(shift);
-    } else if (is(XK_semicolon)) {
+    } else if (is_semicolon(xkey.keycode)) {
         wm_switcher.next_window(shift);
     } else if (is(XK_Left)) {
         wm_switcher.arrow(Switcher::Arrow::Left);
@@ -1709,8 +1751,7 @@ void Manager::on_key_press(const XKeyEvent& xkey)
         return;
     }
     /* Alt + ;, the windows of the application */
-    if (xkey.keycode == XKeysymToKeycode(display, XK_semicolon) &&
-        xkey.state & Mod1Mask) {
+    if (is_semicolon(xkey.keycode) && xkey.state & Mod1Mask) {
         open_switcher(true, xkey.state & ShiftMask);
         key_done = true;
         return;
