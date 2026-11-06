@@ -5639,3 +5639,37 @@ TEST_F(ManagerTest, the_tray_is_gone_when_another_one_takes_the_selection)
 
     EXPECT_EQ(manager->get_tray(), nullptr);
 }
+
+TEST_F(ManagerTest, an_icon_of_the_tray_is_not_managed_when_it_is_mapped)
+{
+    start();
+    manager->set_system_tray(true);
+    FakeClient& program = add_client(false);
+    request_tray_dock(program, manager->get_tray()->get_window(),
+                      program.window);
+    run_loop();
+    ASSERT_EQ(manager->get_tray()->size(), 1u);
+
+    XMapRequestEvent e = {};
+    e.type = MapRequest;
+    e.window = program.window;
+    manager->on_map_request(e);
+
+    EXPECT_FALSE(is_managed(program));
+}
+
+TEST_F(ManagerTest, a_managed_window_is_not_taken_by_the_tray)
+{
+    start();
+    manager->set_system_tray(true);
+    FakeClient& program = add_client();
+    run_loop();
+    ASSERT_TRUE(is_managed(program));
+
+    request_tray_dock(program, manager->get_tray()->get_window(),
+                      program.window);
+    run_loop();
+
+    EXPECT_EQ(manager->get_tray()->size(), 0u);
+    EXPECT_TRUE(is_managed(program));
+}

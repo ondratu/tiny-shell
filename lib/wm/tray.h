@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <set>
 #include <vector>
@@ -68,6 +69,11 @@ class Tray : public tiny::Object {
     //! Become the system tray and tell the programs; false when there is
     //! another tray
     bool acquire();
+
+    //! Windows that the tray must not take (the shell manages them): the
+    //! windows of the manager, its docks and the windows with
+    //! override-redirect are never taken anyway
+    std::function<bool(::Window)> is_taken;
 
     //! The window the programs send their requests to
     ::Window get_window() const { return selection.get_window(); }

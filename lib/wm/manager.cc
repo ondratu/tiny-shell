@@ -1530,6 +1530,10 @@ void Manager::set_system_tray(bool enable)
         return;
     }
     auto tray = std::make_unique<Tray>(wm_panel, root, XDefaultScreen(display));
+    tray->is_taken = [this](::Window window) {
+        return wm_windows.count(window) > 0 || wm_docks.count(window) > 0 ||
+               wm_desktops.count(window) > 0;
+    };
     if (!tray->acquire()) {
         tiny::error("Another system tray runs, there is no tray in the panel");
         return;
@@ -2044,6 +2048,10 @@ void Manager::on_map_request(const XMapRequestEvent& e)
     }
     if (attrs.override_redirect) {
         return; // menu, special tools (idesk) and so on
+    }
+
+    if (wm_tray && wm_tray->has_icon(e.window)) {
+        return; // an icon of the tray is not a window of the desktop
     }
 
     const auto known = wm_windows.find(e.window);

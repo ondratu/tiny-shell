@@ -116,15 +116,16 @@ Tray::~Tray()
 
 bool Tray::acquire()
 {
+    if (selection.acquire(false, std::chrono::milliseconds(0)) !=
+        Selection::Result::Acquired) {
+        return false;
+    }
+    // after the acquire: it takes the time from the first property change
     const long horizontal = 0;
     XChangeProperty(display, selection.get_window(),
                     tiny::get_display()._NET_SYSTEM_TRAY_ORIENTATION,
                     XA_CARDINAL, 32, PropModeReplace,
                     reinterpret_cast<const unsigned char*>(&horizontal), 1);
-    if (selection.acquire(false, std::chrono::milliseconds(0)) !=
-        Selection::Result::Acquired) {
-        return false;
-    }
     connect_window(ClientMessage, selection.get_window(),
                    [this](const XEvent& e) { on_message(e.xclient); });
     selection.announce();
@@ -174,10 +175,16 @@ void Tray::dock(::Window client)
     {
         const IgnoreErrors guard(display);
         XWindowAttributes attrs;
-        if (!XGetWindowAttributes(display, client, &attrs)) {
-            return; // gone already
+        if (!XGetWindowAttributes(display, client, &attrs) ||
+            attrs.override_redirect || (is_taken && is_taken(client))) {
+            return; // gone already, or not a window of a program
         }
         XSelectInput(display, client, StructureNotifyMask | PropertyChangeMask);
+        // The program can be gone before the selection: no DestroyNotify
+        // would come, so look again now that it is sure to come
+        if (!XGetWindowAttributes(display, client, &attrs)) {
+            return;
+        }
     }
     connect_window(DestroyNotify, client,
                    [this, client](const XEvent&) { forget(client); });
