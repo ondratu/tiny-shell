@@ -10,6 +10,8 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <string>
@@ -35,10 +37,10 @@ class TrayExample {
         display(tiny::get_display()),
         root(XDefaultRootWindow(display)),
         icons(display, root, tiny::xdg::default_data_dirs()),
-        quit(tiny::wm::shell_theme.menu_width,
-             tiny::wm::shell_theme.popup_item_height, "Quit"),
         menu(tiny::wm::shell_theme.menu_width,
-             tiny::wm::shell_theme.popup_item_height)
+             tiny::wm::shell_theme.popup_item_height),
+        quit(tiny::wm::shell_theme.menu_width,
+             tiny::wm::shell_theme.popup_item_height, "Quit")
     {
         menu.realize(root);
         quit.set_text_padding(tiny::wm::shell_theme.menu_padding);
@@ -167,8 +169,9 @@ class TrayExample {
     int width = tiny::wm::shell_theme.tray_icon;
     int height = tiny::wm::shell_theme.tray_icon;
     tiny::wm::SymbolicIcons icons;
-    tiny::LabelButton quit;
+    // the item is destroyed before the menu that has its window
     tiny::Popover menu;
+    tiny::LabelButton quit;
     bool running = true;
 };
 
@@ -178,7 +181,12 @@ int main()
 {
     tiny::Display::init();
     tiny::wm::shell_theme.init();
-    TrayExample example;
-    example.main_loop();
-    return 0;
+    {
+        TrayExample example;
+        example.main_loop();
+    }
+    // The static styles close their fonts after the display is closed, which
+    // crashes (see "SIGSEGV at exit" in TODO): leave without them.
+    std::fflush(nullptr);
+    _exit(0);
 }
