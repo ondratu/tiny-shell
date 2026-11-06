@@ -5,7 +5,7 @@
 #include <string>
 #include <thread>
 
-#include <signal.h>
+#include <csignal>
 #include <sys/wait.h>
 #include <unistd.h>
 

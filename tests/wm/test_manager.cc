@@ -5774,13 +5774,14 @@ TEST_F(ManagerSwitcherTest, alt_tab_and_alt_f2_follow_a_change_of_the_layout)
         XGrabKey(other.display, key, Mod1Mask, root_window(), True,
                  GrabModeAsync, GrabModeAsync);
         other.sync();
-        EXPECT_EQ(errors.errors(), 1) << "key " << int(key); // the manager
+        EXPECT_EQ(errors.errors(), 1)
+                << "key " << static_cast<int>(key); // the manager
     }
 }
 
 TEST_F(ManagerSwitcherTest, alt_f4_of_a_window_follows_a_change_of_the_layout)
 {
-    FakeClient& client = add_client();
+    const FakeClient& client = add_client();
     start();
     ASSERT_EQ(manager->wm_windows.size(), 1u);
     int lowest = 0;
@@ -5953,7 +5954,7 @@ TEST_F(ManagerTest, the_settings_can_be_turned_off)
 TEST_F(ManagerTest, another_manager_of_settings_is_left_alone)
 {
     start();
-    FakeClient daemon;
+    const FakeClient daemon;
     const Atom selection = XInternAtom(daemon.display, "_XSETTINGS_S0", False);
     XSetSelectionOwner(daemon.display, selection, daemon.window, CurrentTime);
     daemon.sync();

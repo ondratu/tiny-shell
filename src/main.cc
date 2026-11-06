@@ -266,6 +266,10 @@ int main(int argc, char** argv)
         theme.set_font_style(config.font_style);
         theme.set_variant(config.style);
         theme.init();
+        // the fonts are closed while the display is open, also when it fails
+        struct ReleaseFonts {
+            ~ReleaseFonts() { tiny::wm::shell_theme.release(); }
+        } release_fonts;
 
         const ::Window root = XDefaultRootWindow(display);
 
