@@ -25,6 +25,19 @@ Struts read_struts(::Window window);
 tiny::Rect compute_work_area(int screen_width, int screen_height,
                              const std::vector<Struts>& docks);
 
+/**
+ * @short The work area of one monitor: the monitor without the struts of the
+ * docks that reach it.
+ *
+ * A strut is measured from the edge of the whole screen (`screen_width` x
+ * `screen_height`, the root window), as `_NET_WM_STRUT` says: a top strut of 30
+ * covers the monitors that start in the first 30 rows of the screen, a monitor
+ * below another one is not touched by it.
+ */
+tiny::Rect compute_monitor_area(const tiny::Rect& monitor, int screen_width,
+                                int screen_height,
+                                const std::vector<Struts>& docks);
+
 //! The area for the frames whose borders are drawn outside of them
 tiny::Rect inner_area(const tiny::Rect& area, int border);
 
