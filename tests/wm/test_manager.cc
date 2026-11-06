@@ -5497,6 +5497,39 @@ TEST_F(ManagerSwitcherTest,
               AlreadyGrabbed);
 }
 
+TEST_F(ManagerSwitcherTest, alt_is_left_to_a_key_that_has_semicolon_only_shifted)
+{
+    start();
+    ::Display* dsp = tiny::get_display();
+    int lowest = 0;
+    int last = 0;
+    XDisplayKeycodes(dsp, &lowest, &last);
+    const auto spare = static_cast<KeyCode>(last);
+    KeySym shifted[] = {XK_a, XK_semicolon, NoSymbol, NoSymbol, XK_b,
+                              XK_semicolon};
+    XChangeKeyboardMapping(dsp, spare, 6, shifted, 1);
+    XMappingEvent change = {};
+    change.type = MappingNotify;
+    change.display = dsp;
+    change.request = MappingKeyboard;
+    change.first_keycode = spare;
+    change.count = 1;
+
+    manager->on_mapping_notify(change);
+
+    // Shift + ; and AltGr + ; type other characters (: and so on)
+    EXPECT_FALSE(manager->is_semicolon(spare));
+    const XErrors errors;
+    const FakeClient other;
+    XGrabKey(other.display, spare, Mod1Mask, root_window(), True, GrabModeAsync,
+             GrabModeAsync);
+    other.sync();
+    EXPECT_EQ(errors.errors(), 0);
+
+    KeySym none = NoSymbol;
+    XChangeKeyboardMapping(dsp, spare, 1, &none, 1);
+}
+
 TEST_F(ManagerSwitcherTest, alt_semicolon_follows_a_change_of_the_layout)
 {
     start();

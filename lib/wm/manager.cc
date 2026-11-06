@@ -1597,8 +1597,12 @@ void Manager::grab_semicolon(bool grab)
     if (map == nullptr) {
         return;
     }
+    // Only the keys that type ; with no other modifier: the first level of
+    // the first two groups (the core mapping has them at 0 and 2). Alt + a key
+    // that has ; on a shifted level or behind AltGr is a shortcut of an
+    // application, or a character the user types with it.
     for (int code = first; code <= last; ++code) {
-        for (int i = 0; i < per_key; ++i) {
+        for (int i = 0; i < per_key && i < 4; i += 2) {
             if (map[(code - first) * per_key + i] == XK_semicolon) {
                 semicolons.push_back(static_cast<KeyCode>(code));
                 break;
