@@ -3,6 +3,7 @@
 #include <sys/types.h>
 
 #include <chrono>
+#include <functional>
 #include <optional>
 #include <vector>
 #include <set>
@@ -223,8 +224,31 @@ class Window {
                           const XWindowAttributes& attrs,
                           unsigned long functions, const tiny::Rect& area);
 
+    //! The areas of the monitor that a window is on
+    struct MonitorAreas {
+        tiny::Rect work;   //!< without the panel and the docks
+        tiny::Rect screen; //!< the whole monitor, where a fullscreen window is
+    };
+
+    //! Tells the areas of the monitor that has most of a frame
+    using AreaFinder = std::function<MonitorAreas(const tiny::Rect& frame)>;
+
     //! Where maximized windows lie; a maximized window moves there at once
     void set_work_area(const tiny::Rect& area);
+
+    /**
+     * @short Let the window find its monitor.
+     *
+     * The window asks for the areas of the monitor it is on when it is
+     * maximized, made fullscreen or restored, and when it asks for a place.
+     * Without a finder the work area that was set is used, and a fullscreen
+     * window covers the root window.
+     */
+    void set_area_finder(AreaFinder finder) { find_areas = std::move(finder); }
+
+    //! Look for the monitor of the window again (a monitor, a panel or a dock
+    //! came or went): a maximized or fullscreen window follows its monitor
+    void refresh_areas();
 
     ::Window get_child() const { return child; }
 
@@ -652,6 +676,19 @@ class Window {
     //! Cover the work area (a maximized window)
     virtual void place_maximized();
 
+    //! Cover the monitor (a fullscreen window)
+    virtual void place_fullscreen();
+
+    //! The frame of the window on the root window
+    virtual tiny::Rect frame_geometry() const;
+
+    //! Use the areas of the monitor that has most of the frame; nothing
+    //! changes without a finder
+    void use_monitor_of(const tiny::Rect& frame);
+
+    //! The monitor of a fullscreen window: the root window without a finder
+    tiny::Rect fullscreen_area() const;
+
     //! A dock that came later does not cover a normal window
     virtual void keep_in_work_area();
 
@@ -667,6 +704,8 @@ class Window {
     tiny::Rect state = {0, 0, 0, 0};
     tiny::Rect before_fullscreen = {0, 0, 0, 0};
     tiny::Rect work_area = {0, 0, 0, 0};
+    tiny::Rect screen_area = {0, 0, 0, 0}; //!< empty: the root window
+    AreaFinder find_areas;
 
     unsigned long functions = 0;
     unsigned long wm_states = 0;

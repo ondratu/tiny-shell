@@ -440,6 +440,7 @@ void Client::maximize()
     state.width = width;
     state.height = height;
 
+    use_monitor_of({attrs.x, attrs.y, attrs.width, attrs.height});
     place_maximized();
     if (has_maximize_button()) {
         max_btn.set_restore(true);
@@ -513,14 +514,11 @@ void Client::fullscreen(bool on)
         XWindowAttributes attrs;
         XGetWindowAttributes(display, window, &attrs);
         before_fullscreen = {attrs.x, attrs.y, attrs.width, attrs.height};
-        XGetWindowAttributes(display, root, &attrs);
+        use_monitor_of(before_fullscreen);
 
         // the client covers the frame with its header, so nothing is seen
         XSetWindowBorderWidth(display, window, 0);
-        XMoveResizeWindow(display, window, 0, 0, tiny::x_uint(attrs.width),
-                          tiny::x_uint(attrs.height));
-        XMoveResizeWindow(display, child, 0, 0, tiny::x_uint(attrs.width),
-                          tiny::x_uint(attrs.height));
+        place_fullscreen();
         if (is_resizable()) {
             shadow.unmap();
         }
@@ -556,6 +554,24 @@ void Client::fullscreen(bool on)
     send_configure_notify();
 }
 
+void Client::place_fullscreen()
+{
+    const tiny::Rect area = fullscreen_area();
+    XMoveResizeWindow(display, window, area.x, area.y, tiny::x_uint(area.width),
+                      tiny::x_uint(area.height));
+    XMoveResizeWindow(display, child, 0, 0, tiny::x_uint(area.width),
+                      tiny::x_uint(area.height));
+}
+
+tiny::Rect Client::frame_geometry() const
+{
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(display, window, &attrs)) {
+        return work_area;
+    }
+    return {attrs.x, attrs.y, attrs.width, attrs.height};
+}
+
 void Client::configure_request(const XConfigureRequestEvent& e)
 {
     if (get_maximized() || is_fullscreen() || is_shaded()) {
@@ -566,6 +582,11 @@ void Client::configure_request(const XConfigureRequestEvent& e)
     const int title = header_height();
     XWindowAttributes frame;
     XGetWindowAttributes(display, window, &frame);
+    // the monitor that the window asks for, which can be another one
+    use_monitor_of(
+            {(e.value_mask & CWX) ? e.x - frame.border_width : frame.x,
+             (e.value_mask & CWY) ? e.y - title - frame.border_width : frame.y,
+             frame.width, frame.height});
     // The client asks for the place of its own area (the position it gets in
     // ConfigureNotify), the frame is around it. The header stays below the
     // panel.
@@ -616,6 +637,7 @@ void Client::configure_request(const XConfigureRequestEvent& e)
 
 void Client::restore(int x, int y)
 {
+    use_monitor_of(frame_geometry());
     if (get_maximized()) {
         // the window returns inside of the work area, which may have changed
         const int border = get_border();

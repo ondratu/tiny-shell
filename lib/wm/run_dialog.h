@@ -21,6 +21,10 @@ class RunDialog : public tiny::Popover {
 
     void realize(::Window root, int x = 0, int y = 0) override;
     void popup();
+
+    //! The monitor where the dialog opens, in its middle; without it the root
+    //! window
+    void set_screen(const tiny::Rect& monitor) { screen = monitor; }
     void popover(Object* o, const XEvent& e, void* data);
 
     void run(Object* o, const XEvent& e, void* data);
@@ -36,6 +40,7 @@ class RunDialog : public tiny::Popover {
   private:
     void complete();
 
+    tiny::Rect screen = {0, 0, 0, 0};
     tiny::Label title;
     tiny::Entry entry;
     CommandCompleter completer;

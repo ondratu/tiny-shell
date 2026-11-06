@@ -148,6 +148,10 @@ class Client : public tiny::Container, public Window {
     //! Give the frame and the client this size (a resize of the edges `mask`)
     void resize_frame(const tiny::Rect& frame, uint16_t mask);
 
+    void place_fullscreen() override;
+
+    tiny::Rect frame_geometry() const override;
+
     //! Show the size of the client in units (e.g. columns and rows)
     void show_size_units(int client_width, int client_height);
 

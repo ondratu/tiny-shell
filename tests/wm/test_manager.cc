@@ -180,7 +180,7 @@ TEST_F(ManagerTest, dock_is_centered_at_the_bottom)
 
     auto root = attributes_of(root_window());
     auto dock = attributes_of(manager->wm_dock);
-    EXPECT_EQ(dock.x, root.width / 2);
+    EXPECT_EQ(dock.x, root.width / 2 - dock.width / 2);
     EXPECT_EQ(dock.y, root.height - manager->wm_dock.get_height() - border());
 }
 
@@ -6101,4 +6101,219 @@ TEST_F(ManagerTest, a_managed_window_is_not_taken_by_the_tray)
 
     EXPECT_EQ(manager->get_tray()->size(), 0u);
     EXPECT_TRUE(is_managed(program));
+}
+
+// ---- several monitors ----
+
+namespace {
+
+// The screen as two monitors side by side, the right one is the primary.
+class TwoMonitorsTest : public ManagerTest {
+  protected:
+    void SetUp() override
+    {
+        const XWindowAttributes root = attributes_of(root_window());
+        half = root.width / 2;
+        height = root.height;
+    }
+
+    void split(size_t primary = 1)
+    {
+        start();
+        manager->monitors = {{"A", {0, 0, half, height}, false},
+                             {"B", {half, 0, 2 * half, height}, false}};
+        manager->monitors[1].area.width =
+                attributes_of(root_window()).width - half;
+        manager->choice = {primary, primary == 1 ? 0u : 1u};
+        manager->work_areas.clear();
+        manager->arrange_shell();
+        XSync(dsp(), False);
+    }
+
+    int half = 0;
+    int height = 0;
+};
+
+} // namespace
+
+TEST_F(TwoMonitorsTest, the_panel_is_on_the_primary_monitor)
+{
+    split();
+
+    const XWindowAttributes panel = attributes_of(manager->wm_panel);
+    EXPECT_EQ(panel.x, half);
+    EXPECT_EQ(panel.y, 0);
+    EXPECT_EQ(panel.width, attributes_of(root_window()).width - half);
+}
+
+TEST_F(TwoMonitorsTest, the_panel_follows_another_primary_monitor)
+{
+    split();
+    manager->choice = {0, 1};
+    manager->arrange_shell();
+    XSync(dsp(), False);
+
+    const XWindowAttributes panel = attributes_of(manager->wm_panel);
+    EXPECT_EQ(panel.x, 0);
+    EXPECT_EQ(panel.width, half);
+}
+
+TEST_F(TwoMonitorsTest, the_dock_is_centered_on_the_primary_monitor)
+{
+    split();
+
+    const XWindowAttributes dock = attributes_of(manager->wm_dock);
+    const int primary_width = attributes_of(root_window()).width - half;
+    EXPECT_EQ(dock.x, half + primary_width / 2 - dock.width / 2);
+    EXPECT_EQ(dock.y, height - manager->wm_dock.get_height() - border());
+}
+
+TEST_F(TwoMonitorsTest, only_the_primary_monitor_loses_the_panel)
+{
+    split();
+
+    ASSERT_EQ(manager->work_areas.size(), 2u);
+    EXPECT_EQ(manager->work_areas[0].y, 0);
+    EXPECT_EQ(manager->work_areas[0].height, height);
+    EXPECT_EQ(manager->work_areas[1].y, tiny::wm::shell_theme.panel);
+    EXPECT_EQ(manager->work_area.x, half); // _NET_WORKAREA is the primary one
+}
+
+TEST_F(TwoMonitorsTest, the_panel_strut_is_published_for_its_monitor)
+{
+    split();
+
+    Atom type;
+    int format;
+    unsigned long items;
+    unsigned long after;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(dsp(), manager->wm_panel.get_window(),
+                                 dsp()._NET_WM_STRUT_PARTIAL, 0, 12, False,
+                                 XA_CARDINAL, &type, &format, &items, &after,
+                                 &data),
+              Success);
+    ASSERT_EQ(items, 12u);
+    const auto* v = reinterpret_cast<const long*>(data);
+    EXPECT_EQ(v[2], tiny::wm::shell_theme.panel);
+    EXPECT_EQ(v[8], half);
+    EXPECT_EQ(v[9], attributes_of(root_window()).width - 1);
+    XFree(data);
+}
+
+TEST_F(TwoMonitorsTest, a_window_is_maximized_on_its_own_monitor)
+{
+    split();
+    FakeClient& c = add_client(false);
+    XMoveWindow(c.display, c.window, 50, 80); // on the left monitor
+    c.map();
+    run_loop();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    window->maximize();
+    XSync(dsp(), False);
+
+    const XWindowAttributes f = attributes_of(window->frame());
+    EXPECT_EQ(f.x, 0);
+    EXPECT_EQ(f.y, 0);
+    EXPECT_EQ(f.width, half);
+    EXPECT_EQ(f.height, height);
+}
+
+TEST_F(TwoMonitorsTest,
+       a_window_on_the_primary_monitor_is_maximized_below_the_panel)
+{
+    split();
+    FakeClient& c = add_client(false);
+    XMoveWindow(c.display, c.window, half + 50, 80);
+    c.map();
+    run_loop();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    window->maximize();
+    XSync(dsp(), False);
+
+    const XWindowAttributes f = attributes_of(window->frame());
+    EXPECT_EQ(f.x, half);
+    EXPECT_EQ(f.y, tiny::wm::shell_theme.panel);
+}
+
+TEST_F(TwoMonitorsTest, a_fullscreen_window_covers_only_its_monitor)
+{
+    split();
+    FakeClient& c = add_client(false);
+    XMoveWindow(c.display, c.window, 50, 80);
+    c.map();
+    run_loop();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    window->fullscreen(true);
+    XSync(dsp(), False);
+
+    const XWindowAttributes f = attributes_of(window->frame());
+    EXPECT_EQ(f.x, 0);
+    EXPECT_EQ(f.y, 0);
+    EXPECT_EQ(f.width, half);
+    EXPECT_EQ(f.height, height);
+}
+
+TEST_F(TwoMonitorsTest, a_window_without_a_place_opens_where_the_pointer_is)
+{
+    split();
+    XWarpPointer(dsp(), None, root_window(), 0, 0, 0, 0, 100, 100); // left
+    XSync(dsp(), False);
+    FakeClient& c = add_client(false);
+    XMoveWindow(c.display, c.window, 0, 0);
+    c.map();
+
+    run_loop();
+
+    const XWindowAttributes f = attributes_of(parent_of(c.window));
+    EXPECT_LT(f.x, half);
+    EXPECT_EQ(manager->pointer_monitor(), 0u);
+}
+
+TEST_F(TwoMonitorsTest,
+       the_run_dialog_opens_in_the_middle_of_the_primary_monitor)
+{
+    split();
+
+    manager->wm_run.popup();
+    XSync(dsp(), False);
+
+    const XWindowAttributes run = attributes_of(manager->wm_run);
+    const int primary_width = attributes_of(root_window()).width - half;
+    EXPECT_EQ(run.x, half + (primary_width - run.width) / 2);
+}
+
+TEST_F(TwoMonitorsTest, a_dialog_is_centered_over_its_parent_on_its_monitor)
+{
+    split();
+    const tiny::Rect left = manager->work_areas[0];
+
+    EXPECT_EQ(left.x, 0);
+    EXPECT_EQ(manager->areas_at({10, 10, 100, 100}).work.width, half);
+    EXPECT_EQ(manager->areas_at({half + 10, 10, 100, 100}).screen.x, half);
+}
+
+TEST_F(TwoMonitorsTest, the_settings_choose_the_primary_monitor)
+{
+    start();
+
+    manager->set_monitors("A", "auto", tiny::wm::Placement::Keep);
+    // the server has one monitor, so the list is what the server says
+    EXPECT_EQ(manager->get_monitors().size(), 1u);
+    EXPECT_EQ(manager->get_primary_monitor(), 0u);
+}
+
+TEST_F(ManagerTest, one_monitor_is_the_whole_screen)
+{
+    start();
+
+    ASSERT_GE(manager->get_monitors().size(), 1u);
+    const XWindowAttributes root = attributes_of(root_window());
+    const XWindowAttributes panel = attributes_of(manager->wm_panel);
+    EXPECT_EQ(panel.x, manager->get_monitors()[0].area.x);
+    EXPECT_EQ(panel.width, manager->get_monitors()[0].area.width);
+    EXPECT_LE(panel.width, root.width);
 }

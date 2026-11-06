@@ -285,6 +285,13 @@ class Dock : public tiny::Box {
     void realize(::Window parent, int x, int y) override;
     void resize(int width, int height) override;
 
+    //! The monitor where the dock is, centered at the bottom; without it the
+    //! dock is on the root window
+    void set_screen(const tiny::Rect& monitor);
+
+    //! The place of the dock for its size
+    tiny::Rect area() const;
+
     //! The icons of the launcher button and of an application without an
     //! icon; they must live longer than the dock
     void set_icons(SymbolicIcons* symbolic);
@@ -339,6 +346,7 @@ class Dock : public tiny::Box {
     bool is_favorite(const std::string& id) const;
 
     void resize_to_children();
+    tiny::Rect place_for(int width, int height) const;
 
     DockButton icon;
     SymbolicIcons* symbols = nullptr;
@@ -362,6 +370,7 @@ class Dock : public tiny::Box {
     std::vector<Window*> tasks;   //!< the windows with an icon, as they came
     std::vector<DockIcon*> icons; //!< from the left, without the menu button
     std::vector<int> icon_x;      //!< their places in the dock
+    tiny::Rect on_monitor = {0, 0, 0, 0}; //!< empty: the root window
 };
 
 } // namespace tiny::wm

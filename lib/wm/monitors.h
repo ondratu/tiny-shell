@@ -27,7 +27,8 @@ using Monitors = std::vector<Monitor>;
 
 /**
  * @short Sort the monitors and drop the ones that show the same picture as an
- * earlier one (a clone is inside of the other monitor).
+ * earlier one (a clone is inside of the other monitor), and a monitor that is
+ * the whole screen around two other ones.
  */
 void order_monitors(Monitors& monitors);
 
@@ -50,6 +51,10 @@ std::optional<int> select_monitor_events(::Display* display, ::Window root);
 
 //! Is the event the change of the monitors (`RRScreenChangeNotify`)
 bool is_monitor_event(const XEvent& e, int event_base);
+
+//! Tell Xlib about the change that the event reports (it keeps the size of the
+//! screen); call it for every event that `is_monitor_event()` accepts
+void accept_monitor_event(const XEvent& e);
 
 /**
  * @short The index of the monitor that `spec` names: a number from 1 (the

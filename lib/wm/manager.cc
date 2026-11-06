@@ -79,20 +79,26 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     XGetWindowAttributes(display_arg, root_arg, &attrs);
     screen_width = attrs.width;
     screen_height = attrs.height;
+    randr_base = select_monitor_events(display_arg, root_arg);
+    monitors = read_monitors(display_arg, root_arg);
+    choice = choose_monitors(monitors, primary_spec, secondary_spec);
+    const tiny::Rect primary = monitors[choice.primary].area;
 
     wm_panel.set_icons(&wm_icons);
-    wm_panel.realize(root_arg, 0, 0);
+    wm_panel.realize(root_arg, primary.x, primary.y);
+    wm_panel.place(primary);
     wm_panel.set_events();
     publish_panel_strut();
 
     wm_dock.set_icons(&wm_icons);
-    wm_dock.realize(root_arg, attrs.width / 2,
-                    attrs.height - wm_dock.get_height() -
-                            shell_theme.dock_border);
+    wm_dock.set_screen(primary);
+    wm_dock.realize(root_arg, wm_dock.area().x, wm_dock.area().y);
     wm_dock.set_events(LeaveWindowMask);
     // the strip at the bottom of the screen that shows a hidden dock
-    wm_dock_reveal.realize(root_arg, 0, attrs.height - shell_theme.dock_reveal);
-    wm_dock_reveal.resize(attrs.width, shell_theme.dock_reveal);
+    wm_dock_reveal.realize(root_arg, primary.x,
+                           primary.y + primary.height -
+                                   shell_theme.dock_reveal);
+    wm_dock_reveal.resize(primary.width, shell_theme.dock_reveal);
     wm_dock_reveal.set_events();
     wm_dock_reveal.on_reach.connect([this](const XEvent&) {
         dock_revealed = true;
@@ -144,6 +150,9 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_launcher.keep_above(&wm_panel);
     wm_launcher.keep_above(&wm_dock);
 
+    wm_run.set_screen(primary);
+    wm_switcher.set_screen(primary);
+    wm_launcher.set_screen(primary);
     update_work_area(); // before the first window is placed
 
     XGrabServer(display_arg); // lock the X server for new events
@@ -916,6 +925,10 @@ void Manager::main_loop()
                 on_root_configure(event.xconfigure);
                 break;
             default:
+                if (randr_base && is_monitor_event(event, *randr_base)) {
+                    on_monitors_changed(event);
+                    break;
+                }
 #ifdef DEBUG
                 fprintf(stderr, "Unhandled event: %s (%lx)\n",
                         tiny::event_to_string(event), window);
@@ -1247,11 +1260,14 @@ void Manager::center_over(Window* dialog, const Window* parent)
         !XGetWindowAttributes(display, dialog->frame(), &inner)) {
         return;
     }
+    // on the monitor of the parent
+    const tiny::Rect area =
+            areas_at({outer.x, outer.y, outer.width, outer.height}).work;
     const int x = std::min(outer.x + (outer.width - inner.width) / 2,
-                           work_area.x + work_area.width - inner.width);
+                           area.x + area.width - inner.width);
     const int y = std::min(outer.y + (outer.height - inner.height) / 2,
-                           work_area.y + work_area.height - inner.height);
-    dialog->move_to(std::max(x, work_area.x), std::max(y, work_area.y));
+                           area.y + area.height - inner.height);
+    dialog->move_to(std::max(x, area.x), std::max(y, area.y));
 }
 
 void Manager::on_window_focus(Window* window, const XEvent& e)
@@ -1449,9 +1465,7 @@ void Manager::set_dock_mode(DockMode mode)
 
 tiny::Rect Manager::dock_area() const
 {
-    return {screen_width / 2 - wm_dock.get_width() / 2,
-            screen_height - wm_dock.get_height() - shell_theme.dock_border,
-            wm_dock.get_width(), wm_dock.get_height()};
+    return wm_dock.area();
 }
 
 void Manager::update_dock_visibility()
@@ -1493,8 +1507,9 @@ void Manager::update_dock_visibility()
         // as wide as the dock: the pointer that reveals it is then over it
         // and leaves it, so it hides again
         const tiny::Rect area = dock_area();
+        const tiny::Rect& primary = monitors[choice.primary].area;
         XMoveResizeWindow(display, wm_dock_reveal.get_window(), area.x,
-                          screen_height - shell_theme.dock_reveal,
+                          primary.y + primary.height - shell_theme.dock_reveal,
                           x_dim(area.width), x_dim(shell_theme.dock_reveal));
     }
     if (strip && !wm_dock_reveal.get_maped()) {
@@ -1583,8 +1598,104 @@ void Manager::on_root_configure(const XConfigureEvent& e)
     }
     screen_width = e.width;
     screen_height = e.height;
+    update_monitors();
+    update_work_area(); // the struts are measured from the new edges
     update_dock_visibility();
     run_wallpaper();
+}
+
+void Manager::on_monitors_changed(const XEvent& e)
+{
+    accept_monitor_event(e); // Xlib learns the new size
+    update_monitors();
+    run_wallpaper();
+}
+
+void Manager::set_monitors(const std::string& primary,
+                           const std::string& secondary, Placement where)
+{
+    primary_spec = primary;
+    secondary_spec = secondary;
+    placement = where;
+    placement_asked.clear();
+    update_monitors(true);
+}
+
+void Manager::update_monitors(bool force)
+{
+    const Monitors now = read_monitors(display, root);
+    const auto same = [](const Monitors& a, const Monitors& b) {
+        return a.size() == b.size() &&
+               std::equal(a.begin(), a.end(), b.begin(),
+                          [](const Monitor& x, const Monitor& y) {
+                              return x.name == y.name &&
+                                     x.primary == y.primary &&
+                                     x.area.x == y.area.x &&
+                                     x.area.y == y.area.y &&
+                                     x.area.width == y.area.width &&
+                                     x.area.height == y.area.height;
+                          });
+    };
+    const MonitorChoice chosen =
+            choose_monitors(now, primary_spec, secondary_spec);
+    if (placement != Placement::Keep && chosen.secondary) {
+        // the layout changes the monitors, the event that follows comes here
+        // again; the same command is not started twice in a row
+        const auto command = placement_command(now[*chosen.secondary],
+                                               now[chosen.primary], placement);
+        if (!command.empty() && command != placement_asked) {
+            placement_asked = command;
+            run_program(command);
+        } else if (command.empty()) {
+            placement_asked.clear();
+        }
+    }
+    if (!force && same(now, monitors) && chosen.primary == choice.primary) {
+        return;
+    }
+    monitors = now;
+    choice = chosen;
+    work_areas.clear();
+    arrange_shell();
+}
+
+void Manager::arrange_shell()
+{
+    const tiny::Rect primary = monitors[choice.primary].area;
+    wm_panel.place(primary);
+    wm_dock.set_screen(primary);
+    if (wm_dock_reveal.get_realized()) {
+        XMoveResizeWindow(display, wm_dock_reveal.get_window(), primary.x,
+                          primary.y + primary.height - shell_theme.dock_reveal,
+                          x_dim(primary.width), x_dim(shell_theme.dock_reveal));
+    }
+    wm_run.set_screen(primary);
+    wm_switcher.set_screen(primary);
+    wm_launcher.set_screen(primary);
+    publish_panel_strut();
+    update_work_area();
+    update_dock_visibility();
+}
+
+Window::MonitorAreas Manager::areas_at(const tiny::Rect& frame) const
+{
+    const size_t at = monitor_of(monitors, frame);
+    return {at < work_areas.size() ? work_areas[at] : work_area,
+            monitors[at].area};
+}
+
+size_t Manager::pointer_monitor() const
+{
+    ::Window pointer_root;
+    ::Window child;
+    int x = 0;
+    int y = 0;
+    int window_x;
+    int window_y;
+    unsigned int buttons;
+    XQueryPointer(display, root, &pointer_root, &child, &x, &y, &window_x,
+                  &window_y, &buttons);
+    return monitor_at(monitors, x, y);
 }
 
 void Manager::run_program(const std::vector<std::string>& argv)
@@ -1882,16 +1993,27 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
         }
     }
 
+    // A window that was there stays on its monitor. One that was just mapped
+    // and has no position (0, 0) opens where the pointer is.
+    size_t at =
+            monitor_of(monitors, {attrs.x, attrs.y, attrs.width, attrs.height});
+    if (fresh && attrs.x == 0 && attrs.y == 0) {
+        at = pointer_monitor();
+    }
+    const tiny::Rect area = at < work_areas.size() ? work_areas[at] : work_area;
+
     Window* window = nullptr;
     unsigned long functions;
     unsigned long decorations;
     if (Window::get_motif_hints(child, functions, decorations) &&
         !decorations) {
-        window = Window::create(root, child, attrs, functions, work_area);
+        window = Window::create(root, child, attrs, functions, area);
     } else {
         window = Client::create(root, child, attrs, functions, decorations,
-                                work_area, fresh, &wm_icons);
+                                area, fresh, &wm_icons);
     }
+    window->set_area_finder(
+            [this](const tiny::Rect& frame) { return areas_at(frame); });
 
     // the client survives a crash of the manager
     XAddToSaveSet(display, child);
@@ -2008,12 +2130,14 @@ void Manager::publish_panel_strut()
 {
     // like any panel: the others can see what is reserved
     const Struts strut = panel_strut();
-    XWindowAttributes screen;
-    XGetWindowAttributes(display, root, &screen);
-    // top_start_x, top_end_x: the panel spans the whole width
-    const long data[12] = {
-            strut.left, strut.right, strut.top, strut.bottom,      0, 0,
-            0,          0,           0,         screen.width - 1L, 0, 0};
+    const tiny::Rect& primary = monitors[choice.primary].area;
+    // top_start_x, top_end_x: the panel spans the width of its monitor
+    const long data[12] = {strut.left, strut.right,
+                           strut.top,  strut.bottom,
+                           0,          0,
+                           0,          0,
+                           primary.x,  primary.x + primary.width - 1L,
+                           0,          0};
     XChangeProperty(display, wm_panel.get_window(),
                     tiny::get_display()._NET_WM_STRUT_PARTIAL, XA_CARDINAL, 32,
                     PropModeReplace,
@@ -2022,7 +2146,8 @@ void Manager::publish_panel_strut()
 
 Struts Manager::panel_strut() const
 {
-    return {0, 0, wm_panel.get_height(), 0};
+    // measured from the top of the screen, not of the monitor
+    return {0, 0, monitors[choice.primary].area.y + wm_panel.get_height(), 0};
 }
 
 void Manager::update_work_area()
@@ -2031,24 +2156,39 @@ void Manager::update_work_area()
     XGetWindowAttributes(display, root, &screen);
     std::vector<Struts> docks;
     docks.reserve(wm_docks.size() + 1);
-    docks.push_back(panel_strut()); // our own panel is a dock like the others
     for (const auto& dock : wm_docks) {
         docks.push_back(dock.second);
     }
-    const tiny::Rect area =
-            compute_work_area(screen.width, screen.height, docks);
-    if (area.x == work_area.x && area.y == work_area.y &&
-        area.width == work_area.width && area.height == work_area.height) {
+    std::vector<tiny::Rect> areas;
+    areas.reserve(monitors.size());
+    for (size_t i = 0; i < monitors.size(); ++i) {
+        std::vector<Struts> reserved = docks;
+        if (i == choice.primary) {
+            // our own panel is a dock like the others, on its monitor only
+            reserved.push_back(panel_strut());
+        }
+        areas.push_back(compute_monitor_area(monitors[i].area, screen.width,
+                                             screen.height, reserved));
+    }
+    const auto same = [](const tiny::Rect& a, const tiny::Rect& b) {
+        return a.x == b.x && a.y == b.y && a.width == b.width &&
+               a.height == b.height;
+    };
+    if (areas.size() == work_areas.size() &&
+        std::equal(areas.begin(), areas.end(), work_areas.begin(), same)) {
         return;
     }
+    work_areas = areas;
+    const tiny::Rect area = areas[choice.primary];
     work_area = area;
 
+    // the area of the monitor with the panel, where programs put their windows
     const long data[4] = {area.x, area.y, area.width, area.height};
     XChangeProperty(display, root, tiny::get_display()._NET_WORKAREA,
                     XA_CARDINAL, 32, PropModeReplace,
                     reinterpret_cast<const unsigned char*>(data), 4);
     for (const auto& window : wm_windows) {
-        window.second->set_work_area(area);
+        window.second->refresh_areas();
     }
 }
 

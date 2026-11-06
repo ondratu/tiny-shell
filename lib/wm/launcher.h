@@ -136,8 +136,13 @@ class Launcher : public tiny::Popover {
     /// Start an action of the application (a position in `action_names`).
     bool launch_action(const std::string& id, size_t number);
 
+    //! The monitor that the launcher covers; without it the root window
+    void set_screen(const tiny::Rect& monitor);
+
   private:
     std::vector<std::string> terminal = Config().terminal;
+    tiny::Rect screen = {0, 0, 0, 0}; //!< set by the owner, empty: the root
+    tiny::Rect placed = {0, 0, 0, 0}; //!< where the window is
 
     void relayout();
     void arrange(const LauncherLayout& next);

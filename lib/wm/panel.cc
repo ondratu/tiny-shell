@@ -138,6 +138,17 @@ void Panel::realize(::Window root, int x, int y)
     logo.set_popover_left(true); // the menu starts at the edge of the screen
 }
 
+void Panel::place(const tiny::Rect& monitor)
+{
+    if (!is_realized) {
+        return;
+    }
+    resize(monitor.width, height);
+    // the server tells the size later, and another call can come before
+    width = monitor.width;
+    XMoveWindow(display, window, monitor.x, monitor.y);
+}
+
 void Panel::add_applet(tiny::Widget* applet, Side side)
 {
     if (!is_realized) {

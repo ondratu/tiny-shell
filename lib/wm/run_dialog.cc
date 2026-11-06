@@ -70,6 +70,10 @@ void RunDialog::realize(::Window root, int, int)
 void RunDialog::popup()
 {
     programs_known = false;
+    if (screen.width > 0 && screen.height > 0) {
+        XMoveWindow(display, window, screen.x + (screen.width - width) / 2,
+                    screen.y + (screen.height - height) / 2);
+    }
     map_all();
     XRaiseWindow(display, window);
     entry.set_focus();
