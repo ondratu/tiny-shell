@@ -149,6 +149,29 @@ bool valid_dock_choice(const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
+XftChoices placement_choices()
+{
+    static constexpr XftChoice where[] = {{"", "Keep"},
+                                          {"right", "Right of primary"},
+                                          {"left", "Left of primary"},
+                                          {"above", "Above primary"},
+                                          {"below", "Below primary"}};
+    return {std::begin(where), std::end(where)};
+}
+
+bool valid_placement_choice(const std::string& text)
+{
+    const XftChoices choices = placement_choices();
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+XftChoices numbers_choices()
+{
+    static constexpr XftChoice numbers[] = {{"", "Off"}, {"yes", "Always"}};
+    return {std::begin(numbers), std::end(numbers)};
+}
+
 bool valid_clock_format(const std::string& text)
 {
     return std::none_of(text.begin(), text.end(), [](char c) {

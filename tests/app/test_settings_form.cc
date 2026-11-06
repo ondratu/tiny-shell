@@ -1325,14 +1325,14 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
 {
     using Section = SettingsForm::Section;
     size_t count = 0;
-    for (const Section section :
-         {Section::Fonts, Section::Appearance, Section::Applications}) {
+    for (const Section section : {Section::Fonts, Section::Appearance,
+                                  Section::Applications, Section::Screens}) {
         for (const Field f : SettingsForm::section_fields(section)) {
             EXPECT_EQ(SettingsForm::section_of(f), section);
             ++count;
         }
     }
-    EXPECT_EQ(count, 12u);
+    EXPECT_EQ(count, 16u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1343,6 +1343,7 @@ TEST(SettingsFormSectionTest, the_sections_have_names)
                  "Appearance");
     EXPECT_STREQ(SettingsForm::section_title(Section::Applications),
                  "Applications");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Screens), "Screens");
 }
 
 TEST(SettingsFormSectionTest, a_click_on_an_item_of_the_panel_shows_its_section)
@@ -1381,9 +1382,11 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     EXPECT_TRUE(form.key(Key::NextSection));
     EXPECT_EQ(form.section(), Section::Applications);
     EXPECT_TRUE(form.key(Key::NextSection));
+    EXPECT_EQ(form.section(), Section::Screens);
+    EXPECT_TRUE(form.key(Key::NextSection));
     EXPECT_EQ(form.section(), Section::Fonts); // round
     EXPECT_TRUE(form.key(Key::PrevSection));
-    EXPECT_EQ(form.section(), Section::Applications);
+    EXPECT_EQ(form.section(), Section::Screens);
 }
 
 TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
@@ -1574,4 +1577,104 @@ TEST(SettingsFormSectionTest,
 
     EXPECT_GE(form.thumbnail_rect().width, 1);
     EXPECT_GE(form.thumbnail_rect().height, 1);
+}
+
+// The monitors
+
+TEST(SettingsFormScreensTest, the_values_come_from_the_start)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.primary_monitor = "2";
+    v.secondary_monitor = "HDMI-1";
+    v.monitor_placement = "right";
+    v.monitor_numbers = "yes";
+    const SettingsForm form = make(v);
+
+    EXPECT_EQ(form.values().primary_monitor, "2");
+    EXPECT_EQ(form.values().secondary_monitor, "HDMI-1");
+    EXPECT_EQ(form.choice_label(Field::MonitorPlacement), "Right of primary");
+    EXPECT_EQ(form.choice_label(Field::MonitorNumbers), "Always");
+    EXPECT_FALSE(SettingsForm::is_choice(Field::PrimaryMonitor));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorPlacement));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorNumbers));
+}
+
+TEST(SettingsFormScreensTest, nothing_is_set_by_default)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.values().primary_monitor, "");
+    EXPECT_EQ(form.choice_label(Field::MonitorPlacement), "Keep");
+    EXPECT_EQ(form.choice_label(Field::MonitorNumbers), "Off");
+    EXPECT_EQ(form.problem(), "");
+}
+
+TEST(SettingsFormScreensTest, the_arrows_go_through_the_places)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::MonitorPlacement);
+
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::MonitorPlacement), "right");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::MonitorPlacement), "left");
+    form.key(Key::Left);
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::MonitorPlacement), "");
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::MonitorPlacement), "below");
+}
+
+TEST(SettingsFormScreensTest, a_monitor_is_typed)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::PrimaryMonitor);
+
+    EXPECT_TRUE(form.type("DP-1"));
+
+    EXPECT_EQ(form.text(Field::PrimaryMonitor), "DP-1");
+    EXPECT_EQ(form.problem(Field::PrimaryMonitor), "");
+}
+
+TEST(SettingsFormScreensTest, wrong_values_are_a_problem)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.primary_monitor = "two monitors";
+    EXPECT_FALSE(make(v).problem(Field::PrimaryMonitor).empty());
+    v.secondary_monitor = "a b";
+    EXPECT_FALSE(make(v).problem(Field::SecondaryMonitor).empty());
+    v.monitor_placement = "diagonal";
+    EXPECT_FALSE(make(v).problem(Field::MonitorPlacement).empty());
+    v.monitor_numbers = "maybe";
+    EXPECT_FALSE(make(v).problem(Field::MonitorNumbers).empty());
+}
+
+TEST(SettingsFormScreensTest, the_fields_have_hints)
+{
+    for (const Field f :
+         SettingsForm::section_fields(SettingsForm::Section::Screens)) {
+        EXPECT_NE(std::string(SettingsForm::hint(f)), "");
+    }
+}
+
+TEST(SettingsFormScreensTest, a_click_on_the_section_shows_its_fields)
+{
+    SettingsForm form = make();
+
+    EXPECT_TRUE(click(form, form.section_rect(SettingsForm::Section::Screens)));
+
+    EXPECT_EQ(form.section(), SettingsForm::Section::Screens);
+    EXPECT_EQ(form.focus(), Field::PrimaryMonitor);
+    EXPECT_TRUE(click(form, form.field_rect(Field::MonitorNumbers)));
+    EXPECT_EQ(form.text(Field::MonitorNumbers), "yes");
+}
+
+TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
+{
+    SettingsForm form = make();
+    form.set_section(SettingsForm::Section::Screens);
+    form.resize(700, form.form_height());
+
+    const Rect last = form.field_rect(Field::MonitorNumbers);
+    EXPECT_LT(last.y + last.height, form.message_rect().y);
 }

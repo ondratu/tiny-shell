@@ -843,3 +843,13 @@ TEST(ConfigTest, the_choices_of_the_dock_start_with_the_default)
     EXPECT_STREQ(choices[1].value, "on");
     EXPECT_STREQ(choices[2].value, "off");
 }
+
+TEST(ConfigTest, the_choices_of_the_monitors_start_with_the_default)
+{
+    EXPECT_EQ(std::string(tiny::wm::placement_choices()[0].value), "");
+    EXPECT_EQ(tiny::wm::placement_choices().size(), 5u);
+    EXPECT_TRUE(tiny::wm::valid_placement_choice("above"));
+    EXPECT_TRUE(tiny::wm::valid_placement_choice(""));
+    EXPECT_FALSE(tiny::wm::valid_placement_choice("keep")); // "" is keep
+    EXPECT_EQ(std::string(tiny::wm::numbers_choices()[1].value), "yes");
+}
