@@ -28,7 +28,6 @@ extern Handlers handlers;
 namespace {
 
 constexpr const char* icon_name = "preferences-system";
-constexpr int first_size = 24; // until the tray says how big the icon is
 
 class TrayExample {
   public:
@@ -48,8 +47,8 @@ class TrayExample {
         quit.on_click.connect([this](const XEvent&) { running = false; });
 
         // The tray gives the icon the background of the panel
-        window = XCreateSimpleWindow(display, root, 0, 0, first_size,
-                                     first_size, 0, 0, 0);
+        window = XCreateSimpleWindow(display, root, 0, 0, tiny::x_dim(width),
+                                     tiny::x_dim(height), 0, 0, 0);
         XSetWindowBackgroundPixmap(display, window, ParentRelative);
         XSelectInput(display, window,
                      ExposureMask | ButtonPressMask | StructureNotifyMask);
@@ -164,8 +163,9 @@ class TrayExample {
     ::Display* display;
     ::Window root;
     ::Window window = None;
-    int width = first_size;
-    int height = first_size;
+    // until the tray says how big the icon is
+    int width = tiny::wm::shell_theme.tray_icon;
+    int height = tiny::wm::shell_theme.tray_icon;
     tiny::wm::SymbolicIcons icons;
     tiny::LabelButton quit;
     tiny::Popover menu;

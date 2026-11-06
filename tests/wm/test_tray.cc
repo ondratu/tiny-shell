@@ -221,6 +221,34 @@ TEST_F(TrayTest, a_window_that_is_not_there_is_ignored)
     EXPECT_FALSE(tray.has_icon(gone));
 }
 
+TEST_F(TrayTest, a_window_with_override_redirect_is_not_taken)
+{
+    ASSERT_TRUE(tray.acquire());
+    FakeClient menu;
+    XSetWindowAttributes attrs = {};
+    attrs.override_redirect = True;
+    XChangeWindowAttributes(menu.display, menu.window, CWOverrideRedirect,
+                            &attrs);
+    menu.sync();
+
+    request_dock(menu.window);
+
+    EXPECT_FALSE(tray.has_icon(menu.window));
+    EXPECT_EQ(parent_of(menu.window), root_window());
+}
+
+TEST_F(TrayTest, a_window_of_the_shell_is_not_taken)
+{
+    ASSERT_TRUE(tray.acquire());
+    FakeClient managed;
+    tray.is_taken = [&](::Window w) { return w == managed.window; };
+
+    request_dock(managed.window);
+
+    EXPECT_EQ(tray.size(), 0u);
+    EXPECT_EQ(parent_of(managed.window), root_window());
+}
+
 TEST_F(TrayTest, other_messages_are_ignored)
 {
     ASSERT_TRUE(tray.acquire());
