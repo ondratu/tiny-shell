@@ -10,6 +10,10 @@ namespace tiny::wm {
 //! The name of the selection that tells which window manager runs: `WM_S0`
 std::string selection_name(int screen);
 
+//! The name of the selection of the system tray (freedesktop.org):
+//! `_NET_SYSTEM_TRAY_S0`
+std::string tray_selection_name(int screen);
+
 /**
  * @short The ownership of the `WM_Sn` selection (ICCCM 2.8).
  *
@@ -28,7 +32,11 @@ class Selection {
         Failed,   //!< someone else took it in the meantime
     };
 
+    //! The `WM_Sn` selection of the screen
     Selection(::Display* display, ::Window root, int screen);
+
+    //! Any manager selection (ICCCM 2.8) by its name
+    Selection(::Display* display, ::Window root, const std::string& name);
     ~Selection();
 
     Selection(const Selection&) = delete;
@@ -39,6 +47,9 @@ class Selection {
 
     //! Tell the clients we are the manager (after the root window is ours)
     void announce();
+
+    //! The window that owns the selection: the clients send it messages
+    ::Window get_window() const { return owner_window; }
 
     //! The selection of the `SelectionClear` event is the one we hold
     bool is_lost_by(const XSelectionClearEvent& e) const;

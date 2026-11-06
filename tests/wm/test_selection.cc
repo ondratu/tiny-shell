@@ -75,6 +75,23 @@ TEST(SelectionNameTest, is_named_by_the_screen)
     EXPECT_EQ(tiny::wm::selection_name(2), "WM_S2");
 }
 
+TEST(SelectionNameTest, the_tray_is_named_by_the_screen)
+{
+    EXPECT_EQ(tiny::wm::tray_selection_name(0), "_NET_SYSTEM_TRAY_S0");
+    EXPECT_EQ(tiny::wm::tray_selection_name(1), "_NET_SYSTEM_TRAY_S1");
+}
+
+TEST_F(SelectionTest, a_selection_is_taken_by_its_name)
+{
+    const Atom tray = XInternAtom(display, "_NET_TEST_SELECTION_S0", False);
+    Selection selection(display, root, std::string("_NET_TEST_SELECTION_S0"));
+
+    EXPECT_EQ(selection.acquire(false, 100ms), Selection::Result::Acquired);
+    XSync(display, False);
+    EXPECT_EQ(XGetSelectionOwner(display, tray), selection.get_window());
+    EXPECT_EQ(owner_of_selection(), None); // not the one of the window manager
+}
+
 TEST_F(SelectionTest, free_selection_is_taken)
 {
     Selection selection(display, root, screen);

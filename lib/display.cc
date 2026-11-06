@@ -24,6 +24,12 @@ Display::Display(::Display* display_arg):
     INCR(XInternAtom(display_arg, "INCR", 0)),
     TINY_SELECTION(XInternAtom(display_arg, "TINY_SELECTION", 0)),
     MANAGER(XInternAtom(display_arg, "MANAGER", 0)),
+    _NET_SYSTEM_TRAY_OPCODE(
+            XInternAtom(display_arg, "_NET_SYSTEM_TRAY_OPCODE", 0)),
+    _NET_SYSTEM_TRAY_ORIENTATION(
+            XInternAtom(display_arg, "_NET_SYSTEM_TRAY_ORIENTATION", 0)),
+    _XEMBED(XInternAtom(display_arg, "_XEMBED", 0)),
+    _XEMBED_INFO(XInternAtom(display_arg, "_XEMBED_INFO", 0)),
     _MOTIF_WM_HINTS(XInternAtom(display_arg, "_MOTIF_WM_HINTS", 0)),
     _NET_SUPPORTED(XInternAtom(display_arg, "_NET_SUPPORTED", 0)),
     _NET_SUPPORTING_WM_CHECK(
