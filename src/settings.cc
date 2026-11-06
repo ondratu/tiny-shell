@@ -98,6 +98,8 @@ class SettingsApp : public tiny::XftWindow {
         wallpaper_program(std::move(wallpaper_program_arg)),
         scale(config.scale),
         metrics(SettingsForm::Metrics::scaled(config.scale)),
+        monitors(tiny::wm::read_monitors(display_arg,
+                                         XDefaultRootWindow(display_arg))),
         initial{config.font,
                 config.terminal_line,
                 tiny::number_text(config.scale),
@@ -113,9 +115,8 @@ class SettingsApp : public tiny::XftWindow {
                 config.dock_mode == tiny::wm::DockMode::AutoHide
                         ? ""
                         : tiny::wm::dock_mode_name(config.dock_mode),
-                config.monitor_primary == "auto" ? "" : config.monitor_primary,
-                config.monitor_secondary == "auto" ? ""
-                                                   : config.monitor_secondary,
+                SettingsForm::monitor_value(monitors, config.monitor_primary),
+                SettingsForm::monitor_value(monitors, config.monitor_secondary),
                 config.monitor_placement == tiny::wm::Placement::Keep
                         ? ""
                         : tiny::wm::placement_name(config.monitor_placement),
@@ -139,6 +140,7 @@ class SettingsApp : public tiny::XftWindow {
             ui_font = text_font(ui_family);
         }
 
+        form.set_monitors(monitors);
         form.set_measure([this](const std::string& text) {
             return text_width(ui_font, text);
         });
@@ -261,10 +263,13 @@ class SettingsApp : public tiny::XftWindow {
             case SettingsForm::Result::Editing:
                 break;
             case SettingsForm::Result::Cancelled:
+                show_numbers(false);
                 quit();
                 return;
             case SettingsForm::Result::Saved:
                 if (save()) {
+                    tell_shell(2); // the shell reads [monitors] again
+                    show_numbers(false);
                     quit();
                     return;
                 }
@@ -414,8 +419,34 @@ class SettingsApp : public tiny::XftWindow {
         }
     }
 
+    //! The number of every monitor is on its screen while the monitors are
+    //! set (the shell shows them, over all the windows)
+    void tell_shell(long what)
+    {
+        XEvent e = {};
+        e.xclient.type = ClientMessage;
+        e.xclient.window = XDefaultRootWindow(display);
+        e.xclient.message_type = tiny::get_display()._TINY_SHELL_MONITORS;
+        e.xclient.format = 32;
+        e.xclient.data.l[0] = what;
+        e.xclient.data.l[1] = static_cast<long>(get_window());
+        XSendEvent(display, XDefaultRootWindow(display), False,
+                   SubstructureRedirectMask | SubstructureNotifyMask, &e);
+        XFlush(display);
+    }
+
+    void show_numbers(bool on)
+    {
+        if (on != numbers_shown) {
+            numbers_shown = on;
+            tell_shell(on ? 1 : 0);
+        }
+    }
+
     void paint() override
     {
+        show_numbers(form.view() == SettingsForm::View::Form &&
+                     form.section() == SettingsForm::Section::Screens);
         fill(background, {0, 0, width, height});
         if (form.view() == SettingsForm::View::Picker) {
             paint_picker();
@@ -690,6 +721,8 @@ class SettingsApp : public tiny::XftWindow {
     std::string wallpaper_program; //!< draws the wallpaper after it is saved
     double scale;
     SettingsForm::Metrics metrics;
+    tiny::wm::Monitors monitors; //!< the monitors the form offers
+    bool numbers_shown = false;
     SettingsForm::Values initial; //!< what the files say now
     SettingsForm form;
     std::string ui_family; //!< the family of `ui_font`

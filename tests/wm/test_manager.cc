@@ -6417,3 +6417,108 @@ TEST_F(ManagerTest, the_monitors_of_the_server_are_used_when_they_change)
     EXPECT_EQ(attributes_of(manager->wm_panel).x, 0);
 }
 #endif
+
+namespace {
+
+void send_monitors_message(long what, long window = 0)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = root_window();
+    e.xclient.message_type = dsp()._TINY_SHELL_MONITORS;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = what;
+    e.xclient.data.l[1] = window;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+} // namespace
+
+TEST_F(TwoMonitorsTest, the_settings_show_the_numbers_while_they_live)
+{
+    split();
+    const ::Window owner =
+            XCreateSimpleWindow(dsp(), root_window(), 0, 0, 10, 10, 0, 0, 0);
+
+    send_monitors_message(1, static_cast<long>(owner));
+    run_loop();
+    EXPECT_TRUE(manager->get_monitor_labels().is_shown());
+    EXPECT_EQ(manager->monitor_numbers_timer, 0u); // they stay
+
+    XDestroyWindow(dsp(), owner); // the settings were closed
+    XSync(dsp(), False);
+    run_loop();
+    EXPECT_FALSE(manager->get_monitor_labels().is_shown());
+}
+
+TEST_F(TwoMonitorsTest, the_settings_hide_the_numbers)
+{
+    split();
+    const ::Window owner =
+            XCreateSimpleWindow(dsp(), root_window(), 0, 0, 10, 10, 0, 0, 0);
+    send_monitors_message(1, static_cast<long>(owner));
+    run_loop();
+
+    send_monitors_message(0);
+    run_loop();
+
+    EXPECT_FALSE(manager->get_monitor_labels().is_shown());
+    XDestroyWindow(dsp(), owner);
+}
+
+TEST_F(TwoMonitorsTest,
+       numbers_that_the_configuration_wants_stay_when_the_settings_go)
+{
+    split();
+    manager->set_monitors("auto", "auto", tiny::wm::Placement::Keep, true);
+    send_monitors_message(0);
+    run_loop();
+
+    EXPECT_TRUE(manager->get_monitor_labels().is_shown());
+}
+
+TEST_F(TwoMonitorsTest, the_settings_ask_for_the_monitors_to_be_read_again)
+{
+    split();
+    int asked = 0;
+    manager->set_reload([&asked] { ++asked; });
+
+    send_monitors_message(2);
+    run_loop();
+
+    EXPECT_EQ(asked, 1);
+}
+
+TEST_F(TwoMonitorsTest, the_numbers_are_raised_over_a_window_that_comes_up)
+{
+    split();
+    manager->show_monitor_numbers(true);
+    FakeClient& c = add_client(false);
+    c.map();
+    run_loop();
+
+    ::Window root;
+    ::Window parent;
+    ::Window* kids = nullptr;
+    unsigned int count = 0;
+    XQueryTree(dsp(), root_window(), &root, &parent, &kids, &count);
+    ASSERT_GT(count, 0u);
+    std::vector<::Window> order(kids, kids + count);
+    XFree(kids);
+    const ::Window label =
+            manager->get_monitor_labels().get_labels()[0]->get_window();
+    const ::Window reveal = manager->wm_dock_reveal.get_window();
+    // only the other labels and the strip of the dock may be above the label
+    std::vector<::Window> allowed = {reveal};
+    for (const auto& other : manager->get_monitor_labels().get_labels()) {
+        allowed.push_back(other->get_window());
+    }
+    const auto at = std::find(order.begin(), order.end(), label);
+    ASSERT_NE(at, order.end());
+    for (auto it = at + 1; it != order.end(); ++it) {
+        EXPECT_NE(std::find(allowed.begin(), allowed.end(), *it),
+                  allowed.end());
+    }
+}

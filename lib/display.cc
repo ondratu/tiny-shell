@@ -136,6 +136,7 @@ Display::Display(::Display* display_arg):
     _NET_WM_STRUT(XInternAtom(display_arg, "_NET_WM_STRUT", 0)),
     _NET_WM_STRUT_PARTIAL(XInternAtom(display_arg, "_NET_WM_STRUT_PARTIAL", 0)),
     _NET_WORKAREA(XInternAtom(display_arg, "_NET_WORKAREA", 0)),
+    _TINY_SHELL_MONITORS(XInternAtom(display_arg, "_TINY_SHELL_MONITORS", 0)),
     _NET_DESKTOP_VIEWPORT(XInternAtom(display_arg, "_NET_DESKTOP_VIEWPORT", 0)),
     _NET_DESKTOP_GEOMETRY(XInternAtom(display_arg, "_NET_DESKTOP_GEOMETRY", 0)),
     _NET_CURRENT_DESKTOP(XInternAtom(display_arg, "_NET_CURRENT_DESKTOP", 0)),
