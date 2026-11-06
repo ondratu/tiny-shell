@@ -241,7 +241,7 @@ TEST_F(SwitcherPanelTest, the_old_icon_of_a_window_is_copied)
             XCreatePixmap(tiny::get_display(), root_window(),
                           tiny::x_uint(tiny::wm::shell_theme.icon),
                           tiny::x_uint(tiny::wm::shell_theme.icon),
-                          XDefaultDepth(tiny::get_display(), 0));
+                          tiny::x_uint(XDefaultDepth(tiny::get_display(), 0)));
     GC gc = XCreateGC(tiny::get_display(), pixmap, 0, nullptr);
     XSetForeground(tiny::get_display(), gc, 0x00FF00);
     XFillRectangle(tiny::get_display(), pixmap, gc, 0, 0,
@@ -263,7 +263,7 @@ TEST_F(SwitcherPanelTest, the_mask_of_the_old_icon_leaves_the_background)
     ::Display* dsp = tiny::get_display();
     const auto size = tiny::x_uint(tiny::wm::shell_theme.icon);
     const Pixmap pixmap = XCreatePixmap(dsp, root_window(), size, size,
-                                        XDefaultDepth(dsp, 0));
+                                        tiny::x_uint(XDefaultDepth(dsp, 0)));
     GC gc = XCreateGC(dsp, pixmap, 0, nullptr);
     XSetForeground(dsp, gc, 0x00FF00);
     XFillRectangle(dsp, pixmap, gc, 0, 0, size, size);
