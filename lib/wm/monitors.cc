@@ -230,7 +230,7 @@ std::optional<size_t> find_monitor(const Monitors& monitors,
         }
         const unsigned long number = std::strtoul(text.c_str(), nullptr, 10);
         if (number >= 1 && number <= monitors.size()) {
-            return static_cast<size_t>(number - 1);
+            return number - 1;
         }
         return std::nullopt;
     }
