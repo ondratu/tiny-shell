@@ -1250,6 +1250,7 @@ bool Window::sync_allows_resize()
         return true;
     }
     // the client can destroy its counter any time: BadCounter is no fault
+    XSync(dsp, False); // older errors belong to the handler of the manager
     const XErrorHandler old_handler =
             XSetErrorHandler([](::Display*, XErrorEvent*) -> int { return 0; });
     XSyncValue value;
