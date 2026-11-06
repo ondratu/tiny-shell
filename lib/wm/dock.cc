@@ -342,6 +342,8 @@ void DockIcon::on_expose(const XEvent&, void*)
 
         XCopyArea(display, icon, window, gc, 0, 0, tiny::x_uint(width),
                   tiny::x_uint(size), 0, 0);
+        // the mask clips what is drawn after the icon (the dots) too
+        XSetClipMask(display, gc, None);
     } else if (symbols != nullptr &&
                symbols->draw(window, "application-x-executable",
                              (dragging ? size / 2 : size) * 2 / 3,
