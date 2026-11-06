@@ -642,6 +642,56 @@ TEST(ConfigTest, a_wrong_value_of_the_system_tray_is_refused)
               std::string::npos);
 }
 
+TEST(ConfigTest, the_monitors_are_chosen_by_the_shell_unless_they_are_set)
+{
+    const Config c = parse_config({});
+
+    EXPECT_EQ(c.monitor_primary, "auto");
+    EXPECT_EQ(c.monitor_secondary, "auto");
+    EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Keep);
+    EXPECT_FALSE(c.monitor_numbers);
+}
+
+TEST(ConfigTest, the_monitors_are_read)
+{
+    const Config c =
+            parse_config({{"a", "[monitors]\nprimary = 2\n"
+                                "secondary = HDMI-1\nplacement = Above\n"
+                                "numbers = yes\n"}});
+
+    EXPECT_EQ(c.monitor_primary, "2");
+    EXPECT_EQ(c.monitor_secondary, "HDMI-1");
+    EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Over);
+    EXPECT_TRUE(c.monitor_numbers);
+}
+
+TEST(ConfigTest, an_empty_monitor_is_auto)
+{
+    const Config c = parse_config({{"a", "[monitors]\nprimary =\n"}});
+
+    EXPECT_EQ(c.monitor_primary, "auto");
+}
+
+TEST(ConfigTest, wrong_values_of_the_monitors_are_refused)
+{
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[monitors]\nprimary = two monitors\n"
+                                "placement = diagonal\nnumbers = 1\n"}},
+                         &problems);
+
+    EXPECT_EQ(c.monitor_primary, "auto");
+    EXPECT_EQ(c.monitor_placement, tiny::wm::Placement::Keep);
+    EXPECT_FALSE(c.monitor_numbers);
+    ASSERT_EQ(problems.size(), 3u);
+    EXPECT_NE(problems[0].find("[monitors] primary must be"),
+              std::string::npos);
+    EXPECT_NE(problems[1].find("[monitors] placement must be"),
+              std::string::npos);
+    EXPECT_NE(problems[2].find("[monitors] numbers must be"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, a_format_of_the_clock_with_a_control_character_is_refused)
 {
     std::vector<std::string> problems;

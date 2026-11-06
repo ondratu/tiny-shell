@@ -7,6 +7,7 @@
 
 #include "style.h"
 #include "wm/dock_mode.h"
+#include "wm/monitors.h"
 
 namespace tiny::wm {
 
@@ -42,6 +43,12 @@ namespace tiny::wm {
  * clock_format = %a %e %B %R
  * system_tray = yes
  *
+ * [monitors]
+ * primary = auto
+ * secondary = 2
+ * placement = right
+ * numbers = no
+ *
  * [dock]
  * mode = autohide
  * favorites = firefox.desktop;org.gnome.Nautilus.desktop
@@ -74,6 +81,16 @@ struct Config {
     std::string clock_format = "%a %e %B %R";
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
+    //! [monitors] primary: the monitor of the panel and the dock, a number
+    //! (as the monitors are numbered), a name of an output or "auto"
+    std::string monitor_primary = "auto";
+    //! [monitors] secondary: the monitor that `monitor_placement` moves
+    std::string monitor_secondary = "auto";
+    //! [monitors] placement: where the secondary monitor is, seen from the
+    //! primary one; `Keep` leaves the layout of the system alone
+    Placement monitor_placement = Placement::Keep;
+    //! [monitors] numbers: show the number of every monitor in its corner
+    bool monitor_numbers = false;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
     //! [dock] favorites: ids of desktop files, `;` between them
