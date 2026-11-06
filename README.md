@@ -50,10 +50,15 @@ Implemented:
   the client), shade, dialogs and modal dialogs, focus handling, a window switcher,
   windows adopted at start, clients survive a crash of the manager and are
   given back when it exits, applications that stop responding are found by
-  `_NET_WM_PING` and the user chooses to wait or to force them to quit.
+  `_NET_WM_PING` and the user chooses to wait or to force them to quit,
+  windows that support `_NET_WM_SYNC_REQUEST` are not given a new size by the
+  edges before they have drawn the last one.
 - **Standards:** ICCCM, EWMH (window states, types, layers, struts and the
   work area that follows docks coming and going, active window, focus
-  stealing prevention, frame extents, the client lists), `_MOTIF_WM_HINTS`
+  stealing prevention, frame extents, the client lists, popups: menus,
+  tooltips, notifications, combo lists and drag pictures get no frame and no
+  focus and stay above the windows), XSETTINGS (the theme, the font and the
+  DPI for GTK and Qt, see below), `_MOTIF_WM_HINTS`
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
 - **Shell:** top panel with the logo, which opens the main menu (About,
@@ -61,11 +66,14 @@ Implemented:
   date and time at its
   right end (the names and the order follow `LANG`), the system tray (the icons
   of programs, left of the clock), a dock with
-  one icon for every application (a dot under it for every window) and the
+  one icon for every application (a dot under it for every window, also for
+  an application that is not a favorite) and the
   favorite applications, which stay there when they do not run and can be moved
   by the mouse; the dock hides under the active window and the bottom edge of
   the screen shows it (or it is always shown, or never); a run dialog
-  (Alt+F2), a full screen launcher with search (Super). Their text field has a
+  (Alt+F2, Tab completes the name of a program from `PATH`: the first Tab adds
+  what all the matching programs share, the next ones walk through them), a
+  full screen launcher with search (Super). Their text field has a
   cursor (the arrows, Home, End, Delete and a click), Ctrl+V, Shift+Insert and
   the middle button paste, Ctrl+C copies the text.
 - **Window switcher:** Alt+Tab shows, while Alt is held, a panel in the middle
@@ -78,7 +86,11 @@ Implemented:
   application with big icons and their titles (the left and right arrows
   choose one, Tab still moves between the applications) and the up arrow goes
   back; Escape cancels. Alt+; is the same for the windows of the current
-  application only.
+  application only. It is taken only from the keys that type a semicolon
+  without Shift or AltGr (in every group of the layout), so Alt with the other
+  keys, also the ones that give `;` with a modifier, stays for the
+  applications. The shortcuts of the shell (Alt+Tab, Alt+F2, Alt+F4, Alt+; and
+  Super) follow a change of the keyboard layout.
 - **Settings:** `tiny-settings`, a small form with the sections Fonts,
   Appearance and Applications that changes the font, the rendering of text
   (antialiasing, hinting, subpixel order), the scale, the wallpaper, the mode
@@ -136,8 +148,8 @@ programs is done, only small details of it are left):
 - Written in C++17 (without RTTI), built with GNU make; two static libraries,
   the widgets and the shell
 - [Xlib](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html),
-  Xft (with fontconfig and FreeType, which Xft needs anyway) and Xrender;
-  nothing else is needed to run it
+  Xft (with fontconfig and FreeType, which Xft needs anyway), Xrender and
+  Xext (the SYNC extension); nothing else is needed to run it
 - Tests use [googletest](https://github.com/google/googletest) and Xvfb
 
 ## Platforms
@@ -151,11 +163,11 @@ programs is done, only small details of it are left):
 ## Building
 
 Requirements: a C++17 compiler, GNU make, `pkg-config` and the development
-files of `x11`, `xft` and `xrender`.
+files of `x11`, `xft`, `xrender` and `xext`.
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev libfontconfig-dev
+    libx11-dev libxft-dev libxrender-dev libxext-dev libfontconfig-dev
 
 make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
@@ -227,8 +239,9 @@ there, e.g. on the BSDs) and then the one of the user in `$XDG_CONFIG_HOME`
 (`~/.config` by default). A key of the user's file replaces the same key of
 the global file, so it only needs the keys that differ. Both files are
 optional, `tiny-shell --info` lists them and the settings in use. The file
-is read when tiny-shell starts; a line or a value that is wrong is reported
-on stderr and the default is used.
+is read when tiny-shell starts and again when it gets `SIGHUP` or is run
+as `tiny-shell --reload` (see below); a line or a value that is wrong is
+reported on stderr and the default is used.
 
 ```ini
 # A comment is a whole line that starts with # or ; (not the end of a line)
@@ -246,6 +259,9 @@ style = dark
 # The style of the font, a name that the family has ("Bold", "Italic"); empty
 # is the default style. The title bars are always bold.
 font_style = Bold
+# Tell GTK and Qt programs the theme, the font and the DPI (XSETTINGS, see
+# below): yes (the default) or no
+xsettings = yes
 
 [xft]
 # How the programs draw text, put into the X resources Xft.* when tiny-shell
@@ -312,6 +328,30 @@ in Czech, `Thu 5 November 15:33` in English) and `%R` is `HH:MM`. The default
 is `%a %e %B %R`, without the year. The clock is as wide as the widest text of the format in a year, so
 the panel does not move, and it changes at the start of every minute, so it
 does not show seconds. An empty format removes the clock.
+
+### Settings for GTK and Qt (XSETTINGS)
+
+tiny-shell is the manager of settings of the screen, the way the
+[XSETTINGS](https://specifications.freedesktop.org/xsettings-spec/latest/)
+specification describes it: it owns the selection `_XSETTINGS_S0`, tells the
+programs with the `MANAGER` message and keeps the settings in the property
+`_XSETTINGS_SETTINGS` of its window. The programs that follow it (GTK 2 and 3,
+Qt with the GTK platform theme, Firefox...) change at once when a setting
+changes. The settings come from the configuration file:
+
+- `Net/ThemeName`: `Adwaita-dark` for `[theme] style = dark`, `Adwaita` for
+  light (GTK 2 and 3 can choose a dark theme only by its name; GTK 4 and
+  libadwaita read the color scheme of the portal instead, not done yet)
+- `Gtk/FontName`: the first family of `[theme] font`, `font_style` and
+  `font_size`, like "DejaVu Sans Bold 12"
+- `Xft/DPI`, `Gdk/UnscaledDPI` and `Gdk/WindowScalingFactor`: 96 dpi times
+  `[theme] scale`; the whole part of the scale is the factor of the windows
+- `Xft/Antialias`, `Xft/Hinting`, `Xft/HintStyle` and `Xft/RGBA` from `[xft]`
+  (what is not set is not published)
+
+A settings daemon that already runs (`gsd-xsettings`, `xsettingsd`) is left
+alone and tiny-shell publishes nothing; so is it when `[theme] xsettings = no`.
+The cursor theme is not published yet.
 
 ### The system tray
 
@@ -521,7 +561,7 @@ back, Ctrl+Q and Ctrl+W quit. The sizes follow `[theme] scale`.
 ### Command line
 
 ```
-tiny-shell [--replace] [--info] [--version] [--help]
+tiny-shell [--replace] [--info] [--reload] [--version] [--help]
 ```
 
 `--replace` takes over from a window manager that is already running, the way
@@ -530,6 +570,14 @@ tiny-shell starts when it has gone. Another window manager started with its
 own `--replace` takes over from tiny-shell in the same way. Window managers
 that do not use the selection (for example twm) have to be stopped first.
 `--info` prints what tiny-shell is and which settings it uses.
+`--reload` tells the tiny-shell that runs on the display to read the
+configuration files again; it is the same as `kill -HUP` of its process (the
+process is found through `_NET_WM_PID` of the window `_NET_SUPPORTING_WM_CHECK`,
+so it works on the computer where tiny-shell runs). What changes at once: the
+colors (`[theme] style`), the favorites, the commands, the wallpaper, the
+clock, the system tray, the mode of the dock, `[xft]` and what the programs are
+told by XSETTINGS. The scale and the font of the shell itself need a restart
+(a message says so). `SIGTERM` and `SIGINT` end tiny-shell.
 
 ### Where the launcher looks for applications
 

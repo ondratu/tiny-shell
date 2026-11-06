@@ -17,7 +17,7 @@ concurrency:
 env:
   STRICT: 1
   DEBIAN_FRONTEND: noninteractive
-  DEPS: build-essential pkg-config libx11-dev libxft-dev libxrender-dev
+  DEPS: build-essential pkg-config libx11-dev libxft-dev libxrender-dev libxext-dev
         libfontconfig-dev xvfb xauth libgtest-dev
 
 jobs:
@@ -116,7 +116,7 @@ jobs:
     container: alpine:3.22
     steps:
       - run: >
-          apk add --no-cache git make pkgconf clang g++ libx11-dev libxft-dev
+          apk add --no-cache git make pkgconf clang g++ libx11-dev libxext-dev libxft-dev
           libxrender-dev fontconfig-dev gtest-dev xvfb xvfb-run xauth font-dejavu
       - uses: actions/checkout@v7
       - run: make CXX=clang++ all check examples
