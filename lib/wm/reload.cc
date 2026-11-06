@@ -57,23 +57,20 @@ std::string read_text(::Display* display, ::Window window, Atom property)
 std::string request_reload(::Display* display, ::Window root)
 {
     const tiny::Display& dsp = tiny::get_display();
-    unsigned long check = None;
+    ::Window check = None;
     if (!read_long(display, root, dsp._NET_SUPPORTING_WM_CHECK, XA_WINDOW,
                    check)) {
         return "no window manager runs on this display";
     }
-    if (read_text(display, static_cast<::Window>(check), dsp._NET_WM_NAME) !=
-        "tiny-shell") {
+    if (read_text(display, check, dsp._NET_WM_NAME) != "tiny-shell") {
         return "the window manager that runs is not tiny-shell";
     }
     unsigned long pid = 0;
-    if (!read_long(display, static_cast<::Window>(check), dsp._NET_WM_PID,
-                   XA_CARDINAL, pid) ||
+    if (!read_long(display, check, dsp._NET_WM_PID, XA_CARDINAL, pid) ||
         pid <= 1 || pid > static_cast<unsigned long>(INT_MAX)) {
         return "tiny-shell does not tell its process";
     }
-    if (read_text(display, static_cast<::Window>(check),
-                  XA_WM_CLIENT_MACHINE) != local_host_name()) {
+    if (read_text(display, check, XA_WM_CLIENT_MACHINE) != local_host_name()) {
         return "tiny-shell runs on another computer";
     }
     if (kill(static_cast<pid_t>(pid), SIGHUP) != 0) {
