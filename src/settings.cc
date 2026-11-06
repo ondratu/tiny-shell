@@ -4,7 +4,9 @@
 // The form has a panel at the left with the sections: Fonts (the font, its
 // size and style, and the antialiasing, hinting and subpixel order of the text
 // of the programs), Appearance (the scale, the wallpaper, the mode of the dock
-// and the format of the clock) and Applications (the terminal). The choices
+// and the format of the clock), Applications (the terminal) and Screens (the
+// primary and the secondary monitor, where the secondary one is, and the
+// numbers on the monitors). The choices
 // go through their values with the arrows, Space and a click; a field has a
 // cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
 // Down and Ctrl+Page Up go through the sections. The button next to the font opens a list of the fonts of
@@ -110,7 +112,14 @@ class SettingsApp : public tiny::XftWindow {
                 config.clock_format,
                 config.dock_mode == tiny::wm::DockMode::AutoHide
                         ? ""
-                        : tiny::wm::dock_mode_name(config.dock_mode)},
+                        : tiny::wm::dock_mode_name(config.dock_mode),
+                config.monitor_primary == "auto" ? "" : config.monitor_primary,
+                config.monitor_secondary == "auto" ? ""
+                                                   : config.monitor_secondary,
+                config.monitor_placement == tiny::wm::Placement::Keep
+                        ? ""
+                        : tiny::wm::placement_name(config.monitor_placement),
+                config.monitor_numbers ? "yes" : ""},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -312,6 +321,28 @@ class SettingsApp : public tiny::XftWindow {
                 // the first choice, "", is auto-hide
                 changed.push_back(
                         {"dock", "mode", v.dock.empty() ? "autohide" : v.dock});
+            }
+            if (v.primary_monitor != initial.primary_monitor) {
+                changed.push_back({"monitors", "primary",
+                                   v.primary_monitor.empty()
+                                           ? "auto"
+                                           : v.primary_monitor});
+            }
+            if (v.secondary_monitor != initial.secondary_monitor) {
+                changed.push_back({"monitors", "secondary",
+                                   v.secondary_monitor.empty()
+                                           ? "auto"
+                                           : v.secondary_monitor});
+            }
+            if (v.monitor_placement != initial.monitor_placement) {
+                changed.push_back({"monitors", "placement",
+                                   v.monitor_placement.empty()
+                                           ? "keep"
+                                           : v.monitor_placement});
+            }
+            if (v.monitor_numbers != initial.monitor_numbers) {
+                changed.push_back({"monitors", "numbers",
+                                   v.monitor_numbers.empty() ? "no" : "yes"});
             }
             if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
                 publish_xft(v);
@@ -542,7 +573,11 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Wallpaper, "Wallpaper"},
                     {SettingsForm::Field::WallpaperMode, "Placement"},
                     {SettingsForm::Field::ClockFormat, "Clock"},
-                    {SettingsForm::Field::Dock, "Dock"}};
+                    {SettingsForm::Field::Dock, "Dock"},
+                    {SettingsForm::Field::PrimaryMonitor, "Primary"},
+                    {SettingsForm::Field::SecondaryMonitor, "Secondary"},
+                    {SettingsForm::Field::MonitorPlacement, "Position"},
+                    {SettingsForm::Field::MonitorNumbers, "Numbers"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

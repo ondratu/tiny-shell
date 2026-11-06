@@ -141,6 +141,18 @@ XftChoices dock_choices();
 bool valid_dock_choice(const std::string& text);
 
 /**
+ * @short The values that `[monitors] placement` can have: "" (keep), right,
+ * left, above and below, with the names a form shows.
+ */
+XftChoices placement_choices();
+
+//! Whether the text is one of the values of `placement_choices()`
+bool valid_placement_choice(const std::string& text);
+
+//! The values of `[monitors] numbers`: "" (no) and "yes"
+XftChoices numbers_choices();
+
+/**
  * @short Whether the text is a format of the clock that can be saved.
  *
  * Empty (no clock) or a `strftime()` format without a control character (a

@@ -17,7 +17,7 @@ namespace tiny::app {
  * @short What the settings program shows and does, without any drawing.
  *
  * The form has a panel at its left with the sections (Fonts, Appearance,
- * Applications) and the fields of the chosen section: text fields (the font,
+ * Applications, Screens) and the fields of the chosen section: text fields (the font,
  * its size and style, the scale, the format of the clock, the wallpaper, the
  * terminal), choices (antialiasing, hinting and subpixel order of the text,
  * the placement of the wallpaper, the mode of the dock: the left and right
@@ -46,7 +46,7 @@ class SettingsForm {
     enum class View { Form, Picker };
 
     //! The groups of the settings, in the panel at the left
-    enum class Section { Fonts, Appearance, Applications };
+    enum class Section { Fonts, Appearance, Applications, Screens };
 
     enum class Field {
         Font,
@@ -58,9 +58,13 @@ class SettingsForm {
         Hinting,
         Rgba,
         Wallpaper, //!< the path of a PNG or JPEG, typed (there is no browser)
-        WallpaperMode, //!< a choice: fill, center or tile
-        ClockFormat,   //!< a `strftime()` format; empty is no clock
-        Dock           //!< a choice: auto-hide, on or off
+        WallpaperMode,    //!< a choice: fill, center or tile
+        ClockFormat,      //!< a `strftime()` format; empty is no clock
+        Dock,             //!< a choice: auto-hide, on or off
+        PrimaryMonitor,   //!< auto (empty), a number or the name of an output
+        SecondaryMonitor, //!< the same
+        MonitorPlacement, //!< a choice: keep, right, left, above or below
+        MonitorNumbers    //!< a choice: off or always shown
     };
 
     //! What has the keyboard in the list of fonts
@@ -108,6 +112,11 @@ class SettingsForm {
         //! of the dock ("" is auto-hide, then "on" and "off")
         std::string clock_format{};
         std::string dock{};
+        //! The monitors of `[monitors]`: "" is auto, keep and no
+        std::string primary_monitor{};
+        std::string secondary_monitor{};
+        std::string monitor_placement{};
+        std::string monitor_numbers{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -156,7 +165,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 3;
+    static constexpr size_t section_count = 4;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -335,6 +344,10 @@ class SettingsForm {
         WallpaperModeField,
         ClockFormatField,
         DockField,
+        PrimaryMonitorField,
+        SecondaryMonitorField,
+        MonitorPlacementField,
+        MonitorNumbersField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -344,6 +357,7 @@ class SettingsForm {
         SectionFonts, //!< the items of the panel, in the order of `Section`
         SectionAppearance,
         SectionApplications,
+        SectionScreens,
         FirstRow //!< and the rows of the list from here
     };
 
@@ -369,7 +383,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 12> fields_;
+    std::array<TextField, 16> fields_;
     TextField search_;
     TextField pick_size_;
     std::string pick_style_;
