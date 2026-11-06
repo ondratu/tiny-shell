@@ -5073,3 +5073,379 @@ TEST_F(DockModeTest, the_dock_is_shown_again_when_the_mode_changes_back)
 
     EXPECT_TRUE(dock_shown());
 }
+
+// ---- the window switcher (Alt + Tab with Alt held) ----
+
+class ManagerSwitcherTest : public ManagerFavoritesTest {
+  protected:
+    // The order of use: the third, the second, the first; Alt is held
+    void held()
+    {
+        manage_three();
+        auto it = manager->wm_tops.begin();
+        first = *it;
+        second = *++it;
+        third = *++it;
+        manager->focus_window(second);
+        manager->focus_window(third);
+        manager->is_alt_down = [] { return true; };
+    }
+
+    void press(KeySym keysym, unsigned int state = Mod1Mask)
+    {
+        manager->on_key_press(key(keysym, state));
+    }
+
+    void release(KeySym keysym, unsigned int state = 0)
+    {
+        XKeyEvent e = key(keysym, state);
+        e.type = KeyRelease;
+        manager->on_key_release(e);
+    }
+
+    // Another client tries to take the keyboard: it fails while we have it
+    bool keyboard_is_ours()
+    {
+        const FakeClient other;
+        const int status =
+                XGrabKeyboard(other.display, root_window(), False,
+                              GrabModeAsync, GrabModeAsync, CurrentTime);
+        if (status == GrabSuccess) {
+            XUngrabKeyboard(other.display, CurrentTime);
+        }
+        other.sync();
+        return status == AlreadyGrabbed;
+    }
+
+    WmWindow* first = nullptr;
+    WmWindow* second = nullptr;
+    WmWindow* third = nullptr;
+};
+
+TEST_F(ManagerSwitcherTest, alt_tab_shows_the_switcher_and_switches_nothing)
+{
+    held();
+
+    press(XK_Tab);
+
+    EXPECT_TRUE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, third);
+    EXPECT_TRUE(keyboard_is_ours());
+    EXPECT_TRUE(manager->key_done);
+}
+
+TEST_F(ManagerSwitcherTest, the_window_is_switched_when_alt_is_released)
+{
+    held();
+    press(XK_Tab);
+
+    release(XK_Alt_L);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, second); // the window used before
+    EXPECT_FALSE(keyboard_is_ours());
+}
+
+TEST_F(ManagerSwitcherTest, the_right_alt_switches_as_well)
+{
+    held();
+    press(XK_Tab);
+
+    release(XK_Alt_R);
+
+    EXPECT_EQ(manager->active, second);
+}
+
+TEST_F(ManagerSwitcherTest, other_keys_do_not_close_the_switcher)
+{
+    held();
+    press(XK_Tab);
+
+    release(XK_Tab, Mod1Mask);
+    press(XK_a);
+    release(XK_a);
+
+    EXPECT_TRUE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, third);
+}
+
+TEST_F(ManagerSwitcherTest, tab_goes_on_and_shift_tab_goes_back)
+{
+    held();
+    press(XK_Tab); // the second, the order: third, second, first
+
+    press(XK_Tab); // the first
+    press(XK_Tab, Mod1Mask | ShiftMask);
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, second);
+}
+
+TEST_F(ManagerSwitcherTest,
+       alt_shift_tab_starts_with_the_window_used_the_longest_ago)
+{
+    held();
+
+    press(XK_Tab, Mod1Mask | ShiftMask);
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, first);
+}
+
+TEST_F(ManagerSwitcherTest, the_right_arrow_goes_on_like_tab)
+{
+    held();
+    press(XK_Tab);
+
+    press(XK_Right);
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, first);
+}
+
+TEST_F(ManagerSwitcherTest, the_left_arrow_goes_back_like_shift_tab)
+{
+    held();
+    press(XK_Tab);
+
+    press(XK_Left); // the current window: nothing to switch
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, third);
+}
+
+TEST_F(ManagerSwitcherTest, down_and_up_show_and_hide_the_windows)
+{
+    held();
+    press(XK_Tab);
+
+    press(XK_Down);
+    EXPECT_EQ(attributes_of(manager->wm_switcher.get_windows_panel()).map_state,
+              IsViewable);
+
+    press(XK_Up);
+    EXPECT_EQ(attributes_of(manager->wm_switcher.get_windows_panel()).map_state,
+              IsUnmapped);
+}
+
+TEST_F(ManagerSwitcherTest,
+       alt_semicolon_goes_to_the_other_window_of_the_application)
+{
+    FakeClient& one = add_client();
+    one.set_class("epsilon", "Epsilon");
+    FakeClient& two = add_client();
+    two.set_class("epsilon", "Epsilon");
+    FakeClient& other = add_client();
+    start();
+    manager->is_alt_down = [] { return true; };
+    WmWindow* a = manager->wm_windows.at(one.window);
+    WmWindow* b = manager->wm_windows.at(two.window);
+    manager->focus_window(b);
+    manager->focus_window(manager->wm_windows.at(other.window));
+    manager->focus_window(a); // the order: a, other, b
+
+    press(XK_semicolon);
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, b);
+}
+
+TEST_F(ManagerSwitcherTest,
+       down_chooses_a_window_of_the_application_with_arrows)
+{
+    FakeClient& one = add_client();
+    one.set_class("epsilon", "Epsilon");
+    FakeClient& two = add_client();
+    two.set_class("epsilon", "Epsilon");
+    start();
+    manager->is_alt_down = [] { return true; };
+    WmWindow* a = manager->wm_windows.at(one.window);
+    WmWindow* b = manager->wm_windows.at(two.window);
+    manager->focus_window(b);
+    manager->focus_window(a); // one application, a and b
+
+    press(XK_Tab); // there is no other application
+    press(XK_Down);
+    press(XK_Right);
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, b);
+}
+
+TEST_F(ManagerSwitcherTest, alt_semicolon_shows_the_windows_of_the_application)
+{
+    held();
+
+    press(XK_semicolon);
+
+    EXPECT_TRUE(manager->wm_switcher.is_open());
+    EXPECT_EQ(attributes_of(manager->wm_switcher.get_windows_panel()).map_state,
+              IsViewable);
+    press(XK_semicolon, Mod1Mask | ShiftMask);
+    release(XK_Alt_L);
+    EXPECT_EQ(manager->active, third); // one window per application: no change
+}
+
+TEST_F(ManagerSwitcherTest, escape_closes_the_switcher_and_switches_nothing)
+{
+    held();
+    press(XK_Tab);
+
+    press(XK_Escape);
+    release(XK_Alt_L);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, third);
+    EXPECT_FALSE(keyboard_is_ours());
+}
+
+TEST_F(ManagerSwitcherTest, a_quick_tap_switches_at_once)
+{
+    held();
+    manager->is_alt_down = [] { return false; }; // Alt is up before the grab
+
+    press(XK_Tab);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, second);
+    EXPECT_FALSE(keyboard_is_ours());
+}
+
+TEST_F(ManagerSwitcherTest, without_the_keyboard_it_switches_at_once)
+{
+    held();
+    const FakeClient other;
+    XGrabKeyboard(other.display, root_window(), False, GrabModeAsync,
+                  GrabModeAsync, CurrentTime);
+    other.sync();
+
+    press(XK_Tab);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_EQ(manager->active, second);
+}
+
+TEST_F(ManagerSwitcherTest, a_window_that_goes_away_closes_the_switcher)
+{
+    held();
+    press(XK_Tab);
+    ::Window gone = 0;
+    for (const auto& item : manager->wm_windows) {
+        if (item.second == second) {
+            gone = item.first;
+        }
+    }
+    ASSERT_NE(gone, 0u);
+
+    XDestroyWindowEvent e = {};
+    e.type = DestroyNotify;
+    e.window = gone;
+    manager->on_destroy_notify(e);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_FALSE(keyboard_is_ours());
+}
+
+TEST_F(ManagerSwitcherTest, the_release_of_alt_without_the_switcher_is_ignored)
+{
+    held();
+
+    release(XK_Alt_L);
+
+    EXPECT_EQ(manager->active, third);
+}
+
+TEST_F(ManagerSwitcherTest, alt_semicolon_is_a_shortcut_of_the_manager)
+{
+    start();
+
+    const XErrors errors;
+    const FakeClient other;
+    XGrabKey(other.display, XKeysymToKeycode(other.display, XK_semicolon),
+             Mod1Mask, root_window(), True, GrabModeAsync, GrabModeAsync);
+    other.sync();
+
+    EXPECT_EQ(errors.errors(), 1); // BadAccess: already grabbed
+}
+
+TEST_F(ManagerSwitcherTest, there_is_nothing_to_switch_without_windows)
+{
+    start();
+    manager->is_alt_down = [] { return true; };
+
+    press(XK_Tab);
+    press(XK_semicolon);
+
+    EXPECT_FALSE(manager->wm_switcher.is_open());
+    EXPECT_FALSE(keyboard_is_ours());
+}
+
+TEST_F(ManagerSwitcherTest, the_application_is_named_by_its_desktop_entry)
+{
+    FakeClient& client = add_client();
+    client.set_class("epsilon", "Epsilon");
+    start();
+
+    EXPECT_EQ(manager->switcher_name(*manager->wm_windows.at(client.window)),
+              "epsilon");
+}
+
+TEST_F(ManagerSwitcherTest, an_application_without_an_entry_is_named_by_class)
+{
+    FakeClient& client = add_client();
+    client.set_class("zeta", "Zeta");
+    client.set_title("A title");
+    start();
+
+    EXPECT_EQ(manager->switcher_name(*manager->wm_windows.at(client.window)),
+              "Zeta");
+}
+
+TEST_F(ManagerSwitcherTest, a_window_without_a_class_is_named_by_its_title)
+{
+    FakeClient& client = add_client();
+    client.set_title("A title");
+    start();
+
+    EXPECT_EQ(manager->switcher_name(*manager->wm_windows.at(client.window)),
+              "A title");
+}
+
+TEST_F(ManagerSwitcherTest, a_big_icon_comes_from_the_theme)
+{
+    std::filesystem::create_directories(root / "pixmaps");
+    std::ofstream(root / "pixmaps" / "epsilon.xpm")
+            << "/* XPM */\nstatic char * epsilon_xpm[] = {\n"
+               "\"2 2 1 1\",\n\"a c #FF0000\",\n\"aa\",\n\"aa\"};\n";
+    std::ofstream(root / "applications" / "epsilon.desktop")
+            << "[Desktop Entry]\nName=Epsilon\nType=Application\n"
+               "Icon=epsilon\nExec=true\n";
+    FakeClient& client = add_client();
+    client.set_class("epsilon", "Epsilon");
+    start();
+    const WmWindow& window = *manager->wm_windows.at(client.window);
+
+    const auto big = manager->switcher_icon(
+            window, tiny::wm::shell_theme.switcher_window_icon);
+    const auto small =
+            manager->switcher_icon(window, tiny::wm::shell_theme.icon);
+
+    EXPECT_NE(big.picture, None);
+    EXPECT_NE(big.picture, small.picture); // the one of the window is 48 px
+    EXPECT_EQ(small.picture, window.get_app_icon().picture);
+}
+
+TEST_F(ManagerSwitcherTest, a_window_without_an_application_has_its_own_icon)
+{
+    FakeClient& client = add_client();
+    client.set_icon_pixmap(16, true);
+    start();
+    const WmWindow& window = *manager->wm_windows.at(client.window);
+
+    const auto cell = manager->switcher_icon(
+            window, tiny::wm::shell_theme.switcher_window_icon);
+
+    EXPECT_EQ(cell.picture, None);
+    EXPECT_NE(cell.pixmap, None);
+    EXPECT_NE(cell.mask, None);
+}

@@ -19,6 +19,7 @@
 #include "wm/config.h"
 #include "wm/launcher.h"
 #include "wm/run_dialog.h"
+#include "wm/switcher.h"
 #include "wm/unresponsive_dialog.h"
 #include "wm/symbolic_icons.h"
 #include "wm/dock.h"
@@ -199,6 +200,25 @@ class Manager : public tiny::Object {
 
     bool is_super(unsigned int keycode) const;
 
+    bool is_alt(unsigned int keycode) const;
+
+    //! Alt + Tab and Alt + ;: show the switcher and take the keyboard until
+    //! Alt is released (when it is not held any more, switch at once)
+    void open_switcher(bool windows, bool backwards);
+
+    //! A key pressed while the switcher is shown
+    void on_switcher_key(const XKeyEvent& xkey);
+
+    //! Hide the switcher and give the keyboard back; `switch_now` focuses the
+    //! window that was chosen, otherwise nothing changes
+    void close_switcher(bool switch_now);
+
+    //! The name under the icon of an application in the switcher
+    std::string switcher_name(const Window& window);
+
+    //! The icon of a window in a size for the switcher
+    SwitcherCell switcher_icon(const Window& window, int size);
+
     //! Restore, focus and remember as active at once
     void focus_window(Window* window);
 
@@ -370,6 +390,7 @@ class Manager : public tiny::Object {
     UnresponsiveDialog wm_unresponsive;
     Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
+    Switcher wm_switcher;
     Dock wm_dock;
     DockReveal wm_dock_reveal{shell_theme.dock_reveal};
     DockMode dock_mode = DockMode::AutoHide;
@@ -380,6 +401,8 @@ class Manager : public tiny::Object {
     unsigned drag_button = 0;  //!< its release ends the drag, 0: any
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
+    //! Is Alt held (a test replaces it)
+    std::function<bool()> is_alt_down;
     unsigned long last_user_time = 0; //!< of the last user action we know of
     bool has_user_time = false;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients

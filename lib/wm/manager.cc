@@ -112,6 +112,15 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_run.realize(root_arg, 0, 0);
     wm_run.set_events();
 
+    wm_switcher.set_icons(&wm_icons);
+    wm_switcher.realize(root_arg);
+    wm_switcher.app_name = [this](const Window& window) {
+        return switcher_name(window);
+    };
+    wm_switcher.icon_of = [this](const Window& window, int size) {
+        return switcher_icon(window, size);
+    };
+
     wm_unresponsive.realize(root_arg);
     wm_unresponsive.on_wait.connect([this](const XEvent&) {
         if (asked) {
@@ -170,6 +179,17 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
                       &buttons);
         return (buttons & (Button1Mask | Button2Mask | Button3Mask |
                            Button4Mask | Button5Mask)) != 0;
+    };
+    is_alt_down = [this]() {
+        char keys[32];
+        XQueryKeymap(display, keys);
+        for (const KeySym alt : {KeySym{XK_Alt_L}, KeySym{XK_Alt_R}}) {
+            const KeyCode code = XKeysymToKeycode(display, alt);
+            if (code != 0 && (keys[code / 8] & (1 << (code % 8))) != 0) {
+                return true;
+            }
+        }
+        return false;
     };
     set_supported();
     publish_desktops();
@@ -242,9 +262,15 @@ Manager::~Manager()
     // Shift + Alt + Tab
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
                        ShiftMask | Mod1Mask, root);
+    // Alt + ; and Shift + Alt + ;
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_semicolon),
+                       Mod1Mask, root);
+    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_semicolon),
+                       ShiftMask | Mod1Mask, root);
     // Alt + F2
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
+    close_switcher(false);
     grab_super(false);
     stop_move_resize(false);
     release_windows();
@@ -318,6 +344,11 @@ void Manager::set_events()
                      root);
     // Shift + Alt + Tab
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
+                     ShiftMask | Mod1Mask, root);
+    // Alt + ; and Shift + Alt + ;
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_semicolon), Mod1Mask,
+                     root);
+    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_semicolon),
                      ShiftMask | Mod1Mask, root);
     // Alt + F2
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
@@ -1524,6 +1555,106 @@ void Manager::run_program(const std::vector<std::string>& argv)
     }
 }
 
+bool Manager::is_alt(unsigned int keycode) const
+{
+    return keycode == XKeysymToKeycode(display, XK_Alt_L) ||
+           keycode == XKeysymToKeycode(display, XK_Alt_R);
+}
+
+void Manager::open_switcher(bool windows, bool backwards)
+{
+    wm_switcher.open(recent_windows(), windows, backwards);
+    if (!wm_switcher.is_open()) {
+        return; // no window
+    }
+    // without the grab the release of Alt would not come here
+    const bool grabbed =
+            XGrabKeyboard(display, root, False, GrabModeAsync, GrabModeAsync,
+                          CurrentTime) == GrabSuccess;
+    // a quick tap: Alt was released before the keyboard was ours
+    if (!grabbed || !is_alt_down()) {
+        close_switcher(true);
+    }
+}
+
+void Manager::on_switcher_key(const XKeyEvent& xkey)
+{
+    const bool shift = (xkey.state & ShiftMask) != 0;
+    const auto is = [&](KeySym keysym) {
+        return xkey.keycode == XKeysymToKeycode(display, keysym);
+    };
+    if (is(XK_Tab) || is(XK_ISO_Left_Tab)) {
+        wm_switcher.next_app(shift);
+    } else if (is(XK_semicolon)) {
+        wm_switcher.next_window(shift);
+    } else if (is(XK_Left)) {
+        wm_switcher.arrow(Switcher::Arrow::Left);
+    } else if (is(XK_Right)) {
+        wm_switcher.arrow(Switcher::Arrow::Right);
+    } else if (is(XK_Up)) {
+        wm_switcher.arrow(Switcher::Arrow::Up);
+    } else if (is(XK_Down)) {
+        wm_switcher.arrow(Switcher::Arrow::Down);
+    } else if (is(XK_Escape)) {
+        close_switcher(false); // Alt is released later, it does nothing then
+    }
+}
+
+void Manager::close_switcher(bool switch_now)
+{
+    if (!wm_switcher.is_open()) {
+        return;
+    }
+    Window* target = wm_switcher.close();
+    XUngrabKeyboard(display, CurrentTime);
+    if (switch_now && target != nullptr && target != active) {
+        focus_window(target);
+    }
+}
+
+std::string Manager::switcher_name(const Window& window)
+{
+    if (const xdg::Application* app =
+                wm_launcher.find_application(window.get_app_id())) {
+        if (!app->entry.name.empty()) {
+            return app->entry.name;
+        }
+    }
+    if (!window.get_wm_class().empty()) {
+        return window.get_wm_class();
+    }
+    return menu_title(window.get_wm_name(), 40);
+}
+
+SwitcherCell Manager::switcher_icon(const Window& window, int size)
+{
+    SwitcherCell cell;
+    if (size > shell_theme.icon) { // the icon of the theme in the big size
+        const xdg::Application* app =
+                wm_launcher.find_application(window.get_app_id());
+        if (app != nullptr) {
+            const Launcher::Icon& icon =
+                    wm_launcher.application_icon(*app, size);
+            if (icon.picture != None) {
+                cell.picture = icon.picture;
+                cell.icon_width = icon.width;
+                cell.icon_height = icon.height;
+                return cell;
+            }
+        }
+    }
+    const Window::AppIcon& icon = window.get_app_icon();
+    if (icon.picture != None) {
+        cell.picture = icon.picture;
+        cell.icon_width = icon.width;
+        cell.icon_height = icon.height;
+    } else {
+        cell.pixmap = window.get_icon();
+        cell.mask = window.get_icon_mask();
+    }
+    return cell;
+}
+
 bool Manager::is_super(unsigned int keycode) const
 {
     return keycode == XKeysymToKeycode(display, XK_Super_L) ||
@@ -1532,6 +1663,11 @@ bool Manager::is_super(unsigned int keycode) const
 
 void Manager::on_key_press(const XKeyEvent& xkey)
 {
+    if (wm_switcher.is_open()) { // the keyboard is ours until Alt is released
+        on_switcher_key(xkey);
+        key_done = true;
+        return;
+    }
     /* Alt F2 */
     if (xkey.keycode == XKeysymToKeycode(display, XK_F2)) {
         actions.run("run-dialog");
@@ -1548,7 +1684,14 @@ void Manager::on_key_press(const XKeyEvent& xkey)
      * before Tab and the release would not have the modifier any more */
     if (xkey.keycode == XKeysymToKeycode(display, XK_Tab) &&
         xkey.state & Mod1Mask) {
-        actions.run(xkey.state & ShiftMask ? "prev-window" : "next-window");
+        open_switcher(false, xkey.state & ShiftMask);
+        key_done = true;
+        return;
+    }
+    /* Alt + ;, the windows of the application */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_semicolon) &&
+        xkey.state & Mod1Mask) {
+        open_switcher(true, xkey.state & ShiftMask);
         key_done = true;
         return;
     }
@@ -1557,6 +1700,12 @@ void Manager::on_key_press(const XKeyEvent& xkey)
 
 void Manager::on_key_release(const XKeyEvent& xkey)
 {
+    if (wm_switcher.is_open()) {
+        if (is_alt(xkey.keycode)) {
+            close_switcher(true); // the window is switched when Alt is let go
+        }
+        return;
+    }
     if (is_super(xkey.keycode)) {
         if (super_down) {
             actions.run("launcher");
@@ -1634,6 +1783,9 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
         return;
     }
     Window* window = it->second;
+    if (wm_switcher.contains(window)) {
+        close_switcher(false); // it lists windows that are gone
+    }
     if (asked == window) {
         close_unresponsive_dialog();
     }
@@ -1681,6 +1833,7 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
 
 void Manager::release_windows()
 {
+    close_switcher(false);
     active = nullptr; // nothing is refocused on the way
     while (!wm_windows.empty()) {
         const ::Window child = wm_windows.begin()->first;
