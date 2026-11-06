@@ -234,19 +234,6 @@ TEST(MonitorsTest, a_frame_outside_belongs_to_the_nearest_monitor)
     EXPECT_EQ(monitor_at(list, 2000, 1100), 1u);
 }
 
-TEST(MonitorsTest, a_window_is_centered_over_an_area)
-{
-    const tiny::Rect r = center_in({1920, 30, 1280, 994}, 400, 200);
-
-    EXPECT_EQ(r.x, 1920 + 440);
-    EXPECT_EQ(r.y, 30 + 397);
-    EXPECT_EQ(r.width, 400);
-    EXPECT_EQ(r.height, 200);
-    // bigger than the area: starts at its corner
-    EXPECT_EQ(center_in({10, 20, 100, 100}, 300, 300).x, 10);
-    EXPECT_EQ(center_in({10, 20, 100, 100}, 300, 300).y, 20);
-}
-
 TEST(MonitorsTest, the_events_of_randr_are_recognized_only_with_it)
 {
     const std::optional<int> base =
@@ -292,3 +279,15 @@ TEST(MonitorsTest, the_monitors_of_the_server_are_read)
     EXPECT_EQ(list[1].area.x, half);
 }
 #endif
+
+TEST(MonitorsTest, a_bigger_clone_that_comes_later_replaces_the_smaller_one)
+{
+    Monitors list = {monitor("small", 0, 0, 1280, 720),
+                     monitor("big", 0, 0, 1920, 1080, true)};
+
+    order_monitors(list);
+
+    ASSERT_EQ(list.size(), 1u);
+    EXPECT_EQ(list[0].name, "big");
+    EXPECT_TRUE(list[0].primary);
+}

@@ -1621,6 +1621,8 @@ void Manager::set_monitors(const std::string& primary,
     secondary_spec = secondary;
     placement = where;
     placement_asked.clear();
+    placed_primary.clear();
+    placed_secondary.clear();
     update_monitors(true);
     if (numbers) {
         show_monitor_numbers(true);
@@ -1670,10 +1672,22 @@ void Manager::update_monitors(bool force)
     const MonitorChoice chosen =
             choose_monitors(now, primary_spec, secondary_spec);
     if (placement != Placement::Keep && chosen.secondary) {
-        // the layout changes the monitors, the event that follows comes here
-        // again; the same command is not started twice in a row
-        const auto command = placement_command(now[*chosen.secondary],
-                                               now[chosen.primary], placement);
+        // the layout changes the monitors and their numbers, so the outputs
+        // are the ones that were chosen the first time
+        const auto pinned_primary = find_monitor(now, placed_primary);
+        const auto pinned_secondary = find_monitor(now, placed_secondary);
+        size_t move = *chosen.secondary;
+        size_t to = chosen.primary;
+        if (pinned_primary && pinned_secondary) {
+            to = *pinned_primary;
+            move = *pinned_secondary;
+        } else {
+            placed_primary = now[to].name;
+            placed_secondary = now[move].name;
+        }
+        // the event that follows comes here again; the same command is not
+        // started twice in a row
+        const auto command = placement_command(now[move], now[to], placement);
         if (!command.empty() && command != placement_asked) {
             placement_asked = command;
             run_program(command);
@@ -2032,7 +2046,14 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
     size_t at =
             monitor_of(monitors, {attrs.x, attrs.y, attrs.width, attrs.height});
     if (fresh && attrs.x == 0 && attrs.y == 0) {
-        at = pointer_monitor();
+        XSizeHints hints = {};
+        long supplied = 0;
+        const bool wished =
+                XGetWMNormalHints(display, child, &hints, &supplied) != 0 &&
+                (hints.flags & (USPosition | PPosition)) != 0;
+        if (!wished) {
+            at = pointer_monitor();
+        }
     }
     const tiny::Rect area = at < work_areas.size() ? work_areas[at] : work_area;
 
