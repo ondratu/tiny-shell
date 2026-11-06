@@ -67,6 +67,8 @@ class Display {
     const Atom _NET_WM_NAME;
     const Atom _NET_WM_PING;
     const Atom _NET_WM_PID;
+    const Atom _NET_WM_SYNC_REQUEST;
+    const Atom _NET_WM_SYNC_REQUEST_COUNTER;
     const Atom _NET_WM_MOVERESIZE;
     const Atom _NET_WM_ACTION_BELOW;
     const Atom _NET_WM_ACTION_ABOVE;

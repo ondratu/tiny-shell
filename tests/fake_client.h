@@ -3,6 +3,7 @@
 #include "helpers.h"
 
 #include <X11/Xatom.h>
+#include <X11/extensions/sync.h>
 #include <X11/Xutil.h>
 
 #include <algorithm>
@@ -100,6 +101,30 @@ class FakeClient {
     {
         XSetWMProtocols(display, window, const_cast<Atom*>(atoms.data()),
                         static_cast<int>(atoms.size()));
+        sync();
+    }
+
+    //! `_NET_WM_SYNC_REQUEST`: the window has a counter (at `value`) and says so
+    //! in WM_PROTOCOLS; returns the counter
+    XSyncCounter set_sync_counter(long value = 0)
+    {
+        XSyncValue initial;
+        XSyncIntToValue(&initial, static_cast<int>(value));
+        const XSyncCounter counter = XSyncCreateCounter(display, initial);
+        const unsigned long id = counter;
+        XChangeProperty(display, window, dsp()._NET_WM_SYNC_REQUEST_COUNTER,
+                        XA_CARDINAL, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&id), 1);
+        set_protocols({dsp()._NET_WM_SYNC_REQUEST});
+        return counter;
+    }
+
+    //! What the client did to its counter: it has drawn the request `value`
+    void set_counter(XSyncCounter counter, long value)
+    {
+        XSyncValue number;
+        XSyncIntToValue(&number, static_cast<int>(value));
+        XSyncSetCounter(display, counter, number);
         sync();
     }
 

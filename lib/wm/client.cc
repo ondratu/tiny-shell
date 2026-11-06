@@ -674,6 +674,8 @@ void Client::on_maximize_click(tiny::Object*, const XEvent&, void*)
 void Client::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
 {
     set_maximized(false);
+    deferred_resize.reset();
+    sync_reset();
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);
     long int supplied;
@@ -704,6 +706,20 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
             mask, e.xbutton.x_root - start_event.xbutton.x_root,
             e.xbutton.y_root - start_event.xbutton.y_root, title,
             shell_theme.win_min_width, shell_theme.win_min_height);
+    // the client draws one size, then the next one (_NET_WM_SYNC_REQUEST); the
+    // newest one waits for it and the next motion, or the end of the resize
+    if (!sync_allows_resize()) {
+        deferred_resize = {frame, mask};
+        return;
+    }
+    deferred_resize.reset();
+    sync_request_resize();
+    resize_frame(frame, mask);
+}
+
+void Client::resize_frame(const tiny::Rect& frame, uint16_t mask)
+{
+    const int title = header_height();
     const int x = frame.x;
     const int y = frame.y;
     const int new_width = frame.width;
@@ -729,6 +745,11 @@ void Client::on_move_resize_motion(tiny::Object*, const XEvent& e, void* data)
 
 void Client::on_move_resize_end(tiny::Object*, const XEvent&, void*)
 {
+    if (deferred_resize) { // the last size was waiting for the client
+        resize_frame(deferred_resize->first, deferred_resize->second);
+        deferred_resize.reset();
+    }
+    sync_reset();
     size_label.reset();
     send_configure_notify();
 }

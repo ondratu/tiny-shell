@@ -10,12 +10,14 @@
 #include <utility>
 
 #include <X11/Xutil.h>
+#include <X11/extensions/sync.h>
 
 #include "wm/shell_theme.h"
 #include "object.h"
 #include "container.h"
 #include "widget.h"
 #include "display.h"
+#include "wm/sync_gate.h"
 
 namespace tiny::wm {
 
@@ -407,6 +409,24 @@ class Window {
     //! asks the user first
     virtual void close();
 
+    /**
+     * `_NET_WM_SYNC_REQUEST`: the client that has a counter (and says so in
+     * `WM_PROTOCOLS`) is asked to draw each size of an interactive resize and
+     * is not given the next one before it has. True when there is no counter or
+     * the client has answered the last request (or does not answer in time).
+     */
+    bool sync_allows_resize();
+
+    //! Ask the client to draw the size that follows; does nothing without a
+    //! counter
+    void sync_request_resize();
+
+    //! The next resize starts: nothing is waited for
+    void sync_reset() { sync_gate.reset(); }
+
+    //! The counter of the client, None when it has none or does not use it
+    XSyncCounter get_sync_counter() const { return sync_counter; }
+
     //! Grab Alt + F4 of the client on the key that has F4 now (the layout
     //! can change); the key of the last grab is released
     void grab_close_key();
@@ -508,6 +528,7 @@ class Window {
     void send_configure_notify();
 
     void update_protocols();    //!< Update WMProtocols
+    void update_sync_counter(); //!< `_NET_WM_SYNC_REQUEST_COUNTER`
     void update_properties();   //!< Update WMProperties
     void update_normal_hints(); //!< Update XSizeHints;
     void update_wm_hints();     //!< Update XWMHints;
@@ -667,6 +688,8 @@ class Window {
     XWindowAttributes start_attrs;
 
     std::set<Atom> protocols;
+    XSyncCounter sync_counter = None;
+    SyncGate sync_gate;
     std::set<Atom> properties;
 
     unsigned drag_edges = 0; //!< of `begin_drag`, none: the window is moved

@@ -1008,6 +1008,116 @@ TEST_F(WindowTest, window_manager_protocols_are_read)
     EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
 }
 
+// ---- _NET_WM_SYNC_REQUEST ----
+
+TEST_F(WindowTest, a_window_without_a_counter_is_never_waited_for)
+{
+    auto window = manage();
+
+    EXPECT_EQ(window->get_sync_counter(), None);
+    EXPECT_TRUE(window->sync_allows_resize());
+    window->sync_request_resize(); // nothing is sent
+
+    XEvent e;
+    EXPECT_FALSE(client.message(e));
+    EXPECT_TRUE(window->sync_allows_resize());
+}
+
+TEST_F(WindowTest, the_counter_is_used_only_when_the_protocol_is_there)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    client.set_protocols({dsp().WM_DELETE_WINDOW}); // not _NET_WM_SYNC_REQUEST
+    auto window = manage();
+
+    EXPECT_EQ(window->get_sync_counter(), None);
+    XSyncDestroyCounter(client.display, counter);
+}
+
+TEST_F(WindowTest, the_counter_of_the_client_is_read)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+
+    auto window = manage();
+
+    EXPECT_EQ(window->get_sync_counter(), counter);
+}
+
+TEST_F(WindowTest, a_request_waits_for_the_client_to_draw)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    auto window = manage();
+    ASSERT_TRUE(window->sync_allows_resize());
+
+    window->sync_request_resize();
+
+    XEvent e;
+    ASSERT_TRUE(client.message(e));
+    EXPECT_EQ(e.xclient.message_type, dsp().WM_PROTOCOLS);
+    EXPECT_EQ(e.xclient.data.l[0],
+              static_cast<long>(dsp()._NET_WM_SYNC_REQUEST));
+    EXPECT_EQ(e.xclient.data.l[2], 1); // the number of the request
+    EXPECT_EQ(e.xclient.data.l[3], 0);
+    EXPECT_FALSE(window->sync_allows_resize());
+
+    client.set_counter(counter, 1); // drawn
+
+    EXPECT_TRUE(window->sync_allows_resize());
+}
+
+TEST_F(WindowTest, the_next_request_has_the_next_number)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    auto window = manage();
+    window->sync_request_resize();
+    client.set_counter(counter, 1);
+
+    window->sync_request_resize();
+
+    XEvent e;
+    ASSERT_TRUE(client.message(e));
+    ASSERT_TRUE(client.message(e));
+    EXPECT_EQ(e.xclient.data.l[2], 2);
+}
+
+TEST_F(WindowTest, a_new_resize_does_not_wait_for_the_last_one)
+{
+    client.set_sync_counter();
+    auto window = manage();
+    window->sync_request_resize();
+    ASSERT_FALSE(window->sync_allows_resize());
+
+    window->sync_reset();
+
+    EXPECT_TRUE(window->sync_allows_resize());
+}
+
+TEST_F(WindowTest, a_counter_that_is_gone_is_not_waited_for)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    auto window = manage();
+    window->sync_request_resize();
+    XSyncDestroyCounter(client.display, counter);
+    client.sync();
+
+    EXPECT_TRUE(window->sync_allows_resize());
+    EXPECT_EQ(window->get_sync_counter(), None);
+}
+
+TEST_F(WindowTest, a_counter_that_comes_later_is_found)
+{
+    auto window = manage();
+    window->set_events();
+    ASSERT_EQ(window->get_sync_counter(), None);
+
+    const XSyncCounter counter = client.set_sync_counter();
+    // the two properties come in any order, the counter is found by the last
+    send(client.window,
+         property_event(client.window, dsp()._NET_WM_SYNC_REQUEST_COUNTER));
+    send(client.window, property_event(client.window, dsp().WM_PROTOCOLS));
+
+    EXPECT_EQ(window->get_sync_counter(), counter);
+}
+
 // ---- _NET_WM_MOVERESIZE ----
 
 TEST(MoveResizeTest, the_directions_name_the_edges)

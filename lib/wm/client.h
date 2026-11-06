@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <utility>
 
 #include "container.h"
 #include "wm/header.h"
@@ -143,6 +145,9 @@ class Client : public tiny::Container, public Window {
 
     void keep_in_work_area() override;
 
+    //! Give the frame and the client this size (a resize of the edges `mask`)
+    void resize_frame(const tiny::Rect& frame, uint16_t mask);
+
     //! Show the size of the client in units (e.g. columns and rows)
     void show_size_units(int client_width, int client_height);
 
@@ -169,6 +174,9 @@ class Client : public tiny::Container, public Window {
     MaximizeButton max_btn;
     BackWindow shadow;
     std::unique_ptr<SizeLabel> size_label; //!< only while the size is changed
+    //! The newest size of a resize that waits for the client to draw the
+    //! older one (`_NET_WM_SYNC_REQUEST`), and the edges that move
+    std::optional<std::pair<tiny::Rect, uint16_t>> deferred_resize;
 };
 
 } // namespace tiny::wm

@@ -45,8 +45,9 @@ ifdef HARDEN
 HARDENING = -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fstack-protector-strong
 endif
 
-# fontconfig is a dependency of Xft; it is named because the list of fonts uses it
-PKGS = x11 xft xrender fontconfig
+# fontconfig is a dependency of Xft; it is named because the list of fonts uses it.
+# xext has the SYNC extension (resizing without tearing)
+PKGS = x11 xft xrender fontconfig xext
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 

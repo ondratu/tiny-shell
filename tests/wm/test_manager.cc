@@ -878,6 +878,9 @@ TEST_F(ManagerTest, the_supported_properties_are_published_on_the_root)
               0);
     EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_STATE), 0);
     EXPECT_NE(std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_PING), 0);
+    EXPECT_NE(
+            std::count(atoms.begin(), atoms.end(), dsp()._NET_WM_SYNC_REQUEST),
+            0);
 }
 
 TEST_F(ManagerTest, a_check_window_with_the_name_proves_the_manager_runs)
