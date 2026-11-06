@@ -41,6 +41,12 @@ class Display {
     // Manager selections (ICCCM 2.8)
     const Atom MANAGER;
 
+    // System tray (freedesktop.org) and XEMBED
+    const Atom _NET_SYSTEM_TRAY_OPCODE;
+    const Atom _NET_SYSTEM_TRAY_ORIENTATION;
+    const Atom _XEMBED;
+    const Atom _XEMBED_INFO;
+
     // EWMH
     const Atom _MOTIF_WM_HINTS;
     const Atom _NET_SUPPORTED;

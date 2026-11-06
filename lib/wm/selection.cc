@@ -29,10 +29,20 @@ std::string selection_name(int screen)
     return "WM_S" + std::to_string(screen);
 }
 
+std::string tray_selection_name(int screen)
+{
+    return "_NET_SYSTEM_TRAY_S" + std::to_string(screen);
+}
+
 Selection::Selection(::Display* display_arg, ::Window root_arg, int screen):
+    Selection(display_arg, root_arg, selection_name(screen))
+{}
+
+Selection::Selection(::Display* display_arg, ::Window root_arg,
+                     const std::string& name):
     display(display_arg),
     root(root_arg),
-    selection(XInternAtom(display_arg, selection_name(screen).c_str(), False)),
+    selection(XInternAtom(display_arg, name.c_str(), False)),
     owner_window(
             XCreateSimpleWindow(display_arg, root_arg, -1, -1, 1, 1, 0, 0, 0))
 {
