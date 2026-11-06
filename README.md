@@ -91,11 +91,17 @@ Implemented:
   keys, also the ones that give `;` with a modifier, stays for the
   applications. The shortcuts of the shell (Alt+Tab, Alt+F2, Alt+F4, Alt+; and
   Super) follow a change of the keyboard layout.
+- **Multiple monitors:** the monitors come from RandR and are numbered from the
+  left; the panel, the dock, the launcher and the dialogs are on the primary
+  one (chosen in the settings), a window is maximized and made fullscreen on
+  its own monitor, and each monitor has its own work area. The secondary
+  monitor can be put on one side of the primary one, and the number of every
+  monitor can be shown in its corner (see below).
 - **Settings:** `tiny-settings`, a small form with the sections Fonts,
-  Appearance and Applications that changes the font, the rendering of text
-  (antialiasing, hinting, subpixel order), the scale, the wallpaper, the mode
-  of the dock, the format of the clock and the terminal in the configuration
-  file of the user (see below).
+  Appearance, Applications and Screens that changes the font, the rendering of
+  text (antialiasing, hinting, subpixel order), the scale, the wallpaper, the
+  mode of the dock, the format of the clock, the terminal and the monitors in
+  the configuration file of the user (see below).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a
   transparent terminal can show it; tiny-shell runs it at the start and when
@@ -138,7 +144,6 @@ programs is done, only small details of it are left):
 ### Could: nice to have
 
 - [ ] Virtual desktops
-- [ ] Multiple monitors (RandR)
 - [ ] Plugins and scripting in Lua, as an optional build feature
 - [ ] Window snapping to the screen edges
 - [ ] Session management
@@ -163,11 +168,13 @@ programs is done, only small details of it are left):
 ## Building
 
 Requirements: a C++17 compiler, GNU make, `pkg-config` and the development
-files of `x11`, `xft`, `xrender` and `xext`.
+files of `x11`, `xft`, `xrender` and `xext`, and `xrandr` for several monitors
+(it is used when it is installed; `make RANDR=0` builds without it and the
+whole screen is one monitor).
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev libxext-dev libfontconfig-dev
+    libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libfontconfig-dev
 
 make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper
 make release         # the same, small and stripped, into build-release/
@@ -298,6 +305,21 @@ clock_format = %a %e %B %R
 # yes (the default) or no. Set no when another tray (stalonetray, trayer) runs.
 system_tray = yes
 
+[monitors]
+# The monitors are numbered from the left (and from the top when they start at
+# the same place). The monitor of the panel, the dock, the launcher and the
+# dialogs: auto (the primary monitor of RandR), a number, or the name of an
+# output (DP-1)
+primary = auto
+# The monitor that placement moves: auto (the first one that is not the
+# primary), a number or the name of an output
+secondary = auto
+# Where the secondary monitor is, seen from the primary one: keep (as the
+# system has it), right, left, above or below. It runs xrandr.
+placement = keep
+# Show the number of every monitor in its corner while you set this up
+numbers = no
+
 [dock]
 # When the dock is shown: autohide (the default: it is hidden while the active
 # window covers it, and the pointer at the bottom edge of the screen shows it
@@ -389,6 +411,9 @@ sections and the fields of the chosen section:
   small picture of the file above the path shows that the path is right), the
   mode of the dock (Auto-hide, On, Off) and the format of the clock.
 - **Applications:** the terminal.
+- **Screens:** the primary and the secondary monitor (empty is auto), where the
+  secondary one is (Keep, Right, Left, Above or Below the primary one) and
+  whether the numbers of the monitors are shown (see Multiple monitors).
 
 A click on a section, or Ctrl+Page Down and Ctrl+Page Up, show it. The form shows the values in use now (the global
 file and the one of the user together). A field has a cursor: the arrows,
@@ -433,7 +458,7 @@ the theme is back after the next login.
 
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
 `font_style`, `[theme] scale`, `[commands] terminal`, `[xft] antialias`,
-`hinting`, `rgba`, `[wallpaper] file`, `mode`) to the file of the user, so the others still
+`hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]` ...) to the file of the user, so the others still
 come from the global file, in the way that is described above (the
 comments of the file are lost), and closes the program. Cancel or Escape
 closes it and writes nothing. tiny-shell reads the file only when it starts, so
@@ -501,6 +526,44 @@ The logo at the left of the panel opens a menu with these items, in groups
 
 A click on an item closes the menu. A program that cannot be started is
 reported on stderr.
+
+### Multiple monitors
+
+The monitors are the ones of RandR (`XRRGetMonitors`, also the ones that
+`xrandr --setmonitor` makes, e.g. to split a wide monitor). They are numbered
+from the left to the right, and from the top to the bottom when two start at the
+same place; a monitor that shows the same picture as another (a clone) is not
+counted. Without RandR the whole screen is one monitor.
+
+- **The shell is on the primary monitor.** `[monitors] primary` chooses it by
+  its number or the name of its output; `auto` is the primary monitor of RandR
+  (`xrandr --primary`), or the first one. The panel, the dock (and the strip
+  that shows it), the launcher, the run dialog and the window switcher are
+  there. A dock on every monitor is not done (the dock is one widget with one
+  list of windows).
+- **Windows.** A window opens where the pointer is when it has no place of its
+  own, is maximized to the work area of the monitor it is on (the monitor that
+  has most of the frame), and fullscreen covers that monitor only. The panel
+  takes the top of the primary monitor, the struts of other docks reduce the
+  monitors they touch: a strut is measured from the edge of the whole screen
+  (as `_NET_WM_STRUT` says), so a top strut does not touch a monitor that is
+  below another one. `_NET_WORKAREA` is the work area of the primary monitor.
+- **Position.** `[monitors] placement` puts the secondary monitor to the
+  `right`, `left`, `above` or `below` the primary one by running
+  `xrandr --output SECONDARY --right-of PRIMARY` (the program `xrandr` must
+  be installed). With `keep` (the default) the layout of the system is left as
+  it is. The command is run again when the monitors change, only when the
+  placement is not as asked, and not twice in a row. `secondary` must be the
+  name of an output for it to work (the monitors that `--setmonitor` made are
+  not outputs).
+- **Numbers.** `[monitors] numbers = yes` (or the setting Numbers in
+  `tiny-settings`) shows the number, the name and the size of every monitor in
+  its corner, over all the windows (the primary one says so). The action
+  `identify-monitors` shows them for four seconds. Use it to see which monitor
+  is 1 and which is 2 while you set the primary and the secondary monitor.
+
+tiny-shell reads the settings when it starts, so a change needs a new login.
+A monitor that is plugged in or out, or moved by `xrandr`, is used at once.
 
 ### The dock and the favorite applications
 
