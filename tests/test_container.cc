@@ -13,10 +13,6 @@
 #include "display.h"
 #include "object.h"
 
-namespace tiny {
-extern Handlers handlers;
-}
-
 class BoxTest : public ::testing::Test {
   protected:
     void realize(tiny::Box& box)

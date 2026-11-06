@@ -5613,7 +5613,7 @@ TEST_F(ManagerTest, the_tray_can_be_turned_off)
 TEST_F(ManagerTest, another_tray_is_left_alone)
 {
     start();
-    FakeClient other;
+    const FakeClient other;
     const Atom selection =
             XInternAtom(dsp(), tiny::wm::tray_selection_name(0).c_str(), False);
     XSetSelectionOwner(other.display, selection, other.window, CurrentTime);
@@ -5629,7 +5629,7 @@ TEST_F(ManagerTest, the_tray_is_gone_when_another_one_takes_the_selection)
 {
     start();
     manager->set_system_tray(true);
-    FakeClient other;
+    const FakeClient other;
     const Atom selection =
             XInternAtom(dsp(), tiny::wm::tray_selection_name(0).c_str(), False);
 
