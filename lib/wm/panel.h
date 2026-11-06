@@ -76,6 +76,9 @@ class Panel : public tiny::Box {
 
     ~Panel() override;
 
+    //! No border: it would be drawn on the monitor next to the panel
+    int get_border() const override { return 0; }
+
     void realize(::Window root, int x = 0, int y = 0) override;
 
     //! Put the panel along the top edge of a monitor

@@ -162,6 +162,13 @@ void MonitorLabels::show(::Window root, const Monitors& monitors,
     raise();
 }
 
+bool MonitorLabels::owns(::Window window) const
+{
+    return std::any_of(labels.begin(), labels.end(), [window](const auto& l) {
+        return l->get_window() == window;
+    });
+}
+
 void MonitorLabels::hide()
 {
     labels.clear();

@@ -868,10 +868,15 @@ void Manager::main_loop()
 {
     XEvent event;
 
+    bool raise_labels = false; //!< the last event changed the stacking
     while (running) {
         reframe_windows();
-        if (monitor_labels.is_shown()) {
-            monitor_labels.raise(); // over the window that was just raised
+        if (raise_labels) { // after the handler of that event
+            raise_labels = false;
+            monitor_labels.raise();
+            if (wm_dock_reveal.get_maped()) {
+                XRaiseWindow(display, wm_dock_reveal.get_window());
+            }
         }
         if (!wait_for_event()) {
             running = false; // SIGTERM, SIGHUP or SIGINT
@@ -904,6 +909,14 @@ void Manager::main_loop()
             wm_dock_reveal.get_maped()) {
             XRaiseWindow(display, wm_dock_reveal.get_window());
         }
+
+        // the numbers of the monitors stay over the window that was raised;
+        // only the change of another window counts, or raising them (and the
+        // strip below) would be an endless chain of events
+        raise_labels =
+                (event.type == ConfigureNotify || event.type == MapNotify) &&
+                monitor_labels.is_shown() && !monitor_labels.owns(window) &&
+                window != wm_dock_reveal.get_window();
 
         auto signal_id = std::make_pair(event.type, window);
 
