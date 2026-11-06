@@ -5530,3 +5530,112 @@ TEST_F(ManagerSwitcherTest, alt_semicolon_follows_a_change_of_the_layout)
     manager->on_mapping_notify(change);
     manager->on_mapping_notify(change);
 }
+
+namespace {
+
+// What a program does to get an icon in the tray
+void request_tray_dock(FakeClient& program, ::Window tray, ::Window icon)
+{
+    XClientMessageEvent e = {};
+    e.type = ClientMessage;
+    e.window = tray;
+    e.message_type = dsp()._NET_SYSTEM_TRAY_OPCODE;
+    e.format = 32;
+    e.data.l[0] = CurrentTime;
+    e.data.l[1] = 0; // REQUEST_DOCK
+    e.data.l[2] = static_cast<long>(icon);
+    XSendEvent(program.display, tray, False, NoEventMask,
+               reinterpret_cast<XEvent*>(&e));
+    program.sync();
+}
+
+} // namespace
+
+TEST_F(ManagerTest, there_is_no_tray_until_it_is_asked_for)
+{
+    start();
+
+    EXPECT_EQ(manager->get_tray(), nullptr);
+}
+
+TEST_F(ManagerTest, the_tray_takes_the_icons_of_programs_into_the_panel)
+{
+    start();
+    manager->set_clock_format("%H:%M");
+    manager->set_system_tray(true);
+    ASSERT_NE(manager->get_tray(), nullptr);
+    FakeClient& program = add_client(false);
+
+    request_tray_dock(program, manager->get_tray()->get_window(),
+                      program.window);
+    run_loop();
+
+    ASSERT_EQ(manager->get_tray()->size(), 1u);
+    EXPECT_FALSE(is_managed(program)); // an icon is not a window of the desktop
+    const tiny::wm::TrayIcon* icon = manager->get_tray()->find(program.window);
+    ASSERT_NE(icon, nullptr);
+    EXPECT_EQ(parent_of(program.window), icon->get_window());
+    // the clock stays at the end of the panel
+    EXPECT_LT(attributes_of(*icon).x, attributes_of(*manager->wm_clock).x);
+}
+
+TEST_F(ManagerTest, a_destroyed_icon_leaves_the_tray)
+{
+    start();
+    manager->set_system_tray(true);
+    FakeClient& program = add_client(false);
+    request_tray_dock(program, manager->get_tray()->get_window(),
+                      program.window);
+    run_loop();
+    ASSERT_EQ(manager->get_tray()->size(), 1u);
+
+    XDestroyWindow(program.display, program.window);
+    program.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->get_tray()->size(), 0u);
+}
+
+TEST_F(ManagerTest, the_tray_can_be_turned_off)
+{
+    start();
+    manager->set_system_tray(true);
+
+    manager->set_system_tray(false);
+
+    EXPECT_EQ(manager->get_tray(), nullptr);
+    const Atom selection =
+            XInternAtom(dsp(), tiny::wm::tray_selection_name(0).c_str(), False);
+    XSync(dsp(), False);
+    EXPECT_EQ(XGetSelectionOwner(dsp(), selection), None);
+}
+
+TEST_F(ManagerTest, another_tray_is_left_alone)
+{
+    start();
+    FakeClient other;
+    const Atom selection =
+            XInternAtom(dsp(), tiny::wm::tray_selection_name(0).c_str(), False);
+    XSetSelectionOwner(other.display, selection, other.window, CurrentTime);
+    other.sync();
+
+    manager->set_system_tray(true);
+
+    EXPECT_EQ(manager->get_tray(), nullptr);
+    EXPECT_EQ(XGetSelectionOwner(dsp(), selection), other.window);
+}
+
+TEST_F(ManagerTest, the_tray_is_gone_when_another_one_takes_the_selection)
+{
+    start();
+    manager->set_system_tray(true);
+    FakeClient other;
+    const Atom selection =
+            XInternAtom(dsp(), tiny::wm::tray_selection_name(0).c_str(), False);
+
+    XSetSelectionOwner(other.display, selection, other.window, CurrentTime);
+    other.sync();
+    run_loop();
+
+    EXPECT_EQ(manager->get_tray(), nullptr);
+}
