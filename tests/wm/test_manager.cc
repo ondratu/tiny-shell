@@ -152,6 +152,7 @@ class ManagerTest : public ::testing::Test {
         start();
         ASSERT_EQ(manager->wm_tops.size(), 3u);
         manager->active = manager->wm_tops.front();
+        manager->wm_recent.touch(manager->active);
     }
 
     HeaderFont header_font;
@@ -230,16 +231,20 @@ TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
     EXPECT_FALSE(manager->wm_launcher.is_open());
 }
 
-TEST_F(ManagerTest, the_window_actions_walk_through_the_windows)
+TEST_F(ManagerTest, the_window_actions_walk_through_the_recent_windows)
 {
     manage_three();
     const WmWindow* first = manager->active;
+    const WmWindow* last = manager->wm_tops.back();
 
     manager->get_actions().run("next-window");
     EXPECT_NE(manager->active, first);
 
-    manager->get_actions().run("prev-window");
+    manager->get_actions().run("next-window"); // back, not on to the third
     EXPECT_EQ(manager->active, first);
+
+    manager->get_actions().run("prev-window"); // the one used the longest ago
+    EXPECT_EQ(manager->active, last);
 }
 
 namespace {
@@ -3052,54 +3057,46 @@ TEST_F(ManagerTest, alt_tab_focuses_the_next_window)
 TEST_F(ManagerTest, alt_tab_pressed_again_does_not_wait_for_the_focus_event)
 {
     manage_three();
-    manager->active = nullptr;
     auto it = manager->wm_tops.begin();
     const WmWindow* first = *it;
     const WmWindow* second = *++it;
-    const WmWindow* third = *++it;
 
     manager->on_key_press(key(XK_Tab)); // no event is processed between them
-    EXPECT_EQ(manager->active, first);
-    manager->on_key_press(key(XK_Tab));
     EXPECT_EQ(manager->active, second);
     manager->on_key_press(key(XK_Tab));
+    EXPECT_EQ(manager->active, first);
+    manager->on_key_press(key(XK_Tab));
 
-    EXPECT_EQ(manager->active, third);
-    EXPECT_TRUE(third->is_focused());
-    EXPECT_FALSE(second->is_focused());
+    EXPECT_EQ(manager->active, second);
+    EXPECT_TRUE(second->is_focused());
+    EXPECT_FALSE(first->is_focused());
 }
 
-TEST_F(ManagerTest, alt_tab_wraps_around)
+TEST_F(ManagerTest, alt_tab_switches_between_the_two_last_windows)
 {
     manage_three();
-    manager->active = manager->wm_tops.back();
+    auto it = manager->wm_tops.begin();
+    const WmWindow* first = *it;
+    WmWindow* second = *++it;
+    manager->focus_window(second);
 
-    const XKeyEvent e = key(XK_Tab);
-    manager->on_key_press(e);
+    manager->on_key_press(key(XK_Tab));
 
-    EXPECT_TRUE(manager->wm_tops.front()->is_focused());
+    EXPECT_EQ(manager->active, first);
 }
 
-TEST_F(ManagerTest, alt_shift_tab_focuses_the_previous_window)
+TEST_F(ManagerTest, alt_shift_tab_focuses_the_window_used_the_longest_ago)
 {
     manage_three();
-    manager->active = manager->wm_tops.back();
-    auto* previous = *std::next(manager->wm_tops.rbegin());
+    auto it = manager->wm_tops.begin();
+    const WmWindow* first = *it;
+    manager->focus_window(*++it);
+    manager->focus_window(manager->wm_tops.back());
+    // the order of use: the third, the second, the first
 
-    const XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
-    manager->on_key_press(e);
+    manager->on_key_press(key(XK_Tab, Mod1Mask | ShiftMask));
 
-    EXPECT_TRUE(previous->is_focused());
-}
-
-TEST_F(ManagerTest, alt_shift_tab_wraps_around)
-{
-    manage_three();
-
-    const XKeyEvent e = key(XK_Tab, Mod1Mask | ShiftMask);
-    manager->on_key_press(e);
-
-    EXPECT_TRUE(manager->wm_tops.back()->is_focused());
+    EXPECT_EQ(manager->active, first);
 }
 
 TEST_F(ManagerTest, alt_tab_restores_a_minimized_window)
@@ -3128,15 +3125,44 @@ TEST_F(ManagerTest, alt_shift_tab_restores_a_minimized_window)
     EXPECT_FALSE(last->get_minimized());
 }
 
-TEST_F(ManagerTest, alt_tab_without_an_active_window_starts_with_the_first)
+TEST_F(ManagerTest, closing_the_active_window_focuses_the_one_used_before)
 {
     manage_three();
-    manager->active = nullptr;
+    auto it = manager->wm_tops.begin();
+    ++it;
+    WmWindow* second = *it;
+    WmWindow* third = *++it;
+    manager->focus_window(third);
+    manager->focus_window(second);
+    ::Window gone = 0;
+    for (const auto& item : manager->wm_windows) {
+        if (item.second == second) {
+            gone = item.first;
+        }
+    }
+    ASSERT_NE(gone, 0u);
 
-    const XKeyEvent e = key(XK_Tab);
-    manager->on_key_press(e);
+    XDestroyWindowEvent e = {};
+    e.type = DestroyNotify;
+    e.window = gone;
+    manager->on_destroy_notify(e);
 
-    EXPECT_TRUE(manager->wm_tops.front()->is_focused());
+    EXPECT_EQ(manager->active, third); // not the first, the oldest one
+}
+
+TEST_F(ManagerTest, alt_tab_with_one_window_does_nothing)
+{
+    start();
+    const FakeClient& only = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[only.window];
+    ASSERT_EQ(manager->active, window);
+
+    manager->on_key_press(key(XK_Tab));
+    manager->on_key_press(key(XK_Tab, Mod1Mask | ShiftMask));
+
+    EXPECT_EQ(manager->active, window);
 }
 
 TEST_F(ManagerTest, alt_tab_without_windows_does_nothing)
@@ -3611,7 +3637,7 @@ TEST_F(ManagerTest,
     EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }
 
-TEST_F(ManagerTest, alt_tab_skips_a_window_that_has_a_modal_dialog)
+TEST_F(ManagerTest, alt_tab_reaches_the_modal_dialog_of_a_window_not_its_parent)
 {
     start();
     const FakeClient& parent = add_client();
@@ -3630,9 +3656,6 @@ TEST_F(ManagerTest, alt_tab_skips_a_window_that_has_a_modal_dialog)
 
     manager->on_key_press(key(XK_Tab));
     EXPECT_EQ(manager->active, manager->wm_windows[other.window]);
-
-    manager->on_key_press(key(XK_Tab, Mod1Mask | ShiftMask));
-    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
 }
 
 TEST_F(ManagerTest, focusing_a_dialog_raises_its_parent_under_it)
@@ -3722,7 +3745,7 @@ TEST_F(ManagerTest, a_dialog_that_is_not_modal_leaves_the_focus_to_its_parent)
     EXPECT_EQ(manager->active, manager->wm_windows[parent.window]);
 }
 
-TEST_F(ManagerTest, alt_tab_visits_a_dialog_that_is_not_modal_and_its_parent)
+TEST_F(ManagerTest, alt_tab_does_not_list_a_dialog_apart_from_its_parent)
 {
     start();
     const FakeClient& parent = add_client();
@@ -3731,13 +3754,16 @@ TEST_F(ManagerTest, alt_tab_visits_a_dialog_that_is_not_modal_and_its_parent)
     dialog.set_transient_for(parent.window);
     dialog.map();
     run_loop();
+    const FakeClient& other = add_client();
+    run_loop();
     manager->focus_window(manager->wm_windows[dialog.window]);
 
-    manager->on_key_press(key(XK_Tab));
-    EXPECT_EQ(manager->active, manager->wm_windows[parent.window]);
+    const std::vector<WmWindow*> windows = manager->recent_windows();
 
-    manager->on_key_press(key(XK_Tab));
-    EXPECT_EQ(manager->active, manager->wm_windows[dialog.window]);
+    ASSERT_EQ(windows.size(), 2u);
+    EXPECT_EQ(windows[0],
+              manager->wm_windows[parent.window]); // owns the dialog
+    EXPECT_EQ(windows[1], manager->wm_windows[other.window]);
 }
 
 TEST_F(ManagerTest, focusing_the_parent_raises_a_dialog_that_is_not_modal)

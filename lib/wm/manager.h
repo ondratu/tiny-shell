@@ -12,6 +12,7 @@
 #include "object.h"
 #include "timers.h"
 #include "wm/window.h"
+#include "wm/recent_list.h"
 #include "wm/clock_label.h"
 #include "wm/panel.h"
 #include "wm/action_registry.h"
@@ -204,14 +205,17 @@ class Manager : public tiny::Object {
     //! `window` has the focus now: tell the dock and the root properties
     void remember_active(Window* window, const XEvent& e);
 
-    //! Windows Alt + Tab walks through: the ones that have no dialog open
-    std::vector<Window*> switchable() const;
+    //! Has the window an icon in the dock (and a place in Alt + Tab)
+    bool is_listed(const Window* window) const;
+
+    //! The listed windows, the one used last first
+    std::vector<Window*> recent_windows() const;
 
     void activate_next_window();
 
     void activate_prev_window();
 
-    //! The window before `window` that is not minimized, null if none
+    //! The window used before `window` that is not minimized, null if none
     Window* previous_shown(const Window* window) const;
 
     //! The application of the window (the id, the icon) for the dock
@@ -383,7 +387,8 @@ class Manager : public tiny::Object {
     tiny::Rect work_area = {0, 0, 0, 0};
 
     std::map<::Window, Window*> wm_windows;
-    std::list<Window*> wm_tops;
+    std::list<Window*> wm_tops;    //!< in the order they came
+    RecentList<Window*> wm_recent; //!< in the order they were focused
     std::list<Window*> wm_pager;
     bool key_done;
     bool super_down = false; //!< Super is held and nothing cancelled it
