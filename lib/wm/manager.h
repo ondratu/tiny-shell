@@ -26,6 +26,7 @@
 #include "wm/dock_mode.h"
 #include "wm/dock_reveal.h"
 #include "wm/selection.h"
+#include "wm/tray.h"
 #include "wm/work_area.h"
 
 namespace tiny::wm {
@@ -96,6 +97,19 @@ class Manager : public tiny::Object {
      * updated by a timer at the start of every minute.
      */
     void set_clock_format(const std::string& format);
+
+    /**
+     * @short Become the system tray: the icons of the programs go to the
+     * panel, to the left from the clock.
+     *
+     * Call it after `set_clock_format()`, so that the clock stays at the
+     * end. When another tray runs, there is no tray here (and a message).
+     * The tray is gone when another one takes the selection.
+     */
+    void set_system_tray(bool enable);
+
+    //! The icons of the tray, null when there is no tray
+    const Tray* get_tray() const { return wm_tray.get(); }
 
     /**
      * @short When the dock is shown, see `DockMode`.
@@ -395,6 +409,7 @@ class Manager : public tiny::Object {
     Panel wm_panel;
     std::unique_ptr<ClockLabel> wm_clock; //!< null: no clock
     tiny::Timers::Id clock_timer = 0;
+    std::unique_ptr<Tray> wm_tray; //!< null: no tray
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
     Window* asked = nullptr; //!< the window of the unresponsive dialog

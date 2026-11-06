@@ -214,6 +214,7 @@ int main(int argc, char** argv)
                     !config.wallpaper_set);
         }
         manager.set_clock_format(config.clock_format);
+        manager.set_system_tray(true); // after the clock: it stays at the end
         manager.set_dock_mode(config.dock_mode);
         selection.announce();
         manager.main_loop();

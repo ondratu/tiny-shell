@@ -1523,6 +1523,20 @@ void Manager::set_clock_format(const std::string& format)
     tick_clock();
 }
 
+void Manager::set_system_tray(bool enable)
+{
+    wm_tray.reset();
+    if (!enable || !wm_panel.get_realized()) {
+        return;
+    }
+    auto tray = std::make_unique<Tray>(wm_panel, root, XDefaultScreen(display));
+    if (!tray->acquire()) {
+        tiny::error("Another system tray runs, there is no tray in the panel");
+        return;
+    }
+    wm_tray = std::move(tray);
+}
+
 void Manager::tick_clock()
 {
     wm_clock->update();
@@ -2004,6 +2018,10 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
 
 void Manager::on_selection_clear(const XSelectionClearEvent& e)
 {
+    if (wm_tray && wm_tray->is_lost_by(e)) { // the programs dock there
+        wm_tray.reset();
+        return;
+    }
     if (selection && selection->is_lost_by(e)) {
         tiny::error("Another window manager takes over, leaving");
         running = false;
