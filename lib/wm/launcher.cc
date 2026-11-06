@@ -101,12 +101,17 @@ void Launcher::realize(::Window root, int, int)
 // The screen can change its size while the launcher is hidden
 void Launcher::relayout()
 {
-    XWindowAttributes attrs;
-    if (XGetWindowAttributes(display, root_window, &attrs) == 0) {
-        return;
+    tiny::Rect on = screen;
+    if (on.width <= 0 || on.height <= 0) {
+        XWindowAttributes attrs;
+        if (XGetWindowAttributes(display, root_window, &attrs) == 0) {
+            return;
+        }
+        on = {0, 0, attrs.width, attrs.height};
     }
+    placed = on;
     const LauncherLayout next =
-            LauncherLayout::compute(attrs.width, attrs.height, shell_theme);
+            LauncherLayout::compute(on.width, on.height, shell_theme);
     if (next.icon != layout.icon) {
         free_icons(); // loaded in the other size
     }
@@ -119,8 +124,8 @@ void Launcher::arrange(const LauncherLayout& next)
     width = layout.screen.width;
     height = layout.screen.height;
     if (is_realized) {
-        XMoveResizeWindow(display, window, 0, 0, tiny::x_dim(width),
-                          tiny::x_dim(height));
+        XMoveResizeWindow(display, window, placed.x, placed.y,
+                          tiny::x_dim(width), tiny::x_dim(height));
     }
     fit(entry, layout.entry);
     if (grid.get_realized()) {
@@ -173,6 +178,14 @@ void Launcher::free_icons(::Display* x_display,
         }
     }
     list.clear();
+}
+
+void Launcher::set_screen(const tiny::Rect& monitor)
+{
+    screen = monitor;
+    if (is_realized && !is_maped) {
+        relayout();
+    }
 }
 
 void Launcher::popup()

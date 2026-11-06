@@ -34,6 +34,10 @@ class Switcher {
     //! Create the windows of the panels on the root window (not shown)
     void realize(::Window root);
 
+    //! The monitor where the panels are, in its middle; without it the root
+    //! window
+    void set_screen(const tiny::Rect& area) { monitor = area; }
+
     //! The generic icon of an application without one; must live longer
     void set_icons(SymbolicIcons* icons);
 
@@ -91,8 +95,8 @@ class Switcher {
     SwitcherPanel windows;
     std::optional<size_t> windows_of; //!< the application the list shows
     ::Window root = None;
-    int screen_width = 0;
-    int screen_height = 0;
+    tiny::Rect monitor = {0, 0, 0, 0}; //!< set by the owner, empty: the root
+    tiny::Rect screen = {0, 0, 0, 0};  //!< where the panels are now
 };
 
 } // namespace tiny::wm

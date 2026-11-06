@@ -22,6 +22,12 @@ bool inside(const tiny::Rect& inner, const tiny::Rect& outer)
            inner.y + inner.height <= outer.y + outer.height;
 }
 
+bool same_area(const tiny::Rect& a, const tiny::Rect& b)
+{
+    return a.x == b.x && a.y == b.y && a.width == b.width &&
+           a.height == b.height;
+}
+
 long overlap(const tiny::Rect& a, const tiny::Rect& b)
 {
     const long width =
@@ -52,6 +58,19 @@ bool same_text(const std::string& a, const std::string& b)
 
 void order_monitors(Monitors& monitors)
 {
+    // a monitor around two others is the whole screen, which a server may
+    // report beside the monitors that are set up in it
+    const auto around_others = [&monitors](const Monitor& whole) {
+        return std::count_if(monitors.begin(), monitors.end(),
+                             [&whole](const Monitor& other) {
+                                 return &other != &whole &&
+                                        inside(other.area, whole.area) &&
+                                        !same_area(other.area, whole.area);
+                             }) >= 2;
+    };
+    monitors.erase(
+            std::remove_if(monitors.begin(), monitors.end(), around_others),
+            monitors.end());
     std::stable_sort(monitors.begin(), monitors.end(),
                      [](const Monitor& a, const Monitor& b) {
                          return a.area.x != b.area.x ? a.area.x < b.area.x
@@ -138,6 +157,16 @@ bool is_monitor_event(const XEvent& e, int event_base)
     (void)e;
     (void)event_base;
     return false;
+#endif
+}
+
+void accept_monitor_event(const XEvent& e)
+{
+#ifdef TINY_RANDR
+    XEvent copy = e; // the function wants a pointer that it may write through
+    XRRUpdateConfiguration(&copy);
+#else
+    (void)e;
 #endif
 }
 

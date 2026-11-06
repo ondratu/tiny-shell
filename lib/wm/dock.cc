@@ -933,15 +933,40 @@ void Dock::set_icons(SymbolicIcons* symbolic)
     icon.set_icons(symbolic);
 }
 
+tiny::Rect Dock::place_for(int w, int h) const
+{
+    tiny::Rect on = on_monitor;
+    if (on.width <= 0 || on.height <= 0) {
+        XWindowAttributes attrs;
+        XGetWindowAttributes(display, parent, &attrs);
+        on = {0, 0, attrs.width, attrs.height};
+    }
+    return {on.x + on.width / 2 - w / 2,
+            on.y + on.height - h - shell_theme.dock_border, w, h};
+}
+
+tiny::Rect Dock::area() const
+{
+    return place_for(width, height);
+}
+
+void Dock::set_screen(const tiny::Rect& monitor)
+{
+    on_monitor = monitor;
+    if (is_realized) {
+        const tiny::Rect place = area();
+        XMoveWindow(display, window, place.x, place.y);
+    }
+}
+
 void Dock::resize(int w, int h)
 {
     Box::resize(w, h);
 
     if (is_realized) {
-        XWindowAttributes attrs;
-        XGetWindowAttributes(display, parent, &attrs);
-        XMoveWindow(display, window, attrs.width / 2 - w / 2,
-                    attrs.height - h - shell_theme.dock_border);
+        // the width is the old one until the server tells
+        const tiny::Rect place = place_for(w, h);
+        XMoveWindow(display, window, place.x, place.y);
     }
 }
 

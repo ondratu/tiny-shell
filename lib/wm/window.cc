@@ -1083,6 +1083,7 @@ void Window::maximize()
     state.width = attrs.width;
     state.height = attrs.height;
 
+    use_monitor_of({attrs.x, attrs.y, attrs.width, attrs.height});
     place_maximized();
     set_maximized(true);
 }
@@ -1092,6 +1093,56 @@ void Window::place_maximized()
     XMoveResizeWindow(dsp, child, work_area.x, work_area.y,
                       tiny::x_uint(work_area.width),
                       tiny::x_uint(work_area.height));
+}
+
+tiny::Rect Window::frame_geometry() const
+{
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(dsp, child, &attrs)) {
+        return work_area;
+    }
+    return {attrs.x, attrs.y, attrs.width, attrs.height};
+}
+
+void Window::use_monitor_of(const tiny::Rect& frame)
+{
+    if (find_areas) {
+        const MonitorAreas areas = find_areas(frame);
+        work_area = areas.work;
+        screen_area = areas.screen;
+    }
+}
+
+tiny::Rect Window::fullscreen_area() const
+{
+    if (screen_area.width > 0 && screen_area.height > 0) {
+        return screen_area;
+    }
+    XWindowAttributes attrs;
+    XGetWindowAttributes(dsp, root, &attrs);
+    return {0, 0, attrs.width, attrs.height};
+}
+
+void Window::refresh_areas()
+{
+    if (!find_areas) {
+        return;
+    }
+    use_monitor_of(frame_geometry());
+    if (is_fullscreen()) {
+        place_fullscreen();
+    } else if (get_maximized()) {
+        place_maximized();
+    } else {
+        keep_in_work_area();
+    }
+}
+
+void Window::place_fullscreen()
+{
+    const tiny::Rect area = fullscreen_area();
+    XMoveResizeWindow(dsp, child, area.x, area.y, tiny::x_uint(area.width),
+                      tiny::x_uint(area.height));
 }
 
 void Window::set_work_area(const tiny::Rect& area)
@@ -1134,9 +1185,8 @@ void Window::fullscreen(bool on)
         XWindowAttributes attrs;
         XGetWindowAttributes(dsp, child, &attrs);
         before_fullscreen = {attrs.x, attrs.y, attrs.width, attrs.height};
-        XGetWindowAttributes(dsp, root, &attrs);
-        XMoveResizeWindow(dsp, child, 0, 0, tiny::x_uint(attrs.width),
-                          tiny::x_uint(attrs.height));
+        use_monitor_of(before_fullscreen);
+        place_fullscreen();
         XRaiseWindow(dsp, child);
     } else if (get_maximized()) {
         set_fullscreen(false);
@@ -1178,6 +1228,7 @@ void Window::apply_initial_state()
 
 void Window::restore(int x, int y)
 {
+    use_monitor_of(frame_geometry());
     if (get_maximized()) {
         // the window returns inside of the work area, which may have changed
         const tiny::Rect place =

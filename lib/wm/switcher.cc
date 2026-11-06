@@ -46,10 +46,13 @@ void Switcher::open(const std::vector<Window*>& windows_arg, bool by_windows,
         state.start_apps(backwards);
     }
 
-    XWindowAttributes attrs;
-    XGetWindowAttributes(tiny::get_display(), root, &attrs);
-    screen_width = attrs.width;
-    screen_height = attrs.height;
+    if (monitor.width > 0 && monitor.height > 0) {
+        screen = monitor;
+    } else {
+        XWindowAttributes attrs;
+        XGetWindowAttributes(tiny::get_display(), root, &attrs);
+        screen = {0, 0, attrs.width, attrs.height};
+    }
 
     std::vector<SwitcherCell> cells;
     for (const DockGroup& group : state.apps()) {
@@ -61,7 +64,7 @@ void Switcher::open(const std::vector<Window*>& windows_arg, bool by_windows,
         cells.push_back(std::move(cell));
     }
     // a margin of a panel at both sides of the screen
-    const int room = screen_width - 4 * shell_theme.dock_border;
+    const int room = screen.width - 4 * shell_theme.dock_border;
     apps.set_max_width(room);
     windows.set_max_width(room);
     windows_of.reset();
@@ -108,11 +111,12 @@ void Switcher::place()
 {
     const int gap = shell_theme.dock_border;
     // the panel of the applications does not move when the windows come
-    const int apps_top = (screen_height - apps.get_height()) / 2;
-    apps.place(screen_width / 2, std::max(0, apps_top));
+    const int apps_top = (screen.height - apps.get_height()) / 2;
+    const int center = screen.x + screen.width / 2;
+    apps.place(center, screen.y + std::max(0, apps_top));
     const int below = apps_top + apps.get_height() + gap;
-    const int fits = screen_height - windows.get_height() - gap;
-    windows.place(screen_width / 2, std::max(0, std::min(below, fits)));
+    const int fits = screen.height - windows.get_height() - gap;
+    windows.place(center, screen.y + std::max(0, std::min(below, fits)));
 }
 
 void Switcher::next_app(bool backwards)

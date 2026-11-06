@@ -46,6 +46,19 @@ TEST(MonitorsTest, a_clone_is_not_a_monitor_of_its_own)
     EXPECT_TRUE(list[0].primary); // the clone of the primary one
 }
 
+TEST(MonitorsTest, the_whole_screen_around_two_monitors_is_not_a_monitor)
+{
+    Monitors list = {monitor("A", 0, 0, 640, 800),
+                     monitor("B", 640, 0, 640, 800),
+                     monitor("screen", 0, 0, 1280, 800)};
+
+    order_monitors(list);
+
+    ASSERT_EQ(list.size(), 2u);
+    EXPECT_EQ(list[0].name, "A");
+    EXPECT_EQ(list[1].name, "B");
+}
+
 TEST(MonitorsTest, the_screen_has_at_least_one)
 {
     const Monitors list = read_monitors(tiny::get_display(), root_window());

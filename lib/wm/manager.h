@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <list>
 #include <string>
@@ -18,6 +19,7 @@
 #include "wm/action_registry.h"
 #include "wm/config.h"
 #include "wm/launcher.h"
+#include "wm/monitors.h"
 #include "wm/run_dialog.h"
 #include "wm/switcher.h"
 #include "wm/unresponsive_dialog.h"
@@ -170,6 +172,30 @@ class Manager : public tiny::Object {
 
     //! Change the colors of the shell and repaint what is shown
     void set_variant(Variant variant);
+
+    /**
+     * @short Which monitors the shell uses, see `[monitors]` of the
+     * configuration.
+     *
+     * `primary` is the monitor of the panel, the dock, the launcher and the
+     * dialogs: a number as the monitor is numbered (from the left, then from
+     * the top), the name of an output, or "auto" (the primary monitor of
+     * RandR). `secondary` is the other one that the placement refers to
+     * ("auto": the first one that is not the primary). The placement runs
+     * `xrandr` to put the secondary monitor on one side of the primary one;
+     * `Keep` leaves the layout as it is.
+     */
+    void set_monitors(const std::string& primary, const std::string& secondary,
+                      Placement placement);
+
+    //! The monitors, numbered from the left to the right
+    const Monitors& get_monitors() const { return monitors; }
+
+    //! The monitor of the panel and the dock (an index of `get_monitors()`)
+    size_t get_primary_monitor() const { return choice.primary; }
+
+    //! The work area of each monitor, in the order of `get_monitors()`
+    const std::vector<tiny::Rect>& get_work_areas() const { return work_areas; }
 
   private:
     void set_events();
@@ -356,6 +382,23 @@ class Manager : public tiny::Object {
     //! Compute the work area again; windows and _NET_WORKAREA follow it
     void update_work_area();
 
+    //! Read the monitors and use them: the shell goes to the primary one, the
+    //! windows to the monitors they are on. `force` does it also when the
+    //! monitors are the same.
+    void update_monitors(bool force = false);
+
+    //! Put the panel, the dock and the dialogs on the primary monitor
+    void arrange_shell();
+
+    //! The areas of the monitor that has most of the frame
+    Window::MonitorAreas areas_at(const tiny::Rect& frame) const;
+
+    //! The monitor with the pointer
+    size_t pointer_monitor() const;
+
+    //! The monitors changed (an event of RandR)
+    void on_monitors_changed(const XEvent& e);
+
     //! Focus stealing prevention: may a window that was just mapped have it
     bool may_take_focus(const Window* window) const;
 
@@ -464,7 +507,15 @@ class Manager : public tiny::Object {
     //! Windows of the popup types (menus, tooltips, notifications): above
     //! the others, never framed or focused
     std::set<::Window> wm_popups;
-    tiny::Rect work_area = {0, 0, 0, 0};
+    tiny::Rect work_area = {0, 0, 0, 0}; //!< of the primary monitor
+    std::vector<tiny::Rect> work_areas;  //!< of every monitor
+    Monitors monitors;
+    MonitorChoice choice;
+    std::string primary_spec = "auto";
+    std::string secondary_spec = "auto";
+    Placement placement = Placement::Keep;
+    std::vector<std::string> placement_asked; //!< the last xrandr we started
+    std::optional<int> randr_base;            //!< RandR events, none: no RandR
 
     std::map<::Window, Window*> wm_windows;
     std::list<Window*> wm_tops;    //!< in the order they came

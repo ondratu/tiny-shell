@@ -78,6 +78,9 @@ class Panel : public tiny::Box {
 
     void realize(::Window root, int x = 0, int y = 0) override;
 
+    //! Put the panel along the top edge of a monitor
+    void place(const tiny::Rect& monitor);
+
     //! The icons for the logo; call before `realize()`, they must live longer
     void set_icons(SymbolicIcons* icons) { logo.set_icons(icons); }
 
