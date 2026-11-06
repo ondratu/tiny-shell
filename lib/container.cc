@@ -111,7 +111,7 @@ void Box::resize(int w, int h)
 
 void Box::push_start(Widget* widget, int x_spacing, int y_spacing, int gravity)
 {
-    offsets[widget] = {true, x_spacing, y_spacing};
+    offsets.push_back({widget, {true, x_spacing, y_spacing}});
     if (type == Type::Horizontal) {
         add(widget, start_offset + x_spacing, y_spacing,
             (gravity == AutoGravity ? NorthWestGravity : gravity));
@@ -125,7 +125,7 @@ void Box::push_start(Widget* widget, int x_spacing, int y_spacing, int gravity)
 
 void Box::push_back(Widget* widget, int x_spacing, int y_spacing, int gravity)
 {
-    offsets[widget] = {false, x_spacing, y_spacing};
+    offsets.push_back({widget, {false, x_spacing, y_spacing}});
     if (type == Type::Horizontal) {
         end_offset -= x_spacing + widget->get_width();
         add(widget, end_offset, y_spacing,
@@ -139,7 +139,9 @@ void Box::push_back(Widget* widget, int x_spacing, int y_spacing, int gravity)
 
 void Box::remove(Widget* widget)
 {
-    auto it = offsets.find(widget);
+    const auto it = std::find_if(
+            offsets.begin(), offsets.end(),
+            [widget](const auto& pushed) { return pushed.first == widget; });
 
     Container::remove(widget);
 

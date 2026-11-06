@@ -76,7 +76,8 @@ class Box : public Container {
 
     int start_offset;
     int end_offset;
-    std::map<Widget*, Offset> offsets;
+    //! In the order of the pushes, which is the order on the screen
+    std::vector<std::pair<Widget*, Offset>> offsets;
 };
 
 /**
