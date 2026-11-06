@@ -48,6 +48,12 @@ endif
 # fontconfig is a dependency of Xft; it is named because the list of fonts uses it.
 # xext has the SYNC extension (resizing without tearing)
 PKGS = x11 xft xrender fontconfig xext
+# RandR (several monitors) is used when it is installed; RANDR=0 builds without
+# it (the whole screen is one monitor then)
+RANDR ?= $(shell pkg-config --exists xrandr && echo 1 || echo 0)
+ifeq ($(RANDR),1)
+PKGS += xrandr
+endif
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
@@ -69,6 +75,9 @@ CXXFLAGS ?= -Og -g
 override CXXFLAGS += -DTINY_DEBUG
 else
 CXXFLAGS ?= -Os -fno-asynchronous-unwind-tables
+endif
+ifeq ($(RANDR),1)
+override CXXFLAGS += -DTINY_RANDR
 endif
 override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
@@ -157,7 +166,7 @@ help:
 	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
-	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors),"
+	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 (no RandR),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
 
 examples: $(EXAMPLES)
