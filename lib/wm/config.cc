@@ -359,6 +359,38 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[panel] system_tray must be yes or no");
         }
     }
+    const auto read_monitor = [&](const char* key, std::string& target,
+                                  const char* what) {
+        if (const auto value = ini.get("monitors", key)) {
+            const std::string spec(trim(*value));
+            if (valid_monitor_spec(spec)) {
+                target = spec.empty() ? "auto" : spec;
+            } else {
+                problem(what);
+            }
+        }
+    };
+    read_monitor("primary", config.monitor_primary,
+                 "[monitors] primary must be auto, a number or the name of an "
+                 "output");
+    read_monitor("secondary", config.monitor_secondary,
+                 "[monitors] secondary must be auto, a number or the name of "
+                 "an output");
+    if (const auto value = ini.get("monitors", "placement")) {
+        if (const auto placement = parse_placement(*value)) {
+            config.monitor_placement = *placement;
+        } else {
+            problem("[monitors] placement must be keep, right, left, above or "
+                    "below");
+        }
+    }
+    if (const auto value = ini.get("monitors", "numbers")) {
+        if (*value == "yes" || *value == "no") {
+            config.monitor_numbers = *value == "yes";
+        } else {
+            problem("[monitors] numbers must be yes or no");
+        }
+    }
     if (const auto value = ini.get("dock", "mode")) {
         if (const auto mode = parse_dock_mode(*value)) {
             config.dock_mode = *mode;
