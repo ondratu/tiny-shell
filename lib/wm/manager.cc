@@ -297,6 +297,7 @@ void Manager::register_actions()
     actions.add("run-dialog", [this] { wm_run.popup(); });
     actions.add("next-window", [this] { activate_next_window(); });
     actions.add("prev-window", [this] { activate_prev_window(); });
+    actions.add("identify-monitors", [this] { show_monitor_numbers(); });
     actions.add("theme-dark", [this] { set_variant(Variant::Dark); });
     actions.add("theme-light", [this] { set_variant(Variant::Light); });
     actions.add("theme-toggle", [this] {
@@ -574,6 +575,7 @@ void Manager::restack_layers()
     // over everything, also over a maximized or full screen window, or the
     // pointer at the edge of the screen would not reach it
     XRaiseWindow(display, wm_dock_reveal.get_window());
+    monitor_labels.raise();
 }
 
 void Manager::request_frame_extents(::Window child)
@@ -1612,13 +1614,42 @@ void Manager::on_monitors_changed(const XEvent& e)
 }
 
 void Manager::set_monitors(const std::string& primary,
-                           const std::string& secondary, Placement where)
+                           const std::string& secondary, Placement where,
+                           bool numbers)
 {
     primary_spec = primary;
     secondary_spec = secondary;
     placement = where;
     placement_asked.clear();
     update_monitors(true);
+    if (numbers) {
+        show_monitor_numbers(true);
+    } else if (monitor_numbers_always) {
+        hide_monitor_numbers();
+    }
+}
+
+void Manager::show_monitor_numbers(bool always)
+{
+    using namespace std::chrono_literals;
+    timers.cancel(monitor_numbers_timer);
+    monitor_numbers_timer = 0;
+    monitor_numbers_always = always;
+    monitor_labels.show(root, monitors, choice.primary);
+    if (!always) {
+        monitor_numbers_timer = timers.after(4s, [this] {
+            monitor_numbers_timer = 0;
+            monitor_labels.hide();
+        });
+    }
+}
+
+void Manager::hide_monitor_numbers()
+{
+    timers.cancel(monitor_numbers_timer);
+    monitor_numbers_timer = 0;
+    monitor_numbers_always = false;
+    monitor_labels.hide();
 }
 
 void Manager::update_monitors(bool force)
@@ -1675,6 +1706,9 @@ void Manager::arrange_shell()
     publish_panel_strut();
     update_work_area();
     update_dock_visibility();
+    if (monitor_labels.is_shown()) { // the monitors moved or came and went
+        monitor_labels.show(root, monitors, choice.primary);
+    }
 }
 
 Window::MonitorAreas Manager::areas_at(const tiny::Rect& frame) const
