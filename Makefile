@@ -54,6 +54,12 @@ RANDR ?= $(shell pkg-config --exists xrandr && echo 1 || echo 0)
 ifeq ($(RANDR),1)
 PKGS += xrandr
 endif
+# Xinerama is the other way to tell the monitors (Xephyr +xinerama, old
+# servers); used when it is installed, XINERAMA=0 builds without it
+XINERAMA ?= $(shell pkg-config --exists xinerama && echo 1 || echo 0)
+ifeq ($(XINERAMA),1)
+PKGS += xinerama
+endif
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
@@ -78,6 +84,9 @@ CXXFLAGS ?= -Os -fno-asynchronous-unwind-tables
 endif
 ifeq ($(RANDR),1)
 override CXXFLAGS += -DTINY_RANDR
+endif
+ifeq ($(XINERAMA),1)
+override CXXFLAGS += -DTINY_XINERAMA
 endif
 override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
@@ -166,7 +175,7 @@ help:
 	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
-	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 (no RandR),"
+	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 (no RandR / Xinerama),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
 
 examples: $(EXAMPLES)

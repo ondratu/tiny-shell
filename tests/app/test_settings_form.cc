@@ -1332,7 +1332,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 16u);
+    EXPECT_EQ(count, 15u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1587,16 +1587,13 @@ TEST(SettingsFormScreensTest, the_values_come_from_the_start)
     v.primary_monitor = "2";
     v.secondary_monitor = "HDMI-1";
     v.monitor_placement = "right";
-    v.monitor_numbers = "yes";
     const SettingsForm form = make(v);
 
     EXPECT_EQ(form.values().primary_monitor, "2");
     EXPECT_EQ(form.values().secondary_monitor, "HDMI-1");
     EXPECT_EQ(form.choice_label(Field::MonitorPlacement), "Right of primary");
-    EXPECT_EQ(form.choice_label(Field::MonitorNumbers), "Always");
     EXPECT_TRUE(SettingsForm::is_choice(Field::PrimaryMonitor));
     EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorPlacement));
-    EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorNumbers));
 }
 
 TEST(SettingsFormScreensTest, nothing_is_set_by_default)
@@ -1605,7 +1602,6 @@ TEST(SettingsFormScreensTest, nothing_is_set_by_default)
 
     EXPECT_EQ(form.values().primary_monitor, "");
     EXPECT_EQ(form.choice_label(Field::MonitorPlacement), "Keep");
-    EXPECT_EQ(form.choice_label(Field::MonitorNumbers), "Off");
     EXPECT_EQ(form.problem(), "");
 }
 
@@ -1667,8 +1663,6 @@ TEST(SettingsFormScreensTest, wrong_values_are_a_problem)
     EXPECT_FALSE(make(v).problem(Field::SecondaryMonitor).empty());
     v.monitor_placement = "diagonal";
     EXPECT_FALSE(make(v).problem(Field::MonitorPlacement).empty());
-    v.monitor_numbers = "maybe";
-    EXPECT_FALSE(make(v).problem(Field::MonitorNumbers).empty());
 }
 
 TEST(SettingsFormScreensTest, the_fields_have_hints)
@@ -1687,8 +1681,8 @@ TEST(SettingsFormScreensTest, a_click_on_the_section_shows_its_fields)
 
     EXPECT_EQ(form.section(), SettingsForm::Section::Screens);
     EXPECT_EQ(form.focus(), Field::PrimaryMonitor);
-    EXPECT_TRUE(click(form, form.field_rect(Field::MonitorNumbers)));
-    EXPECT_EQ(form.text(Field::MonitorNumbers), "yes");
+    EXPECT_TRUE(click(form, form.field_rect(Field::MonitorPlacement)));
+    EXPECT_EQ(form.text(Field::MonitorPlacement), "right");
 }
 
 TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
@@ -1697,6 +1691,6 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
     form.set_section(SettingsForm::Section::Screens);
     form.resize(700, form.form_height());
 
-    const Rect last = form.field_rect(Field::MonitorNumbers);
+    const Rect last = form.field_rect(Field::MonitorPlacement);
     EXPECT_LT(last.y + last.height, form.message_rect().y);
 }

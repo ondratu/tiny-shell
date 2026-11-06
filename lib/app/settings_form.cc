@@ -66,22 +66,22 @@ constexpr size_t thumbnail_rows = 3;
 
 //! All the fields, in the order of `SettingsForm::Field` (the order of the
 //! texts and of the targets)
-constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
-                                          SettingsForm::Field::Size,
-                                          SettingsForm::Field::Style,
-                                          SettingsForm::Field::Terminal,
-                                          SettingsForm::Field::Scale,
-                                          SettingsForm::Field::Antialias,
-                                          SettingsForm::Field::Hinting,
-                                          SettingsForm::Field::Rgba,
-                                          SettingsForm::Field::Wallpaper,
-                                          SettingsForm::Field::WallpaperMode,
-                                          SettingsForm::Field::ClockFormat,
-                                          SettingsForm::Field::Dock,
-                                          SettingsForm::Field::PrimaryMonitor,
-                                          SettingsForm::Field::SecondaryMonitor,
-                                          SettingsForm::Field::MonitorPlacement,
-                                          SettingsForm::Field::MonitorNumbers};
+constexpr SettingsForm::Field fields[] = {
+        SettingsForm::Field::Font,
+        SettingsForm::Field::Size,
+        SettingsForm::Field::Style,
+        SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale,
+        SettingsForm::Field::Antialias,
+        SettingsForm::Field::Hinting,
+        SettingsForm::Field::Rgba,
+        SettingsForm::Field::Wallpaper,
+        SettingsForm::Field::WallpaperMode,
+        SettingsForm::Field::ClockFormat,
+        SettingsForm::Field::Dock,
+        SettingsForm::Field::PrimaryMonitor,
+        SettingsForm::Field::SecondaryMonitor,
+        SettingsForm::Field::MonitorPlacement};
 
 } // namespace
 
@@ -117,8 +117,7 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.dock),
             TextField(initial.primary_monitor),
             TextField(initial.secondary_monitor),
-            TextField(initial.monitor_placement),
-            TextField(initial.monitor_numbers)},
+            TextField(initial.monitor_placement)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -168,8 +167,7 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::Dock),
             text(Field::PrimaryMonitor),
             text(Field::SecondaryMonitor),
-            text(Field::MonitorPlacement),
-            text(Field::MonitorNumbers)};
+            text(Field::MonitorPlacement)};
 }
 
 // The sections
@@ -199,9 +197,9 @@ SettingsForm::section_fields(Section section)
             Field::Scale, Field::Wallpaper, Field::WallpaperMode, Field::Dock,
             Field::ClockFormat};
     static const std::vector<Field> applications = {Field::Terminal};
-    static const std::vector<Field> screens = {
-            Field::PrimaryMonitor, Field::SecondaryMonitor,
-            Field::MonitorPlacement, Field::MonitorNumbers};
+    static const std::vector<Field> screens = {Field::PrimaryMonitor,
+                                               Field::SecondaryMonitor,
+                                               Field::MonitorPlacement};
     switch (section) {
         case Section::Fonts:
             return fonts;
@@ -254,9 +252,6 @@ const char* SettingsForm::hint(Field field)
         case Field::MonitorPlacement:
             return "Where the secondary monitor is, seen from the primary "
                    "one (runs xrandr).";
-        case Field::MonitorNumbers:
-            return "Shows the number of every monitor in its corner, to tell "
-                   "them apart.";
         case Field::Terminal:
             return "The program and its arguments, e.g. xterm -e.";
         case Field::Wallpaper:
@@ -272,8 +267,7 @@ bool SettingsForm::is_choice(Field field)
     return field == Field::Antialias || field == Field::Hinting ||
            field == Field::Rgba || field == Field::WallpaperMode ||
            field == Field::Dock || field == Field::PrimaryMonitor ||
-           field == Field::SecondaryMonitor ||
-           field == Field::MonitorPlacement || field == Field::MonitorNumbers;
+           field == Field::SecondaryMonitor || field == Field::MonitorPlacement;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -321,9 +315,6 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     }
     if (field == Field::MonitorPlacement) {
         return wm::placement_choices();
-    }
-    if (field == Field::MonitorNumbers) {
-        return wm::numbers_choices();
     }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
                                          : wm::xft_choices(xft_option(field));
@@ -405,10 +396,6 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_placement_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
-        case Field::MonitorNumbers:
-            return value.empty() || value == "yes"
-                           ? ""
-                           : "Choose one of the values that are offered.";
         case Field::PrimaryMonitor:
         case Field::SecondaryMonitor:
             return wm::valid_monitor_spec(value)
@@ -460,8 +447,7 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.dock),
             clean(v.primary_monitor),
             clean(v.secondary_monitor),
-            clean(v.monitor_placement),
-            clean(v.monitor_numbers)};
+            clean(v.monitor_placement)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -852,8 +838,7 @@ bool SettingsForm::act(size_t target, int x)
         case DockField:
         case PrimaryMonitorField:
         case SecondaryMonitorField:
-        case MonitorPlacementField:
-        case MonitorNumbersField: {
+        case MonitorPlacementField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on

@@ -183,10 +183,9 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     }
     if (old == nullptr || old->monitor_primary != config.monitor_primary ||
         old->monitor_secondary != config.monitor_secondary ||
-        old->monitor_placement != config.monitor_placement ||
-        old->monitor_numbers != config.monitor_numbers) {
+        old->monitor_placement != config.monitor_placement) {
         manager.set_monitors(config.monitor_primary, config.monitor_secondary,
-                             config.monitor_placement, config.monitor_numbers);
+                             config.monitor_placement);
     }
 }
 

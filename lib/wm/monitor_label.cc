@@ -12,8 +12,9 @@ namespace tiny::wm {
 
 namespace {
 
-//! The number is this many times as high as the panel
-constexpr int number_scale = 2;
+//! The number is this many times as high as the panel (the label is small, it
+//! only has to be seen from a distance)
+constexpr int number_scale = 1;
 
 //! A font for the big number, nothing when it can't be opened
 XftFont* open_number_font(::Display* display)
