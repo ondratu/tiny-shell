@@ -52,6 +52,9 @@ Display::Display(::Display* display_arg):
     _NET_WM_NAME(XInternAtom(display_arg, "_NET_WM_NAME", 0)),
     _NET_WM_PING(XInternAtom(display_arg, "_NET_WM_PING", 0)),
     _NET_WM_PID(XInternAtom(display_arg, "_NET_WM_PID", 0)),
+    _NET_WM_SYNC_REQUEST(XInternAtom(display_arg, "_NET_WM_SYNC_REQUEST", 0)),
+    _NET_WM_SYNC_REQUEST_COUNTER(
+            XInternAtom(display_arg, "_NET_WM_SYNC_REQUEST_COUNTER", 0)),
     _NET_WM_MOVERESIZE(XInternAtom(display_arg, "_NET_WM_MOVERESIZE", 0)),
     _NET_WM_ACTION_BELOW(XInternAtom(display_arg, "_NET_WM_ACTION_BELOW", 0)),
     _NET_WM_ACTION_ABOVE(XInternAtom(display_arg, "_NET_WM_ACTION_ABOVE", 0)),

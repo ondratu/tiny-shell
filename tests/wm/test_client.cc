@@ -1309,6 +1309,70 @@ TEST_F(ClientTest, resizing_the_right_bottom_corner_grows_the_window)
     EXPECT_EQ(win->header.get_width(), 250u);
 }
 
+TEST_F(ClientTest, a_resize_waits_for_the_client_to_draw_the_last_size)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    resizable();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(350, 330, MotionNotify), mask);
+    pump_events();
+    EXPECT_EQ(frame().width, 250); // the first size goes at once
+
+    // the client has not drawn it: this one is kept back
+    win->on_move_resize_motion(nullptr, pointer(400, 330, MotionNotify), mask);
+    pump_events();
+    EXPECT_EQ(frame().width, 250);
+
+    client.set_counter(counter, 1); // drawn
+    win->on_move_resize_motion(nullptr, pointer(410, 330, MotionNotify), mask);
+    pump_events();
+    EXPECT_EQ(frame().width, 310);
+}
+
+TEST_F(ClientTest, the_last_size_is_used_when_the_resize_ends)
+{
+    client.set_sync_counter();
+    resizable();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(350, 330, MotionNotify), mask);
+    win->on_move_resize_motion(nullptr, pointer(400, 330, MotionNotify), mask);
+    ASSERT_EQ(frame().width, 250);
+
+    win->on_move_resize_end(nullptr, pointer(400, 330, ButtonRelease), nullptr);
+    pump_events();
+
+    EXPECT_EQ(frame().width, 300);
+}
+
+TEST_F(ClientTest, a_new_resize_does_not_wait_for_the_one_before)
+{
+    client.set_sync_counter();
+    resizable();
+    build();
+    using tiny::Position;
+    void* mask = reinterpret_cast<void*>(
+            static_cast<size_t>(Position::Right | Position::Bottom));
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(350, 330, MotionNotify), mask);
+    win->on_move_resize_end(nullptr, pointer(350, 330, ButtonRelease), nullptr);
+
+    win->on_move_resize_begin(nullptr, pointer(300, 300), nullptr);
+    win->on_move_resize_motion(nullptr, pointer(360, 330, MotionNotify), mask);
+    pump_events();
+
+    EXPECT_EQ(frame().width, 310); // from the 250 of the first resize
+}
+
 TEST_F(ClientTest, resizing_the_left_top_corner_moves_the_window)
 {
     resizable();

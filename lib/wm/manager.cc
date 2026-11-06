@@ -343,6 +343,8 @@ void Manager::set_supported()
                               dsp._NET_ACTIVE_WINDOW,
                               dsp._NET_CLOSE_WINDOW,
                               dsp._NET_WM_PING,
+                              dsp._NET_WM_SYNC_REQUEST,
+                              dsp._NET_WM_SYNC_REQUEST_COUNTER,
                               dsp._NET_WM_MOVERESIZE,
                               dsp._NET_NUMBER_OF_DESKTOPS,
                               dsp._NET_CURRENT_DESKTOP,

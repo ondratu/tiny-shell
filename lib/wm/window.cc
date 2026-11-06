@@ -374,6 +374,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
     }
 
     update_protocols();
+    update_sync_counter();
     update_properties();
     update_transient_for();
     wm_type = get_net_wm_type(child_arg);
@@ -1213,6 +1214,77 @@ void Window::update_protocols()
     XFree(supported);
 }
 
+void Window::update_sync_counter()
+{
+    sync_counter = None;
+    sync_gate.reset();
+    if (!protocols.count(dsp._NET_WM_SYNC_REQUEST)) {
+        return;
+    }
+    int event_base = 0;
+    int error_base = 0;
+    if (!XSyncQueryExtension(dsp, &event_base, &error_base)) {
+        return; // the server has no counters
+    }
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0;
+    unsigned long left = 0;
+    unsigned char* data = nullptr;
+    if (XGetWindowProperty(dsp, child, dsp._NET_WM_SYNC_REQUEST_COUNTER, 0, 1,
+                           False, XA_CARDINAL, &type, &format, &count, &left,
+                           &data) == Success &&
+        data != nullptr) {
+        // the first one is the basic counter (the second, the one of the
+        // frames, is not used)
+        if (type == XA_CARDINAL && format == 32 && count == 1) {
+            sync_counter = *reinterpret_cast<XSyncCounter*>(data);
+        }
+        XFree(data);
+    }
+}
+
+bool Window::sync_allows_resize()
+{
+    if (sync_counter == None) {
+        return true;
+    }
+    // the client can destroy its counter any time: BadCounter is no fault
+    const XErrorHandler old_handler =
+            XSetErrorHandler([](::Display*, XErrorEvent*) -> int { return 0; });
+    XSyncValue value;
+    const bool found = XSyncQueryCounter(dsp, sync_counter, &value) != 0;
+    XSetErrorHandler(old_handler);
+    if (!found) {
+        sync_counter = None; // it is gone: the client is not waited for
+        return true;
+    }
+    const uint64_t now_value = (static_cast<uint64_t>(static_cast<uint32_t>(
+                                        XSyncValueHigh32(value)))
+                                << 32) |
+                               XSyncValueLow32(value);
+    return sync_gate.is_open(now_value, SyncGate::Clock::now());
+}
+
+void Window::sync_request_resize()
+{
+    if (sync_counter == None) {
+        return;
+    }
+    const uint64_t number = sync_gate.request(SyncGate::Clock::now());
+    XClientMessageEvent msg = {};
+    msg.type = ClientMessage;
+    msg.window = child;
+    msg.message_type = dsp.WM_PROTOCOLS;
+    msg.format = 32;
+    msg.data.l[0] = static_cast<long>(dsp._NET_WM_SYNC_REQUEST);
+    msg.data.l[1] = CurrentTime;
+    msg.data.l[2] = static_cast<long>(number & 0xFFFFFFFFU);
+    msg.data.l[3] = static_cast<long>(number >> 32);
+    msg.data.l[4] = 0;
+    XSendEvent(dsp, child, False, NoEventMask, reinterpret_cast<XEvent*>(&msg));
+}
+
 void Window::update_properties()
 {
     properties.clear();
@@ -1784,6 +1856,11 @@ void Window::on_property_notify(const XEvent& e, void*)
 
     if (e.xproperty.atom == dsp.WM_PROTOCOLS) {
         update_protocols();
+        update_sync_counter();
+        return;
+    }
+    if (e.xproperty.atom == dsp._NET_WM_SYNC_REQUEST_COUNTER) {
+        update_sync_counter();
         return;
     }
     if (e.xproperty.atom == dsp._NET_WM_STATE) {
