@@ -53,6 +53,8 @@ TEST_F(ShellThemeTest, scale_multiplies_metrics_and_styles_and_the_toolkit)
     EXPECT_EQ(t.menu_separator, 16);
     EXPECT_EQ(t.popup_item_height, 60);
     EXPECT_EQ(t.menu_padding, 24);
+    EXPECT_EQ(t.tray_icon, 36);
+    EXPECT_EQ(t.tray_gap, 8);
     EXPECT_EQ(t.dock_dot, 8);
     EXPECT_EQ(t.dock_line, 2);
     EXPECT_EQ(t.dock_marker, 6);

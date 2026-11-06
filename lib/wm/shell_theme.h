@@ -57,6 +57,8 @@ class ShellTheme {
     int dock_reveal = 5; //!< the strip at the screen edge that shows the dock
     int dock_attention_bar = 3; //!< under the icon that demands attention
     int panel_app_width = 200;
+    int tray_icon = 18; //!< the side of an icon of the system tray
+    int tray_gap = 4;   //!< the space at both sides of an icon of the tray
     int menu_width = 200;
     int menu_item_height = 20;
     int menu_separator = 8;     //!< the space of the line between item groups

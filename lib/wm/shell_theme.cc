@@ -33,6 +33,8 @@ void ShellTheme::scale_own(double factor)
     dock_reveal = scaled(5, factor);
     dock_attention_bar = scaled(3, factor);
     panel_app_width = scaled(200, factor);
+    tray_icon = scaled(18, factor);
+    tray_gap = scaled(4, factor);
     menu_width = scaled(200, factor);
     menu_item_height = scaled(20, factor);
     menu_separator = scaled(8, factor);
