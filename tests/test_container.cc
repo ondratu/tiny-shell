@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "container.h"
+#include "helpers.h"
 #include "display.h"
 #include "object.h"
 
@@ -111,6 +112,42 @@ TEST_F(BoxTest, remove_end_widget_restores_end_offset)
     box.remove(&a);
 
     EXPECT_EQ(box.get_end_offset(), 199u);
+}
+
+TEST_F(BoxTest, remove_end_widget_keeps_the_order_of_the_others)
+{
+    tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
+    realize(box);
+    std::vector<std::unique_ptr<tiny::Widget>> pushed;
+    for (int i = 0; i < 4; ++i) {
+        pushed.push_back(std::make_unique<tiny::Widget>(20, 10));
+        box.push_back(pushed.back().get());
+    }
+
+    box.remove(pushed[1].get()); // the second from the right
+
+    // The first stays at the right edge, the next ones follow to the left
+    // (the order is the one of the pushes, not of the addresses).
+    EXPECT_EQ(attributes_of(*pushed[0]).x, 199 - 20);
+    EXPECT_EQ(attributes_of(*pushed[2]).x, 199 - 40);
+    EXPECT_EQ(attributes_of(*pushed[3]).x, 199 - 60);
+}
+
+TEST_F(BoxTest, remove_start_widget_keeps_the_order_of_the_others)
+{
+    tiny::Box box(tiny::Box::Type::Horizontal, 200, 50);
+    realize(box);
+    std::vector<std::unique_ptr<tiny::Widget>> pushed;
+    for (int i = 0; i < 4; ++i) {
+        pushed.push_back(std::make_unique<tiny::Widget>(20, 10));
+        box.push_start(pushed.back().get());
+    }
+
+    box.remove(pushed[1].get());
+
+    EXPECT_EQ(attributes_of(*pushed[0]).x, 0);
+    EXPECT_EQ(attributes_of(*pushed[2]).x, 20);
+    EXPECT_EQ(attributes_of(*pushed[3]).x, 40);
 }
 
 TEST_F(BoxTest, resize_horizontal_shifts_end_offset)
