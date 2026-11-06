@@ -27,6 +27,10 @@ class ShellTheme {
     //! Open the fonts of all the styles, the toolkit ones too
     void init();
 
+    //! Close the fonts of all the styles, the toolkit ones too; call before
+    //! the display is closed
+    void release();
+
     //! The family of the font of all the styles; call before `init()`
     void set_font(const std::string& family);
 

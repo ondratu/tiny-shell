@@ -449,8 +449,8 @@ class Manager : public tiny::Object {
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
     struct GrabbedKey {
-        KeyCode code;
-        unsigned int modifiers;
+        KeyCode code = 0;
+        unsigned int modifiers = 0;
     };
     std::vector<GrabbedKey> shortcut_keys; //!< what `grab_shortcuts` holds
     std::vector<KeyCode> semicolons;       //!< the keys grabbed for Alt + ;

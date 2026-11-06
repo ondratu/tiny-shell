@@ -57,4 +57,11 @@ void Theme::init() // TODO: screen, display, config...
     list.init();
 }
 
+void Theme::release()
+{
+    widget.release();
+    entry.release();
+    list.release();
+}
+
 } // namespace tiny

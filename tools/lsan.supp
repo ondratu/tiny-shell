@@ -7,3 +7,8 @@ leak:libfontconfig.so
 # The test client of tests/fake_client.h whose connection was killed on purpose
 # (close_kills_a_client_without_delete_protocol) cannot be closed cleanly.
 leak:FakeClient::FakeClient
+
+# StyleDefaultsTest.a_font_of_a_display_that_is_gone_is_not_closed closes the
+# display under a font on purpose: the font of a display that is gone can not
+# be freed (the process frees it when it ends).
+leak:StyleDefaultsTest_a_font_of_a_display_that_is_gone_is_not_closed_Test

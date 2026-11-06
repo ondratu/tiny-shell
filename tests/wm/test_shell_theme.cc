@@ -22,6 +22,17 @@ TEST_F(ShellThemeTest, init_opens_fonts_of_all_styles_and_of_the_toolkit)
     EXPECT_NE(t.header.get_font(), nullptr);
 }
 
+TEST_F(ShellThemeTest, release_closes_all_the_fonts)
+{
+    t.init();
+
+    t.release();
+
+    EXPECT_EQ(toolkit.widget.get_font(), nullptr);
+    EXPECT_EQ(t.button.get_font(), nullptr);
+    EXPECT_EQ(t.header.get_font(), nullptr);
+}
+
 TEST_F(ShellThemeTest, default_window_metrics)
 {
     EXPECT_EQ(t.win_header, 25);

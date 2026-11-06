@@ -334,7 +334,7 @@ TEST_F(XSettingsTest, a_setting_that_goes_away_or_comes_is_a_change)
 
 TEST_F(XSettingsTest, another_manager_of_settings_is_not_replaced)
 {
-    FakeClient daemon;
+    const FakeClient daemon;
     XSetSelectionOwner(daemon.display, selection, daemon.window, CurrentTime);
     daemon.sync();
     XSettings owner(display, root, screen);

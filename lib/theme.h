@@ -22,6 +22,10 @@ class Theme {
 
     void init();
 
+    //! Close the fonts of all the styles; the programs call it before the
+    //! display is closed (the styles are globals, which are destroyed later)
+    void release();
+
     //! The family of the font of all the styles; call before `init()`
     void set_font(const std::string& family);
 

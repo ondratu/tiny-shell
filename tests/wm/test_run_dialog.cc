@@ -231,7 +231,7 @@ namespace {
 
 // A dialog that knows these programs, and is shown
 struct CompletingDialog {
-    explicit CompletingDialog(std::vector<std::string> programs)
+    explicit CompletingDialog(const std::vector<std::string>& programs)
     {
         dialog.list_programs = [this, programs] {
             ++reads;

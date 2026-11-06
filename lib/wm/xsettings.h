@@ -88,7 +88,7 @@ class XSettings {
 
     //! Publish these settings; nothing changes when they are the same as the
     //! ones that are there. Before `acquire()` they are kept for it.
-    void set(std::vector<XSetting> settings);
+    void set(std::vector<XSetting> list);
 
     //! The serial of the last change (the one in the property)
     uint32_t get_serial() const { return serial; }

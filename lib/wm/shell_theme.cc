@@ -87,6 +87,13 @@ void ShellTheme::set_variant(Variant variant)
     dock_mark.colorize(variant);
 }
 
+void ShellTheme::release()
+{
+    toolkit.release();
+    button.release();
+    header.release();
+}
+
 void ShellTheme::init()
 {
     toolkit.init();

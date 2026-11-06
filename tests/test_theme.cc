@@ -166,6 +166,9 @@ TEST(StyleDefaultsTest, delete_through_base_pointer_closes_font)
 TEST(StyleDefaultsTest, a_font_of_a_display_that_is_gone_is_not_closed)
 {
     auto* style = new Style(tiny::theme.widget);
+    style->set_font_size(
+            7.5); // a font of its own: the leak of it is named here
+    style->scale(1);
     style->init();
     ASSERT_NE(style->get_font(), nullptr);
 
@@ -195,6 +198,19 @@ TEST(ThemeTest, init_opens_fonts_of_all_styles)
     EXPECT_NE(theme.widget.get_font(), nullptr);
     EXPECT_NE(theme.entry.get_font(), nullptr);
     EXPECT_NE(theme.list.get_font(), nullptr);
+}
+
+TEST(ThemeTest, release_closes_the_fonts_of_all_styles)
+{
+    tiny::Theme theme;
+    theme.init();
+
+    theme.release();
+
+    EXPECT_EQ(theme.widget.get_font(), nullptr);
+    EXPECT_EQ(theme.entry.get_font(), nullptr);
+    EXPECT_EQ(theme.list.get_font(), nullptr);
+    theme.release(); // nothing to close the second time
 }
 
 TEST(ThemeTest, widget_style_defaults)
