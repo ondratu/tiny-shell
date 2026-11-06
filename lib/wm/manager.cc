@@ -1004,54 +1004,46 @@ void Manager::focus_window(Window* window)
     remember_active(target, XEvent());
 }
 
-std::vector<Window*> Manager::switchable() const
+bool Manager::is_listed(const Window* window) const
+{
+    // a minimized window needs its icon, it is the way back
+    return !is_dialog(window) &&
+           (!window->skip_taskbar() || window->get_minimized());
+}
+
+std::vector<Window*> Manager::recent_windows() const
 {
     std::vector<Window*> found;
-    std::copy_if(wm_tops.begin(), wm_tops.end(), std::back_inserter(found),
-                 [&](const Window* window) {
-                     return modal_dialogs_of(window).empty();
-                 });
-    if (found.empty()) { // dialogs of each other: leave nothing out of reach
-        found.assign(wm_tops.begin(), wm_tops.end());
+    for (Window* window : wm_recent.items()) {
+        if (is_listed(window)) {
+            found.push_back(window);
+        }
     }
     return found;
 }
 
 void Manager::activate_next_window()
 {
-    const std::vector<Window*> windows = switchable();
-    if (windows.empty()) {
-        return; // no window to activate
+    const std::vector<Window*> windows = recent_windows();
+    if (windows.size() > 1) { // the one before the current window
+        focus_window(windows[1]);
     }
-    const auto it = std::find(windows.cbegin(), windows.cend(), active);
-    focus_window(it == windows.cend() || it + 1 == windows.cend() ? windows[0]
-                                                                  : *(it + 1));
 }
 
 void Manager::activate_prev_window()
 {
-    const std::vector<Window*> windows = switchable();
-    if (windows.empty()) {
-        return; // no window to activate
+    const std::vector<Window*> windows = recent_windows();
+    if (windows.size() > 1) { // the one used the longest ago
+        focus_window(windows.back());
     }
-    const auto it = std::find(windows.cbegin(), windows.cend(), active);
-    focus_window(it == windows.cend() || it == windows.cbegin() ? windows.back()
-                                                                : *(it - 1));
 }
 
 Window* Manager::previous_shown(const Window* window) const
 {
-    auto it = std::find(wm_tops.crbegin(), wm_tops.crend(), window);
-    if (it == wm_tops.crend()) {
-        return nullptr;
-    }
-    // walk back from the window, around the end of the list
-    for (size_t i = 1; i < wm_tops.size(); ++i) {
-        if (++it == wm_tops.crend()) {
-            it = wm_tops.crbegin();
-        }
-        if (!(*it)->get_minimized() && parent_of(*it) != window) {
-            return *it;
+    for (Window* found : wm_recent.items()) {
+        if (found != window && !found->get_minimized() &&
+            parent_of(found) != window) {
+            return found;
         }
     }
     return nullptr;
@@ -1254,9 +1246,7 @@ void Manager::on_window_modal(const Window* dialog)
 
 void Manager::update_dock_entry(Window* window)
 {
-    // a minimized window needs its icon, it is the way back
-    const bool wanted = !is_dialog(window) &&
-                        (!window->skip_taskbar() || window->get_minimized());
+    const bool wanted = is_listed(window);
     if (wanted && !wm_dock.contains(window)) {
         wm_dock.add(window);
     } else if (!wanted && wm_dock.contains(window)) {
@@ -1341,6 +1331,17 @@ void Manager::remember_active(Window* window, const XEvent& e)
         wm_dock.redraw(active, e);
     }
     active = window;
+    wm_recent.touch(window);
+    // a dialog is used with the window it belongs to, which Alt + Tab lists
+    const Window* from = window;
+    for (size_t depth = 0; depth < wm_tops.size(); ++depth) {
+        Window* parent = parent_of(from);
+        if (!parent) {
+            break;
+        }
+        wm_recent.touch(parent);
+        from = parent;
+    }
     note_user_time(window); // focused by the user, or at least with a time
     wm_dock.redraw(active, e);
     restack_layers();
@@ -1609,6 +1610,7 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
 
     wm_windows[child] = window;
     wm_tops.push_back(window);
+    wm_recent.add_last(window); // the oldest, until it is focused
     window->publish_desktop();
     window->publish_allowed_actions();
     window->apply_initial_state();
@@ -1644,6 +1646,7 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
     const std::vector<Window*> dialogs = transients_of(window);
     if (active == window && parent && !parent->get_minimized()) {
         wm_tops.remove(window);
+        wm_recent.remove(window);
         wm_windows.erase(it);
         active = nullptr;
         focus_window(parent); // back to the window the dialog belonged to
@@ -1658,6 +1661,7 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
         active = nullptr;
     }
     wm_tops.remove(window);
+    wm_recent.remove(window);
     wm_dock.remove(window);
     if (alive) {
         window->withdraw();
@@ -1682,6 +1686,7 @@ void Manager::release_windows()
         const ::Window child = wm_windows.begin()->first;
         Window* window = wm_windows.begin()->second;
         wm_tops.remove(window);
+        wm_recent.remove(window);
         wm_dock.remove(window);
         window->withdraw(); // the next manager starts from the client's word
         delete window;      // gives the client back to the root
