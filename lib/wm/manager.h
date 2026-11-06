@@ -27,6 +27,7 @@
 #include "wm/dock_reveal.h"
 #include "wm/selection.h"
 #include "wm/tray.h"
+#include "wm/xsettings.h"
 #include "wm/work_area.h"
 
 namespace tiny::wm {
@@ -114,6 +115,19 @@ class Manager : public tiny::Object {
      * The tray is gone when another one takes the selection.
      */
     void set_system_tray(bool enable);
+
+    /**
+     * Tell the programs the look through the selection `_XSETTINGS_Sn`
+     * (XSETTINGS): `make` gives the settings for a variant of the theme and is
+     * asked again when the variant changes. Nothing is published when `enable`
+     * is false, or when another manager of settings runs (it is not replaced).
+     */
+    void
+    set_xsettings(bool enable,
+                  std::function<std::vector<XSetting>(Variant)> make = nullptr);
+
+    //! The manager of the settings, null when there is none
+    const XSettings* get_xsettings() const { return wm_xsettings.get(); }
 
     //! The icons of the tray, null when there is no tray
     const Tray* get_tray() const { return wm_tray.get(); }
@@ -480,6 +494,8 @@ class Manager : public tiny::Object {
     int screen_height = 0;
     std::string force_quit_program = "xkill";
     std::function<void()> reload;
+    std::unique_ptr<XSettings> wm_xsettings;
+    std::function<std::vector<XSetting>(Variant)> xsettings_source;
     std::vector<std::string> terminal_program = {"xterm"};
     std::string restart_command = Config().reboot_command;
     std::string shutdown_command = Config().poweroff_command;

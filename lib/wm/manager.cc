@@ -299,6 +299,9 @@ void Manager::register_actions()
 void Manager::set_variant(Variant variant)
 {
     shell_theme.set_variant(variant);
+    if (wm_xsettings) { // the programs that run follow the theme
+        wm_xsettings->set(xsettings_source(variant));
+    }
     if (wallpaper_command.empty()) { // a picture does not change with the theme
         XSetWindowBackground(display, root, shell_theme.root_background);
         XClearWindow(display, root);
@@ -1535,6 +1538,31 @@ void Manager::set_system_tray(bool enable)
     wm_tray = std::move(tray);
 }
 
+void Manager::set_xsettings(bool enable,
+                            std::function<std::vector<XSetting>(Variant)> make)
+{
+    xsettings_source = std::move(make);
+    if (!enable || !xsettings_source) {
+        wm_xsettings.reset();
+        return;
+    }
+    const std::vector<XSetting> settings =
+            xsettings_source(tiny::theme.get_variant());
+    if (wm_xsettings) { // the programs get the change, the owner stays
+        wm_xsettings->set(settings);
+        return;
+    }
+    auto owner =
+            std::make_unique<XSettings>(display, root, XDefaultScreen(display));
+    owner->set(settings);
+    if (!owner->acquire()) {
+        tiny::error("Another manager of settings runs, the programs are not "
+                    "told the look");
+        return;
+    }
+    wm_xsettings = std::move(owner);
+}
+
 void Manager::tick_clock()
 {
     wm_clock->update();
@@ -2045,6 +2073,10 @@ void Manager::on_selection_clear(const XSelectionClearEvent& e)
 {
     if (wm_tray && wm_tray->is_lost_by(e)) { // the programs dock there
         wm_tray.reset();
+        return;
+    }
+    if (wm_xsettings && wm_xsettings->is_lost_by(e)) { // another daemon
+        wm_xsettings.reset();
         return;
     }
     if (selection && selection->is_lost_by(e)) {

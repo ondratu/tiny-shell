@@ -345,6 +345,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
                     "characters");
         }
     }
+    if (const auto value = ini.get("theme", "xsettings")) {
+        if (*value == "yes" || *value == "no") {
+            config.xsettings = *value == "yes";
+        } else {
+            problem("[theme] xsettings must be yes or no");
+        }
+    }
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";
