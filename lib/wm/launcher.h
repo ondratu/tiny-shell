@@ -120,6 +120,11 @@ class Launcher : public tiny::Popover {
     /// `application_icon`.
     const Icon& application_icon(const xdg::Application& app);
 
+    /// The icon of an application in another size (Alt + Tab shows big ones).
+    /// It has no picture when the theme has no icon; it lives as long as the
+    /// launcher.
+    const Icon& application_icon(const xdg::Application& app, int size);
+
     /// Start the application with a desktop file id, like Return does in the
     /// launcher. False when it is not installed or does not start.
     bool launch(const std::string& id);
@@ -165,6 +170,7 @@ class Launcher : public tiny::Popover {
     std::unique_ptr<xdg::IconTheme> icon_theme;
     std::map<std::string, Icon> icons;        //!< by the id of the application
     std::map<std::string, Icon> window_icons; //!< the same for the windows
+    std::map<std::string, Icon> sized_icons;  //!< by the id and the size
     std::vector<size_t> found;                //!< indexes into the applications
     std::vector<std::string> recent;          //!< ids, the latest first
 };

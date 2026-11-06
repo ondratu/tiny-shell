@@ -69,6 +69,8 @@ class SwitcherPanel : public tiny::Widget {
 
     size_t get_count() const { return cells.size(); }
 
+    const SwitcherCell& get_cell(size_t index) const { return cells.at(index); }
+
     std::optional<size_t> get_selected() const { return selected; }
 
     //! The cells that are shown
