@@ -105,7 +105,7 @@ Monitors read_monitors(::Display* display, ::Window root)
     Monitors monitors;
 #ifdef TINY_RANDR
     int count = 0;
-    XRRMonitorInfo* info = XRRGetMonitors(display, root, True, &count);
+    XRRMonitorInfo* info = XRRGetMonitors(display, root, False, &count);
     if (info != nullptr) {
         for (int i = 0; i < count; ++i) {
             Monitor monitor;

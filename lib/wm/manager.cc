@@ -1635,7 +1635,7 @@ void Manager::show_monitor_numbers(bool always)
     timers.cancel(monitor_numbers_timer);
     monitor_numbers_timer = 0;
     monitor_numbers_always = always;
-    monitor_labels.show(root, monitors, choice.primary);
+    monitor_labels.show(root, monitors, choice.primary, work_areas);
     if (!always) {
         monitor_numbers_timer = timers.after(4s, [this] {
             monitor_numbers_timer = 0;
@@ -1707,7 +1707,7 @@ void Manager::arrange_shell()
     update_work_area();
     update_dock_visibility();
     if (monitor_labels.is_shown()) { // the monitors moved or came and went
-        monitor_labels.show(root, monitors, choice.primary);
+        monitor_labels.show(root, monitors, choice.primary, work_areas);
     }
 }
 

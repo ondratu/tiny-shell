@@ -31,8 +31,8 @@ class MonitorLabel : public tiny::Widget {
     const std::string& get_number() const { return number; }
     const std::string& get_detail() const { return detail; }
 
-    /// Put the label in the top left corner of the monitor
-    void place(const tiny::Rect& monitor);
+    /// Put the label in the top left corner of the area
+    void place(const tiny::Rect& area);
 
   protected:
     void on_expose(const XEvent& e, void* data);
@@ -63,7 +63,13 @@ class MonitorLabels {
     //! it is the primary one
     static std::string detail_of(const Monitor& monitor, bool primary);
 
-    void show(::Window root, const Monitors& monitors, size_t primary);
+    /**
+     * Show a label in the corner of the `areas` (the work areas of the
+     * monitors, so that the label is not under a panel); an area that is
+     * missing is the monitor.
+     */
+    void show(::Window root, const Monitors& monitors, size_t primary,
+              const std::vector<tiny::Rect>& areas = {});
 
     void hide();
 
