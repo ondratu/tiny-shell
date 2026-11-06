@@ -13,7 +13,7 @@ messages, issues and documentation.
 
 1. **Small.** Small source, small binary, small memory footprint. A feature
    that costs a lot of any of them needs a good reason.
-2. **Few dependencies.** The shell runs with libX11, Xft and Xrender, and
+2. **Few dependencies.** The shell runs with libX11, Xft, Xrender and Xext, and
    fontconfig and FreeType that Xft needs anyway (and the C and C++ standard
    libraries).
    See [Dependencies](#dependencies).
@@ -163,8 +163,9 @@ costs a lot of code or memory (see the goals above).
 
 - Allowed without discussion: libX11, Xft, Xrender, fontconfig and FreeType (Xft
   uses them; we use fontconfig for the list of fonts and FreeType to read the
-  `name` table of a font file), and (when needed for a
-  feature) Xrandr or Xext extensions that are on every Xorg system.
+  `name` table of a font file), libXext (the SYNC extension for resizing
+  without tearing) and, when needed for a feature, Xrandr or other extensions
+  that are on every Xorg system.
 - Everything else needs a discussion first and must be **optional at build
   time** (a make variable, with the feature compiled out when it is off).
   Lua for scripting is the planned example.
@@ -195,7 +196,7 @@ costs a lot of code or memory (see the goals above).
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr
+    libx11-dev libxft-dev libxrender-dev libxext-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr
 make                  # build (no debugging information)
 make DEBUG=1          # build with -Og -g, for gdb, and with TINY_LOG() messages
 make check            # unit tests (run against Xvfb)
