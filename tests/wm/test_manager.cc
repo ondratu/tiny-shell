@@ -6331,6 +6331,9 @@ TEST_F(TwoMonitorsTest, the_numbers_are_shown_for_a_while_by_an_action)
     EXPECT_EQ(labels[1]->get_number(), "2");
     EXPECT_NE(labels[1]->get_detail().find("(primary)"), std::string::npos);
     EXPECT_NE(manager->monitor_numbers_timer, 0u); // they go away by themselves
+    // the label of the primary monitor is not under the panel
+    EXPECT_GE(attributes_of(*labels[1]).y, tiny::wm::shell_theme.panel);
+    EXPECT_LT(attributes_of(*labels[0]).y, tiny::wm::shell_theme.panel);
 }
 
 TEST_F(TwoMonitorsTest, the_numbers_can_stay_shown)

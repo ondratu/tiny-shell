@@ -61,7 +61,7 @@ void MonitorLabel::set_text(const std::string& number_arg,
     detail = detail_arg;
 }
 
-void MonitorLabel::place(const tiny::Rect& monitor)
+void MonitorLabel::place(const tiny::Rect& area)
 {
     XftFont* big = open_number_font(display);
     XftFont* small = get_style().get_font();
@@ -75,7 +75,7 @@ void MonitorLabel::place(const tiny::Rect& monitor)
 
     width = std::max(number_width, detail_width) + 2 * padding;
     height = number_height + small->height + 2 * padding;
-    XMoveResizeWindow(display, window, monitor.x + padding, monitor.y + padding,
+    XMoveResizeWindow(display, window, area.x + padding, area.y + padding,
                       tiny::x_dim(width), tiny::x_dim(height));
 }
 
@@ -132,7 +132,7 @@ std::string MonitorLabels::detail_of(const Monitor& monitor, bool primary)
 }
 
 void MonitorLabels::show(::Window root, const Monitors& monitors,
-                         size_t primary)
+                         size_t primary, const std::vector<tiny::Rect>& areas)
 {
     ::Display* display = tiny::get_display();
     // one label for each monitor: made when there are not enough, dropped when
@@ -154,7 +154,7 @@ void MonitorLabels::show(::Window root, const Monitors& monitors,
         MonitorLabel& label = *labels[i];
         label.set_text(std::to_string(i + 1),
                        detail_of(monitors[i], i == primary));
-        label.place(monitors[i].area);
+        label.place(i < areas.size() ? areas[i] : monitors[i].area);
         label.map();
         XClearArea(display, label.get_window(), 0, 0, 0, 0, True);
     }
