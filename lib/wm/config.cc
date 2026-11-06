@@ -345,6 +345,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
                     "characters");
         }
     }
+    if (const auto value = ini.get("panel", "system_tray")) {
+        if (*value == "yes" || *value == "no") {
+            config.system_tray = *value == "yes";
+        } else {
+            problem("[panel] system_tray must be yes or no");
+        }
+    }
     if (const auto value = ini.get("dock", "mode")) {
         if (const auto mode = parse_dock_mode(*value)) {
             config.dock_mode = *mode;

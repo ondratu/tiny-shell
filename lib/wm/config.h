@@ -39,6 +39,7 @@ namespace tiny::wm {
  *
  * [panel]
  * clock_format = %a %e %B %R
+ * system_tray = yes
  *
  * [dock]
  * mode = autohide
@@ -68,6 +69,8 @@ struct Config {
     std::string wallpaper_mode;
     //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
     std::string clock_format = "%a %e %B %R";
+    //! [panel] system_tray: the icons of programs in the panel (yes or no)
+    bool system_tray = true;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
     //! [dock] favorites: ids of desktop files, `;` between them

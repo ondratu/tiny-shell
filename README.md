@@ -278,6 +278,10 @@ terminal = xterm -e
 # It changes at the start of every minute (the default is below)
 clock_format = %a %e %B %R
 
+# The icons of programs (the system tray) in the panel, left of the clock:
+# yes (the default) or no. Set no when another tray (stalonetray, trayer) runs.
+system_tray = yes
+
 [dock]
 # When the dock is shown: autohide (the default: it is hidden while the active
 # window covers it, and the pointer at the bottom edge of the screen shows it
@@ -320,7 +324,7 @@ it owns the selection `_NET_SYSTEM_TRAY_S0`, tells the programs with the
 `MANAGER` message, and a program asks for an icon with
 `_NET_SYSTEM_TRAY_OPCODE`. An icon that the program hides (`_XEMBED_INFO`) takes
 no place, and one that the program destroys is gone from the panel. The texts of
-balloons (`BEGIN_MESSAGE`) are not shown. Another tray that already runs is left
+balloons (`BEGIN_MESSAGE`) are not shown. `[panel] system_tray = no` turns it off. Another tray that already runs is left
 alone (there is a message and no tray in the panel), and the tray stops when
 another one takes the selection; the icons go back to their programs, which
 ask again when a tray announces itself.
