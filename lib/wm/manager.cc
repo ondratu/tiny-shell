@@ -617,6 +617,29 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         }
         return true;
     }
+    if (e.message_type == dsp._TINY_SHELL_MONITORS) {
+        switch (e.data.l[0]) {
+            case 1: { // while its window lives, `tiny-settings` shows them
+                monitor_numbers_owner = static_cast<::Window>(e.data.l[1]);
+                XSelectInput(display, monitor_numbers_owner,
+                             StructureNotifyMask);
+                show_monitor_numbers(true);
+                break;
+            }
+            case 2:
+                if (reload) { // the same as SIGHUP
+                    reload();
+                }
+                break;
+            default:
+                monitor_numbers_owner = None;
+                if (!monitor_numbers_configured) {
+                    hide_monitor_numbers();
+                }
+                break;
+        }
+        return true;
+    }
     if (e.message_type == dsp._NET_CURRENT_DESKTOP ||
         e.message_type == dsp._NET_NUMBER_OF_DESKTOPS) {
         publish_desktops(); // there is one desktop, whatever is asked
@@ -850,6 +873,9 @@ void Manager::main_loop()
 
     while (running) {
         reframe_windows();
+        if (monitor_labels.is_shown()) {
+            monitor_labels.raise(); // over the window that was just raised
+        }
         if (!wait_for_event()) {
             running = false; // SIGTERM, SIGHUP or SIGINT
             break;
@@ -1624,9 +1650,10 @@ void Manager::set_monitors(const std::string& primary,
     placed_primary.clear();
     placed_secondary.clear();
     update_monitors(true);
+    monitor_numbers_configured = numbers;
     if (numbers) {
         show_monitor_numbers(true);
-    } else if (monitor_numbers_always) {
+    } else if (monitor_numbers_always && monitor_numbers_owner == None) {
         hide_monitor_numbers();
     }
 }
@@ -2294,6 +2321,12 @@ void Manager::on_selection_clear(const XSelectionClearEvent& e)
 
 void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
 {
+    if (e.window == monitor_numbers_owner) { // the settings were closed
+        monitor_numbers_owner = None;
+        if (!monitor_numbers_configured) {
+            hide_monitor_numbers();
+        }
+    }
     untrack_dock(e.window);
     wm_desktops.erase(e.window);
     wm_popups.erase(e.window);

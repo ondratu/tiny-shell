@@ -247,10 +247,10 @@ const char* SettingsForm::hint(Field field)
             return "Auto-hide: hidden under a window, the bottom edge shows "
                    "it.";
         case Field::PrimaryMonitor:
-            return "Empty: the primary monitor of the system. Or a number "
-                   "from the corner of a screen, or an output (DP-1).";
+            return "The monitor of the panel and the dock; the numbers are "
+                   "on the screens.";
         case Field::SecondaryMonitor:
-            return "Empty: the first monitor that is not the primary one.";
+            return "The monitor that Position moves.";
         case Field::MonitorPlacement:
             return "Where the secondary monitor is, seen from the primary "
                    "one (runs xrandr).";
@@ -271,8 +271,47 @@ bool SettingsForm::is_choice(Field field)
 {
     return field == Field::Antialias || field == Field::Hinting ||
            field == Field::Rgba || field == Field::WallpaperMode ||
-           field == Field::Dock || field == Field::MonitorPlacement ||
-           field == Field::MonitorNumbers;
+           field == Field::Dock || field == Field::PrimaryMonitor ||
+           field == Field::SecondaryMonitor ||
+           field == Field::MonitorPlacement || field == Field::MonitorNumbers;
+}
+
+void SettingsForm::set_monitors(const wm::Monitors& monitors)
+{
+    monitor_options_ = {{"", "Auto"}};
+    for (size_t i = 0; i < monitors.size(); ++i) {
+        const wm::Monitor& m = monitors[i];
+        monitor_options_.emplace_back(
+                m.name.empty() ? std::to_string(i + 1) : m.name,
+                std::to_string(i + 1) + ": " +
+                        (m.name.empty() ? std::string("screen") : m.name) +
+                        " " + std::to_string(m.area.width) + "x" +
+                        std::to_string(m.area.height));
+    }
+}
+
+std::string SettingsForm::monitor_value(const wm::Monitors& monitors,
+                                        const std::string& spec)
+{
+    const auto found = wm::find_monitor(monitors, spec);
+    if (!found) {
+        return spec == "auto" ? "" : spec;
+    }
+    return monitors[*found].name.empty() ? std::to_string(*found + 1)
+                                         : monitors[*found].name;
+}
+
+std::vector<std::pair<std::string, std::string>>
+SettingsForm::options_of(Field field) const
+{
+    if (field == Field::PrimaryMonitor || field == Field::SecondaryMonitor) {
+        return monitor_options_;
+    }
+    std::vector<std::pair<std::string, std::string>> options;
+    for (const wm::XftChoice& c : choices_of(field)) {
+        options.emplace_back(c.value, c.label);
+    }
+    return options;
 }
 
 wm::XftChoices SettingsForm::choices_of(Field field)
@@ -305,9 +344,9 @@ wm::XftOption SettingsForm::xft_option(Field field)
 
 std::string SettingsForm::choice_label(Field field) const
 {
-    for (const wm::XftChoice& c : choices_of(field)) {
-        if (text(field) == c.value) {
-            return c.label;
+    for (const auto& option : options_of(field)) {
+        if (text(field) == option.first) {
+            return option.second;
         }
     }
     return text(field);
@@ -928,14 +967,14 @@ bool SettingsForm::edit(TextField& field, Key pressed)
 //! The next (or the previous) value of a choice; the first one is the default
 void SettingsForm::step_choice(Field field, int direction)
 {
-    const wm::XftChoices choices = choices_of(field);
-    const auto n = static_cast<long>(choices.size());
-    const auto* const found = std::find_if(
-            choices.begin(), choices.end(),
-            [&](const wm::XftChoice& c) { return text(field) == c.value; });
-    const long at = found == choices.end() ? 0 : found - choices.begin();
+    const auto options = options_of(field);
+    const auto n = static_cast<long>(options.size());
+    const auto found = std::find_if(
+            options.begin(), options.end(),
+            [&](const auto& option) { return text(field) == option.first; });
+    const long at = found == options.end() ? 0 : found - options.begin();
     field_ref(field).set_text(
-            choices[static_cast<size_t>((at + direction + n) % n)].value);
+            options[static_cast<size_t>((at + direction + n) % n)].first);
     status_.clear();
 }
 

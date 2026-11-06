@@ -411,9 +411,12 @@ sections and the fields of the chosen section:
   small picture of the file above the path shows that the path is right), the
   mode of the dock (Auto-hide, On, Off) and the format of the clock.
 - **Applications:** the terminal.
-- **Screens:** the primary and the secondary monitor (empty is auto), where the
-  secondary one is (Keep, Right, Left, Above or Below the primary one) and
-  whether the numbers of the monitors are shown (see Multiple monitors).
+- **Screens:** the primary and the secondary monitor (a choice of the monitors
+  that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
+  one is (Keep, Right, Left, Above or Below the primary one) and whether the
+  numbers of the monitors stay shown (see Multiple monitors). While this
+  section is shown, the number of every monitor is on its screen, over all the
+  windows, and Save applies the monitors at once.
 
 A click on a section, or Ctrl+Page Down and Ctrl+Page Up, show it. The form shows the values in use now (the global
 file and the one of the user together). A field has a cursor: the arrows,
@@ -556,14 +559,22 @@ counted. Without RandR the whole screen is one monitor.
   placement is not as asked, and not twice in a row. `secondary` must be the
   name of an output for it to work (the monitors that `--setmonitor` made are
   not outputs).
-- **Numbers.** `[monitors] numbers = yes` (or the setting Numbers in
-  `tiny-settings`) shows the number, the name and the size of every monitor in
+- **Numbers.** While the section Screens of `tiny-settings` is shown, the
+  numbers are on the screens (the settings ask the shell for it with the
+  client message `_TINY_SHELL_MONITORS`, and they go away when the settings
+  are closed). `[monitors] numbers = yes` (or the setting Numbers) shows them
+  all the time. They show the number, the name and the size of every monitor in
   its corner, over all the windows (the primary one says so). The action
   `identify-monitors` shows them for four seconds. Use it to see which monitor
   is 1 and which is 2 while you set the primary and the secondary monitor.
 
-tiny-shell reads the settings when it starts, so a change needs a new login.
-A monitor that is plugged in or out, or moved by `xrandr`, is used at once.
+Save in `tiny-settings` makes the shell read `[monitors]` again at once (the
+same message), so the primary monitor and the position are changed without a
+new login; the other settings still need one. A monitor that is plugged in or
+out, or moved by `xrandr`, is used at once. The position needs a server with
+more than one output: a nested X server like Xephyr has a single one, so there
+is nothing to move there (try it on a real display, or `xrandr --listmonitors`
+shows what the shell sees).
 
 ### The dock and the favorite applications
 

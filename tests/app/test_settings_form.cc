@@ -1594,7 +1594,7 @@ TEST(SettingsFormScreensTest, the_values_come_from_the_start)
     EXPECT_EQ(form.values().secondary_monitor, "HDMI-1");
     EXPECT_EQ(form.choice_label(Field::MonitorPlacement), "Right of primary");
     EXPECT_EQ(form.choice_label(Field::MonitorNumbers), "Always");
-    EXPECT_FALSE(SettingsForm::is_choice(Field::PrimaryMonitor));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::PrimaryMonitor));
     EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorPlacement));
     EXPECT_TRUE(SettingsForm::is_choice(Field::MonitorNumbers));
 }
@@ -1625,15 +1625,37 @@ TEST(SettingsFormScreensTest, the_arrows_go_through_the_places)
     EXPECT_EQ(form.text(Field::MonitorPlacement), "below");
 }
 
-TEST(SettingsFormScreensTest, a_monitor_is_typed)
+TEST(SettingsFormScreensTest,
+     the_monitors_are_offered_with_their_names_and_sizes)
 {
     SettingsForm form = make();
+    form.set_monitors({{"DP-1", {0, 0, 1920, 1080}, false},
+                       {"", {1920, 0, 1280, 1024}, true}});
     focus_on(form, Field::PrimaryMonitor);
 
-    EXPECT_TRUE(form.type("DP-1"));
-
+    EXPECT_EQ(form.choice_label(Field::PrimaryMonitor), "Auto");
+    form.key(Key::Right);
     EXPECT_EQ(form.text(Field::PrimaryMonitor), "DP-1");
-    EXPECT_EQ(form.problem(Field::PrimaryMonitor), "");
+    EXPECT_EQ(form.choice_label(Field::PrimaryMonitor), "1: DP-1 1920x1080");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::PrimaryMonitor), "2"); // no output: the number
+    EXPECT_EQ(form.choice_label(Field::PrimaryMonitor), "2: screen 1280x1024");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::PrimaryMonitor), ""); // round
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::PrimaryMonitor), "2");
+}
+
+TEST(SettingsFormScreensTest, a_setting_is_shown_as_the_monitor_it_names)
+{
+    const tiny::wm::Monitors monitors = {{"DP-1", {0, 0, 800, 600}, false},
+                                         {"", {800, 0, 800, 600}, false}};
+
+    EXPECT_EQ(SettingsForm::monitor_value(monitors, "auto"), "");
+    EXPECT_EQ(SettingsForm::monitor_value(monitors, "1"), "DP-1");
+    EXPECT_EQ(SettingsForm::monitor_value(monitors, "dp-1"), "DP-1");
+    EXPECT_EQ(SettingsForm::monitor_value(monitors, "2"), "2");
+    EXPECT_EQ(SettingsForm::monitor_value(monitors, "HDMI-3"), "HDMI-3");
 }
 
 TEST(SettingsFormScreensTest, wrong_values_are_a_problem)

@@ -151,6 +151,16 @@ class SettingsForm {
         measure_ = std::move(measure);
     }
 
+    /// The monitors that the fields Primary and Secondary offer, besides
+    /// Auto: "1: HDMI-1 1920x1080". The value of a choice is the name of the
+    /// output (the number when it has none). Call it before the form is used.
+    void set_monitors(const wm::Monitors& monitors);
+
+    /// The value that the form uses for the monitor a setting names ("auto",
+    /// a number or an output): "" is auto, else the name or the number.
+    static std::string monitor_value(const wm::Monitors& monitors,
+                                     const std::string& spec);
+
     /// The size of the window.
     void resize(int width, int height);
 
@@ -363,6 +373,11 @@ class SettingsForm {
 
     //! The values of a choice
     static wm::XftChoices choices_of(Field field);
+
+    //! The values of a choice and the names a form shows for them; the
+    //! monitors are the ones of `set_monitors()`
+    std::vector<std::pair<std::string, std::string>>
+    options_of(Field field) const;
     TextField& field_ref(Field field);
     size_t target_at(int x, int y) const;
     bool act(size_t target, int x);
@@ -384,6 +399,9 @@ class SettingsForm {
     int controls_top() const;
 
     std::array<TextField, 16> fields_;
+    //! value and label of the monitors, Auto first
+    std::vector<std::pair<std::string, std::string>> monitor_options_ = {
+            {"", "Auto"}};
     TextField search_;
     TextField pick_size_;
     std::string pick_style_;

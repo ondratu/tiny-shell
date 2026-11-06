@@ -534,6 +534,8 @@ class Manager : public tiny::Object {
     std::optional<int> randr_base; //!< RandR events, none: no RandR
     MonitorLabels monitor_labels;  //!< the numbers on the monitors
     bool monitor_numbers_always = false;
+    bool monitor_numbers_configured = false; //!< [monitors] numbers = yes
+    ::Window monitor_numbers_owner = None;   //!< shows them while it lives
     tiny::Timers::Id monitor_numbers_timer = 0;
 
     std::map<::Window, Window*> wm_windows;
