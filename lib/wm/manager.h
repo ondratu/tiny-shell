@@ -19,6 +19,7 @@
 #include "wm/action_registry.h"
 #include "wm/config.h"
 #include "wm/launcher.h"
+#include "wm/monitor_label.h"
 #include "wm/monitors.h"
 #include "wm/run_dialog.h"
 #include "wm/switcher.h"
@@ -165,8 +166,8 @@ class Manager : public tiny::Object {
      *
      * The manager registers "about", "settings", "applications", "launcher",
      * "run-dialog", "terminal", "force-quit", "restart", "shutdown", "logout",
-     * "next-window", "prev-window", "theme-dark", "theme-light" and
-     * "theme-toggle"; more can be added (a script, the key bindings).
+     * "next-window", "prev-window", "theme-dark", "theme-light",
+     * "theme-toggle" and "identify-monitors"; more can be added (a script, the key bindings).
      */
     ActionRegistry& get_actions() { return actions; }
 
@@ -183,10 +184,21 @@ class Manager : public tiny::Object {
      * RandR). `secondary` is the other one that the placement refers to
      * ("auto": the first one that is not the primary). The placement runs
      * `xrandr` to put the secondary monitor on one side of the primary one;
-     * `Keep` leaves the layout as it is.
+     * `Keep` leaves the layout as it is. With `numbers` the number of every
+     * monitor stays shown in its corner, otherwise the action
+     * "identify-monitors" shows them for a few seconds.
      */
     void set_monitors(const std::string& primary, const std::string& secondary,
-                      Placement placement);
+                      Placement placement, bool numbers = false);
+
+    //! Show the numbers of the monitors; they stay when `always`, else they go
+    //! after a few seconds
+    void show_monitor_numbers(bool always = false);
+
+    //! Hide the numbers of the monitors, also when they should stay
+    void hide_monitor_numbers();
+
+    const MonitorLabels& get_monitor_labels() const { return monitor_labels; }
 
     //! The monitors, numbered from the left to the right
     const Monitors& get_monitors() const { return monitors; }
@@ -516,6 +528,9 @@ class Manager : public tiny::Object {
     Placement placement = Placement::Keep;
     std::vector<std::string> placement_asked; //!< the last xrandr we started
     std::optional<int> randr_base;            //!< RandR events, none: no RandR
+    MonitorLabels monitor_labels;             //!< the numbers on the monitors
+    bool monitor_numbers_always = false;
+    tiny::Timers::Id monitor_numbers_timer = 0;
 
     std::map<::Window, Window*> wm_windows;
     std::list<Window*> wm_tops;    //!< in the order they came

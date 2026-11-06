@@ -6317,3 +6317,54 @@ TEST_F(ManagerTest, one_monitor_is_the_whole_screen)
     EXPECT_EQ(panel.width, manager->get_monitors()[0].area.width);
     EXPECT_LE(panel.width, root.width);
 }
+
+TEST_F(TwoMonitorsTest, the_numbers_are_shown_for_a_while_by_an_action)
+{
+    split();
+    EXPECT_FALSE(manager->get_monitor_labels().is_shown());
+
+    manager->actions.run("identify-monitors");
+
+    const auto& labels = manager->get_monitor_labels().get_labels();
+    ASSERT_EQ(labels.size(), 2u);
+    EXPECT_EQ(labels[0]->get_number(), "1");
+    EXPECT_EQ(labels[1]->get_number(), "2");
+    EXPECT_NE(labels[1]->get_detail().find("(primary)"), std::string::npos);
+    EXPECT_NE(manager->monitor_numbers_timer, 0u); // they go away by themselves
+}
+
+TEST_F(TwoMonitorsTest, the_numbers_can_stay_shown)
+{
+    split();
+
+    manager->show_monitor_numbers(true);
+
+    EXPECT_TRUE(manager->get_monitor_labels().is_shown());
+    EXPECT_EQ(manager->monitor_numbers_timer, 0u);
+    manager->hide_monitor_numbers();
+    EXPECT_FALSE(manager->get_monitor_labels().is_shown());
+}
+
+TEST_F(TwoMonitorsTest, the_numbers_follow_a_change_of_the_monitors)
+{
+    split();
+    manager->show_monitor_numbers(true);
+
+    manager->monitors.pop_back();
+    manager->choice = {0, std::nullopt};
+    manager->arrange_shell();
+
+    EXPECT_EQ(manager->get_monitor_labels().get_labels().size(), 1u);
+}
+
+TEST_F(TwoMonitorsTest, the_settings_turn_the_numbers_on_and_off)
+{
+    start();
+
+    manager->set_monitors("auto", "auto", tiny::wm::Placement::Keep, true);
+    EXPECT_TRUE(manager->get_monitor_labels().is_shown());
+    EXPECT_EQ(manager->monitor_numbers_timer, 0u);
+
+    manager->set_monitors("auto", "auto", tiny::wm::Placement::Keep, false);
+    EXPECT_FALSE(manager->get_monitor_labels().is_shown());
+}
