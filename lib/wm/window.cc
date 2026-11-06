@@ -2031,6 +2031,17 @@ Window::WMType Window::get_net_wm_type(::Window window)
             wm_type = WMType::DIALOG;
             break;
         }
+        for (const Atom popup : {display._NET_WM_WINDOW_TYPE_NOTIFICATION,
+                                 display._NET_WM_WINDOW_TYPE_POPUP_MENU,
+                                 display._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                                 display._NET_WM_WINDOW_TYPE_TOOLTIP,
+                                 display._NET_WM_WINDOW_TYPE_COMBO,
+                                 display._NET_WM_WINDOW_TYPE_DND}) {
+            if (window_types[i] == popup) {
+                XFree(data);
+                return WMType::POPUP;
+            }
+        }
         // NORMAL is default
     }
     XFree(data);

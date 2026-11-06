@@ -247,6 +247,12 @@ TEST_F(WindowTest, net_wm_type_is_read_from_the_property)
             {dsp()._NET_WM_WINDOW_TYPE_UTILITY, WmWindow::WMType::UTILITY},
             {dsp()._NET_WM_WINDOW_TYPE_SPLASH, WmWindow::WMType::SPLASH},
             {dsp()._NET_WM_WINDOW_TYPE_DIALOG, WmWindow::WMType::DIALOG},
+            {dsp()._NET_WM_WINDOW_TYPE_NOTIFICATION, WmWindow::WMType::POPUP},
+            {dsp()._NET_WM_WINDOW_TYPE_POPUP_MENU, WmWindow::WMType::POPUP},
+            {dsp()._NET_WM_WINDOW_TYPE_DROPDOWN_MENU, WmWindow::WMType::POPUP},
+            {dsp()._NET_WM_WINDOW_TYPE_TOOLTIP, WmWindow::WMType::POPUP},
+            {dsp()._NET_WM_WINDOW_TYPE_COMBO, WmWindow::WMType::POPUP},
+            {dsp()._NET_WM_WINDOW_TYPE_DND, WmWindow::WMType::POPUP},
             {dsp()._NET_WM_WINDOW_TYPE_NORMAL, WmWindow::WMType::NORMAL},
     };
 

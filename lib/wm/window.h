@@ -189,6 +189,11 @@ class Window {
         UTILITY,
         SPLASH,
         DIALOG,
+        //! A notification, a menu (popup, dropdown), a tooltip, the list of a
+        //! combo box or the picture of a drag: shown where the client puts it,
+        //! with no frame, no focus, above the windows; the shell does not
+        //! manage it
+        POPUP,
         NORMAL
     };
 

@@ -655,6 +655,108 @@ TEST_F(ManagerTest, desktop_dock_and_splash_windows_are_not_adopted)
     EXPECT_EQ(manager->wm_windows.size(), 0u);
 }
 
+// The windows that menus, tooltips and notifications use: the client knows
+// where they go, so they get no frame, no focus, no place in the dock and
+// stay above the windows
+TEST_F(ManagerTest, popups_are_not_adopted_and_stay_where_they_were_put)
+{
+    for (const Atom type :
+         {dsp()._NET_WM_WINDOW_TYPE_NOTIFICATION,
+          dsp()._NET_WM_WINDOW_TYPE_POPUP_MENU,
+          dsp()._NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+          dsp()._NET_WM_WINDOW_TYPE_TOOLTIP, dsp()._NET_WM_WINDOW_TYPE_COMBO,
+          dsp()._NET_WM_WINDOW_TYPE_DND}) {
+        FakeClient& c = add_client(false);
+        set_window_type(c, type);
+        c.map();
+    }
+    start();
+
+    EXPECT_EQ(manager->wm_windows.size(), 0u);
+    EXPECT_EQ(manager->wm_popups.size(), 6u);
+    for (const auto& c : clients) {
+        const XWindowAttributes attrs = attributes_of(c->window);
+        EXPECT_EQ(parent_of(c->window), root_window()); // no frame
+        EXPECT_EQ(attrs.map_state, IsViewable);         // shown
+        EXPECT_EQ(attrs.x, 10);                         // not moved
+        EXPECT_EQ(attrs.y, 20);
+        EXPECT_EQ(attrs.border_width, 0); // no border
+    }
+}
+
+TEST_F(ManagerTest, a_popup_never_takes_the_focus)
+{
+    const FakeClient& window = add_client();
+    FakeClient& tip = add_client(false);
+    set_window_type(tip, dsp()._NET_WM_WINDOW_TYPE_TOOLTIP);
+    start();
+    manager->focus_window(manager->wm_windows[window.window]);
+    ASSERT_EQ(manager->active, manager->wm_windows[window.window]);
+
+    tip.map();
+    run_loop();
+
+    EXPECT_EQ(manager->wm_popups.count(tip.window), 1u);
+    EXPECT_EQ(attributes_of(tip.window).map_state, IsViewable);
+    EXPECT_EQ(manager->active, manager->wm_windows[window.window]);
+    EXPECT_TRUE(manager->wm_windows[window.window]->is_focused());
+    EXPECT_EQ(manager->wm_windows.size(), 1u); // nor is it in Alt+Tab
+}
+
+TEST_F(ManagerTest, a_popup_is_above_the_windows_also_after_a_focus_change)
+{
+    const FakeClient& first = add_client();
+    FakeClient& menu = add_client(false);
+    set_window_type(menu, dsp()._NET_WM_WINDOW_TYPE_POPUP_MENU);
+    start();
+    menu.map();
+    run_loop();
+    ASSERT_EQ(manager->wm_popups.count(menu.window), 1u);
+
+    manager->focus_window(manager->wm_windows[first.window]);
+
+    // the last of the children is the top one
+    XSync(dsp(), False);
+    ::Window ignored;
+    ::Window parent;
+    ::Window* children = nullptr;
+    unsigned int count = 0;
+    XQueryTree(dsp(), root_window(), &ignored, &parent, &children, &count);
+    ASSERT_GT(count, 0u);
+    std::vector<::Window> order(children, children + count);
+    XFree(children);
+    const auto popup = std::find(order.begin(), order.end(), menu.window);
+    const auto frame =
+            std::find(order.begin(), order.end(), parent_of(first.window));
+    ASSERT_NE(popup, order.end());
+    ASSERT_NE(frame, order.end());
+    EXPECT_GT(popup, frame);
+}
+
+TEST_F(ManagerTest, a_popup_that_is_hidden_or_destroyed_is_forgotten)
+{
+    FakeClient& tip = add_client(false);
+    set_window_type(tip, dsp()._NET_WM_WINDOW_TYPE_TOOLTIP);
+    start();
+    tip.map();
+    run_loop();
+    ASSERT_EQ(manager->wm_popups.size(), 1u);
+
+    XUnmapWindow(tip.display, tip.window);
+    tip.sync();
+    run_loop();
+    EXPECT_EQ(manager->wm_popups.size(), 0u);
+
+    tip.map(); // shown again: it is found again
+    run_loop();
+    EXPECT_EQ(manager->wm_popups.size(), 1u);
+
+    XDestroyWindow(tip.display, tip.window);
+    tip.sync();
+    run_loop();
+    EXPECT_EQ(manager->wm_popups.size(), 0u);
+}
+
 TEST_F(ManagerTest, other_window_types_are_adopted)
 {
     FakeClient& c = add_client(false);

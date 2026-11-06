@@ -96,6 +96,12 @@ class Display {
     const Atom _NET_WM_WINDOW_TYPE_UTILITY;
     const Atom _NET_WM_WINDOW_TYPE_SPLASH;
     const Atom _NET_WM_WINDOW_TYPE_DIALOG;
+    const Atom _NET_WM_WINDOW_TYPE_NOTIFICATION;
+    const Atom _NET_WM_WINDOW_TYPE_POPUP_MENU;
+    const Atom _NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
+    const Atom _NET_WM_WINDOW_TYPE_TOOLTIP;
+    const Atom _NET_WM_WINDOW_TYPE_COMBO;
+    const Atom _NET_WM_WINDOW_TYPE_DND;
     const Atom _NET_WM_WINDOW_TYPE_NORMAL;
     const Atom _NET_WM_STATE;
     const Atom _NET_WM_STATE_MODAL;

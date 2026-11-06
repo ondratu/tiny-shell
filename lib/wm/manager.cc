@@ -552,6 +552,9 @@ void Manager::restack_layers()
     };
     raise_layer([](const Window* w) { return w->is_above(); });
     raise_layer([](const Window* w) { return w->is_fullscreen(); });
+    for (const ::Window popup : wm_popups) {
+        XRaiseWindow(display, popup);
+    }
     XRaiseWindow(display, wm_run.get_window()); // hidden until it is needed
     XRaiseWindow(display, wm_launcher.get_window());
     if (asked) {
@@ -1866,6 +1869,12 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
                 return nullptr; // it is not framed, but it stays at the bottom
             case Window::WMType::SPLASH:
                 return nullptr; // do not manage this window type
+            case Window::WMType::POPUP:
+                // the client knows where it belongs: no frame, no focus, no
+                // place in the dock and Alt+Tab, but always above
+                wm_popups.insert(child);
+                XRaiseWindow(display, child);
+                return nullptr;
             default:
                 break;
         }
@@ -2057,6 +2066,7 @@ void Manager::on_unmap_notify(const XUnmapEvent& e)
 {
     untrack_dock(e.window); // a hidden dock reserves nothing
     wm_desktops.erase(e.window);
+    wm_popups.erase(e.window); // it is raised again when it is shown
     // TODO: could be append to signal handlers on wm_window.window
     if (e.window == reframed.window && e.serial >= reframed.first &&
         e.serial < reframed.last) {
@@ -2089,6 +2099,7 @@ void Manager::on_destroy_notify(const XDestroyWindowEvent& e)
 {
     untrack_dock(e.window);
     wm_desktops.erase(e.window);
+    wm_popups.erase(e.window);
     unmanage(e.window, false);
 }
 
