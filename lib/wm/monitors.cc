@@ -100,11 +100,15 @@ bool has_randr()
 #endif
 }
 
-Monitors read_monitors(::Display* display, ::Window root)
+namespace {
+
+//! The monitors that RandR reports, ordered; none without RandR
+Monitors randr_monitors(::Display* display, ::Window root)
 {
     Monitors monitors;
 #ifdef TINY_RANDR
     int count = 0;
+    // also the monitors without an output (`xrandr --setmonitor`)
     XRRMonitorInfo* info = XRRGetMonitors(display, root, False, &count);
     if (info != nullptr) {
         for (int i = 0; i < count; ++i) {
@@ -124,7 +128,18 @@ Monitors read_monitors(::Display* display, ::Window root)
         XRRFreeMonitors(info);
     }
     order_monitors(monitors);
+#else
+    (void)display;
+    (void)root;
 #endif
+    return monitors;
+}
+
+} // namespace
+
+Monitors read_monitors(::Display* display, ::Window root)
+{
+    Monitors monitors = randr_monitors(display, root);
     if (monitors.empty()) {
         XWindowAttributes attrs;
         XGetWindowAttributes(display, root, &attrs);
@@ -220,7 +235,7 @@ MonitorChoice choose_monitors(const Monitors& monitors,
     }
     const auto other = find_monitor(monitors, secondary_spec);
     if (other && *other != choice.primary) {
-        choice.secondary = *other;
+        choice.secondary = other;
         return choice;
     }
     for (size_t i = 0; i < monitors.size(); ++i) {

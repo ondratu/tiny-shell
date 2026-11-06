@@ -189,7 +189,7 @@ class Manager : public tiny::Object {
      * "identify-monitors" shows them for a few seconds.
      */
     void set_monitors(const std::string& primary, const std::string& secondary,
-                      Placement placement, bool numbers = false);
+                      Placement where, bool numbers = false);
 
     //! Show the numbers of the monitors; they stay when `always`, else they go
     //! after a few seconds
