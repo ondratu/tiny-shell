@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "display.h"
 #include "theme.h"
 
 using tiny::Style;
@@ -160,6 +161,28 @@ TEST(StyleDefaultsTest, delete_through_base_pointer_closes_font)
     ASSERT_NE(style->get_font(), nullptr);
 
     delete style; // must close the font while the display is still open
+}
+
+TEST(StyleDefaultsTest, a_font_of_a_display_that_is_gone_is_not_closed)
+{
+    auto* style = new Style(tiny::theme.widget);
+    style->init();
+    ASSERT_NE(style->get_font(), nullptr);
+
+    // the globals are destroyed in an order nobody chooses: the display can be
+    // closed before the style is
+    tiny::Display::init();
+
+    delete style; // must not touch the closed display
+}
+
+TEST(StyleDefaultsTest, init_again_replaces_the_font)
+{
+    Style style;
+    style.init();
+    style.init();
+
+    EXPECT_NE(style.get_font(), nullptr);
 }
 
 // A local Theme is used: the global one is destroyed after the display.
