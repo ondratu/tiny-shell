@@ -17,7 +17,8 @@ namespace tiny {
  * after every edit, on_activate on Return and on_cancel on Escape. The keys
  * that move in a list or a grid (Up, Down, Page Up, Page Down) are passed to
  * on_key, and Left and Right too after `pass_horizontal_keys()`; else they
- * move the cursor, like Home, End and a click. Ctrl+V and Shift+Insert paste
+ * move the cursor, like Home, End and a click. Tab is told by on_tab (the owner
+ * may complete the text). Ctrl+V and Shift+Insert paste
  * the clipboard, the middle button pastes the primary selection, Ctrl+C copies
  * the whole text. What the text means is up to the owner.
  */
@@ -53,6 +54,7 @@ class Entry : public Widget {
     Signal on_activate;
     Signal on_cancel;
     Signal on_key;
+    Signal on_tab;
 
   protected:
     void on_key_press(const XEvent& e, void* data);

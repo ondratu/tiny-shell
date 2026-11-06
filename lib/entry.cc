@@ -148,8 +148,7 @@ void Entry::on_key_press(const XEvent& e, void*)
         case XK_Page_Down:
             return on_key(this, e);
         case XK_Tab:
-            // TODO: completion
-            return;
+            return on_tab(this, e);
         default:
             // control characters (Ctrl+key, DEL, ...) are not text
             if (typed.empty() || static_cast<unsigned char>(typed[0]) < 0x20 ||
