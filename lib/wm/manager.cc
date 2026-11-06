@@ -183,13 +183,11 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     is_alt_down = [this]() {
         char keys[32];
         XQueryKeymap(display, keys);
-        for (const KeySym alt : {KeySym{XK_Alt_L}, KeySym{XK_Alt_R}}) {
+        const auto down = [&](KeySym alt) {
             const KeyCode code = XKeysymToKeycode(display, alt);
-            if (code != 0 && (keys[code / 8] & (1 << (code % 8))) != 0) {
-                return true;
-            }
-        }
-        return false;
+            return code != 0 && (keys[code / 8] & (1 << (code % 8))) != 0;
+        };
+        return down(XK_Alt_L) || down(XK_Alt_R);
     };
     set_supported();
     publish_desktops();
@@ -263,10 +261,8 @@ Manager::~Manager()
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_Tab),
                        ShiftMask | Mod1Mask, root);
     // Alt + ; and Shift + Alt + ;
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_semicolon),
-                       Mod1Mask, root);
-    tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_semicolon),
-                       ShiftMask | Mod1Mask, root);
+    grab_alt(XK_semicolon, 0, false);
+    grab_alt(XK_semicolon, ShiftMask, false);
     // Alt + F2
     tiny::x_ungrab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask,
                        root);
@@ -346,10 +342,8 @@ void Manager::set_events()
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_Tab),
                      ShiftMask | Mod1Mask, root);
     // Alt + ; and Shift + Alt + ;
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_semicolon), Mod1Mask,
-                     root);
-    tiny::x_grab_key(display, XKeysymToKeycode(display, XK_semicolon),
-                     ShiftMask | Mod1Mask, root);
+    grab_alt(XK_semicolon, 0, true);
+    grab_alt(XK_semicolon, ShiftMask, true);
     // Alt + F2
     tiny::x_grab_key(display, XKeysymToKeycode(display, XK_F2), Mod1Mask, root);
     grab_super(true);
@@ -1045,11 +1039,9 @@ bool Manager::is_listed(const Window* window) const
 std::vector<Window*> Manager::recent_windows() const
 {
     std::vector<Window*> found;
-    for (Window* window : wm_recent.items()) {
-        if (is_listed(window)) {
-            found.push_back(window);
-        }
-    }
+    std::copy_if(wm_recent.items().begin(), wm_recent.items().end(),
+                 std::back_inserter(found),
+                 [this](const Window* window) { return is_listed(window); });
     return found;
 }
 
@@ -1058,6 +1050,8 @@ void Manager::activate_next_window()
     const std::vector<Window*> windows = recent_windows();
     if (windows.size() > 1) { // the one before the current window
         focus_window(windows[1]);
+    } else if (windows.size() == 1 && windows[0]->get_minimized()) {
+        focus_window(windows[0]); // the only way back
     }
 }
 
@@ -1066,6 +1060,8 @@ void Manager::activate_prev_window()
     const std::vector<Window*> windows = recent_windows();
     if (windows.size() > 1) { // the one used the longest ago
         focus_window(windows.back());
+    } else if (windows.size() == 1 && windows[0]->get_minimized()) {
+        focus_window(windows[0]);
     }
 }
 
@@ -1366,6 +1362,8 @@ void Manager::remember_active(Window* window, const XEvent& e)
     // a dialog is used with the window it belongs to, which Alt + Tab lists
     const Window* from = window;
     for (size_t depth = 0; depth < wm_tops.size(); ++depth) {
+        // the list holds non-const pointers
+        // NOLINTNEXTLINE(misc-const-correctness)
         Window* parent = parent_of(from);
         if (!parent) {
             break;
@@ -1561,6 +1559,16 @@ bool Manager::is_alt(unsigned int keycode) const
            keycode == XKeysymToKeycode(display, XK_Alt_R);
 }
 
+void Manager::grab_alt(KeySym keysym, unsigned int extra, bool grab)
+{
+    const KeyCode code = XKeysymToKeycode(display, keysym);
+    if (code == 0) { // zero would be any key
+        return;
+    }
+    grab ? tiny::x_grab_key(display, code, Mod1Mask | extra, root)
+         : tiny::x_ungrab_key(display, code, Mod1Mask | extra, root);
+}
+
 void Manager::open_switcher(bool windows, bool backwards)
 {
     wm_switcher.open(recent_windows(), windows, backwards);
@@ -1571,6 +1579,7 @@ void Manager::open_switcher(bool windows, bool backwards)
     const bool grabbed =
             XGrabKeyboard(display, root, False, GrabModeAsync, GrabModeAsync,
                           CurrentTime) == GrabSuccess;
+    switcher_grabbed = grabbed;
     // a quick tap: Alt was released before the keyboard was ours
     if (!grabbed || !is_alt_down()) {
         close_switcher(true);
@@ -1606,8 +1615,16 @@ void Manager::close_switcher(bool switch_now)
         return;
     }
     Window* target = wm_switcher.close();
-    XUngrabKeyboard(display, CurrentTime);
-    if (switch_now && target != nullptr && target != active) {
+    if (switcher_grabbed) { // never end a grab that is not ours
+        XUngrabKeyboard(display, CurrentTime);
+        switcher_grabbed = false;
+    }
+    // the first window is the current one, unless it is minimized or nothing
+    // has the focus
+    const std::vector<Window*> recent = recent_windows();
+    const bool current = !recent.empty() && recent.front() == target &&
+                         active != nullptr && !target->get_minimized();
+    if (switch_now && target != nullptr && !current) {
         focus_window(target);
     }
 }

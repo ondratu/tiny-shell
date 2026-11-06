@@ -606,10 +606,6 @@ void Dock::track_handler(int change)
     }
 }
 
-namespace {
-
-//! The windows of one application have one icon: its desktop file or, when
-//! it is unknown, the class of the window
 std::string task_key(const Window* task)
 {
     if (!task->get_app_id().empty()) {
@@ -620,8 +616,6 @@ std::string task_key(const Window* task)
     }
     return {};
 }
-
-} // namespace
 
 void Dock::rebuild()
 {

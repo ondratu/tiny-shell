@@ -202,6 +202,9 @@ class Manager : public tiny::Object {
 
     bool is_alt(unsigned int keycode) const;
 
+    //! Grab (or release) Alt + a key; a keysym that has no key is skipped
+    void grab_alt(KeySym keysym, unsigned int extra, bool grab);
+
     //! Alt + Tab and Alt + ;: show the switcher and take the keyboard until
     //! Alt is released (when it is not held any more, switch at once)
     void open_switcher(bool windows, bool backwards);
@@ -401,6 +404,7 @@ class Manager : public tiny::Object {
     unsigned drag_button = 0;  //!< its release ends the drag, 0: any
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
+    bool switcher_grabbed = false; //!< the keyboard is ours for the switcher
     //! Is Alt held (a test replaces it)
     std::function<bool()> is_alt_down;
     unsigned long last_user_time = 0; //!< of the last user action we know of

@@ -84,11 +84,7 @@ std::optional<size_t> SwitcherModel::result() const
     if (groups.empty()) {
         return std::nullopt;
     }
-    const size_t chosen = groups[app].tasks[window];
-    if (chosen == 0) { // the current window
-        return std::nullopt;
-    }
-    return chosen;
+    return groups[app].tasks[window];
 }
 
 } // namespace tiny::wm

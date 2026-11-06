@@ -52,6 +52,7 @@ class SwitcherTest : public ::testing::Test {
     std::vector<WmWindow*> all()
     {
         std::vector<WmWindow*> list;
+        list.reserve(windows.size());
         for (const auto& window : windows) {
             list.push_back(window.get());
         }
@@ -122,13 +123,14 @@ TEST_F(SwitcherTest, tab_moves_the_cursor_and_wraps_around)
     EXPECT_EQ(switcher.close(), at(3));
 }
 
-TEST_F(SwitcherTest, the_cursor_on_the_current_application_switches_nothing)
+TEST_F(SwitcherTest,
+       the_cursor_on_the_current_application_gives_the_first_window)
 {
     switcher.open(all(), false, false);
     switcher.next_app(false);
     switcher.next_app(false);
 
-    EXPECT_EQ(switcher.close(), nullptr);
+    EXPECT_EQ(switcher.close(), at(0));
 }
 
 TEST_F(SwitcherTest, shift_alt_tab_starts_on_the_last_application)
@@ -342,4 +344,26 @@ TEST_F(SwitcherTest, does_not_open_before_it_is_realized)
     unrealized.open(all(), false, false);
 
     EXPECT_FALSE(unrealized.is_open());
+}
+
+TEST_F(SwitcherTest, windows_of_one_class_without_an_entry_are_one_application)
+{
+    std::vector<std::unique_ptr<FakeClient>> more_clients;
+    std::vector<std::unique_ptr<WmWindow>> more;
+    std::vector<WmWindow*> list;
+    for (int i = 0; i < 3; ++i) {
+        more_clients.push_back(std::make_unique<FakeClient>());
+        more_clients.back()->set_class("xterm", "XTerm");
+        more_clients.back()->map();
+        more.push_back(std::make_unique<WmWindow>(more_clients.back()->window,
+                                                  root_window(), 0xFFFF,
+                                                  screen_area()));
+        list.push_back(more.back().get());
+    }
+
+    switcher.open(list, false, false);
+
+    EXPECT_EQ(switcher.get_apps_panel().get_count(), 1u);
+    EXPECT_EQ(switcher.get_apps_panel().get_cell(0).dots, 3u);
+    switcher.close();
 }

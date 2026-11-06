@@ -3156,7 +3156,7 @@ TEST_F(ManagerTest, alt_tab_with_one_window_does_nothing)
     const FakeClient& only = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[only.window];
+    const WmWindow* window = manager->wm_windows[only.window];
     ASSERT_EQ(manager->active, window);
 
     manager->on_key_press(key(XK_Tab));
@@ -5235,7 +5235,7 @@ TEST_F(ManagerSwitcherTest,
     one.set_class("epsilon", "Epsilon");
     FakeClient& two = add_client();
     two.set_class("epsilon", "Epsilon");
-    FakeClient& other = add_client();
+    const FakeClient& other = add_client();
     start();
     manager->is_alt_down = [] { return true; };
     WmWindow* a = manager->wm_windows.at(one.window);
@@ -5448,4 +5448,51 @@ TEST_F(ManagerSwitcherTest, a_window_without_an_application_has_its_own_icon)
     EXPECT_EQ(cell.picture, None);
     EXPECT_NE(cell.pixmap, None);
     EXPECT_NE(cell.mask, None);
+}
+
+TEST_F(ManagerSwitcherTest,
+       a_minimized_window_that_is_the_first_is_brought_back)
+{
+    held();
+    third->minimize();
+
+    press(XK_Tab);
+    press(XK_Left); // the cursor on the first application, the minimized one
+    release(XK_Alt_L);
+
+    EXPECT_FALSE(third->get_minimized());
+}
+
+TEST_F(ManagerSwitcherTest, the_actions_bring_back_the_only_minimized_window)
+{
+    start();
+    const FakeClient& only = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[only.window];
+    window->minimize();
+
+    manager->get_actions().run("next-window");
+    EXPECT_FALSE(window->get_minimized());
+
+    window->minimize();
+    manager->get_actions().run("prev-window");
+    EXPECT_FALSE(window->get_minimized());
+}
+
+TEST_F(ManagerSwitcherTest,
+       a_failed_grab_does_not_end_the_grab_of_another_client)
+{
+    held();
+    const FakeClient other;
+    XGrabKeyboard(other.display, root_window(), False, GrabModeAsync,
+                  GrabModeAsync, CurrentTime);
+    other.sync();
+
+    press(XK_Tab);
+
+    const FakeClient probe;
+    EXPECT_EQ(XGrabKeyboard(probe.display, root_window(), False, GrabModeAsync,
+                            GrabModeAsync, CurrentTime),
+              AlreadyGrabbed);
 }
