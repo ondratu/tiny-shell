@@ -57,9 +57,10 @@ Implemented:
   (functions and decorations), Desktop Entry and the Icon Theme specification
   (PNG, SVG, XPM).
 - **Shell:** top panel with the logo, which opens the main menu (About,
-  Settings, Applications, Terminal, Force Quit, Restart, Shutdown, Logout), and
-  the date and time at its
-  right end (the names and the order follow `LANG`), a dock with
+  Settings, Applications, Terminal, Force Quit, Restart, Shutdown, Logout), the
+  date and time at its
+  right end (the names and the order follow `LANG`), the system tray (the icons
+  of programs, left of the clock), a dock with
   one icon for every application (a dot under it for every window) and the
   favorite applications, which stay there when they do not run and can be moved
   by the mouse; the dock hides under the active window and the bottom edge of
@@ -125,7 +126,6 @@ programs is done, only small details of it are left):
 ### Could: nice to have
 
 - [ ] Virtual desktops
-- [ ] System tray (`_NET_SYSTEM_TRAY`, XEMBED)
 - [ ] Multiple monitors (RandR)
 - [ ] Plugins and scripting in Lua, as an optional build feature
 - [ ] Window snapping to the screen edges
@@ -308,6 +308,31 @@ in Czech, `Thu 5 November 15:33` in English) and `%R` is `HH:MM`. The default
 is `%a %e %B %R`, without the year. The clock is as wide as the widest text of the format in a year, so
 the panel does not move, and it changes at the start of every minute, so it
 does not show seconds. An empty format removes the clock.
+
+### The system tray
+
+The icons of programs (a network applet, a volume control, a messenger) are in
+the panel, left of the clock, the newest one at the left end. tiny-shell is the
+tray when it starts, the way the
+[System Tray Protocol](https://specifications.freedesktop.org/systemtray-spec/latest/)
+and [XEMBED](https://specifications.freedesktop.org/xembed-spec/latest/) say:
+it owns the selection `_NET_SYSTEM_TRAY_S0`, tells the programs with the
+`MANAGER` message, and a program asks for an icon with
+`_NET_SYSTEM_TRAY_OPCODE`. An icon that the program hides (`_XEMBED_INFO`) takes
+no place, and one that the program destroys is gone from the panel. The texts of
+balloons (`BEGIN_MESSAGE`) are not shown. Another tray that already runs is left
+alone (there is a message and no tray in the panel), and the tray stops when
+another one takes the selection; the icons go back to their programs, which
+ask again when a tray announces itself.
+
+`make examples` builds `build/examples/tray_icon`, a program with one icon in
+the tray and a menu with Quit. It draws one of the icons of the shell, so
+start it with the data of the repository (`tools/run-xephyr.sh` already has it
+in `XDG_DATA_DIRS`):
+
+```sh
+XDG_DATA_DIRS=$PWD/data:/usr/share build/examples/tray_icon
+```
 
 ### Settings
 
