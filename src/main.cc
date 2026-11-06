@@ -150,15 +150,18 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
             });
     if (old == nullptr || old->wallpaper_file != config.wallpaper_file ||
         old->wallpaper_set != config.wallpaper_set ||
-        old->wallpaper_mode != config.wallpaper_mode) {
-        if (!tiny::wm::wallpaper_of(config, config.style,
-                                    tiny::xdg::default_data_dirs())
-                     .empty()) {
-            // without [wallpaper] file the wallpaper is the one of the style
-            manager.set_wallpaper_command(
-                    {tiny::sibling_program(program, "tiny-wallpaper")},
-                    !config.wallpaper_set);
-        }
+        old->wallpaper_mode != config.wallpaper_mode ||
+        old->style != config.style) {
+        // without [wallpaper] file the wallpaper is the one of the style
+        const bool has_wallpaper =
+                !tiny::wm::wallpaper_of(config, config.style,
+                                        tiny::xdg::default_data_dirs())
+                         .empty();
+        manager.set_wallpaper_command(
+                has_wallpaper ? std::vector<std::string>{tiny::sibling_program(
+                                        program, "tiny-wallpaper")}
+                              : std::vector<std::string>{},
+                !config.wallpaper_set);
     }
     const bool clock_changed =
             old == nullptr || old->clock_format != config.clock_format;
@@ -201,7 +204,28 @@ void reload_config(tiny::wm::Manager& manager, tiny::wm::Config& current,
     if (config.xft_antialias != current.xft_antialias ||
         config.xft_hinting != current.xft_hinting ||
         config.xft_rgba != current.xft_rgba) {
-        publish_xft(tiny::get_display(), config, program);
+        // an option that is not set any more removes its resources
+        std::vector<tiny::wm::ResourceChange> changes =
+                tiny::wm::xft_resources(config);
+        const std::string* const before[] = {&current.xft_antialias,
+                                             &current.xft_hinting,
+                                             &current.xft_rgba};
+        const std::string* const now[] = {
+                &config.xft_antialias, &config.xft_hinting, &config.xft_rgba};
+        for (const auto option :
+             {tiny::wm::XftOption::Antialias, tiny::wm::XftOption::Hinting,
+              tiny::wm::XftOption::Rgba}) {
+            const auto i = static_cast<size_t>(option);
+            if (now[i]->empty() && !before[i]->empty()) {
+                for (auto& change : tiny::wm::xft_resources(option, "")) {
+                    changes.push_back(std::move(change));
+                }
+            }
+        }
+        if (!changes.empty() &&
+            !tiny::wm::publish_resources(tiny::get_display(), changes)) {
+            fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
+        }
     }
     apply_config(manager, config, &current, program);
     // what only a restart applies stays as it was, so it is reported again
@@ -269,7 +293,8 @@ int main(int argc, char** argv)
         // the fonts are closed while the display is open, also when it fails
         struct ReleaseFonts {
             ~ReleaseFonts() { tiny::wm::shell_theme.release(); }
-        } release_fonts;
+        };
+        const ReleaseFonts release_fonts;
 
         const ::Window root = XDefaultRootWindow(display);
 
