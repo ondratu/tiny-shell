@@ -61,6 +61,9 @@ TEST_F(ShellThemeTest, scale_multiplies_metrics_and_styles_and_the_toolkit)
     EXPECT_EQ(t.launcher_label, 80);
     EXPECT_EQ(t.launcher_icon, 96);
     EXPECT_EQ(t.launcher_dot, 16);
+    EXPECT_EQ(t.switcher_cell_width, 192);
+    EXPECT_EQ(t.switcher_window_cell_width, 320);
+    EXPECT_EQ(t.switcher_window_icon, 256);
     EXPECT_EQ(t.launcher_columns, 8); // a count is not scaled
     EXPECT_EQ(t.launcher_rows, 4);
 }

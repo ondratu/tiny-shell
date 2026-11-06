@@ -74,7 +74,8 @@ const SymbolicIcons::Icon& SymbolicIcons::get(const std::string& name, int size,
 }
 
 bool SymbolicIcons::draw(::Window target, const std::string& name, int size,
-                         unsigned long color, int box_width, int box_height)
+                         unsigned long color, int box_width, int box_height,
+                         int box_x, int box_y)
 {
     const Icon& icon = get(name, size, color);
     if (icon.picture == None) {
@@ -92,8 +93,8 @@ bool SymbolicIcons::draw(::Window target, const std::string& name, int size,
     const Picture destination =
             XRenderCreatePicture(display, target, format, 0, nullptr);
     XRenderComposite(display, PictOpOver, icon.picture, None, destination, 0, 0,
-                     0, 0, (box_width - icon.width) / 2,
-                     (box_height - icon.height) / 2, x_uint(icon.width),
+                     0, 0, box_x + (box_width - icon.width) / 2,
+                     box_y + (box_height - icon.height) / 2, x_uint(icon.width),
                      x_uint(icon.height));
     XRenderFreePicture(display, destination);
     return true;

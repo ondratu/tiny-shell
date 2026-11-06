@@ -46,6 +46,9 @@ void ShellTheme::scale_own(double factor)
     launcher_label = scaled(40, factor);
     launcher_icon = scaled(48, factor);
     launcher_dot = scaled(8, factor);
+    switcher_cell_width = scaled(96, factor);
+    switcher_window_cell_width = scaled(160, factor);
+    switcher_window_icon = scaled(128, factor);
 
     button.scale(factor);
     header.scale(factor);

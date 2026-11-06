@@ -72,6 +72,9 @@ class ShellTheme {
     int launcher_label = 40;      // under an icon, for its text
     int launcher_icon = 48;
     int launcher_dot = 8;
+    int switcher_cell_width = 96;         //!< an application in Alt + Tab
+    int switcher_window_cell_width = 160; //!< a window in Alt + Tab
+    int switcher_window_icon = 128;       //!< the icon of a window there
 
     Theme& toolkit;
 

@@ -55,11 +55,13 @@ class SymbolicIcons {
     /**
      * @short Draw the icon in the middle of the box of the window.
      *
-     * The icon is put over what the window shows. Returns false and draws
-     * nothing when the icon does not exist.
+     * The icon is put over what the window shows. The box starts at the top
+     * left corner of the window, or at (`box_x`, `box_y`). Returns false and
+     * draws nothing when the icon does not exist.
      */
     bool draw(::Window target, const std::string& name, int size,
-              unsigned long color, int box_width, int box_height);
+              unsigned long color, int box_width, int box_height, int box_x = 0,
+              int box_y = 0);
 
   private:
     ::Display* display;
