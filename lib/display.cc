@@ -144,6 +144,9 @@ Display::Display(::Display* display_arg):
             XInternAtom(display_arg, "_NET_NUMBER_OF_DESKTOPS", 0)),
     _NET_SHOWING_DESKTOP(XInternAtom(display_arg, "_NET_SHOWING_DESKTOP", 0)),
     _NET_DESKTOP_NAMES(XInternAtom(display_arg, "_NET_DESKTOP_NAMES", 0)),
+    _NET_MOVERESIZE_WINDOW(
+            XInternAtom(display_arg, "_NET_MOVERESIZE_WINDOW", 0)),
+    _NET_RESTACK_WINDOW(XInternAtom(display_arg, "_NET_RESTACK_WINDOW", 0)),
     display(display_arg),
     serial(++last_serial)
 {

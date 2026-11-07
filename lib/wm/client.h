@@ -53,6 +53,7 @@ class Client : public tiny::Container, public Window {
     void lower() override;
 
     void stack_under(::Window sibling) override;
+    void stack_over(::Window sibling) override;
 
     //! The border of the frame, none without `DECOR_BORDER`
     int get_border() const override;

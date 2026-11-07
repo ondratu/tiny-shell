@@ -1076,6 +1076,195 @@ TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)
     EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
 }
 
+// ---- _NET_MOVERESIZE_WINDOW and _NET_RESTACK_WINDOW ----
+
+namespace {
+
+// A client asks the window manager for a place and a size (EWMH)
+void request_move_resize_window(::Window window, unsigned long flags, long x,
+                                long y, long width, long height)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = dsp()._NET_MOVERESIZE_WINDOW;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = static_cast<long>(flags);
+    e.xclient.data.l[1] = x;
+    e.xclient.data.l[2] = y;
+    e.xclient.data.l[3] = width;
+    e.xclient.data.l[4] = height;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+constexpr unsigned long mr_x = 1UL << 8;
+constexpr unsigned long mr_y = 1UL << 9;
+constexpr unsigned long mr_width = 1UL << 10;
+constexpr unsigned long mr_height = 1UL << 11;
+constexpr unsigned long mr_pager = 2UL << 12;
+
+// A client asks for another place in the stack: the sibling, the detail
+void request_restack(::Window window, ::Window sibling, long detail)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = dsp()._NET_RESTACK_WINDOW;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = 2;
+    e.xclient.data.l[1] = static_cast<long>(sibling);
+    e.xclient.data.l[2] = detail;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+// The clients from the bottom to the top
+std::vector<::Window> stacking_order()
+{
+    return root_property<::Window>(dsp()._NET_CLIENT_LIST_STACKING, XA_WINDOW);
+}
+
+size_t stack_index(const std::vector<::Window>& order, ::Window window)
+{
+    return static_cast<size_t>(std::find(order.begin(), order.end(), window) -
+                               order.begin());
+}
+
+} // namespace
+
+TEST_F(ManagerTest, a_client_can_ask_for_a_place_and_a_size_of_its_window)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    const ::Window frame = parent_of(c.window);
+
+    // the reference point of the north west gravity is the corner of the frame
+    request_move_resize_window(c.window, 1 | mr_x | mr_y | mr_width | mr_height,
+                               300, 200, 250, 150);
+    run_loop();
+
+    const auto f = attributes_of(frame);
+    EXPECT_EQ(f.x, 300);
+    EXPECT_EQ(f.y, 200);
+    EXPECT_EQ(c.attrs().width, 250);
+    EXPECT_EQ(c.attrs().height, 150);
+}
+
+TEST_F(ManagerTest, a_request_for_a_size_only_keeps_the_place)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    const ::Window frame = parent_of(c.window);
+    const auto before = attributes_of(frame);
+
+    request_move_resize_window(c.window, mr_width | mr_height | mr_pager, 0, 0,
+                               320, 240);
+    run_loop();
+
+    const auto after = attributes_of(frame);
+    EXPECT_EQ(after.x, before.x);
+    EXPECT_EQ(after.y, before.y);
+    EXPECT_EQ(c.attrs().width, 320);
+    EXPECT_EQ(c.attrs().height, 240);
+}
+
+TEST_F(ManagerTest, a_request_with_a_size_that_is_not_positive_is_ignored)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_move_resize_window(c.window, mr_width | mr_height, 0, 0, 0, -5);
+    run_loop();
+
+    EXPECT_EQ(c.attrs().width, 200);
+    EXPECT_EQ(c.attrs().height, 100);
+}
+
+TEST_F(ManagerTest, a_window_that_is_not_ours_is_not_moved_by_a_request)
+{
+    start();
+    const FakeClient& c = add_client(false);
+
+    request_move_resize_window(c.window, mr_x | mr_y, 300, 200, 0, 0);
+    request_restack(c.window, None, Above);
+    run_loop();
+
+    EXPECT_FALSE(is_managed(c));
+}
+
+TEST_F(ManagerTest, a_client_can_ask_to_be_raised_or_lowered)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    const FakeClient& third = add_client();
+    run_loop();
+    pump_events();
+
+    request_restack(first.window, None, Above);
+    run_loop();
+    auto order = stacking_order();
+    ASSERT_EQ(order.size(), 3u);
+    EXPECT_EQ(order.back(), first.window);
+
+    request_restack(first.window, None, Below);
+    run_loop();
+    order = stacking_order();
+    EXPECT_EQ(order.front(), first.window);
+    EXPECT_NE(second.window, third.window);
+}
+
+TEST_F(ManagerTest, a_client_can_ask_to_be_over_or_under_a_sibling)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    const FakeClient& third = add_client();
+    run_loop();
+    pump_events();
+    ASSERT_LT(stack_index(stacking_order(), first.window),
+              stack_index(stacking_order(), second.window));
+
+    request_restack(first.window, second.window, Above);
+    run_loop();
+    auto order = stacking_order();
+    EXPECT_EQ(stack_index(order, first.window),
+              stack_index(order, second.window) + 1);
+
+    request_restack(third.window, first.window, Below);
+    run_loop();
+    order = stacking_order();
+    EXPECT_EQ(stack_index(order, third.window) + 1,
+              stack_index(order, first.window));
+}
+
+TEST_F(ManagerTest, the_restack_requests_that_are_not_honored_change_nothing)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+    const auto before = stacking_order();
+
+    request_restack(first.window, second.window, Opposite);
+    request_restack(first.window, None, TopIf);
+    request_restack(first.window, first.window, Above);
+    request_restack(first.window, 12345, Above);
+    run_loop();
+
+    EXPECT_EQ(stacking_order(), before);
+}
+
 // ---- _NET_SHOWING_DESKTOP ----
 
 namespace {
@@ -4808,7 +4997,8 @@ TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
          {dsp()._NET_CLIENT_LIST_STACKING, dsp()._NET_FRAME_EXTENTS,
           dsp()._NET_REQUEST_FRAME_EXTENTS, dsp()._NET_WM_STATE_ABOVE,
           dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
-          dsp()._NET_SHOWING_DESKTOP, dsp()._NET_DESKTOP_NAMES}) {
+          dsp()._NET_SHOWING_DESKTOP, dsp()._NET_DESKTOP_NAMES,
+          dsp()._NET_MOVERESIZE_WINDOW, dsp()._NET_RESTACK_WINDOW}) {
         EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
     }
 }
