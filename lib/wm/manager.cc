@@ -374,6 +374,7 @@ void Manager::set_supported()
                               dsp._NET_WM_SYNC_REQUEST,
                               dsp._NET_WM_SYNC_REQUEST_COUNTER,
                               dsp._NET_WM_MOVERESIZE,
+                              dsp._GTK_SHOW_WINDOW_MENU,
                               dsp._NET_MOVERESIZE_WINDOW,
                               dsp._NET_RESTACK_WINDOW,
                               dsp._NET_WM_FULLSCREEN_MONITORS,
@@ -1125,12 +1126,31 @@ void Manager::main_loop()
             continue;
         }
 
+        if (dragged && drag_by_click) { // the window menu moves or resizes it
+            if (event.type == KeyPress &&
+                XLookupKeysym(&event.xkey, 0) == XK_Escape) {
+                end_click_drag(true);
+                continue;
+            }
+            if (event.type == ButtonPress && event.xbutton.button <= Button3) {
+                end_click_drag(false);
+                continue;
+            }
+        }
+        if (release_pending && event.type == ButtonRelease) {
+            release_pending = false;
+            XUngrabPointer(display, CurrentTime);
+            continue;
+        }
         if (dragged && event.type == MotionNotify) {
             while (XCheckTypedEvent(display, MotionNotify, &event)) {}
             move_resize_to(event.xmotion.x_root, event.xmotion.y_root);
             continue;
         }
         if (dragged && event.type == ButtonRelease) {
+            if (drag_by_click) {
+                continue; // a click ends it, not the release of the one before
+            }
             // the other buttons and the wheel do not end it
             if (!drag_button || event.xbutton.button == drag_button) {
                 stop_move_resize();
@@ -1227,11 +1247,7 @@ void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
     if (direction != MOVE_BY_POINTER && !edges) {
         return;
     }
-    const bool allowed =
-            edges ? window->is_resizable() && !window->get_maximized() &&
-                            !window->is_fullscreen() && !window->is_shaded()
-                  : window->is_movable() && !window->is_fullscreen();
-    if (!allowed || !is_button_down()) {
+    if (!may_drag(*window, edges) || !is_button_down()) {
         return;
     }
     stop_move_resize();
@@ -1257,6 +1273,87 @@ void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
                        static_cast<int>(e.data.l[1]));
 }
 
+bool Manager::may_drag(const Window& window, unsigned edges)
+{
+    return edges ? window.is_resizable() && !window.get_maximized() &&
+                           !window.is_fullscreen() && !window.is_shaded()
+                 : window.is_movable() && !window.is_fullscreen();
+}
+
+void Manager::start_click_drag(Window* window, bool resize)
+{
+    const unsigned edges =
+            resize ? tiny::Position::Bottom | tiny::Position::Right : 0;
+    // a maximized window is restored by its title bar, not by the menu
+    if (!may_drag(*window, edges) || window->get_maximized()) {
+        return;
+    }
+    stop_move_resize();
+
+    const Cursor cursor = XCreateFontCursor(
+            display, resize ? tiny::Position::get_cursor_shape(
+                                      static_cast<uint16_t>(edges))
+                            : XC_fleur);
+    const int grabbed = XGrabPointer(
+            display, root, False,
+            ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+            GrabModeAsync, GrabModeAsync, None, cursor, CurrentTime);
+    XFreeCursor(display, cursor);
+    if (grabbed != GrabSuccess) {
+        return;
+    }
+    // Escape puts the window back; the other keys go on as they did
+    if (XGrabKeyboard(display, root, False, GrabModeAsync, GrabModeAsync,
+                      CurrentTime) != GrabSuccess) {
+        XUngrabPointer(display, CurrentTime);
+        return;
+    }
+
+    // a move keeps the distance of the window from the pointer, a resize
+    // takes the corner of the window to the pointer
+    ::Window pointer_root;
+    ::Window pointer_child;
+    int x = 0;
+    int y = 0;
+    int unused;
+    unsigned int buttons;
+    XQueryPointer(display, root, &pointer_root, &pointer_child, &x, &y, &unused,
+                  &unused, &buttons);
+    if (resize) {
+        XWindowAttributes frame;
+        XGetWindowAttributes(display, window->frame(), &frame);
+        x = frame.x + frame.width + frame.border_width;
+        y = frame.y + frame.height + frame.border_width;
+    }
+    dragged = window;
+    drag_by_click = true;
+    drag_button = 0;
+    drag_start_x = x;
+    drag_start_y = y;
+    window->begin_drag(edges, x, y);
+}
+
+void Manager::end_click_drag(bool cancel)
+{
+    if (!dragged || !drag_by_click) {
+        return;
+    }
+    if (cancel) { // back where it was
+        dragged->drag_to(drag_start_x, drag_start_y);
+        stop_move_resize();
+        return;
+    }
+    // The click is over when its button is released; until then the pointer
+    // stays grabbed, so the application under it does not see half a click.
+    Window* window = dragged;
+    dragged = nullptr;
+    drag_by_click = false;
+    release_pending = true;
+    XUngrabKeyboard(display, CurrentTime);
+    window->end_drag();
+    update_dock_visibility();
+}
+
 void Manager::move_resize_to(int x_root, int y_root)
 {
     if (dragged) {
@@ -1272,6 +1369,11 @@ void Manager::stop_move_resize(bool finish)
     }
     Window* window = dragged;
     dragged = nullptr;
+    if (drag_by_click) {
+        drag_by_click = false;
+        XUngrabKeyboard(display, CurrentTime);
+    }
+    release_pending = false;
     XUngrabPointer(display, CurrentTime);
     if (finish) {
         window->end_drag();

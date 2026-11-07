@@ -477,6 +477,29 @@ class Manager : public tiny::Object {
      */
     void start_move_resize(Window* window, const XClientMessageEvent& e);
 
+    /**
+     * @short Move or resize a window with the pointer until a click (the
+     * window menu).
+     *
+     * The window follows the pointer; a click of any of the three buttons
+     * ends it and Escape puts the window back. A move needs no motion of the
+     * pointer first, the window keeps its distance from it. A resize takes
+     * the bottom right corner of the window to the pointer, so the pointer
+     * has to be moved to the corner first. Nothing happens when the window
+     * may not be moved or resized, or the pointer is held by something else.
+     */
+    void start_click_drag(Window* window, bool resize);
+
+    //! May the pointer move (no edges) or resize the window by `edges`
+    static bool may_drag(const Window& window, unsigned edges);
+
+    //! The pointer is held by a click drag; the click that ends it is not
+    //! over, its release is still to be swallowed
+    bool is_click_drag() const { return drag_by_click; }
+
+    //! A click, a key or the end: finish (`cancel` false) or undo the drag
+    void end_click_drag(bool cancel);
+
     //! Follow the pointer while a window is moved or resized
     void move_resize_to(int x_root, int y_root);
 
@@ -544,6 +567,11 @@ class Manager : public tiny::Object {
     Window* active = nullptr;
     Window* dragged = nullptr; //!< moved or resized by the manager
     unsigned drag_button = 0;  //!< its release ends the drag, 0: any
+    bool drag_by_click =
+            false; //!< a click ends the drag, see `start_click_drag`
+    bool release_pending = false; //!< the release of the click that ended it
+    int drag_start_x = 0;         //!< where the pointer was (Escape goes back)
+    int drag_start_y = 0;
     //! Is a pointer button held (a test replaces it)
     std::function<bool()> is_button_down;
     struct GrabbedKey {
