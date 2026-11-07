@@ -54,10 +54,11 @@ void StartupNotification::feed(::Window sender, const char* data, bool begin,
     if (begin) {
         if (partial.size() >= 16 && !partial.count(sender)) {
             // the oldest sender that never finishes
-            partial.erase(std::min_element(
-                    partial.begin(), partial.end(), [](auto& a, auto& b) {
-                        return a.second.first < b.second.first;
-                    }));
+            partial.erase(std::min_element(partial.begin(), partial.end(),
+                                           [](const auto& a, const auto& b) {
+                                               return a.second.first <
+                                                      b.second.first;
+                                           }));
         }
         partial[sender] = {++begun, std::string()};
     }
