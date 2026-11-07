@@ -1950,6 +1950,15 @@ void Window::on_client_message(const XEvent& e, void*)
         return;
     }
 
+    if (e.xclient.message_type == dsp._GTK_SHOW_WINDOW_MENU) {
+        // data: the device, the pointer in the root coordinates
+        on_window_menu_request(
+                nullptr,
+                make_pointer_event(static_cast<int>(e.xclient.data.l[1]),
+                                   static_cast<int>(e.xclient.data.l[2])));
+        return;
+    }
+
     if (e.xclient.message_type == dsp.WM_CHANGE_STATE) {
         if (e.xclient.data.l[0] == IconicState) {
             if (is_minimizable()) {

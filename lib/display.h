@@ -144,6 +144,8 @@ class Display {
     //! The invisible border that a GTK window with its own decorations draws
     //! its shadow in: left, right, top, bottom
     const Atom _GTK_FRAME_EXTENTS;
+    //! A GTK window with its own title bar asks for the window menu
+    const Atom _GTK_SHOW_WINDOW_MENU;
 
   private:
     ::Display* display;
