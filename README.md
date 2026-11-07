@@ -43,21 +43,26 @@ as it can give.
 
 Implemented:
 
-- **Window manager:** reparenting frames drawn by tiny-shell (title, icon,
-  close, minimize and maximize buttons), move and resize by the title bar, edges
-  and corners, maximize, fullscreen (F11), minimize (also on request of the
-  client), shade, dialogs and modal dialogs, focus handling, a window switcher,
-  windows adopted at start, clients survive a crash of the manager and are given
-  back when it exits, applications that stop responding are found by
-  `_NET_WM_PING` and the user chooses to wait or to force them to quit, windows
-  that support `_NET_WM_SYNC_REQUEST` are not given a new size by the edges
-  before they have drawn the last one.
+- **Window manager:** reparenting frames drawn by tiny-shell, with a title bar
+  (the window menu button, the title, and the minimize, maximize and close
+  buttons), a border and edges to resize by.
+  - Move and resize with the pointer (the title bar, the edges and the
+    corners), maximize, fullscreen (F11), minimize, shade (a double click on
+    the title bar), dialogs and modal dialogs, a window switcher.
+  - The **window menu** (see below) for everything that has no button.
+  - Windows that were there before the manager started are adopted, and clients
+    survive a crash of the manager and are given back when it exits.
+  - Applications that stop responding are found by `_NET_WM_PING`, and the user
+    chooses to wait or to force them to quit.
+  - A window that supports `_NET_WM_SYNC_REQUEST` is not given a new size by the
+    edges before it has drawn the last one.
 - **Standards:** programs need to know nothing about tiny-shell.
   - ICCCM and EWMH: window states, types and layers; struts and a work area that
     follows docks coming and going; the active window and focus stealing
     prevention; frame extents; the client lists; the requests of a client to
     move, resize and restack its window (`_NET_WM_MOVERESIZE`,
-    `_NET_MOVERESIZE_WINDOW`, `_NET_RESTACK_WINDOW`); fullscreen over several
+    `_NET_MOVERESIZE_WINDOW`, `_NET_RESTACK_WINDOW`) and to show its window menu
+    (`_GTK_SHOW_WINDOW_MENU`); fullscreen over several
     monitors (`_NET_WM_FULLSCREEN_MONITORS`); show desktop
     (`_NET_SHOWING_DESKTOP`) and the name of the desktop; the geometry of the
     dock icon of a window (`_NET_WM_ICON_GEOMETRY`). Menus, tooltips,
@@ -96,7 +101,7 @@ Implemented:
   is taken only from the keys that type a semicolon without Shift or AltGr (in
   every group of the layout), so Alt with the other keys, also the ones that
   give `;` with a modifier, stays for the applications. The shortcuts of the
-  shell (Alt+Tab, Alt+F2, Alt+F4, Alt+; and Super) follow a change of the
+  shell (Alt+Tab, Alt+F2, Alt+F4, Alt+Space, Alt+; and Super) follow a change of the
   keyboard layout.
 - **Multiple monitors:** the monitors come from RandR and are numbered from the
   left; the panel, the dock, the launcher and the dialogs are on the primary one
@@ -125,7 +130,8 @@ Implemented:
   `theme-light` and `theme-toggle`; no key or menu item is bound to them yet,
   see the key bindings in the plan).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,
-  `run-dialog`, `launcher`, `next-window`, `show-desktop`, `exec:<command>`...),
+  `run-dialog`, `launcher`, `next-window`, `show-desktop`, `window-menu`,
+  `exec:<command>`...),
   and the panel has slots for small widgets of plugins; this is what the planned
   Lua plugins will use.
 - **Other:** one `poll()` event loop for X events, signals and timers (finished
@@ -150,7 +156,7 @@ programs is done, only small details are left):
 
 - [ ] Virtual desktops (there is one desktop now; show desktop works)
 - [ ] Plugins and scripting in Lua, as an optional build feature
-- [ ] Window snapping to the screen edges
+- [ ] Window snapping to the screen edges and half-screen maximize
 - [ ] Session management
 
 ## Technology
@@ -413,6 +419,36 @@ The action `show-desktop` (or a request of a program or a pager,
 asking again brings back the windows it hid. The windows that were minimized
 before stay so. Focusing any window (Alt+Tab, the dock, a new window) ends the
 mode and brings the others back. There is no key and no button for it yet.
+
+### The window menu
+
+The menu has what a window can do and the title bar has no button for. It opens:
+
+- with the button at the left end of the title bar (below it), or with the
+  right button anywhere on the title bar (at the pointer);
+- with **Alt+Space** for the active window (below its title bar), or the action
+  `window-menu`;
+- when a program that draws its own title bar (GTK) asks for it with
+  `_GTK_SHOW_WINDOW_MENU`, at the place it gives. The shell announces the
+  request in `_NET_SUPPORTED`.
+
+The items depend on the window, and what the window cannot do is not listed:
+
+- **Maximize** or **Restore** (a maximized window has no Move, Resize and
+  Roll Up);
+- **Minimize**;
+- **Move** and **Resize**: the window follows the pointer until you click (any
+  of the three buttons), Escape puts it back. Moving does not need the pointer
+  to go anywhere first, the window keeps its distance from it. Resizing takes
+  the bottom right corner of the window to the pointer, so move the pointer
+  to the corner you want;
+- **Roll Up** or **Roll Down**: the window is rolled up to its title bar (a
+  double click on the title bar does the same);
+- **Always on Top** or **Not Always on Top**;
+- **Close**, last.
+
+A window without the `MENU` decoration of `_MOTIF_WM_HINTS` and a dialog have
+no menu button (the right button and Alt+Space still open the menu).
 
 ### Startup notification
 
