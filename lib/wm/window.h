@@ -654,6 +654,9 @@ class Window {
     //! The client asks to be moved or resized (`_NET_WM_MOVERESIZE`), the
     //! event is the message
     tiny::Signal on_move_resize_request;
+    //! The window menu is asked for (`_GTK_SHOW_WINDOW_MENU` of a client, the
+    //! title bar); the event has the pointer in `xbutton.x_root`, `y_root`
+    tiny::Signal on_window_menu_request;
     //! `close()` was asked of a client that does not respond
     tiny::Signal on_unresponsive;
     tiny::Signal on_drag_begin;

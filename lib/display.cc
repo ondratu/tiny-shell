@@ -155,6 +155,7 @@ Display::Display(::Display* display_arg):
     _NET_WM_FULLSCREEN_MONITORS(
             XInternAtom(display_arg, "_NET_WM_FULLSCREEN_MONITORS", 0)),
     _GTK_FRAME_EXTENTS(XInternAtom(display_arg, "_GTK_FRAME_EXTENTS", 0)),
+    _GTK_SHOW_WINDOW_MENU(XInternAtom(display_arg, "_GTK_SHOW_WINDOW_MENU", 0)),
     display(display_arg),
     serial(++last_serial)
 {

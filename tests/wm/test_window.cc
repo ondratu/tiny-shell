@@ -1237,6 +1237,23 @@ TEST_F(WindowTest, the_request_to_move_or_resize_is_passed_on)
               static_cast<long>(tiny::wm::MOVE_BY_POINTER));
 }
 
+TEST_F(WindowTest, the_request_for_the_window_menu_is_passed_on)
+{
+    auto window = manage();
+    Recorder recorder;
+    window->on_window_menu_request.connect(recorder.slot());
+    window->set_events();
+
+    // the device, the pointer in the root coordinates (GTK)
+    send(client.window,
+         client_message(client.window, dsp()._GTK_SHOW_WINDOW_MENU, 0, 120,
+                        45));
+
+    EXPECT_EQ(recorder.calls, 1);
+    EXPECT_EQ(recorder.last_event.xbutton.x_root, 120);
+    EXPECT_EQ(recorder.last_event.xbutton.y_root, 45);
+}
+
 // ---- _NET_WM_ALLOWED_ACTIONS ----
 
 namespace {
