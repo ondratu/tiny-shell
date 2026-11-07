@@ -303,26 +303,28 @@ const std::vector<tiny::Rect> two_screens = {{0, 0, 1920, 1080},
 
 TEST(MonitorsTest, the_span_of_one_screen_is_the_screen)
 {
-    const auto area = span_screens(two_screens, 1, 1, 1, 1);
+    const tiny::Rect none = {-1, -1, -1, -1};
+    const tiny::Rect area =
+            span_screens(two_screens, 1, 1, 1, 1).value_or(none);
 
-    ASSERT_TRUE(area);
-    EXPECT_EQ(area->x, 1920);
-    EXPECT_EQ(area->y, 0);
-    EXPECT_EQ(area->width, 1280);
-    EXPECT_EQ(area->height, 1024);
+    EXPECT_EQ(area.x, 1920);
+    EXPECT_EQ(area.y, 0);
+    EXPECT_EQ(area.width, 1280);
+    EXPECT_EQ(area.height, 1024);
 }
 
 TEST(MonitorsTest, the_span_takes_every_edge_from_its_own_screen)
 {
     // the top and the left edge of the first screen, the bottom edge of the
     // second one, the right edge of the second one
-    const auto area = span_screens(two_screens, 0, 1, 0, 1);
+    const tiny::Rect none = {-1, -1, -1, -1};
+    const tiny::Rect area =
+            span_screens(two_screens, 0, 1, 0, 1).value_or(none);
 
-    ASSERT_TRUE(area);
-    EXPECT_EQ(area->x, 0);
-    EXPECT_EQ(area->y, 0);
-    EXPECT_EQ(area->width, 3200);
-    EXPECT_EQ(area->height, 1024);
+    EXPECT_EQ(area.x, 0);
+    EXPECT_EQ(area.y, 0);
+    EXPECT_EQ(area.width, 3200);
+    EXPECT_EQ(area.height, 1024);
 }
 
 TEST(MonitorsTest, a_span_over_a_screen_that_is_not_there_is_nothing)
