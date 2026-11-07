@@ -1400,6 +1400,12 @@ void Manager::start_click_drag(Window* window, bool resize)
         y = frame.y + frame.height + frame.border_width;
         // the pointer goes to the corner it drags
         XWarpPointer(display, None, root, 0, 0, 0, 0, x, y);
+        // Motion from before the warp is still queued: it would shrink the
+        // window to the old place of the pointer before it grows from the
+        // corner.
+        XSync(display, False);
+        XEvent stale;
+        while (XCheckTypedEvent(display, MotionNotify, &stale)) {}
     }
     dragged = window;
     drag_by_click = true;
