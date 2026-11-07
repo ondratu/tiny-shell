@@ -314,6 +314,13 @@ class Dock : public tiny::Box {
     //! Make the icons again from the windows and the favorites
     void rebuild();
 
+    /**
+     * Tell every window where its icon is (`_NET_WM_ICON_GEOMETRY`, in the
+     * root coordinates), for a compositor or a tool that animates a minimizing
+     * window. The shell itself does not animate (quiet defaults).
+     */
+    void publish_icon_geometry(const tiny::Rect& place);
+
     void clear();
 
     //! An icon starts (+1) or ends (-1) handling a click

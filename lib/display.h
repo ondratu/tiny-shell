@@ -134,6 +134,7 @@ class Display {
     const Atom _NET_DESKTOP_NAMES;
     const Atom _NET_MOVERESIZE_WINDOW;
     const Atom _NET_RESTACK_WINDOW;
+    const Atom _NET_WM_ICON_GEOMETRY;
     //! The invisible border that a GTK window with its own decorations draws
     //! its shadow in: left, right, top, bottom
     const Atom _GTK_FRAME_EXTENTS;
