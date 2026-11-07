@@ -130,6 +130,7 @@ class Display {
     const Atom _NET_DESKTOP_GEOMETRY;
     const Atom _NET_CURRENT_DESKTOP;
     const Atom _NET_NUMBER_OF_DESKTOPS;
+    const Atom _NET_SHOWING_DESKTOP;
 
   private:
     ::Display* display;

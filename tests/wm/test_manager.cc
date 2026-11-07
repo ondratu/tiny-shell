@@ -206,7 +206,8 @@ TEST_F(ManagerTest, the_actions_of_the_shell_are_registered_by_name)
     for (const char* name :
          {"about", "settings", "terminal", "force-quit", "restart", "shutdown",
           "logout", "applications", "launcher", "run-dialog", "next-window",
-          "prev-window", "theme-dark", "theme-light", "theme-toggle"}) {
+          "prev-window", "show-desktop", "theme-dark", "theme-light",
+          "theme-toggle"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), name), names.end())
                 << name;
     }
@@ -1073,6 +1074,103 @@ TEST_F(ManagerTest, active_window_request_restores_a_minimized_window)
     pump_events();
 
     EXPECT_FALSE(manager->wm_windows[c.window]->get_minimized());
+}
+
+// ---- _NET_SHOWING_DESKTOP ----
+
+namespace {
+
+std::vector<unsigned long> showing_desktop()
+{
+    return root_property<unsigned long>(dsp()._NET_SHOWING_DESKTOP,
+                                        XA_CARDINAL);
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_desktop_is_not_shown_at_the_start)
+{
+    start();
+
+    EXPECT_EQ(showing_desktop(), (std::vector<unsigned long>{0}));
+}
+
+TEST_F(ManagerTest,
+       showing_the_desktop_hides_all_the_windows_and_brings_them_back)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+    auto* hidden_before = manager->wm_windows[first.window];
+    hidden_before->minimize();
+
+    request(root_window(), dsp()._NET_SHOWING_DESKTOP, 1);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(showing_desktop(), (std::vector<unsigned long>{1}));
+    EXPECT_TRUE(manager->wm_windows[first.window]->get_minimized());
+    EXPECT_TRUE(manager->wm_windows[second.window]->get_minimized());
+
+    request(root_window(), dsp()._NET_SHOWING_DESKTOP, 0);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(showing_desktop(), (std::vector<unsigned long>{0}));
+    EXPECT_FALSE(manager->wm_windows[second.window]->get_minimized());
+    // it was minimized before, so the desktop does not bring it back
+    EXPECT_TRUE(manager->wm_windows[first.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, focusing_a_window_ends_showing_the_desktop)
+{
+    start();
+    const FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+    manager->get_actions().run("show-desktop");
+    ASSERT_TRUE(manager->wm_windows[first.window]->get_minimized());
+
+    request(first.window, dsp()._NET_ACTIVE_WINDOW, 2);
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(showing_desktop(), (std::vector<unsigned long>{0}));
+    EXPECT_FALSE(manager->wm_windows[first.window]->get_minimized());
+    EXPECT_FALSE(manager->wm_windows[second.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, the_show_desktop_action_toggles_and_forgets_closed_windows)
+{
+    start();
+    FakeClient& first = add_client();
+    const FakeClient& second = add_client();
+    run_loop();
+    pump_events();
+
+    manager->get_actions().run("show-desktop");
+    EXPECT_TRUE(manager->showing_desktop);
+    XUnmapWindow(first.display, first.window);
+    first.sync();
+    run_loop();
+    pump_events();
+    manager->get_actions().run("show-desktop");
+
+    EXPECT_FALSE(manager->showing_desktop);
+    EXPECT_FALSE(manager->wm_windows[second.window]->get_minimized());
+}
+
+TEST_F(ManagerTest, showing_the_desktop_without_windows_only_sets_the_property)
+{
+    start();
+
+    request(root_window(), dsp()._NET_SHOWING_DESKTOP, 1);
+    run_loop();
+
+    EXPECT_EQ(showing_desktop(), (std::vector<unsigned long>{1}));
 }
 
 TEST_F(ManagerTest, the_dock_is_redrawn_when_a_window_demands_attention)
@@ -4687,7 +4785,8 @@ TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
     for (const Atom atom :
          {dsp()._NET_CLIENT_LIST_STACKING, dsp()._NET_FRAME_EXTENTS,
           dsp()._NET_REQUEST_FRAME_EXTENTS, dsp()._NET_WM_STATE_ABOVE,
-          dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION}) {
+          dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
+          dsp()._NET_SHOWING_DESKTOP}) {
         EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
     }
 }

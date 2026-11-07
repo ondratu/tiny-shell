@@ -248,6 +248,19 @@ class Manager : public tiny::Object {
     //! `_NET_DESKTOP_GEOMETRY` and `_NET_DESKTOP_VIEWPORT`
     void publish_desktops();
 
+    /**
+     * @short `_NET_SHOWING_DESKTOP`: hide all the windows to see the desktop,
+     * or bring back the ones that were hidden.
+     *
+     * Windows that were minimized before stay minimized. Focusing a window
+     * (a new one, the dock, Alt + Tab) ends the mode and brings the others
+     * back, too.
+     */
+    void show_desktop(bool show);
+
+    //! Write `_NET_SHOWING_DESKTOP` on the root window
+    void publish_showing_desktop();
+
     //! Remove what `set_supported` and `publish_clients` put on the root
     void clear_published();
 
@@ -509,6 +522,8 @@ class Manager : public tiny::Object {
     bool switcher_grabbed = false; //!< the keyboard is ours for the switcher
     //! Is Alt held (a test replaces it)
     std::function<bool()> is_alt_down;
+    bool showing_desktop = false;         //!< see `show_desktop()`
+    std::vector<::Window> desktop_hidden; //!< clients that it minimized
     unsigned long last_user_time = 0; //!< of the last user action we know of
     bool has_user_time = false;
     std::map<::Window, Struts> wm_docks; //!< struts of the docks of clients
