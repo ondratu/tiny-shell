@@ -9,6 +9,7 @@
 #include "wm/startup.h"
 
 using tiny::wm::parse_startup_message;
+using tiny::wm::StartupMessage;
 using tiny::wm::StartupNotification;
 using tiny::wm::StartupSequence;
 using Clock = StartupNotification::Clock;
@@ -52,25 +53,27 @@ StartupSequence sequence(const std::string& id, const std::string& wmclass = "")
 
 TEST(StartupMessageTest, the_command_and_the_values_are_parsed)
 {
-    const auto message = parse_startup_message(
-            "new: ID=\"tiny_1\" NAME=Files SCREEN=0 ICON=folder");
+    const StartupMessage message =
+            parse_startup_message(
+                    "new: ID=\"tiny_1\" NAME=Files SCREEN=0 ICON=folder")
+                    .value_or(StartupMessage{});
 
-    ASSERT_TRUE(message);
-    EXPECT_EQ(message->command, "new");
-    EXPECT_EQ(message->values.at("ID"), "tiny_1");
-    EXPECT_EQ(message->values.at("NAME"), "Files");
-    EXPECT_EQ(message->values.at("ICON"), "folder");
+    EXPECT_EQ(message.command, "new");
+    EXPECT_EQ(message.values.at("ID"), "tiny_1");
+    EXPECT_EQ(message.values.at("NAME"), "Files");
+    EXPECT_EQ(message.values.at("ICON"), "folder");
 }
 
 TEST(StartupMessageTest, a_quoted_value_has_blanks_and_escapes)
 {
-    const auto message = parse_startup_message(
-            "change: ID=\"a b\" NAME=\"say \\\"hi\\\" \\\\ now\" BIN=x");
+    const StartupMessage message =
+            parse_startup_message(
+                    R"(change: ID="a b" NAME="say \"hi\" \\ now" BIN=x)")
+                    .value_or(StartupMessage{});
 
-    ASSERT_TRUE(message);
-    EXPECT_EQ(message->values.at("ID"), "a b");
-    EXPECT_EQ(message->values.at("NAME"), "say \"hi\" \\ now");
-    EXPECT_EQ(message->values.at("BIN"), "x");
+    EXPECT_EQ(message.values.at("ID"), "a b");
+    EXPECT_EQ(message.values.at("NAME"), "say \"hi\" \\ now");
+    EXPECT_EQ(message.values.at("BIN"), "x");
 }
 
 TEST(StartupMessageTest, a_text_without_a_command_is_not_a_message)
@@ -82,11 +85,12 @@ TEST(StartupMessageTest, a_text_without_a_command_is_not_a_message)
 
 TEST(StartupMessageTest, a_broken_tail_is_dropped)
 {
-    const auto message = parse_startup_message("remove: ID=1 word NAME");
+    const StartupMessage message =
+            parse_startup_message("remove: ID=1 word NAME")
+                    .value_or(StartupMessage{});
 
-    ASSERT_TRUE(message);
-    EXPECT_EQ(message->values.at("ID"), "1");
-    EXPECT_EQ(message->values.size(), 1u);
+    EXPECT_EQ(message.values.at("ID"), "1");
+    EXPECT_EQ(message.values.size(), 1u);
 }
 
 TEST(StartupNotificationTest, a_message_in_several_pieces_starts_a_sequence)
@@ -189,8 +193,8 @@ TEST(StartupNotificationTest, a_sequence_ends_after_the_timeout)
 
     EXPECT_FALSE(startup.expire(now + StartupNotification::timeout / 2));
     EXPECT_TRUE(startup.busy());
-    ASSERT_TRUE(startup.next_deadline());
-    EXPECT_EQ(*startup.next_deadline(), now + StartupNotification::timeout);
+    EXPECT_EQ(startup.next_deadline().value_or(now),
+              now + StartupNotification::timeout);
 
     EXPECT_TRUE(startup.expire(now + StartupNotification::timeout));
     EXPECT_FALSE(startup.busy());

@@ -197,6 +197,7 @@ std::vector<tiny::Rect> xinerama_screens(::Display* display)
 Monitors xinerama_monitors(::Display* display)
 {
     Monitors monitors;
+    // cppcheck-suppress knownEmptyContainer ; it is empty without TINY_XINERAMA
     for (const tiny::Rect& screen : xinerama_screens(display)) {
         monitors.push_back({"", screen, false});
     }
@@ -228,6 +229,7 @@ std::vector<tiny::Rect> screens_of_server(::Display* display,
                                           const Monitors& monitors)
 {
     std::vector<tiny::Rect> screens = xinerama_screens(display);
+    // cppcheck-suppress knownConditionTrueFalse ; true without TINY_XINERAMA
     if (screens.empty()) { // no Xinerama: the monitors are all there is
         for (const Monitor& monitor : monitors) {
             screens.push_back(monitor.area);

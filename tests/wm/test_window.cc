@@ -2027,7 +2027,7 @@ TEST_F(WindowTest, wrong_gtk_extents_are_limited_or_ignored)
 {
     client.map();
     client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {5, 5});
-    tiny::wm::FrameExtents none =
+    const tiny::wm::FrameExtents none =
             WmWindow::get_gtk_frame_extents(client.window);
     EXPECT_EQ(none.left + none.right + none.top + none.bottom, 0);
 

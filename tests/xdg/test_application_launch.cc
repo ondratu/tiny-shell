@@ -157,8 +157,8 @@ TEST(LaunchTest, the_program_gets_the_startup_id_or_none)
         std::getline(in, line);
         return line;
     };
-    EXPECT_TRUE(wait_for([&] { return read(with_id) != ""; }));
-    EXPECT_TRUE(wait_for([&] { return read(without) != ""; }));
+    EXPECT_TRUE(wait_for([&] { return !read(with_id).empty(); }));
+    EXPECT_TRUE(wait_for([&] { return !read(without).empty(); }));
     EXPECT_EQ(read(with_id), "[id_1]");
     EXPECT_EQ(read(without), "[]"); // not the one of the shell
     unsetenv("DESKTOP_STARTUP_ID");
