@@ -1088,6 +1088,28 @@ std::vector<unsigned long> showing_desktop()
 
 } // namespace
 
+TEST_F(ManagerTest, the_one_desktop_has_a_name)
+{
+    start();
+
+    const auto names =
+            root_property<char>(dsp()._NET_DESKTOP_NAMES, dsp().UTF8_STRING);
+
+    // one name for one desktop, ended by a zero byte
+    EXPECT_EQ(std::string(names.begin(), names.end()),
+              std::string("Desktop\0", 8));
+}
+
+TEST_F(ManagerTest, the_name_of_the_desktop_is_removed_at_the_end)
+{
+    start();
+
+    manager.reset();
+
+    EXPECT_TRUE(root_property<char>(dsp()._NET_DESKTOP_NAMES, dsp().UTF8_STRING)
+                        .empty());
+}
+
 TEST_F(ManagerTest, the_desktop_is_not_shown_at_the_start)
 {
     start();
@@ -4786,7 +4808,7 @@ TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
          {dsp()._NET_CLIENT_LIST_STACKING, dsp()._NET_FRAME_EXTENTS,
           dsp()._NET_REQUEST_FRAME_EXTENTS, dsp()._NET_WM_STATE_ABOVE,
           dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
-          dsp()._NET_SHOWING_DESKTOP}) {
+          dsp()._NET_SHOWING_DESKTOP, dsp()._NET_DESKTOP_NAMES}) {
         EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
     }
 }
