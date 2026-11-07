@@ -219,6 +219,13 @@ std::pair<int, int> frame_position(int gravity, int x, int y,
             y - v * (extents.top + extents.bottom) / 2};
 }
 
+tiny::Rect grow_by(const tiny::Rect& area, const FrameExtents& extents)
+{
+    return {area.x - extents.left, area.y - extents.top,
+            area.width + extents.left + extents.right,
+            area.height + extents.top + extents.bottom};
+}
+
 std::pair<int, int> gravity_shift(int gravity, int dw, int dh)
 {
     if (gravity == StaticGravity) {
@@ -377,6 +384,7 @@ Window::Window(::Window child_arg, ::Window root_arg,
     update_sync_counter();
     update_properties();
     update_transient_for();
+    update_gtk_frame_extents();
     wm_type = get_net_wm_type(child_arg);
 
     if (properties.count(dsp._NET_WM_STATE)) {
@@ -1140,9 +1148,10 @@ void Window::maximize()
 
 void Window::place_maximized()
 {
-    XMoveResizeWindow(dsp, child, work_area.x, work_area.y,
-                      tiny::x_uint(work_area.width),
-                      tiny::x_uint(work_area.height));
+    // the visible part covers the work area, the shadow lies outside of it
+    const tiny::Rect area = grow_by(work_area, gtk_extents);
+    XMoveResizeWindow(dsp, child, area.x, area.y, tiny::x_uint(area.width),
+                      tiny::x_uint(area.height));
 }
 
 tiny::Rect Window::frame_geometry() const
@@ -1217,7 +1226,7 @@ void Window::keep_in_work_area()
     // the border is outside of the window
     const tiny::Rect place =
             fit_in_area({attrs.x, attrs.y, attrs.width, attrs.height},
-                        inner_area(work_area, 1));
+                        grow_by(inner_area(work_area, 1), gtk_extents));
     if (place.x != attrs.x || place.y != attrs.y ||
         place.width != attrs.width || place.height != attrs.height) {
         XMoveResizeWindow(dsp, child, place.x, place.y,
@@ -1285,7 +1294,7 @@ void Window::restore(int x, int y)
                 fit_in_area({x ? (x - state.width / 2) : state.x,
                              y ? (y - state.height / 2) : state.y, state.width,
                              state.height},
-                            inner_area(work_area, 1));
+                            grow_by(inner_area(work_area, 1), gtk_extents));
         state.width = place.width;
         state.height = place.height;
 
@@ -1972,6 +1981,13 @@ void Window::on_property_notify(const XEvent& e, void*)
     if (e.xproperty.atom == dsp._NET_WM_DESKTOP) {
         return; // ours: the manager decides, a pager asks with a message
     }
+    if (e.xproperty.atom == dsp._GTK_FRAME_EXTENTS) {
+        update_gtk_frame_extents();
+        if (get_maximized() && !is_fullscreen()) {
+            place_maximized(); // GTK drops the shadow of a maximized window
+        }
+        return;
+    }
     if (e.xproperty.atom == dsp.WM_NORMAL_HINTS) {
         update_normal_hints();
         publish_allowed_actions(); // a fixed size cannot be resized
@@ -2249,6 +2265,38 @@ static bool read_user_time_window(::Window window, ::Window& named)
         XFree(data);
     }
     return found;
+}
+
+FrameExtents Window::get_gtk_frame_extents(::Window window)
+{
+    const tiny::Display& display = tiny::get_display();
+    Atom returned_type;
+    int size;
+    unsigned long nitems = 0;
+    unsigned long bytes_left;
+    unsigned char* data = nullptr;
+    FrameExtents extents;
+    if (XGetWindowProperty(display, window, display._GTK_FRAME_EXTENTS, 0L, 4L,
+                           false, XA_CARDINAL, &returned_type, &size, &nitems,
+                           &bytes_left, &data) == Success &&
+        data && nitems == 4 && size == 32 && returned_type == XA_CARDINAL) {
+        // a wrong value must not take the window out of the screen
+        constexpr unsigned long most = 512;
+        const auto* values = reinterpret_cast<const unsigned long*>(data);
+        extents.left = static_cast<int>(std::min(values[0], most));
+        extents.right = static_cast<int>(std::min(values[1], most));
+        extents.top = static_cast<int>(std::min(values[2], most));
+        extents.bottom = static_cast<int>(std::min(values[3], most));
+    }
+    if (data) {
+        XFree(data);
+    }
+    return extents;
+}
+
+void Window::update_gtk_frame_extents()
+{
+    gtk_extents = get_gtk_frame_extents(child);
 }
 
 bool Window::get_user_time(::Window window, unsigned long& time)

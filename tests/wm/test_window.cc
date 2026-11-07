@@ -1980,6 +1980,61 @@ TEST_F(WindowTest, maximize_fills_the_screen_and_restore_returns_the_size)
     EXPECT_FALSE(window->get_maximized());
 }
 
+TEST_F(WindowTest, grow_by_adds_the_extents_on_every_side)
+{
+    const tiny::Rect grown = tiny::wm::grow_by({10, 20, 100, 50}, {1, 2, 3, 4});
+
+    EXPECT_EQ(grown.x, 9);
+    EXPECT_EQ(grown.y, 17);
+    EXPECT_EQ(grown.width, 103);
+    EXPECT_EQ(grown.height, 57);
+}
+
+TEST_F(WindowTest, the_shadow_of_a_gtk_window_lies_outside_of_the_work_area)
+{
+    client.map();
+    client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {10, 12, 8, 14});
+    auto window = manage();
+
+    window->maximize();
+
+    const XWindowAttributes max = client.attrs();
+    EXPECT_EQ(max.x, -10);
+    EXPECT_EQ(max.y, tiny::wm::shell_theme.panel - 8);
+    EXPECT_EQ(max.width, screen().width + 22);
+    EXPECT_EQ(max.height,
+              screen().height - tiny::wm::shell_theme.panel + 8 + 14);
+}
+
+TEST_F(WindowTest, a_gtk_window_that_drops_its_shadow_is_placed_again)
+{
+    client.map();
+    client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {10, 10, 10, 10});
+    auto window = manage();
+    window->set_events();
+    window->maximize();
+
+    client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {0, 0, 0, 0});
+    send(client.window,
+         property_event(client.window, dsp()._GTK_FRAME_EXTENTS));
+
+    const XWindowAttributes max = client.attrs();
+    EXPECT_EQ(max.x, 0);
+    EXPECT_EQ(max.width, screen().width);
+}
+
+TEST_F(WindowTest, wrong_gtk_extents_are_limited_or_ignored)
+{
+    client.map();
+    client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {5, 5});
+    tiny::wm::FrameExtents none =
+            WmWindow::get_gtk_frame_extents(client.window);
+    EXPECT_EQ(none.left + none.right + none.top + none.bottom, 0);
+
+    client.set_cardinals(dsp()._GTK_FRAME_EXTENTS, {100000, 0, 0, 0});
+    EXPECT_EQ(WmWindow::get_gtk_frame_extents(client.window).left, 512);
+}
+
 TEST_F(WindowTest, fullscreen_covers_the_whole_screen_and_back)
 {
     client.map();
