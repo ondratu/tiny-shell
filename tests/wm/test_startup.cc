@@ -265,3 +265,25 @@ TEST(StartupNotificationTest, many_senders_that_do_not_finish_are_forgotten)
 
     EXPECT_TRUE(startup.sequences().count("fine"));
 }
+
+TEST(StartupNotificationTest, the_oldest_unfinished_sender_is_forgotten_first)
+{
+    StartupNotification startup;
+    const auto now = Clock::now();
+    char piece[20];
+    std::memset(piece, 'x', 20);
+    // the lowest window id is the newest sender
+    const auto first = pieces_of("new: ID=kept NAME=\"A name that is long\"");
+    startup.feed(1000, first[0].data(), true, now);
+    for (::Window sender = 999; sender >= 985; --sender) {
+        startup.feed(sender, piece, true, now);
+    }
+
+    startup.feed(1, piece, true, now); // the 17th sender, 1000 is the oldest
+    startup.feed(1000, first[1].data(), false, now);
+
+    EXPECT_FALSE(startup.sequences().count("kept"));
+    // the other ones were not touched: this one still completes
+    startup.feed(985, piece, false, now);
+    EXPECT_TRUE(startup.sequences().empty());
+}

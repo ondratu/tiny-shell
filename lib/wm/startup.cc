@@ -53,21 +53,25 @@ void StartupNotification::feed(::Window sender, const char* data, bool begin,
     const size_t length = strnlen(data, 20);
     if (begin) {
         if (partial.size() >= 16 && !partial.count(sender)) {
-            partial.erase(partial.begin()); // senders that never finish
+            // the oldest sender that never finishes
+            partial.erase(std::min_element(
+                    partial.begin(), partial.end(), [](auto& a, auto& b) {
+                        return a.second.first < b.second.first;
+                    }));
         }
-        partial[sender].clear();
+        partial[sender] = {++begun, std::string()};
     }
     const auto it = partial.find(sender);
     if (it == partial.end()) {
         return; // the beginning was not seen
     }
-    it->second.append(data, length);
-    if (it->second.size() > longest_message) {
+    it->second.second.append(data, length);
+    if (it->second.second.size() > longest_message) {
         partial.erase(it);
         return;
     }
     if (length < 20) { // the zero byte: the text is complete
-        const std::string text = std::move(it->second);
+        const std::string text = std::move(it->second.second);
         partial.erase(it);
         if (const auto message = parse_startup_message(text)) {
             handle(*message, now);

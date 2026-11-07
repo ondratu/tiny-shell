@@ -63,6 +63,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 {
     tiny::reap_children();
     catch_quit_signals();
+    // the programs of the shell get their own id, never the one it was given
+    unsetenv("DESKTOP_STARTUP_ID");
     XSetWindowBackground(display_arg, root_arg, shell_theme.root_background);
     XSync(display_arg, True);
 
@@ -495,7 +497,10 @@ void Manager::show_desktop(bool show)
     if (show) {
         desktop_hidden.clear();
         for (const auto& entry : wm_windows) {
-            if (!entry.second->get_minimized()) {
+            // a dialog goes with its window, a window that may not be
+            // minimized stays
+            if (!entry.second->get_minimized() &&
+                entry.second->is_minimizable()) {
                 desktop_hidden.push_back(entry.first);
             }
         }
@@ -944,8 +949,8 @@ void Manager::note_started(::Window child)
     unsigned long count;
     unsigned long left;
     unsigned char* data = nullptr;
-    if (XGetWindowProperty(display, child, dsp._NET_STARTUP_ID, 0, 64, False,
-                           dsp.UTF8_STRING, &type, &format, &count, &left,
+    if (XGetWindowProperty(display, child, dsp._NET_STARTUP_ID, 0, 256, False,
+                           AnyPropertyType, &type, &format, &count, &left,
                            &data) == Success &&
         data && format == 8 && count > 0) {
         ended = startup.finish(
@@ -983,6 +988,10 @@ void Manager::update_busy_cursor()
     if (busy && busy_cursor == None) {
         busy_cursor = XCreateFontCursor(display, XC_watch);
     }
+    if (busy == cursor_busy) {
+        return;
+    }
+    cursor_busy = busy;
     XDefineCursor(display, root, busy ? busy_cursor : arrow_cursor);
 }
 
@@ -2264,7 +2273,9 @@ void Manager::on_key_release(const XKeyEvent& xkey)
 Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
                         bool fresh)
 {
-    note_started(child); // also a window that is not framed
+    if (fresh) {
+        note_started(child); // also a window that is not framed
+    }
     std::set<Atom> properties;
     Window::get_properties(child, properties);
 

@@ -524,6 +524,7 @@ class Manager : public tiny::Object {
     unsigned startup_serial = 0;  //!< makes the ids of the shell different
     Cursor arrow_cursor = None;   //!< of the root window
     Cursor busy_cursor = None;    //!< while an application starts
+    bool cursor_busy = false;     //!< the root window has `busy_cursor`
 
     SymbolicIcons wm_icons{display, root, xdg::default_data_dirs()};
     Panel wm_panel;
