@@ -24,7 +24,9 @@ void on_sigchld(int)
 // The child reports a failed chdir or exec through the pipe (closed by a
 // good exec).
 [[noreturn]] void exec_child(const std::vector<std::string>& argv,
-                             const std::string& directory, int report)
+                             const std::string& directory,
+                             const std::vector<std::string>& environment,
+                             int report)
 {
     setsid();
 
@@ -40,6 +42,16 @@ void on_sigchld(int)
     }
     args.push_back(nullptr);
 
+    for (const std::string& change : environment) {
+        const size_t equal = change.find('=');
+        if (equal == std::string::npos) {
+            unsetenv(change.c_str());
+        } else {
+            setenv(change.substr(0, equal).c_str(), change.c_str() + equal + 1,
+                   1);
+        }
+    }
+
     if (directory.empty() || chdir(directory.c_str()) == 0) {
         execvp(args[0], args.data());
     }
@@ -52,7 +64,8 @@ void on_sigchld(int)
 
 } // namespace
 
-pid_t spawn(const std::vector<std::string>& argv, const std::string& directory)
+pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
+            const std::vector<std::string>& environment)
 {
     if (argv.empty() || argv[0].empty()) {
         errno = EINVAL;
@@ -67,7 +80,7 @@ pid_t spawn(const std::vector<std::string>& argv, const std::string& directory)
     const pid_t pid = fork();
     if (pid == 0) {
         close(report[0]);
-        exec_child(argv, directory, report[1]);
+        exec_child(argv, directory, environment, report[1]);
     }
 
     const int fork_errno = errno;

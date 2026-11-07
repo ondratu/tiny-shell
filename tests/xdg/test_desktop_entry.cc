@@ -38,6 +38,7 @@ TEST(DesktopEntryParseTest, reads_the_basic_keys)
     EXPECT_EQ(e.path, "/opt/firefox");
     EXPECT_EQ(e.startup_wm_class, "Navigator");
     EXPECT_FALSE(e.terminal);
+    EXPECT_FALSE(e.startup_notify);
 }
 
 TEST(DesktopEntryParseTest, reads_booleans_and_lists)
@@ -45,10 +46,12 @@ TEST(DesktopEntryParseTest, reads_booleans_and_lists)
     const DesktopEntry e =
             parse_desktop_entry("[Desktop Entry]\n"
                                 "Terminal=true\nNoDisplay=true\nHidden=true\n"
+                                "StartupNotify=true\n"
                                 "Categories=Network;WebBrowser;\n"
                                 "Keywords=a\\;b;web;;\n");
 
     EXPECT_TRUE(e.terminal);
+    EXPECT_TRUE(e.startup_notify);
     EXPECT_TRUE(e.no_display);
     EXPECT_TRUE(e.hidden);
     EXPECT_EQ(e.categories, (Args{"Network", "WebBrowser"}));

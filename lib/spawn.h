@@ -15,12 +15,15 @@ namespace tiny {
  * share its terminal.
  *
  * A non-empty `directory` becomes the working directory of the program.
+ * `environment` changes the environment of the program: "NAME=value" sets a
+ * variable, "NAME" (no equal sign) removes it.
  *
  * Returns the pid of the child. When the program can't be started (empty
  * argv, fork, chdir or exec failure) returns -1 and sets errno.
  */
 pid_t spawn(const std::vector<std::string>& argv,
-            const std::string& directory = "");
+            const std::string& directory = "",
+            const std::vector<std::string>& environment = {});
 
 /// Run a shell command line (pipes, variables, ~) with `/bin/sh -c`.
 pid_t spawn_shell(const std::string& command);

@@ -234,6 +234,7 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.categories = split_list(get("Categories"));
     entry.keywords = split_list(get("Keywords"));
     entry.terminal = get("Terminal") == "true";
+    entry.startup_notify = get("StartupNotify") == "true";
     entry.no_display = get("NoDisplay") == "true";
     entry.hidden = get("Hidden") == "true";
     for (const std::string& id : split_list(get("Actions"))) {

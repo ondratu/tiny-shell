@@ -45,6 +45,31 @@ TEST(SpawnTest, runs_the_command)
     std::filesystem::remove(marker);
 }
 
+TEST(SpawnTest, the_environment_of_the_program_is_changed)
+{
+    const auto out = temp_file("tiny-spawn-env-");
+    setenv("TINY_SPAWN_REMOVED", "old", 1);
+    setenv("TINY_SPAWN_KEPT", "kept", 1);
+
+    ASSERT_GT(tiny::spawn({"/bin/sh", "-c",
+                           "echo \"$TINY_SPAWN_SET|$TINY_SPAWN_REMOVED|"
+                           "$TINY_SPAWN_KEPT\" > " +
+                                   out.string()},
+                          "", {"TINY_SPAWN_SET=a=b", "TINY_SPAWN_REMOVED"}),
+              0);
+    ASSERT_TRUE(wait_for([&] {
+        return std::filesystem::exists(out) &&
+               std::filesystem::file_size(out) > 0;
+    }));
+    std::ifstream in(out);
+    std::string line;
+    std::getline(in, line);
+    EXPECT_EQ(line, "a=b||kept"); // a value may have an equal sign
+    unsetenv("TINY_SPAWN_REMOVED");
+    unsetenv("TINY_SPAWN_KEPT");
+    std::filesystem::remove(out);
+}
+
 TEST(SpawnTest, child_leads_its_own_session)
 {
     const auto out = temp_file("tiny-spawn-sid-");

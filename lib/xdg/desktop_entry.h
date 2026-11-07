@@ -35,6 +35,7 @@ struct DesktopEntry {
     //! In the order of `Actions`; an action with no Name or Exec is dropped
     std::vector<DesktopAction> actions;
     bool terminal = false;
+    bool startup_notify = false; //!< tells when it has started (StartupNotify)
     bool no_display = false;
     bool hidden = false;
 
