@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cerrno>
+#include <cstdint>
 #include <csignal>
 #include <cstring>
 #include <iterator>
@@ -359,6 +360,7 @@ void Manager::set_supported()
                               dsp._NET_WM_MOVERESIZE,
                               dsp._NET_MOVERESIZE_WINDOW,
                               dsp._NET_RESTACK_WINDOW,
+                              dsp._NET_WM_FULLSCREEN_MONITORS,
                               dsp._NET_NUMBER_OF_DESKTOPS,
                               dsp._NET_CURRENT_DESKTOP,
                               dsp._NET_DESKTOP_GEOMETRY,
@@ -627,6 +629,27 @@ void Manager::restack_layers()
     monitor_labels.raise();
 }
 
+void Manager::set_fullscreen_monitors(Window* window,
+                                      const XClientMessageEvent& e)
+{
+    // data[0..3] are the monitors of the top, bottom, left and right edge
+    size_t edges[4];
+    for (size_t i = 0; i < 4; ++i) {
+        edges[i] =
+                e.data.l[i] < 0 ? SIZE_MAX : static_cast<size_t>(e.data.l[i]);
+    }
+    const auto area = span_screens(screens_of_server(display, monitors),
+                                   edges[0], edges[1], edges[2], edges[3]);
+    if (!area) {
+        return; // a monitor that is not there
+    }
+    window->set_fullscreen_span(*area);
+    XChangeProperty(display, window->get_child(),
+                    tiny::get_display()._NET_WM_FULLSCREEN_MONITORS,
+                    XA_CARDINAL, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(e.data.l), 4);
+}
+
 void Manager::restack_window(Window* window, const XClientMessageEvent& e)
 {
     // data[1] is the sibling, data[2] says where the window goes to it
@@ -726,6 +749,13 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
             found->second->move_resize_request(e);
         } else {
             restack_window(found->second, e);
+        }
+        return true;
+    }
+    if (e.message_type == dsp._NET_WM_FULLSCREEN_MONITORS) {
+        const auto found = wm_windows.find(e.window);
+        if (found != wm_windows.end()) {
+            set_fullscreen_monitors(found->second, e);
         }
         return true;
     }
@@ -1815,6 +1845,9 @@ void Manager::update_monitors(bool force)
     monitors = now;
     choice = chosen;
     work_areas.clear();
+    for (const auto& entry : wm_windows) {
+        entry.second->drop_fullscreen_span(); // the numbers mean other places
+    }
     arrange_shell();
 }
 

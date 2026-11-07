@@ -2035,6 +2035,54 @@ TEST_F(WindowTest, wrong_gtk_extents_are_limited_or_ignored)
     EXPECT_EQ(WmWindow::get_gtk_frame_extents(client.window).left, 512);
 }
 
+TEST_F(WindowTest, a_fullscreen_window_covers_the_area_it_was_given)
+{
+    client.map();
+    auto window = manage();
+    window->set_fullscreen_span({100, 50, 500, 400}); // not fullscreen yet
+    ASSERT_EQ(client.attrs().width, 200);
+
+    window->fullscreen(true);
+
+    const XWindowAttributes full = client.attrs();
+    EXPECT_EQ(full.x, 100);
+    EXPECT_EQ(full.y, 50);
+    EXPECT_EQ(full.width, 500);
+    EXPECT_EQ(full.height, 400);
+}
+
+TEST_F(WindowTest, the_area_of_a_fullscreen_window_can_change_and_be_dropped)
+{
+    client.map();
+    auto window = manage();
+    window->fullscreen(true);
+
+    window->set_fullscreen_span({10, 20, 300, 200});
+    EXPECT_EQ(client.attrs().width, 300);
+
+    client.set_cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS, {0, 0, 0, 0});
+    window->drop_fullscreen_span();
+    EXPECT_EQ(client.attrs().width, screen().width);
+    EXPECT_TRUE(client.cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS).empty());
+    window->drop_fullscreen_span(); // nothing to drop
+}
+
+TEST_F(WindowTest, the_area_is_forgotten_when_the_window_leaves_fullscreen)
+{
+    client.map();
+    auto window = manage();
+    window->set_fullscreen_span({10, 20, 300, 200});
+    window->fullscreen(true);
+    client.set_cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS, {0, 0, 0, 0});
+
+    window->fullscreen(false);
+    window->fullscreen(true);
+
+    EXPECT_FALSE(window->has_fullscreen_span());
+    EXPECT_EQ(client.attrs().width, screen().width);
+    EXPECT_TRUE(client.cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS).empty());
+}
+
 TEST_F(WindowTest, fullscreen_covers_the_whole_screen_and_back)
 {
     client.map();

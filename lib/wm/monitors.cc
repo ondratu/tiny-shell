@@ -165,10 +165,11 @@ Monitors randr_monitors(::Display* display, ::Window root)
     return monitors;
 }
 
-//! The screens that Xinerama reports (no names); none without it
-Monitors xinerama_monitors(::Display* display)
+//! The screens that Xinerama reports (no names) in its order, not sorted; none
+//! without it
+std::vector<tiny::Rect> xinerama_screens(::Display* display)
 {
-    Monitors monitors;
+    std::vector<tiny::Rect> screens;
 #ifdef TINY_XINERAMA
     int event_base = 0;
     int error_base = 0;
@@ -178,20 +179,28 @@ Monitors xinerama_monitors(::Display* display)
         XineramaScreenInfo* info = XineramaQueryScreens(display, &count);
         for (int i = 0; info != nullptr && i < count; ++i) {
             if (info[i].width > 0 && info[i].height > 0) {
-                monitors.push_back({"",
-                                    {info[i].x_org, info[i].y_org,
-                                     info[i].width, info[i].height},
-                                    false});
+                screens.push_back({info[i].x_org, info[i].y_org, info[i].width,
+                                   info[i].height});
             }
         }
         if (info != nullptr) {
             XFree(info);
         }
     }
-    order_monitors(monitors);
 #else
     (void)display;
 #endif
+    return screens;
+}
+
+//! The screens that Xinerama reports as monitors (no names), ordered
+Monitors xinerama_monitors(::Display* display)
+{
+    Monitors monitors;
+    for (const tiny::Rect& screen : xinerama_screens(display)) {
+        monitors.push_back({"", screen, false});
+    }
+    order_monitors(monitors);
     return monitors;
 }
 
@@ -213,6 +222,37 @@ Monitors read_monitors(::Display* display, ::Window root)
         monitors.push_back({"", {0, 0, attrs.width, attrs.height}, true});
     }
     return monitors;
+}
+
+std::vector<tiny::Rect> screens_of_server(::Display* display,
+                                          const Monitors& monitors)
+{
+    std::vector<tiny::Rect> screens = xinerama_screens(display);
+    if (screens.empty()) { // no Xinerama: the monitors are all there is
+        for (const Monitor& monitor : monitors) {
+            screens.push_back(monitor.area);
+        }
+    }
+    return screens;
+}
+
+std::optional<tiny::Rect> span_screens(const std::vector<tiny::Rect>& screens,
+                                       size_t top, size_t bottom, size_t left,
+                                       size_t right)
+{
+    for (const size_t index : {top, bottom, left, right}) {
+        if (index >= screens.size()) {
+            return std::nullopt;
+        }
+    }
+    const int x = screens[left].x;
+    const int y = screens[top].y;
+    const int right_edge = screens[right].x + screens[right].width;
+    const int bottom_edge = screens[bottom].y + screens[bottom].height;
+    if (right_edge <= x || bottom_edge <= y) {
+        return std::nullopt; // the monitors are not around an area
+    }
+    return tiny::Rect{x, y, right_edge - x, bottom_edge - y};
 }
 
 std::optional<int> select_monitor_events(::Display* display, ::Window root)

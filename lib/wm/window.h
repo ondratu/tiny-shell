@@ -249,6 +249,20 @@ class Window {
      */
     void set_area_finder(AreaFinder finder) { find_areas = std::move(finder); }
 
+    /**
+     * @short `_NET_WM_FULLSCREEN_MONITORS`: the area that the fullscreen
+     * window covers instead of one monitor. A window that is fullscreen
+     * moves there at once, the others when they go fullscreen. It is
+     * dropped when the window leaves fullscreen or `drop_fullscreen_span()`.
+     */
+    void set_fullscreen_span(const tiny::Rect& area);
+
+    //! The window covers the monitor it is on again
+    void drop_fullscreen_span();
+
+    //! Is the area of `set_fullscreen_span()` in use
+    bool has_fullscreen_span() const { return span.width > 0; }
+
     //! Look for the monitor of the window again (a monitor, a panel or a dock
     //! came or went): a maximized or fullscreen window follows its monitor
     void refresh_areas();
@@ -730,6 +744,7 @@ class Window {
     tiny::Rect before_fullscreen = {0, 0, 0, 0};
     tiny::Rect work_area = {0, 0, 0, 0};
     tiny::Rect screen_area = {0, 0, 0, 0}; //!< empty: the root window
+    tiny::Rect span = {0, 0, 0, 0};        //!< empty: the monitor of the window
     AreaFinder find_areas;
 
     FrameExtents gtk_extents; //!< see `get_gtk_frame_extents()`

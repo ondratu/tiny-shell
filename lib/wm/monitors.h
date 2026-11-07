@@ -42,6 +42,26 @@ void order_monitors(Monitors& monitors);
  */
 Monitors read_monitors(::Display* display, ::Window root);
 
+/**
+ * @short The screens in the order of Xinerama, which the indices of
+ * `_NET_WM_FULLSCREEN_MONITORS` count (they are not the numbers on the
+ * screen). Without Xinerama the monitors in their order.
+ */
+std::vector<tiny::Rect> screens_of_server(::Display* display,
+                                          const Monitors& monitors);
+
+/**
+ * @short The area that a fullscreen window over several screens has: its top
+ * edge is the top of the screen `top`, the bottom edge the bottom of `bottom`,
+ * the left and the right edge those of `left` and `right`.
+ *
+ * Nothing when an index is out of the list or the edges do not enclose an
+ * area.
+ */
+std::optional<tiny::Rect> span_screens(const std::vector<tiny::Rect>& screens,
+                                       size_t top, size_t bottom, size_t left,
+                                       size_t right);
+
 //! Whether this build has the RandR extension compiled in
 bool has_randr();
 

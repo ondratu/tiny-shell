@@ -291,3 +291,59 @@ TEST(MonitorsTest, a_bigger_clone_that_comes_later_replaces_the_smaller_one)
     EXPECT_EQ(list[0].name, "big");
     EXPECT_TRUE(list[0].primary);
 }
+
+// ---- the area over several screens (_NET_WM_FULLSCREEN_MONITORS) ----
+
+namespace {
+
+const std::vector<tiny::Rect> two_screens = {{0, 0, 1920, 1080},
+                                             {1920, 0, 1280, 1024}};
+
+} // namespace
+
+TEST(MonitorsTest, the_span_of_one_screen_is_the_screen)
+{
+    const auto area = span_screens(two_screens, 1, 1, 1, 1);
+
+    ASSERT_TRUE(area);
+    EXPECT_EQ(area->x, 1920);
+    EXPECT_EQ(area->y, 0);
+    EXPECT_EQ(area->width, 1280);
+    EXPECT_EQ(area->height, 1024);
+}
+
+TEST(MonitorsTest, the_span_takes_every_edge_from_its_own_screen)
+{
+    // the top and the left edge of the first screen, the bottom edge of the
+    // second one, the right edge of the second one
+    const auto area = span_screens(two_screens, 0, 1, 0, 1);
+
+    ASSERT_TRUE(area);
+    EXPECT_EQ(area->x, 0);
+    EXPECT_EQ(area->y, 0);
+    EXPECT_EQ(area->width, 3200);
+    EXPECT_EQ(area->height, 1024);
+}
+
+TEST(MonitorsTest, a_span_over_a_screen_that_is_not_there_is_nothing)
+{
+    EXPECT_FALSE(span_screens(two_screens, 0, 2, 0, 1));
+    EXPECT_FALSE(span_screens(two_screens, 0, 1, SIZE_MAX, 1));
+}
+
+TEST(MonitorsTest, a_span_whose_edges_cross_is_nothing)
+{
+    // the left edge lies right of the right edge
+    EXPECT_FALSE(span_screens(two_screens, 0, 0, 1, 0));
+}
+
+TEST(MonitorsTest, the_screens_of_the_server_are_the_monitors_without_xinerama)
+{
+    ::Display* display = tiny::get_display();
+    const Monitors list = {monitor("one", 0, 0, 640, 480)};
+
+    const auto screens = screens_of_server(display, list);
+
+    ASSERT_FALSE(screens.empty());
+    EXPECT_GT(screens[0].width, 0);
+}

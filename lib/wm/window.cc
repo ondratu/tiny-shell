@@ -622,6 +622,10 @@ void Window::set_fullscreen(bool fullscreen_arg)
         wm_states |= WMState::FULLSCREEN;
     } else {
         wm_states &= static_cast<unsigned long>(~WMState::FULLSCREEN);
+        if (has_fullscreen_span()) { // it is for the fullscreen window only
+            span = {0, 0, 0, 0};
+            XDeleteProperty(dsp, child, dsp._NET_WM_FULLSCREEN_MONITORS);
+        }
     }
 
     publish_wm_states();
@@ -1172,8 +1176,31 @@ void Window::use_monitor_of(const tiny::Rect& frame)
     }
 }
 
+void Window::set_fullscreen_span(const tiny::Rect& area)
+{
+    span = area;
+    if (is_fullscreen()) {
+        place_fullscreen();
+    }
+}
+
+void Window::drop_fullscreen_span()
+{
+    if (!has_fullscreen_span()) {
+        return;
+    }
+    span = {0, 0, 0, 0};
+    XDeleteProperty(dsp, child, dsp._NET_WM_FULLSCREEN_MONITORS);
+    if (is_fullscreen()) {
+        place_fullscreen();
+    }
+}
+
 tiny::Rect Window::fullscreen_area() const
 {
+    if (has_fullscreen_span()) {
+        return span;
+    }
     if (screen_area.width > 0 && screen_area.height > 0) {
         return screen_area;
     }
