@@ -2296,6 +2296,60 @@ TEST_F(ManagerTest,
     manager->end_click_drag(false);
 }
 
+TEST_F(ManagerTest, a_resize_whose_warp_failed_goes_on_from_the_pointer)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    manager->start_click_drag(window, true);
+    listen_to_the_grab();
+
+    // the pointer is still far from the corner (Xephyr, a virtual machine)
+    XEvent motion = make_event(MotionNotify);
+    motion.xmotion.x_root = 50;
+    motion.xmotion.y_root = 40;
+    send_to_root(motion, PointerMotionMask);
+    run_loop();
+    EXPECT_EQ(attributes_of(window->frame()).width, before.width);
+    EXPECT_EQ(attributes_of(window->frame()).height, before.height);
+
+    motion.xmotion.x_root = 70; // 20 pixels from where the drag started
+    motion.xmotion.y_root = 45;
+    send_to_root(motion, PointerMotionMask);
+    run_loop();
+    EXPECT_EQ(attributes_of(window->frame()).width, before.width + 20);
+    EXPECT_EQ(attributes_of(window->frame()).height, before.height + 5);
+    manager->end_click_drag(false);
+}
+
+TEST_F(ManagerTest,
+       a_resize_whose_warp_worked_follows_the_pointer_from_the_corner)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    const int corner_x = before.x + before.width + before.border_width;
+    const int corner_y = before.y + before.height + before.border_width;
+    manager->start_click_drag(window, true);
+    listen_to_the_grab();
+
+    XEvent motion = make_event(MotionNotify);
+    motion.xmotion.x_root = corner_x + 3;
+    motion.xmotion.y_root = corner_y + 2;
+    send_to_root(motion, PointerMotionMask);
+    run_loop();
+
+    EXPECT_EQ(attributes_of(window->frame()).width, before.width + 3);
+    EXPECT_EQ(attributes_of(window->frame()).height, before.height + 2);
+    manager->end_click_drag(false);
+}
+
 TEST_F(ManagerTest, a_click_ends_the_drag_and_its_release_frees_the_pointer)
 {
     start();
