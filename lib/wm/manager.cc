@@ -362,6 +362,7 @@ void Manager::set_supported()
                               dsp._NET_DESKTOP_GEOMETRY,
                               dsp._NET_DESKTOP_VIEWPORT,
                               dsp._NET_SHOWING_DESKTOP,
+                              dsp._NET_DESKTOP_NAMES,
                               dsp._NET_WM_DESKTOP,
                               dsp._NET_WM_ALLOWED_ACTIONS,
                               dsp._NET_WM_ACTION_MOVE,
@@ -451,6 +452,12 @@ void Manager::publish_desktops()
                 display, root, p.property, XA_CARDINAL, 32, PropModeReplace,
                 reinterpret_cast<const unsigned char*>(p.values), p.count);
     }
+    // the names are UTF-8 strings, each ended by a zero byte
+    static const char names[] = "Desktop";
+    XChangeProperty(display, root, dsp._NET_DESKTOP_NAMES, dsp.UTF8_STRING, 8,
+                    PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(names),
+                    sizeof(names)); // with the zero
 }
 
 void Manager::publish_showing_desktop()
@@ -498,7 +505,8 @@ void Manager::clear_published()
           dsp._NET_CLIENT_LIST, dsp._NET_CLIENT_LIST_STACKING,
           dsp._NET_ACTIVE_WINDOW, dsp._NET_NUMBER_OF_DESKTOPS,
           dsp._NET_CURRENT_DESKTOP, dsp._NET_DESKTOP_GEOMETRY,
-          dsp._NET_DESKTOP_VIEWPORT, dsp._NET_SHOWING_DESKTOP}) {
+          dsp._NET_DESKTOP_VIEWPORT, dsp._NET_SHOWING_DESKTOP,
+          dsp._NET_DESKTOP_NAMES}) {
         XDeleteProperty(display, root, property);
     }
     if (check_window != None) {

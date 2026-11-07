@@ -245,6 +245,7 @@ class Manager : public tiny::Object {
     void set_supported();
 
     //! The one desktop: `_NET_NUMBER_OF_DESKTOPS`, `_NET_CURRENT_DESKTOP`,
+    //! `_NET_DESKTOP_NAMES`,
     //! `_NET_DESKTOP_GEOMETRY` and `_NET_DESKTOP_VIEWPORT`
     void publish_desktops();
 
