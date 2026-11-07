@@ -133,6 +133,40 @@ TEST(LaunchTest, runs_in_the_path_directory)
     std::filesystem::remove_all(dir);
 }
 
+TEST(LaunchTest, the_program_gets_the_startup_id_or_none)
+{
+    const auto script = temp_path("tiny-launch-startup-script-");
+    const auto with_id = temp_path("tiny-launch-startup-with-");
+    const auto without = temp_path("tiny-launch-startup-without-");
+    {
+        std::ofstream out(script);
+        out << "#!/bin/sh\necho \"[$DESKTOP_STARTUP_ID]\" > \"$1\"\n";
+    }
+    std::filesystem::permissions(script, std::filesystem::perms::owner_all);
+    setenv("DESKTOP_STARTUP_ID", "of-the-shell", 1);
+
+    EXPECT_GT(tiny::xdg::launch(app(script.string() + " " + with_id.string()),
+                                {}, {"xterm", "-e"}, {}, "id_1"),
+              0);
+    EXPECT_GT(tiny::xdg::launch(app(script.string() + " " + without.string())),
+              0);
+
+    const auto read = [](const std::filesystem::path& path) {
+        std::ifstream in(path);
+        std::string line;
+        std::getline(in, line);
+        return line;
+    };
+    EXPECT_TRUE(wait_for([&] { return read(with_id) != ""; }));
+    EXPECT_TRUE(wait_for([&] { return read(without) != ""; }));
+    EXPECT_EQ(read(with_id), "[id_1]");
+    EXPECT_EQ(read(without), "[]"); // not the one of the shell
+    unsetenv("DESKTOP_STARTUP_ID");
+    for (const auto& path : {script, with_id, without}) {
+        std::filesystem::remove(path);
+    }
+}
+
 TEST(LaunchTest, missing_path_directory_is_reported)
 {
     auto application = app("true");

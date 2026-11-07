@@ -74,7 +74,8 @@ std::vector<std::string> expand_exec(const Application& app,
 }
 
 pid_t launch(const Application& app, const std::vector<std::string>& files,
-             const std::vector<std::string>& terminal, std::string_view exec)
+             const std::vector<std::string>& terminal, std::string_view exec,
+             const std::string& startup_id)
 {
     auto argv = expand_exec(app, files, exec);
     if (argv.empty()) {
@@ -84,7 +85,9 @@ pid_t launch(const Application& app, const std::vector<std::string>& files,
     if (app.entry.terminal) {
         argv.insert(argv.begin(), terminal.begin(), terminal.end());
     }
-    return spawn(argv, app.entry.path);
+    return spawn(argv, app.entry.path,
+                 {startup_id.empty() ? "DESKTOP_STARTUP_ID"
+                                     : "DESKTOP_STARTUP_ID=" + startup_id});
 }
 
 } // namespace tiny::xdg
