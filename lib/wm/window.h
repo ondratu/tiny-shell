@@ -175,6 +175,9 @@ unsigned edges_of_direction(long direction);
 std::pair<int, int> frame_position(int gravity, int x, int y,
                                    const FrameExtents& extents);
 
+//! The area grown by the extents on each side
+tiny::Rect grow_by(const tiny::Rect& area, const FrameExtents& extents);
+
 /// How far the frame moves, when the client grows by dw, dh and keeps its
 /// reference point (the gravity) where it was.
 std::pair<int, int> gravity_shift(int gravity, int dw, int dh);
@@ -564,12 +567,13 @@ class Window {
     //! Tell the client where it is, in the root coordinates (ICCCM 4.1.5)
     void send_configure_notify();
 
-    void update_protocols();    //!< Update WMProtocols
-    void update_sync_counter(); //!< `_NET_WM_SYNC_REQUEST_COUNTER`
-    void update_properties();   //!< Update WMProperties
-    void update_normal_hints(); //!< Update XSizeHints;
-    void update_wm_hints();     //!< Update XWMHints;
-    void update_wm_states();    //!< Update WMStates
+    void update_protocols();         //!< Update WMProtocols
+    void update_sync_counter();      //!< `_NET_WM_SYNC_REQUEST_COUNTER`
+    void update_properties();        //!< Update WMProperties
+    void update_normal_hints();      //!< Update XSizeHints;
+    void update_wm_hints();          //!< Update XWMHints;
+    void update_wm_states();         //!< Update WMStates
+    void update_gtk_frame_extents(); //!< `_GTK_FRAME_EXTENTS`
     void update_desktop();      //!< `_NET_WM_DESKTOP` of all desktops: sticky
     void update_wm_name();      //!< Update wm_name
     void update_wm_class();     //!< Update wm_class
@@ -583,6 +587,14 @@ class Window {
 
     //! Return _NET_WM_TYPE or WMType::NORMAL when property can't be read
     static WMType get_net_wm_type(::Window window);
+
+    /**
+     * `_GTK_FRAME_EXTENTS` of the window: the invisible border (a shadow) that
+     * a GTK application with client-side decorations draws around its window.
+     * Zeros when there is none. The window is placed so the visible part, not
+     * the border, lies in the work area.
+     */
+    static FrameExtents get_gtk_frame_extents(::Window window);
 
     //! `_NET_WM_USER_TIME` of the window, or of the window its
     //! `_NET_WM_USER_TIME_WINDOW` names; false when there is none
@@ -720,6 +732,7 @@ class Window {
     tiny::Rect screen_area = {0, 0, 0, 0}; //!< empty: the root window
     AreaFinder find_areas;
 
+    FrameExtents gtk_extents; //!< see `get_gtk_frame_extents()`
     unsigned long functions = 0;
     unsigned long wm_states = 0;
     ::Window transient_for = None;
