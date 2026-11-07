@@ -251,24 +251,6 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
     }
 }
 
-TEST_F(HeaderTest, the_title_does_not_start_before_the_left_inset)
-{
-    tiny::wm::Header h(60, 25);
-    h.realize(root_window(), 0, 0);
-    h.map_all();
-    h.set_title("A very long title that does not fit into the header");
-
-    h.set_left_inset(30);
-
-    const Image img = image_of(h);
-    EXPECT_GT(img.count_not(bg(), 24), 0u);
-    for (int x = 0; x < 20; ++x) { // the glyphs blur a pixel or two
-        for (int y = 0; y < 24; ++y) {
-            EXPECT_EQ(img.at(x, y), bg()) << x << "," << y; // room for a button
-        }
-    }
-}
-
 TEST_F(HeaderTest, set_disable_makes_the_text_lighter)
 {
     tiny::wm::Header h(300, 25);

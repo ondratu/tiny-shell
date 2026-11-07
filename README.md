@@ -44,8 +44,7 @@ as it can give.
 Implemented:
 
 - **Window manager:** reparenting frames drawn by tiny-shell, with a title bar
-  (the window menu button, the title, and the minimize, maximize and close
-  buttons), a border and edges to resize by.
+  (the title and the minimize, maximize and close buttons), a border and edges to resize by.
   - Move and resize with the pointer (the title bar, the edges and the
     corners), maximize, fullscreen (F11), minimize, shade (a double click on
     the title bar), dialogs and modal dialogs, a window switcher.
@@ -424,8 +423,7 @@ mode and brings the others back. There is no key and no button for it yet.
 
 The menu has what a window can do and the title bar has no button for. It opens:
 
-- with the button at the left end of the title bar (below it), or with the
-  right button anywhere on the title bar (at the pointer);
+- with the right button anywhere on the title bar (at the pointer);
 - with **Alt+Space** for the active window (below its title bar), or the action
   `window-menu`;
 - when a program that draws its own title bar (GTK) asks for it with
@@ -445,9 +443,6 @@ The items depend on the window, and what the window cannot do is not listed:
   double click on the title bar does the same);
 - **Always on Top** or **Not Always on Top**;
 - **Close**, last.
-
-A window without the `MENU` decoration of `_MOTIF_WM_HINTS` and a dialog have
-no menu button (the right button and Alt+Space still open the menu).
 
 ### Startup notification
 

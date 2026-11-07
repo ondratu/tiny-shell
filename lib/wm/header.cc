@@ -117,17 +117,6 @@ void Header::set_title(const std::string& title_arg)
     }
 }
 
-void Header::set_left_inset(int inset)
-{
-    if (inset == left_inset) {
-        return;
-    }
-    left_inset = inset;
-    if (is_maped) {
-        on_expose(XEvent(), nullptr);
-    }
-}
-
 void Header::set_disable(bool disable)
 {
     is_disabled = disable;
@@ -162,7 +151,7 @@ void Header::on_expose(const XEvent&, void*)
     if ((x + extents.width) > get_end_offset()) {
         x = get_end_offset() - extents.width;
     }
-    x = std::max({x, get_padding(), left_inset});
+    x = std::max(x, get_padding());
 
     XSetWindowBackground(display, window, shell_theme.header.get_bg(state));
     XClearWindow(display, window);

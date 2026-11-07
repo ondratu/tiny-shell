@@ -155,38 +155,6 @@ void MaximizeButton::set_restore(bool _restore)
     on_expose(XEvent(), nullptr);
 }
 
-WindowMenuButton::WindowMenuButton() = default;
-
-WindowMenuButton::~WindowMenuButton() = default;
-
-void WindowMenuButton::on_expose(const XEvent&, void*)
-{
-    if (draw_icon("open-menu")) {
-        return;
-    }
-    XWindowAttributes attrs;
-    XGetWindowAttributes(display, window, &attrs);
-
-    GC gc = XCreateGC(display, window, 0, nullptr);
-    const uint8_t state = get_theme_state();
-
-    XSetWindowBackground(display, window, get_style().get_bg(state));
-    XClearWindow(display, window);
-
-    XSetForeground(display, gc, get_style().get_fg(state));
-    XSetLineAttributes(display, gc, tiny::x_uint(line_width()), LineSolid,
-                       CapButt, JoinBevel);
-
-    // three lines, like the icon of a menu
-    const int mid_x = attrs.width / 2;
-    const int mid_y = attrs.width / 2;
-    for (const double step : {-3.5, 0.0, 3.5}) {
-        XDrawLine(display, window, gc, px(mid_x - sc(4)), px(mid_y + sc(step)),
-                  px(mid_x + sc(4)), px(mid_y + sc(step)));
-    }
-    XFreeGC(display, gc);
-}
-
 MinimizeButton::MinimizeButton() = default;
 
 MinimizeButton::~MinimizeButton() = default;
