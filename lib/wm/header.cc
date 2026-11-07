@@ -17,6 +17,7 @@ TitleBox::~TitleBox()
 {
     if (event_done) {
         XUngrabButton(display, Button1, AnyModifier, window);
+        XUngrabButton(display, Button3, AnyModifier, window);
         disconnect(ButtonPress);
         disconnect(ButtonRelease);
         disconnect(MotionNotify);
@@ -31,6 +32,11 @@ void TitleBox::set_events(long mask)
             display, Button1, AnyModifier, window, true,
             ButtonPressMask | ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
             None, XCreateFontCursor(display, XC_hand1));
+
+    XGrabButton( // the right button opens the window menu
+            display, Button3, AnyModifier, window, true,
+            ButtonPressMask | ButtonReleaseMask, GrabModeAsync, GrabModeAsync,
+            None, None);
 
     connect(ButtonPress,
             [this](const XEvent& e) { on_button_press(e, nullptr); });
@@ -82,6 +88,7 @@ Header::~Header()
 {
     if (event_done) {
         XUngrabButton(display, Button1, AnyModifier, window);
+        XUngrabButton(display, Button3, AnyModifier, window);
         disconnect(Expose);
     }
 }
