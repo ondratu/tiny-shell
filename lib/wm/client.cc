@@ -186,10 +186,10 @@ void Client::set_events(long mask)
         on_minimize_click(o, e, d);
     });
 
-    menu_btn.on_click.connect([this](tiny::Object* o, const XEvent& e,
+    menu_btn.on_click.connect([this](const tiny::Object* o, const XEvent& e,
                                      void* d) { on_menu_click(o, e, d); });
     header.get_title_box()->on_context_menu.connect(
-            [this](tiny::Object* o, const XEvent& e, void* d) {
+            [this](const tiny::Object* o, const XEvent& e, void* d) {
                 on_menu_click(o, e, d);
             });
 
