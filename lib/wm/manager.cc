@@ -202,6 +202,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     };
     set_supported();
     publish_desktops();
+    publish_showing_desktop();
     publish_clients();
 
     wm_panel.map_all();
@@ -297,6 +298,7 @@ void Manager::register_actions()
     actions.add("run-dialog", [this] { wm_run.popup(); });
     actions.add("next-window", [this] { activate_next_window(); });
     actions.add("prev-window", [this] { activate_prev_window(); });
+    actions.add("show-desktop", [this] { show_desktop(!showing_desktop); });
     actions.add("theme-dark", [this] { set_variant(Variant::Dark); });
     actions.add("theme-light", [this] { set_variant(Variant::Light); });
     actions.add("theme-toggle", [this] {
@@ -359,6 +361,7 @@ void Manager::set_supported()
                               dsp._NET_CURRENT_DESKTOP,
                               dsp._NET_DESKTOP_GEOMETRY,
                               dsp._NET_DESKTOP_VIEWPORT,
+                              dsp._NET_SHOWING_DESKTOP,
                               dsp._NET_WM_DESKTOP,
                               dsp._NET_WM_ALLOWED_ACTIONS,
                               dsp._NET_WM_ACTION_MOVE,
@@ -450,6 +453,43 @@ void Manager::publish_desktops()
     }
 }
 
+void Manager::publish_showing_desktop()
+{
+    const long value = showing_desktop ? 1 : 0;
+    XChangeProperty(display, root, tiny::get_display()._NET_SHOWING_DESKTOP,
+                    XA_CARDINAL, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&value), 1);
+}
+
+void Manager::show_desktop(bool show)
+{
+    if (show == showing_desktop) {
+        return;
+    }
+    showing_desktop = show;
+    if (show) {
+        desktop_hidden.clear();
+        for (const auto& entry : wm_windows) {
+            if (!entry.second->get_minimized()) {
+                desktop_hidden.push_back(entry.first);
+            }
+        }
+        for (const ::Window child : desktop_hidden) {
+            wm_windows[child]->minimize();
+        }
+    } else {
+        const std::vector<::Window> hidden = std::move(desktop_hidden);
+        desktop_hidden.clear();
+        for (const ::Window child : hidden) {
+            const auto it = wm_windows.find(child);
+            if (it != wm_windows.end() && it->second->get_minimized()) {
+                it->second->restore();
+            }
+        }
+    }
+    publish_showing_desktop();
+}
+
 void Manager::clear_published()
 {
     const tiny::Display& dsp = tiny::get_display();
@@ -458,7 +498,7 @@ void Manager::clear_published()
           dsp._NET_CLIENT_LIST, dsp._NET_CLIENT_LIST_STACKING,
           dsp._NET_ACTIVE_WINDOW, dsp._NET_NUMBER_OF_DESKTOPS,
           dsp._NET_CURRENT_DESKTOP, dsp._NET_DESKTOP_GEOMETRY,
-          dsp._NET_DESKTOP_VIEWPORT}) {
+          dsp._NET_DESKTOP_VIEWPORT, dsp._NET_SHOWING_DESKTOP}) {
         XDeleteProperty(display, root, property);
     }
     if (check_window != None) {
@@ -635,6 +675,10 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
                 hide_monitor_numbers();
                 break;
         }
+        return true;
+    }
+    if (e.message_type == dsp._NET_SHOWING_DESKTOP) {
+        show_desktop(e.data.l[0] != 0);
         return true;
     }
     if (e.message_type == dsp._NET_CURRENT_DESKTOP ||
@@ -1045,6 +1089,7 @@ void Manager::stop_move_resize(bool finish)
 
 void Manager::focus_window(Window* window)
 {
+    show_desktop(false); // the user goes back to the windows
     if (window->get_minimized()) {
         window->restore();
     }

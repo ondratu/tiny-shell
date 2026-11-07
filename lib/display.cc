@@ -142,6 +142,7 @@ Display::Display(::Display* display_arg):
     _NET_CURRENT_DESKTOP(XInternAtom(display_arg, "_NET_CURRENT_DESKTOP", 0)),
     _NET_NUMBER_OF_DESKTOPS(
             XInternAtom(display_arg, "_NET_NUMBER_OF_DESKTOPS", 0)),
+    _NET_SHOWING_DESKTOP(XInternAtom(display_arg, "_NET_SHOWING_DESKTOP", 0)),
     display(display_arg),
     serial(++last_serial)
 {
