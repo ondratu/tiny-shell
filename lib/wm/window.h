@@ -419,6 +419,9 @@ class Window {
     //! Put the frame right under `sibling` (a top level window)
     virtual void stack_under(::Window sibling);
 
+    //! Put the frame right over `sibling` (a top level window)
+    virtual void stack_over(::Window sibling);
+
     //! The frame around the client (nothing for a window without a frame)
     virtual FrameExtents frame_extents() const { return {}; }
 
@@ -547,6 +550,16 @@ class Window {
 
     //! The client asks for another position or size (ConfigureRequest)
     virtual void configure_request(const XConfigureRequestEvent& e);
+
+    /**
+     * @short `_NET_MOVERESIZE_WINDOW`: the client asks for a place and a size
+     * as if it had no frame.
+     *
+     * `data[0]` of the message has the gravity (0: the one of the window), the
+     * flags of the values that are given (x, y, width, height) and the source;
+     * the position is where the reference point of the gravity goes.
+     */
+    void move_resize_request(const XClientMessageEvent& e);
 
     //! Tell the client where it is, in the root coordinates (ICCCM 4.1.5)
     void send_configure_notify();

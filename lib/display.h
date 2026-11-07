@@ -132,6 +132,8 @@ class Display {
     const Atom _NET_NUMBER_OF_DESKTOPS;
     const Atom _NET_SHOWING_DESKTOP;
     const Atom _NET_DESKTOP_NAMES;
+    const Atom _NET_MOVERESIZE_WINDOW;
+    const Atom _NET_RESTACK_WINDOW;
 
   private:
     ::Display* display;

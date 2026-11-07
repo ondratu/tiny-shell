@@ -382,6 +382,20 @@ void Client::stack_under(::Window sibling)
     }
 }
 
+void Client::stack_over(::Window sibling)
+{
+    XWindowChanges changes = {};
+    changes.sibling = sibling;
+    changes.stack_mode = Above;
+    XConfigureWindow(display, window, CWSibling | CWStackMode, &changes);
+    if (is_resizable()) {
+        changes.sibling = window;
+        changes.stack_mode = Below;
+        XConfigureWindow(display, shadow.get_window(), CWSibling | CWStackMode,
+                         &changes); // under the frame
+    }
+}
+
 static FrameExtents extents_with(int header, int border)
 {
     return {border, border, header + border, border};

@@ -259,6 +259,10 @@ class Manager : public tiny::Object {
      */
     void show_desktop(bool show);
 
+    //! `_NET_RESTACK_WINDOW`: put the window over or under a sibling, or
+    //! on top or at the bottom when there is none
+    void restack_window(Window* window, const XClientMessageEvent& e);
+
     //! Write `_NET_SHOWING_DESKTOP` on the root window
     void publish_showing_desktop();
 

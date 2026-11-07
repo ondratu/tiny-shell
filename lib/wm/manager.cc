@@ -357,6 +357,8 @@ void Manager::set_supported()
                               dsp._NET_WM_SYNC_REQUEST,
                               dsp._NET_WM_SYNC_REQUEST_COUNTER,
                               dsp._NET_WM_MOVERESIZE,
+                              dsp._NET_MOVERESIZE_WINDOW,
+                              dsp._NET_RESTACK_WINDOW,
                               dsp._NET_NUMBER_OF_DESKTOPS,
                               dsp._NET_CURRENT_DESKTOP,
                               dsp._NET_DESKTOP_GEOMETRY,
@@ -625,6 +627,35 @@ void Manager::restack_layers()
     monitor_labels.raise();
 }
 
+void Manager::restack_window(Window* window, const XClientMessageEvent& e)
+{
+    // data[1] is the sibling, data[2] says where the window goes to it
+    const auto sibling = static_cast<::Window>(e.data.l[1]);
+    const long detail = e.data.l[2];
+    const auto other = wm_windows.find(sibling);
+    if (other != wm_windows.end() && other->second != window) {
+        if (detail == Above) {
+            window->stack_over(other->second->frame());
+        } else if (detail == Below) {
+            window->stack_under(other->second->frame());
+        } else {
+            return; // TopIf, BottomIf and Opposite are not honored
+        }
+    } else if (sibling == None) {
+        if (detail == Above) {
+            window->raise();
+        } else if (detail == Below) {
+            window->lower();
+        } else {
+            return;
+        }
+    } else {
+        return; // a sibling that is not a window of ours
+    }
+    restack_layers(); // the panel and the layers stay where they belong
+    publish_stacking();
+}
+
 void Manager::request_frame_extents(::Window child)
 {
     const tiny::Display& dsp = tiny::get_display();
@@ -682,6 +713,19 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
                 monitor_numbers_owner = None;
                 hide_monitor_numbers();
                 break;
+        }
+        return true;
+    }
+    if (e.message_type == dsp._NET_MOVERESIZE_WINDOW ||
+        e.message_type == dsp._NET_RESTACK_WINDOW) {
+        const auto found = wm_windows.find(e.window);
+        if (found == wm_windows.end()) {
+            return true; // not ours to move
+        }
+        if (e.message_type == dsp._NET_MOVERESIZE_WINDOW) {
+            found->second->move_resize_request(e);
+        } else {
+            restack_window(found->second, e);
         }
         return true;
     }

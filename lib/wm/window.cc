@@ -885,6 +885,56 @@ void Window::stack_under(::Window sibling)
     XConfigureWindow(dsp, child, CWSibling | CWStackMode, &changes);
 }
 
+void Window::stack_over(::Window sibling)
+{
+    XWindowChanges changes = {};
+    changes.sibling = sibling;
+    changes.stack_mode = Above;
+    XConfigureWindow(dsp, child, CWSibling | CWStackMode, &changes);
+}
+
+void Window::move_resize_request(const XClientMessageEvent& e)
+{
+    constexpr unsigned long gravity_mask = 0xFF;
+    constexpr unsigned long has_x = 1UL << 8;
+    constexpr unsigned long has_y = 1UL << 9;
+    constexpr unsigned long has_width = 1UL << 10;
+    constexpr unsigned long has_height = 1UL << 11;
+    const auto flags = static_cast<unsigned long>(e.data.l[0]);
+    int gravity = static_cast<int>(flags & gravity_mask);
+    if (gravity < NorthWestGravity || gravity > StaticGravity) {
+        gravity = window_gravity(*hints); // none (0) or not a gravity
+    }
+
+    XConfigureRequestEvent request = {};
+    request.type = ConfigureRequest;
+    request.display = dsp;
+    request.parent = root;
+    request.window = child;
+    const FrameExtents extents = frame_extents();
+    // the reference point of the gravity goes to x, y; ask for the place of
+    // the client area, like a ConfigureRequest does
+    const auto place = frame_position(gravity, static_cast<int>(e.data.l[1]),
+                                      static_cast<int>(e.data.l[2]), extents);
+    if (flags & has_x) {
+        request.x = place.first + extents.left;
+        request.value_mask |= CWX;
+    }
+    if (flags & has_y) {
+        request.y = place.second + extents.top;
+        request.value_mask |= CWY;
+    }
+    if ((flags & has_width) && e.data.l[3] > 0) {
+        request.width = static_cast<int>(std::min(e.data.l[3], 65535L));
+        request.value_mask |= CWWidth;
+    }
+    if ((flags & has_height) && e.data.l[4] > 0) {
+        request.height = static_cast<int>(std::min(e.data.l[4], 65535L));
+        request.value_mask |= CWHeight;
+    }
+    configure_request(request);
+}
+
 void Window::move_to(int x, int y)
 {
     XMoveWindow(dsp, child, x, y);
