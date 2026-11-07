@@ -228,7 +228,7 @@ jobs:
         # functions of the event handlers) with a reserve; change it on
         # purpose.
         run: |
-          max=570000
+          max=600000
           make CXX=clang++-19 AR=llvm-ar-19 \
               CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell

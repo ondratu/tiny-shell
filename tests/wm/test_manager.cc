@@ -1207,7 +1207,7 @@ TEST_F(ManagerTest, a_window_that_is_not_ours_is_not_moved_by_a_request)
 TEST_F(ManagerTest, a_client_can_ask_to_be_raised_or_lowered)
 {
     start();
-    const const FakeClient& first = add_client();
+    const FakeClient& first = add_client();
     const FakeClient& second = add_client();
     const FakeClient& third = add_client();
     run_loop();
