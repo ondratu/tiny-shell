@@ -47,9 +47,6 @@ class Header : public tiny::Box {
 
     void set_disable(bool disable);
 
-    //! The title does not start before `inset` (a button at the left edge)
-    void set_left_inset(int inset);
-
     const tiny::Style& get_style() const override { return shell_theme.header; }
 
   protected:
@@ -57,7 +54,6 @@ class Header : public tiny::Box {
 
   private:
     std::string title;
-    int left_inset = 0;
 
     TitleBox title_box;
     const int screen; // XXX: this is zero for now
