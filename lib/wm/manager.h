@@ -29,6 +29,7 @@
 #include "wm/dock.h"
 #include "wm/dock_mode.h"
 #include "wm/dock_reveal.h"
+#include "wm/window_menu.h"
 #include "wm/selection.h"
 #include "wm/tray.h"
 #include "wm/xsettings.h"
@@ -500,6 +501,15 @@ class Manager : public tiny::Object {
     //! A click, a key or the end: finish (`cancel` false) or undo the drag
     void end_click_drag(bool cancel);
 
+    //! Open the window menu of `window` at the pointer
+    void open_window_menu(Window* window, int x_root, int y_root);
+
+    //! The window menu of the active window, below its title bar
+    void open_active_window_menu();
+
+    //! An item of the window menu was chosen
+    void run_window_menu_action(Window& window, WindowMenuAction action);
+
     //! Follow the pointer while a window is moved or resized
     void move_resize_to(int x_root, int y_root);
 
@@ -560,6 +570,7 @@ class Manager : public tiny::Object {
     Launcher wm_launcher;
     Switcher wm_switcher;
     Dock wm_dock;
+    WindowMenu wm_window_menu; //!< of the title bar, Alt + Space, a client
     DockReveal wm_dock_reveal{shell_theme.dock_reveal};
     DockMode dock_mode = DockMode::AutoHide;
     bool dock_revealed = false; //!< the pointer brought a hidden dock back

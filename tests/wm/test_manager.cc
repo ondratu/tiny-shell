@@ -2398,6 +2398,244 @@ TEST_F(ManagerTest, a_window_that_goes_away_ends_the_click_drag)
     EXPECT_FALSE(manager->is_click_drag());
 }
 
+// ---- the window menu ----
+
+namespace {
+
+// A GTK client asks for the window menu at the pointer
+void request_window_menu(::Window window, long x, long y)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = dsp()._GTK_SHOW_WINDOW_MENU;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = 0;
+    e.xclient.data.l[1] = x;
+    e.xclient.data.l[2] = y;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+std::vector<std::string> menu_labels(tiny::wm::DockMenu& menu)
+{
+    std::vector<std::string> labels;
+    for (size_t i = 0; i < menu.count(); ++i) {
+        labels.push_back(menu.item(i).get_text());
+    }
+    return labels;
+}
+
+// A click on an item (the pointer enters it first)
+void click_menu_item(tiny::wm::DockMenu& menu, size_t index)
+{
+    send(menu.item(index), EnterNotify);
+    send(menu.item(index), ButtonRelease);
+    pump_events();
+}
+
+} // namespace
+
+TEST_F(ManagerTest, a_gtk_client_can_ask_for_the_window_menu)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    EXPECT_TRUE(manager->wm_window_menu.is_open());
+    EXPECT_EQ(manager->wm_window_menu.target(), window);
+    EXPECT_EQ(attributes_of(manager->wm_window_menu.get_menu()).y, 80);
+}
+
+TEST_F(ManagerTest, the_window_menu_of_a_frame_has_the_items_of_a_window)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    EXPECT_EQ(
+            menu_labels(manager->wm_window_menu.get_menu()),
+            (std::vector<std::string>{"Maximize", "Minimize", "Move", "Resize",
+                                      "Roll Up", "Always on Top", "Close"}));
+}
+
+TEST_F(ManagerTest, the_menu_of_a_minimized_window_is_not_shown)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->minimize();
+
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    EXPECT_FALSE(manager->wm_window_menu.is_open());
+}
+
+TEST_F(ManagerTest, maximize_in_the_window_menu_maximizes_the_window)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 0);
+
+    EXPECT_TRUE(window->get_maximized());
+    EXPECT_FALSE(manager->wm_window_menu.is_open());
+}
+
+TEST_F(ManagerTest, always_on_top_in_the_window_menu_puts_the_window_on_top)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 5);
+
+    EXPECT_TRUE(window->is_above());
+}
+
+TEST_F(ManagerTest, roll_up_in_the_window_menu_shades_the_window)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 4);
+
+    EXPECT_TRUE(window->is_shaded());
+}
+
+TEST_F(ManagerTest, move_in_the_window_menu_moves_the_window_until_a_click)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 2);
+
+    EXPECT_EQ(manager->dragged, window);
+    EXPECT_TRUE(manager->is_click_drag());
+    manager->end_click_drag(false);
+}
+
+TEST_F(ManagerTest, resize_in_the_window_menu_resizes_the_window_until_a_click)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 3);
+
+    EXPECT_EQ(manager->dragged, window);
+    manager->end_click_drag(false);
+}
+
+TEST_F(ManagerTest, close_in_the_window_menu_closes_the_window)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    run_loop();
+    pump_events();
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    click_menu_item(manager->wm_window_menu.get_menu(), 6);
+
+    XEvent e;
+    ASSERT_TRUE(c.message(e));
+    EXPECT_EQ(e.xclient.data.l[0], static_cast<long>(dsp().WM_DELETE_WINDOW));
+}
+
+TEST_F(ManagerTest, a_window_that_goes_away_closes_its_menu)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+    ASSERT_TRUE(manager->wm_window_menu.is_open());
+
+    manager->unmanage(c.window, true);
+
+    EXPECT_FALSE(manager->wm_window_menu.is_open());
+}
+
+TEST_F(ManagerTest, the_window_menu_action_opens_the_menu_of_the_active_window)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    window->set_focus();
+    ASSERT_EQ(manager->active, window);
+
+    manager->actions.run("window-menu");
+
+    EXPECT_TRUE(manager->wm_window_menu.is_open());
+    EXPECT_EQ(manager->wm_window_menu.target(), window);
+}
+
+TEST_F(ManagerTest, alt_space_opens_the_window_menu)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->set_focus();
+    XKeyEvent key = {};
+    key.keycode = XKeysymToKeycode(dsp(), XK_space);
+    key.state = Mod1Mask;
+
+    manager->on_key_press(key);
+
+    EXPECT_TRUE(manager->wm_window_menu.is_open());
+    EXPECT_TRUE(manager->key_done);
+}
+
+TEST_F(ManagerTest, the_window_menu_action_needs_an_active_window)
+{
+    start();
+
+    manager->actions.run("window-menu");
+
+    EXPECT_FALSE(manager->wm_window_menu.is_open());
+}
+
 TEST_F(ManagerTest, the_client_is_told_its_place_when_the_drag_ends)
 {
     start();

@@ -149,6 +149,10 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
 
     wm_launcher.set_icons(&wm_icons);
     wm_launcher.realize(root_arg, 0, 0);
+    wm_window_menu.realize(root_arg);
+    wm_window_menu.on_action = [this](Window& window, WindowMenuAction action) {
+        run_window_menu_action(window, action);
+    };
     wm_launcher.set_events();
     wm_launcher.begin_startup = [this](const xdg::Application& app) {
         return begin_startup(app);
@@ -314,6 +318,7 @@ void Manager::register_actions()
     actions.add("run-dialog", [this] { wm_run.popup(); });
     actions.add("next-window", [this] { activate_next_window(); });
     actions.add("prev-window", [this] { activate_prev_window(); });
+    actions.add("window-menu", [this] { open_active_window_menu(); });
     actions.add("show-desktop", [this] { show_desktop(!showing_desktop); });
     actions.add("theme-dark", [this] { set_variant(Variant::Dark); });
     actions.add("theme-light", [this] { set_variant(Variant::Light); });
@@ -340,6 +345,7 @@ void Manager::set_variant(Variant variant)
     wm_dock.restyle();
     wm_dock.get_menu().restyle();
     wm_dock.get_windows_menu().restyle();
+    wm_window_menu.get_menu().restyle();
     wm_launcher.restyle();
     wm_run.restyle();
     wm_unresponsive.restyle();
@@ -1273,6 +1279,66 @@ void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
                        static_cast<int>(e.data.l[1]));
 }
 
+void Manager::open_window_menu(Window* window, int x_root, int y_root)
+{
+    if (window->get_minimized()) {
+        return;
+    }
+    wm_window_menu.popup(*window, x_root, y_root);
+}
+
+void Manager::open_active_window_menu()
+{
+    if (!active || active->get_minimized()) {
+        return;
+    }
+    XWindowAttributes frame;
+    if (!XGetWindowAttributes(display, active->frame(), &frame)) {
+        return;
+    }
+    open_window_menu(active, frame.x, frame.y + active->frame_extents().top);
+}
+
+void Manager::run_window_menu_action(Window& window, WindowMenuAction action)
+{
+    using Action = WindowMenuAction;
+    if (action != Action::Minimize && action != Action::Close) {
+        window.set_focus(); // the menu had it
+    }
+    switch (action) {
+        case Action::Restore:
+            window.restore();
+            break;
+        case Action::Maximize:
+            window.maximize();
+            break;
+        case Action::Minimize:
+            window.minimize();
+            break;
+        case Action::Move:
+            start_click_drag(&window, false);
+            break;
+        case Action::Resize:
+            start_click_drag(&window, true);
+            break;
+        case Action::RollUp:
+            window.shade(true);
+            break;
+        case Action::RollDown:
+            window.shade(false);
+            break;
+        case Action::AlwaysOnTop:
+            window.set_above(true);
+            break;
+        case Action::NotAlwaysOnTop:
+            window.set_above(false);
+            break;
+        case Action::Close:
+            window.close();
+            break;
+    }
+}
+
 bool Manager::may_drag(const Window& window, unsigned edges)
 {
     return edges ? window.is_resizable() && !window.get_maximized() &&
@@ -1577,6 +1643,9 @@ void Manager::connect_window(Window* window)
             [this, window](const XEvent&) { on_window_reframe(window); });
     window->on_move_resize_request.connect([this, window](const XEvent& e) {
         start_move_resize(window, e.xclient);
+    });
+    window->on_window_menu_request.connect([this, window](const XEvent& e) {
+        open_window_menu(window, e.xbutton.x_root, e.xbutton.y_root);
     });
     window->on_modifier_drag.connect([this](const XEvent&) {
         super_down = false; // Super was used to move a window, not to open
@@ -2146,6 +2215,8 @@ void Manager::grab_shortcuts(bool grab)
     add(key_of(XK_Tab), ShiftMask | Mod1Mask);
     // Alt + F2
     add(key_of(XK_F2), Mod1Mask);
+    // Alt + Space, the window menu
+    add(key_of(XK_space), Mod1Mask);
     // Super alone opens the launcher, so a shortcut with Super is not passed
     // to an application
     add(key_of(XK_Super_L), 0);
@@ -2326,6 +2397,13 @@ void Manager::on_key_press(const XKeyEvent& xkey)
         key_done = true;
         return;
     }
+    /* Alt + Space, the window menu of the active window */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_space) &&
+        xkey.state & Mod1Mask) {
+        actions.run("window-menu");
+        key_done = true;
+        return;
+    }
     /* Super, the launcher opens when the key is released */
     if (is_super(xkey.keycode)) {
         super_down = true;
@@ -2470,6 +2548,7 @@ void Manager::unmanage(::Window child, bool alive, bool reframing)
     if (dragged == window) {
         stop_move_resize(false); // it is gone, or comes back in a new frame
     }
+    wm_window_menu.forget(window);
 
     Window* parent = parent_of(window);
     // the dialogs go with the window they belong to
