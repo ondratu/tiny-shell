@@ -92,7 +92,7 @@ class Client : public tiny::Container, public Window {
 
     //! The menu button or the right button on the title bar: ask for the
     //! window menu where the pointer is
-    void on_menu_click(tiny::Object* o, const XEvent& e, void* data);
+    void on_menu_click(const tiny::Object* o, const XEvent& e, void* data);
 
     void on_minimize_click(tiny::Object* o, const XEvent& e, void* data);
 

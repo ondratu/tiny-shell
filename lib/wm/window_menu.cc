@@ -67,10 +67,9 @@ void WindowMenu::realize(::Window root)
     menu.realize(root);
     menu.on_item = [this](size_t index) {
         Window* window = open_for;
-        const WindowMenuAction action = index < items.size()
-                                                ? items[index].action
-                                                : WindowMenuAction::Close;
         const bool valid = window != nullptr && index < items.size();
+        const WindowMenuAction action =
+                valid ? items[index].action : WindowMenuAction::Move;
         menu.unmap();
         if (valid && on_action) {
             on_action(*window, action);
@@ -81,12 +80,15 @@ void WindowMenu::realize(::Window root)
 
 void WindowMenu::popup(Window& window, int x_root, int y_root)
 {
-    items = window_menu_items(window_menu_state(window));
-    if (items.empty()) { // a context menu is shown only when it has something
+    std::vector<WindowMenuItem> offered =
+            window_menu_items(window_menu_state(window));
+    if (offered.empty()) { // a context menu is shown only when it has something
         return;
     }
+    items = std::move(offered);
     menu.unmap();
     std::vector<std::string> labels;
+    labels.reserve(items.size());
     for (const WindowMenuItem& item : items) {
         labels.push_back(item.label);
     }

@@ -55,7 +55,9 @@ void TitleBox::on_button_press(const XEvent& e, void*)
 void TitleBox::on_button_release(const XEvent& e, void*)
 {
     if (e.xbutton.button == Button3) {
-        on_context_menu(this, e);
+        if (!(e.xbutton.state & Button1Mask)) { // not in the middle of a drag
+            on_context_menu(this, e);
+        }
         return;
     }
     XUngrabPointer(display, CurrentTime);
@@ -117,6 +119,9 @@ void Header::set_title(const std::string& title_arg)
 
 void Header::set_left_inset(int inset)
 {
+    if (inset == left_inset) {
+        return;
+    }
     left_inset = inset;
     if (is_maped) {
         on_expose(XEvent(), nullptr);

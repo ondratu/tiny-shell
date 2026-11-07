@@ -2263,7 +2263,7 @@ TEST_F(ManagerTest, a_window_is_moved_by_the_pointer_until_a_click)
     // the pointer did not have to move first
     EXPECT_EQ(attributes_of(window->frame()).x, before.x + 30);
     EXPECT_EQ(attributes_of(window->frame()).y, before.y + 20);
-    EXPECT_TRUE(manager->is_click_drag());
+    EXPECT_TRUE(manager->drag_by_click);
     manager->end_click_drag(false);
     EXPECT_EQ(manager->dragged, nullptr);
     EXPECT_EQ(attributes_of(window->frame()).x, before.x + 30);
@@ -2316,7 +2316,7 @@ TEST_F(ManagerTest, a_click_ends_the_drag_and_its_release_frees_the_pointer)
     send_to_root(press, ButtonPressMask);
     run_loop();
     EXPECT_EQ(manager->dragged, nullptr);
-    EXPECT_FALSE(manager->is_click_drag());
+    EXPECT_FALSE(manager->drag_by_click);
     EXPECT_TRUE(manager->release_pending);
 
     send_to_root(release, ButtonReleaseMask);
@@ -2395,7 +2395,7 @@ TEST_F(ManagerTest, a_window_that_goes_away_ends_the_click_drag)
     manager->unmanage(c.window, true);
 
     EXPECT_EQ(manager->dragged, nullptr);
-    EXPECT_FALSE(manager->is_click_drag());
+    EXPECT_FALSE(manager->drag_by_click);
 }
 
 // ---- the window menu ----
@@ -2421,6 +2421,7 @@ void request_window_menu(::Window window, long x, long y)
 std::vector<std::string> menu_labels(tiny::wm::DockMenu& menu)
 {
     std::vector<std::string> labels;
+    labels.reserve(menu.count());
     for (size_t i = 0; i < menu.count(); ++i) {
         labels.push_back(menu.item(i).get_text());
     }
@@ -2443,7 +2444,7 @@ TEST_F(ManagerTest, a_gtk_client_can_ask_for_the_window_menu)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
 
     request_window_menu(c.window, 100, 80);
     run_loop();
@@ -2489,7 +2490,7 @@ TEST_F(ManagerTest, maximize_in_the_window_menu_maximizes_the_window)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_window_menu(c.window, 100, 80);
     run_loop();
 
@@ -2505,7 +2506,7 @@ TEST_F(ManagerTest, always_on_top_in_the_window_menu_puts_the_window_on_top)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_window_menu(c.window, 100, 80);
     run_loop();
 
@@ -2520,7 +2521,7 @@ TEST_F(ManagerTest, roll_up_in_the_window_menu_shades_the_window)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_window_menu(c.window, 100, 80);
     run_loop();
 
@@ -2535,14 +2536,14 @@ TEST_F(ManagerTest, move_in_the_window_menu_moves_the_window_until_a_click)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_window_menu(c.window, 100, 80);
     run_loop();
 
     click_menu_item(manager->wm_window_menu.get_menu(), 2);
 
     EXPECT_EQ(manager->dragged, window);
-    EXPECT_TRUE(manager->is_click_drag());
+    EXPECT_TRUE(manager->drag_by_click);
     manager->end_click_drag(false);
 }
 
@@ -2552,7 +2553,7 @@ TEST_F(ManagerTest, resize_in_the_window_menu_resizes_the_window_until_a_click)
     const FakeClient& c = add_client();
     run_loop();
     pump_events();
-    WmWindow* window = manager->wm_windows[c.window];
+    const WmWindow* window = manager->wm_windows[c.window];
     request_window_menu(c.window, 100, 80);
     run_loop();
 
@@ -2625,6 +2626,23 @@ TEST_F(ManagerTest, alt_space_opens_the_window_menu)
 
     EXPECT_TRUE(manager->wm_window_menu.is_open());
     EXPECT_TRUE(manager->key_done);
+}
+
+TEST_F(ManagerTest, no_window_menu_opens_during_a_click_drag)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    manager->start_click_drag(window, false);
+
+    request_window_menu(c.window, 100, 80);
+    run_loop();
+
+    EXPECT_FALSE(manager->wm_window_menu.is_open());
+    EXPECT_EQ(manager->dragged, window);
+    manager->end_click_drag(false);
 }
 
 TEST_F(ManagerTest, the_window_menu_action_needs_an_active_window)

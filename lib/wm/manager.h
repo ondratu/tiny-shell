@@ -494,10 +494,6 @@ class Manager : public tiny::Object {
     //! May the pointer move (no edges) or resize the window by `edges`
     static bool may_drag(const Window& window, unsigned edges);
 
-    //! The pointer is held by a click drag; the click that ends it is not
-    //! over, its release is still to be swallowed
-    bool is_click_drag() const { return drag_by_click; }
-
     //! A click, a key or the end: finish (`cancel` false) or undo the drag
     void end_click_drag(bool cancel);
 

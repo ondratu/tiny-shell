@@ -1142,6 +1142,9 @@ void Manager::main_loop()
                 end_click_drag(false);
                 continue;
             }
+            if (event.type == KeyPress || event.type == KeyRelease) {
+                continue; // no switcher or menu while the pointer is held
+            }
         }
         if (release_pending && event.type == ButtonRelease) {
             release_pending = false;
@@ -1281,7 +1284,8 @@ void Manager::start_move_resize(Window* window, const XClientMessageEvent& e)
 
 void Manager::open_window_menu(Window* window, int x_root, int y_root)
 {
-    if (window->get_minimized()) {
+    // not in the middle of a move or resize, which holds the pointer
+    if (window->get_minimized() || dragged) {
         return;
     }
     wm_window_menu.popup(*window, x_root, y_root);
@@ -1387,7 +1391,11 @@ void Manager::start_click_drag(Window* window, bool resize)
                   &unused, &buttons);
     if (resize) {
         XWindowAttributes frame;
-        XGetWindowAttributes(display, window->frame(), &frame);
+        if (!XGetWindowAttributes(display, window->frame(), &frame)) {
+            XUngrabKeyboard(display, CurrentTime);
+            XUngrabPointer(display, CurrentTime);
+            return; // the window is gone
+        }
         x = frame.x + frame.width + frame.border_width;
         y = frame.y + frame.height + frame.border_width;
     }
