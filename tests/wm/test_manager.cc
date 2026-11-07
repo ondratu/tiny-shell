@@ -1265,6 +1265,74 @@ TEST_F(ManagerTest, the_restack_requests_that_are_not_honored_change_nothing)
     EXPECT_EQ(stacking_order(), before);
 }
 
+// ---- _NET_WM_FULLSCREEN_MONITORS ----
+
+namespace {
+
+// A client asks for the monitors of the edges of its fullscreen window
+void request_fullscreen_monitors(::Window window, long top, long bottom,
+                                 long left, long right)
+{
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = window;
+    e.xclient.message_type = dsp()._NET_WM_FULLSCREEN_MONITORS;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = top;
+    e.xclient.data.l[1] = bottom;
+    e.xclient.data.l[2] = left;
+    e.xclient.data.l[3] = right;
+    e.xclient.data.l[4] = 1;
+    XSendEvent(dsp(), root_window(), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &e);
+    XSync(dsp(), False);
+}
+
+} // namespace
+
+TEST_F(ManagerTest,
+       the_monitors_of_a_fullscreen_window_are_kept_in_its_property)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->wm_windows[c.window]->fullscreen(true);
+
+    request_fullscreen_monitors(c.window, 0, 0, 0, 0);
+    run_loop();
+
+    EXPECT_EQ(c.cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS),
+              (std::vector<unsigned long>{0, 0, 0, 0}));
+    EXPECT_TRUE(manager->wm_windows[c.window]->has_fullscreen_span());
+}
+
+TEST_F(ManagerTest, a_monitor_that_is_not_there_is_not_used_for_fullscreen)
+{
+    start();
+    FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+
+    request_fullscreen_monitors(c.window, 0, 0, 0, 77);
+    request_fullscreen_monitors(c.window, -1, 0, 0, 0);
+    run_loop();
+
+    EXPECT_FALSE(manager->wm_windows[c.window]->has_fullscreen_span());
+    EXPECT_TRUE(c.cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS).empty());
+}
+
+TEST_F(ManagerTest, a_window_that_is_not_ours_gets_no_monitors_for_fullscreen)
+{
+    start();
+    FakeClient& c = add_client(false);
+
+    request_fullscreen_monitors(c.window, 0, 0, 0, 0);
+    run_loop();
+
+    EXPECT_TRUE(c.cardinals(dsp()._NET_WM_FULLSCREEN_MONITORS).empty());
+}
+
 // ---- _NET_SHOWING_DESKTOP ----
 
 namespace {
@@ -4998,7 +5066,8 @@ TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
           dsp()._NET_REQUEST_FRAME_EXTENTS, dsp()._NET_WM_STATE_ABOVE,
           dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
           dsp()._NET_SHOWING_DESKTOP, dsp()._NET_DESKTOP_NAMES,
-          dsp()._NET_MOVERESIZE_WINDOW, dsp()._NET_RESTACK_WINDOW}) {
+          dsp()._NET_MOVERESIZE_WINDOW, dsp()._NET_RESTACK_WINDOW,
+          dsp()._NET_WM_FULLSCREEN_MONITORS}) {
         EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
     }
 }

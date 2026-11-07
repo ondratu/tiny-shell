@@ -259,6 +259,10 @@ class Manager : public tiny::Object {
      */
     void show_desktop(bool show);
 
+    //! `_NET_WM_FULLSCREEN_MONITORS`: the fullscreen window covers the
+    //! monitors that the message names
+    void set_fullscreen_monitors(Window* window, const XClientMessageEvent& e);
+
     //! `_NET_RESTACK_WINDOW`: put the window over or under a sibling, or
     //! on top or at the bottom when there is none
     void restack_window(Window* window, const XClientMessageEvent& e);
