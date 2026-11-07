@@ -1398,6 +1398,8 @@ void Manager::start_click_drag(Window* window, bool resize)
         }
         x = frame.x + frame.width + frame.border_width;
         y = frame.y + frame.height + frame.border_width;
+        // the pointer goes to the corner it drags
+        XWarpPointer(display, None, root, 0, 0, 0, 0, x, y);
     }
     dragged = window;
     drag_by_click = true;
