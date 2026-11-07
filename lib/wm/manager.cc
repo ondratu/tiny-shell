@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdlib>
 #include <chrono>
 #include <cerrno>
 #include <cstdint>
@@ -1153,6 +1154,9 @@ void Manager::main_loop()
         }
         if (dragged && event.type == MotionNotify) {
             while (XCheckTypedEvent(display, MotionNotify, &event)) {}
+            if (check_anchor && !check_warp(event.xmotion)) {
+                continue;
+            }
             move_resize_to(event.xmotion.x_root, event.xmotion.y_root);
             continue;
         }
@@ -1412,7 +1416,27 @@ void Manager::start_click_drag(Window* window, bool resize)
     drag_button = 0;
     drag_start_x = x;
     drag_start_y = y;
+    click_edges = edges;
+    check_anchor = resize;
     window->begin_drag(edges, x, y);
+}
+
+bool Manager::check_warp(const XMotionEvent& motion)
+{
+    check_anchor = false;
+    // A warp is only a request: Xephyr and a pointer that a virtual machine
+    // sets from outside can leave the pointer where it was. The corner is
+    // not under it then, so the drag goes on from the pointer, relative to
+    // where it is, and the window does not jump to it.
+    constexpr int tolerance = 16;
+    if (std::abs(motion.x_root - drag_start_x) <= tolerance &&
+        std::abs(motion.y_root - drag_start_y) <= tolerance) {
+        return true;
+    }
+    drag_start_x = motion.x_root;
+    drag_start_y = motion.y_root;
+    dragged->begin_drag(click_edges, drag_start_x, drag_start_y);
+    return false;
 }
 
 void Manager::end_click_drag(bool cancel)

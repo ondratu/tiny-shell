@@ -438,7 +438,10 @@ The items depend on the window, and what the window cannot do is not listed:
 - **Move** and **Resize**: the window follows the pointer until you click (any
   of the three buttons), Escape puts it back. Moving does not need the pointer
   to go anywhere first, the window keeps its distance from it. Resizing moves
-  the pointer to the bottom right corner of the window, which then follows it;
+  the pointer to the bottom right corner of the window, which then follows it.
+  Where the X server does not let a program move the pointer (Xephyr, a
+  pointer that a virtual machine sets from outside), the size changes from
+  where the pointer is, without a jump;
 - **Roll Up** or **Roll Down**: the window is rolled up to its title bar (a
   double click on the title bar does the same);
 - **Always on Top** or **Not Always on Top**;

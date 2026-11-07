@@ -494,6 +494,13 @@ class Manager : public tiny::Object {
     //! May the pointer move (no edges) or resize the window by `edges`
     static bool may_drag(const Window& window, unsigned edges);
 
+    /**
+     * The first motion of a resize from the menu: the pointer is at the
+     * corner when the warp worked. When it is not, the drag starts from
+     * where the pointer is. False when the event only set the start.
+     */
+    bool check_warp(const XMotionEvent& motion);
+
     //! A click, a key or the end: finish (`cancel` false) or undo the drag
     void end_click_drag(bool cancel);
 
@@ -577,6 +584,8 @@ class Manager : public tiny::Object {
     bool drag_by_click =
             false; //!< a click ends the drag, see `start_click_drag`
     bool release_pending = false; //!< the release of the click that ended it
+    bool check_anchor = false;    //!< the first motion tells if the warp worked
+    unsigned click_edges = 0;     //!< of the click drag, 0: a move
     int drag_start_x = 0;         //!< where the pointer was (Escape goes back)
     int drag_start_y = 0;
     //! Is a pointer button held (a test replaces it)
