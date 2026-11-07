@@ -239,9 +239,9 @@ TEST_F(WindowMenuTest, a_window_that_goes_away_closes_its_menu)
 TEST_F(WindowMenuTest, another_window_going_away_leaves_the_menu_open)
 {
     const auto window = manage();
-    FakeClient other_client;
-    tiny::wm::Window other(other_client.window, root_window(), 0xFFFF,
-                           screen_area());
+    const FakeClient other_client;
+    const tiny::wm::Window other(other_client.window, root_window(), 0xFFFF,
+                                 screen_area());
     menu.popup(*window, 50, 40);
 
     menu.forget(&other);
@@ -252,7 +252,7 @@ TEST_F(WindowMenuTest, another_window_going_away_leaves_the_menu_open)
 TEST_F(WindowMenuTest, a_second_popup_replaces_the_first)
 {
     const auto window = manage();
-    FakeClient other_client;
+    const FakeClient other_client;
     tiny::wm::Window other(other_client.window, root_window(), 0xFFFF,
                            screen_area());
     menu.popup(*window, 50, 40);

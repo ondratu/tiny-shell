@@ -719,7 +719,7 @@ void Client::on_close_click(tiny::Object*, const XEvent&, void*)
     close();
 }
 
-void Client::on_menu_click(tiny::Object* o, const XEvent& e, void*)
+void Client::on_menu_click(const tiny::Object* o, const XEvent& e, void*)
 {
     if (o == &menu_btn) { // below the button, like any menu of a button
         XWindowAttributes frame;

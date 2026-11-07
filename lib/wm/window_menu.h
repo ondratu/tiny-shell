@@ -25,7 +25,7 @@ enum class WindowMenuAction {
 };
 
 struct WindowMenuItem {
-    WindowMenuAction action;
+    WindowMenuAction action = WindowMenuAction::Close;
     std::string label;
 };
 
