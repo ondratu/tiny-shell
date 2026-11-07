@@ -6,6 +6,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace tiny::wm {
 
@@ -92,7 +93,9 @@ class StartupNotification {
 
   private:
     std::map<std::string, StartupSequence> running; //!< by id
-    std::map<::Window, std::string> partial;        //!< texts not complete yet
+    //! texts not complete yet, with the number of their beginning
+    std::map<::Window, std::pair<unsigned long, std::string>> partial;
+    unsigned long begun = 0; //!< counts the beginnings
 };
 
 } // namespace tiny::wm
