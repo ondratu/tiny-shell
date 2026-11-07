@@ -2212,6 +2212,192 @@ TEST_F(ManagerTest, the_pointer_events_of_the_grab_drive_the_window)
     EXPECT_EQ(manager->dragged, nullptr);
 }
 
+// ---- the window menu: move and resize until a click ----
+
+namespace {
+
+// Where the pointer is
+std::pair<int, int> pointer_place()
+{
+    ::Window unused_window;
+    int x = 0;
+    int y = 0;
+    int unused;
+    unsigned int buttons;
+    XQueryPointer(dsp(), root_window(), &unused_window, &unused_window, &x, &y,
+                  &unused, &unused, &buttons);
+    return {x, y};
+}
+
+// The events of a grab come to the root; here they are sent by hand
+void listen_to_the_grab()
+{
+    XSelectInput(dsp(), root_window(),
+                 SubstructureNotifyMask | SubstructureRedirectMask |
+                         PointerMotionMask | ButtonPressMask |
+                         ButtonReleaseMask | KeyPressMask);
+}
+
+void send_to_root(XEvent& event, long mask)
+{
+    event.xany.window = root_window();
+    XSendEvent(dsp(), root_window(), False, mask, &event);
+}
+
+} // namespace
+
+TEST_F(ManagerTest, a_window_is_moved_by_the_pointer_until_a_click)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    const auto [px, py] = pointer_place();
+
+    manager->start_click_drag(window, false);
+    ASSERT_EQ(manager->dragged, window);
+    manager->move_resize_to(px + 30, py + 20);
+
+    // the pointer did not have to move first
+    EXPECT_EQ(attributes_of(window->frame()).x, before.x + 30);
+    EXPECT_EQ(attributes_of(window->frame()).y, before.y + 20);
+    EXPECT_TRUE(manager->is_click_drag());
+    manager->end_click_drag(false);
+    EXPECT_EQ(manager->dragged, nullptr);
+    EXPECT_EQ(attributes_of(window->frame()).x, before.x + 30);
+}
+
+TEST_F(ManagerTest,
+       a_window_is_resized_by_the_pointer_at_its_bottom_right_corner)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    const int corner_x = before.x + before.width + before.border_width;
+    const int corner_y = before.y + before.height + before.border_width;
+
+    manager->start_click_drag(window, true);
+    ASSERT_EQ(manager->dragged, window);
+    // the size follows the pointer from the corner, not from where it was
+    manager->move_resize_to(corner_x + 25, corner_y + 15);
+
+    const XWindowAttributes after = attributes_of(window->frame());
+    EXPECT_EQ(after.x, before.x);
+    EXPECT_EQ(after.y, before.y);
+    EXPECT_EQ(after.width, before.width + 25);
+    EXPECT_EQ(after.height, before.height + 15);
+    manager->end_click_drag(false);
+}
+
+TEST_F(ManagerTest, a_click_ends_the_drag_and_its_release_frees_the_pointer)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const auto [px, py] = pointer_place();
+    manager->start_click_drag(window, false);
+    listen_to_the_grab();
+
+    XEvent release = make_event(ButtonRelease);
+    release.xbutton.button = Button1;
+    send_to_root(release, ButtonReleaseMask);
+    run_loop();
+    EXPECT_EQ(manager->dragged, window); // the release of the menu click
+
+    XEvent press = make_event(ButtonPress);
+    press.xbutton.button = Button1;
+    send_to_root(press, ButtonPressMask);
+    run_loop();
+    EXPECT_EQ(manager->dragged, nullptr);
+    EXPECT_FALSE(manager->is_click_drag());
+    EXPECT_TRUE(manager->release_pending);
+
+    send_to_root(release, ButtonReleaseMask);
+    run_loop();
+    EXPECT_FALSE(manager->release_pending);
+    (void)px;
+    (void)py;
+}
+
+TEST_F(ManagerTest, the_wheel_does_not_end_the_drag)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    manager->start_click_drag(window, false);
+    listen_to_the_grab();
+
+    XEvent press = make_event(ButtonPress);
+    press.xbutton.button = Button4;
+    send_to_root(press, ButtonPressMask);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, window);
+    manager->end_click_drag(false);
+}
+
+TEST_F(ManagerTest, escape_puts_the_window_back)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    const XWindowAttributes before = attributes_of(window->frame());
+    const auto [px, py] = pointer_place();
+    manager->start_click_drag(window, false);
+    manager->move_resize_to(px + 50, py + 40);
+    listen_to_the_grab();
+
+    XEvent key = make_event(KeyPress);
+    key.xkey.keycode = XKeysymToKeycode(dsp(), XK_Escape);
+    send_to_root(key, KeyPressMask);
+    run_loop();
+
+    EXPECT_EQ(manager->dragged, nullptr);
+    EXPECT_EQ(attributes_of(window->frame()).x, before.x);
+    EXPECT_EQ(attributes_of(window->frame()).y, before.y);
+}
+
+TEST_F(ManagerTest, a_maximized_window_is_neither_moved_nor_resized_by_a_click)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    WmWindow* window = manager->wm_windows[c.window];
+    window->maximize();
+
+    manager->start_click_drag(window, false);
+    EXPECT_EQ(manager->dragged, nullptr);
+    manager->start_click_drag(window, true);
+    EXPECT_EQ(manager->dragged, nullptr);
+}
+
+TEST_F(ManagerTest, a_window_that_goes_away_ends_the_click_drag)
+{
+    start();
+    const FakeClient& c = add_client();
+    run_loop();
+    pump_events();
+    manager->start_click_drag(manager->wm_windows[c.window], false);
+    ASSERT_NE(manager->dragged, nullptr);
+
+    manager->unmanage(c.window, true);
+
+    EXPECT_EQ(manager->dragged, nullptr);
+    EXPECT_FALSE(manager->is_click_drag());
+}
+
 TEST_F(ManagerTest, the_client_is_told_its_place_when_the_drag_ends)
 {
     start();
@@ -5070,7 +5256,7 @@ TEST_F(ManagerTest, the_supported_list_has_what_the_manager_handles)
           dsp()._NET_WM_STATE_BELOW, dsp()._NET_WM_STATE_DEMANDS_ATTENTION,
           dsp()._NET_SHOWING_DESKTOP, dsp()._NET_DESKTOP_NAMES,
           dsp()._NET_MOVERESIZE_WINDOW, dsp()._NET_RESTACK_WINDOW,
-          dsp()._NET_WM_FULLSCREEN_MONITORS}) {
+          dsp()._NET_WM_FULLSCREEN_MONITORS, dsp()._GTK_SHOW_WINDOW_MENU}) {
         EXPECT_NE(std::count(atoms.begin(), atoms.end(), atom), 0);
     }
 }
