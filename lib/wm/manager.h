@@ -619,7 +619,7 @@ class Manager : public tiny::Object {
     std::list<Window*> wm_tops;    //!< in the order they came
     RecentList<Window*> wm_recent; //!< in the order they were focused
     std::list<Window*> wm_pager;
-    bool key_done;
+    bool key_done = false;
     bool super_down = false; //!< Super is held and nothing cancelled it
     bool running;
     const Selection* selection = nullptr;
