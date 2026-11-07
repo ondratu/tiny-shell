@@ -61,6 +61,17 @@ class MaximizeButton : public WindowButton {
     bool restore;
 };
 
+//! The button at the left edge of the title bar that opens the window menu
+class WindowMenuButton : public WindowButton {
+  public:
+    WindowMenuButton();
+
+    ~WindowMenuButton() override;
+
+  protected:
+    void on_expose(const XEvent& e, void* data) override;
+};
+
 class MinimizeButton : public WindowButton {
   public:
     MinimizeButton();

@@ -31,6 +31,7 @@ class Client : public tiny::Container, public Window {
     //! The icons of the buttons of the title bar; they must live longer
     void set_icons(SymbolicIcons* icons)
     {
+        menu_btn.set_icons(icons);
         cls_btn.set_icons(icons);
         min_btn.set_icons(icons);
         max_btn.set_icons(icons);
@@ -88,6 +89,10 @@ class Client : public tiny::Container, public Window {
 
     /* signal handlers */
     void on_close_click(tiny::Object* o, const XEvent& e, void* data);
+
+    //! The menu button or the right button on the title bar: ask for the
+    //! window menu where the pointer is
+    void on_menu_click(tiny::Object* o, const XEvent& e, void* data);
 
     void on_minimize_click(tiny::Object* o, const XEvent& e, void* data);
 
@@ -157,6 +162,10 @@ class Client : public tiny::Container, public Window {
     void show_size_units(int client_width, int client_height);
 
     //! The buttons the window has: what Motif hints and the type allow
+    bool has_menu_button() const
+    {
+        return !is_auxiliary() && (decorations & MotifWMHints::DECOR_MENU);
+    }
     bool has_close_button() const { return is_closable(); }
     bool has_minimize_button() const
     {
@@ -174,6 +183,7 @@ class Client : public tiny::Container, public Window {
     unsigned long last_click_time = 0;
 
     Header header;
+    WindowMenuButton menu_btn;
     CloseButton cls_btn;
     MinimizeButton min_btn;
     MaximizeButton max_btn;

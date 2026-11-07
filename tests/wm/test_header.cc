@@ -46,6 +46,32 @@ TEST(TitleBoxTest, drag_signals_follow_pointer_events)
     EXPECT_EQ(end.last_owner, &box);
 }
 
+TEST(TitleBoxTest, the_right_button_opens_the_menu_and_does_not_drag)
+{
+    tiny::wm::TitleBox box(100, 25);
+    Recorder begin;
+    Recorder end;
+    Recorder menu;
+    box.on_drag_begin.connect(begin.slot());
+    box.on_drag_end.connect(end.slot());
+    box.on_context_menu.connect(menu.slot());
+    box.realize(root_window(), 0, 0);
+
+    XEvent press = make_event(ButtonPress);
+    press.xbutton.button = Button3;
+    send(box.get_window(), press);
+    EXPECT_EQ(menu.calls, 0); // it opens when the button is released
+    XEvent release = make_event(ButtonRelease);
+    release.xbutton.button = Button3;
+    release.xbutton.x_root = 31;
+    send(box.get_window(), release);
+
+    EXPECT_EQ(begin.calls, 0);
+    EXPECT_EQ(end.calls, 0);
+    EXPECT_EQ(menu.calls, 1);
+    EXPECT_EQ(menu.last_event.xbutton.x_root, 31);
+}
+
 TEST(TitleBoxTest, mapped_title_box_can_grab_the_pointer)
 {
     tiny::wm::TitleBox box(100, 25);
@@ -222,6 +248,24 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
     EXPECT_GT(img.count_not(bg(), 24), 0u);
     for (int y = 0; y < 24; ++y) {
         EXPECT_EQ(img.at(0, y), bg()) << "row " << y; // not cut on the left
+    }
+}
+
+TEST_F(HeaderTest, the_title_does_not_start_before_the_left_inset)
+{
+    tiny::wm::Header h(60, 25);
+    h.realize(root_window(), 0, 0);
+    h.map_all();
+    h.set_title("A very long title that does not fit into the header");
+
+    h.set_left_inset(30);
+
+    const Image img = image_of(h);
+    EXPECT_GT(img.count_not(bg(), 24), 0u);
+    for (int x = 0; x < 30; ++x) {
+        for (int y = 0; y < 24; ++y) {
+            EXPECT_EQ(img.at(x, y), bg()) << x << "," << y; // room for a button
+        }
     }
 }
 

@@ -18,6 +18,8 @@ class TitleBox : public tiny::Widget {
     tiny::Signal on_drag_begin;
     tiny::Signal on_drag_end;
     tiny::Signal on_drag_motion;
+    //! The right button was clicked (the pointer is in the event)
+    tiny::Signal on_context_menu;
 
   protected:
     void on_button_press(const XEvent& e, void* data);
@@ -45,6 +47,9 @@ class Header : public tiny::Box {
 
     void set_disable(bool disable);
 
+    //! The title does not start before `inset` (a button at the left edge)
+    void set_left_inset(int inset);
+
     const tiny::Style& get_style() const override { return shell_theme.header; }
 
   protected:
@@ -52,6 +57,7 @@ class Header : public tiny::Box {
 
   private:
     std::string title;
+    int left_inset = 0;
 
     TitleBox title_box;
     const int screen; // XXX: this is zero for now
