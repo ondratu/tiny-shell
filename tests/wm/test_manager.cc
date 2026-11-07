@@ -5,6 +5,7 @@
 #include <X11/keysym.h>
 
 #include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <csignal>
@@ -41,6 +42,8 @@
 #endif
 
 using WmWindow = tiny::wm::Window;
+using tiny::wm::StartupNotification;
+using tiny::wm::StartupSequence;
 
 namespace {
 
@@ -6857,4 +6860,181 @@ TEST_F(TwoMonitorsTest, the_panel_does_not_reach_the_next_monitor)
     const XWindowAttributes panel = attributes_of(manager->wm_panel);
     EXPECT_EQ(panel.border_width, 0);
     EXPECT_LE(panel.x + panel.width, half);
+}
+
+// ---- startup notification ----
+
+class ManagerStartupTest : public ManagerTest {
+  protected:
+    void SetUp() override
+    {
+        std::filesystem::remove_all(root);
+        std::filesystem::create_directories(root / "applications");
+        std::ofstream(root / "applications" / "notifying.desktop")
+                << "[Desktop Entry]\nName=Notifying\nType=Application\n"
+                   "Exec=true\nStartupNotify=true\nStartupWMClass=Notifier\n";
+        std::ofstream(root / "applications" / "quiet.desktop")
+                << "[Desktop Entry]\nName=Quiet\nType=Application\n"
+                   "Exec=true\n";
+        std::ofstream(root / "applications" / "broken.desktop")
+                << "[Desktop Entry]\nName=Broken\nType=Application\n"
+                   "Exec=/nonexistent/program\nStartupNotify=true\n";
+    }
+
+    void TearDown() override { std::filesystem::remove_all(root); }
+
+    // A launcher (not the shell) says what it starts: the pieces of the text
+    // are client messages of 20 bytes to the root window
+    void announce(FakeClient& launcher, const std::string& text)
+    {
+        const std::string with_zero = text + '\0';
+        for (size_t at = 0; at < with_zero.size(); at += 20) {
+            XEvent e = {};
+            e.xclient.type = ClientMessage;
+            e.xclient.window = launcher.window;
+            e.xclient.message_type = at == 0 ? dsp()._NET_STARTUP_INFO_BEGIN
+                                             : dsp()._NET_STARTUP_INFO;
+            e.xclient.format = 8;
+            std::memcpy(e.xclient.data.b, with_zero.data() + at,
+                        std::min<size_t>(20, with_zero.size() - at));
+            XSendEvent(dsp(), root_window(), False, PropertyChangeMask, &e);
+        }
+        XSync(dsp(), False);
+    }
+
+    std::filesystem::path root =
+            std::filesystem::temp_directory_path() /
+            ("tiny-manager-startup-" + std::to_string(getpid()));
+    EnvVar data_home{"XDG_DATA_HOME", "/nonexistent"};
+    EnvVar data_dirs{"XDG_DATA_DIRS", root.string()};
+};
+
+TEST_F(ManagerStartupTest,
+       the_shell_starts_an_application_that_wants_to_be_seen)
+{
+    start();
+
+    ASSERT_TRUE(manager->wm_launcher.launch("notifying.desktop"));
+
+    ASSERT_EQ(manager->startup.sequences().size(), 1u);
+    const auto& sequence = manager->startup.sequences().begin()->second;
+    EXPECT_EQ(sequence.id.rfind("tiny-shell-", 0), 0u);
+    EXPECT_NE(sequence.id.find("_TIME"), std::string::npos);
+    EXPECT_EQ(sequence.name, "Notifying");
+    EXPECT_EQ(sequence.wmclass, "Notifier");
+    EXPECT_NE(manager->busy_cursor, None); // the cursor of waiting
+}
+
+TEST_F(ManagerStartupTest, an_application_that_does_not_ask_is_not_waited_for)
+{
+    start();
+
+    ASSERT_TRUE(manager->wm_launcher.launch("quiet.desktop"));
+
+    EXPECT_TRUE(manager->startup.sequences().empty());
+}
+
+TEST_F(ManagerStartupTest, an_application_that_does_not_start_is_forgotten)
+{
+    start();
+
+    EXPECT_FALSE(manager->wm_launcher.launch("broken.desktop"));
+
+    EXPECT_TRUE(manager->startup.sequences().empty());
+}
+
+TEST_F(ManagerStartupTest, the_first_window_with_the_id_ends_the_waiting)
+{
+    start();
+    ASSERT_TRUE(manager->wm_launcher.launch("notifying.desktop"));
+    const std::string id = manager->startup.sequences().begin()->first;
+    FakeClient& c = add_client(false);
+    c.set_utf8(dsp()._NET_STARTUP_ID, id);
+
+    c.map();
+    run_loop();
+
+    EXPECT_TRUE(manager->startup.sequences().empty());
+}
+
+TEST_F(ManagerStartupTest, a_window_of_another_application_does_not_end_it)
+{
+    start();
+    ASSERT_TRUE(manager->wm_launcher.launch("notifying.desktop"));
+    FakeClient& c = add_client(false);
+    c.set_utf8(dsp()._NET_STARTUP_ID, "another-launcher_TIME1");
+    c.set_class("other", "Other");
+
+    c.map();
+    run_loop();
+
+    EXPECT_EQ(manager->startup.sequences().size(), 1u);
+}
+
+TEST_F(ManagerStartupTest, a_window_without_the_id_ends_it_by_its_class)
+{
+    start();
+    ASSERT_TRUE(manager->wm_launcher.launch("notifying.desktop"));
+    FakeClient& c = add_client(false);
+    c.set_class("notifier", "Notifier");
+
+    c.map();
+    run_loop();
+
+    EXPECT_TRUE(manager->startup.sequences().empty());
+}
+
+TEST_F(ManagerStartupTest, another_launcher_can_start_and_end_a_sequence)
+{
+    start();
+    FakeClient& launcher = add_client(false);
+
+    announce(launcher, "new: ID=\"other_TIME5\" NAME=\"A long name\" "
+                       "WMCLASS=Other");
+    run_loop();
+    ASSERT_EQ(manager->startup.sequences().size(), 1u);
+    EXPECT_EQ(manager->startup.sequences().at("other_TIME5").name,
+              "A long name");
+
+    announce(launcher, "remove: ID=other_TIME5");
+    run_loop();
+    EXPECT_TRUE(manager->startup.sequences().empty());
+}
+
+TEST_F(ManagerStartupTest, a_sequence_that_nobody_ends_stops_after_a_while)
+{
+    start();
+    FakeClient& launcher = add_client(false);
+    announce(launcher, "new: ID=late");
+    run_loop();
+    ASSERT_EQ(manager->startup.sequences().size(), 1u);
+    const int wait = manager->next_timeout_ms();
+    EXPECT_GT(wait, 0);
+    EXPECT_LE(wait, 15000);
+
+    // the sequence began a long time ago
+    StartupSequence old;
+    old.id = "old";
+    manager->startup.begin(old, StartupNotification::Clock::now() -
+                                        std::chrono::seconds(60));
+    manager->check_startup();
+
+    EXPECT_FALSE(manager->startup.sequences().count("old"));
+    EXPECT_TRUE(manager->startup.sequences().count("late"));
+}
+
+TEST_F(ManagerStartupTest, a_message_that_is_not_text_is_ignored)
+{
+    start();
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = root_window();
+    e.xclient.message_type = dsp()._NET_STARTUP_INFO_BEGIN;
+    e.xclient.format = 32;
+    XSendEvent(dsp(), root_window(), False, PropertyChangeMask, &e);
+    XSync(dsp(), False);
+
+    run_loop();
+
+    EXPECT_TRUE(manager->startup.sequences().empty());
 }

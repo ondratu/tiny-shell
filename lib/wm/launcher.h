@@ -129,6 +129,16 @@ class Launcher : public tiny::Popover {
     /// launcher. False when it is not installed or does not start.
     bool launch(const std::string& id);
 
+    /**
+     * The application is about to start: the owner makes the id for the
+     * startup notification (`DESKTOP_STARTUP_ID`) and starts to watch for its
+     * window. Asked only for an application with `StartupNotify=true`.
+     */
+    std::function<std::string(const xdg::Application&)> begin_startup;
+
+    /// The application did not start: the id of `begin_startup` is not needed
+    std::function<void(const std::string&)> cancel_startup;
+
     /// The names of the actions of the application (empty when it has none or
     /// is not installed), in the order of the desktop file.
     std::vector<std::string> action_names(const std::string& id);

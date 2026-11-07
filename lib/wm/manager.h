@@ -21,6 +21,7 @@
 #include "wm/launcher.h"
 #include "wm/monitor_label.h"
 #include "wm/monitors.h"
+#include "wm/startup.h"
 #include "wm/run_dialog.h"
 #include "wm/switcher.h"
 #include "wm/unresponsive_dialog.h"
@@ -227,6 +228,24 @@ class Manager : public tiny::Object {
 
     //! Milliseconds the loop may sleep: the pings and the timers
     int next_timeout_ms() const;
+
+    /**
+     * @short The shell starts an application that tells when it has started
+     * (`StartupNotify`): the id for `DESKTOP_STARTUP_ID`.
+     *
+     * The "busy" cursor shows until its first window comes, the application
+     * (or the launcher) says it is done, or `StartupNotification::timeout`.
+     */
+    std::string begin_startup(const xdg::Application& app);
+
+    //! A window came: the application it belongs to has started
+    void note_started(::Window child);
+
+    //! Drop the sequences that took too long
+    void check_startup();
+
+    //! The cursor of the root window is the "busy" one while something starts
+    void update_busy_cursor();
 
     //! Ping the windows, mark those that did not answer in time and ask the
     //! user about the ones that do not respond for long
@@ -501,6 +520,10 @@ class Manager : public tiny::Object {
     ::Window root;
     XErrorHandler old_error_handler = nullptr;
     ::Window check_window = None; //!< `_NET_SUPPORTING_WM_CHECK`
+    StartupNotification startup;  //!< the applications that are starting
+    unsigned startup_serial = 0;  //!< makes the ids of the shell different
+    Cursor arrow_cursor = None;   //!< of the root window
+    Cursor busy_cursor = None;    //!< while an application starts
 
     SymbolicIcons wm_icons{display, root, xdg::default_data_dirs()};
     Panel wm_panel;

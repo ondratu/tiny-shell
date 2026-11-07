@@ -275,8 +275,15 @@ void Launcher::run(Object* o, const XEvent& e, void* data)
 
 bool Launcher::start(const xdg::Application& app, std::string_view exec)
 {
-    if (xdg::launch(app, {}, terminal, exec) < 0) {
+    std::string startup_id;
+    if (app.entry.startup_notify && begin_startup) {
+        startup_id = begin_startup(app);
+    }
+    if (xdg::launch(app, {}, terminal, exec, startup_id) < 0) {
         const int error = errno;
+        if (!startup_id.empty() && cancel_startup) {
+            cancel_startup(startup_id);
+        }
         auto argv = xdg::expand_exec(app, {}, exec);
         if (app.entry.terminal && !terminal.empty()) {
             argv = terminal; // the program that did not start

@@ -66,8 +66,8 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     XSetWindowBackground(display_arg, root_arg, shell_theme.root_background);
     XSync(display_arg, True);
 
-    XDefineCursor(display_arg, root_arg,
-                  XCreateFontCursor(display_arg, XC_arrow));
+    arrow_cursor = XCreateFontCursor(display_arg, XC_arrow);
+    XDefineCursor(display_arg, root_arg, arrow_cursor);
 
     ::Window rv_root;
     ::Window rv_parent;
@@ -148,6 +148,13 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_launcher.set_icons(&wm_icons);
     wm_launcher.realize(root_arg, 0, 0);
     wm_launcher.set_events();
+    wm_launcher.begin_startup = [this](const xdg::Application& app) {
+        return begin_startup(app);
+    };
+    wm_launcher.cancel_startup = [this](const std::string& id) {
+        startup.finish(id);
+        update_busy_cursor();
+    };
     wm_launcher.keep_above(&wm_panel);
     wm_launcher.keep_above(&wm_dock);
 
@@ -273,6 +280,12 @@ Manager::~Manager()
     release_windows();
     clear_published();
     release_quit_signals();
+    XUndefineCursor(display, root);
+    for (const Cursor cursor : {arrow_cursor, busy_cursor}) {
+        if (cursor != None) {
+            XFreeCursor(display, cursor);
+        }
+    }
 
     if (old_error_handler) {
         XSetErrorHandler(old_error_handler);
@@ -336,9 +349,10 @@ void Manager::set_variant(Variant variant)
 void Manager::set_events()
 {
     // StructureNotify: the size of the screen (RandR) changes
+    // PropertyChange: the messages of the startup notification are sent with it
     XSelectInput(display, root,
                  SubstructureNotifyMask | SubstructureRedirectMask |
-                         StructureNotifyMask);
+                         StructureNotifyMask | PropertyChangeMask);
 
     grab_shortcuts(true);
 }
@@ -752,6 +766,16 @@ bool Manager::on_root_message(const XClientMessageEvent& e)
         }
         return true;
     }
+    if (e.message_type == dsp._NET_STARTUP_INFO_BEGIN ||
+        e.message_type == dsp._NET_STARTUP_INFO) {
+        if (e.format == 8) {
+            startup.feed(e.window, e.data.b,
+                         e.message_type == dsp._NET_STARTUP_INFO_BEGIN,
+                         StartupNotification::Clock::now());
+            update_busy_cursor();
+        }
+        return true;
+    }
     if (e.message_type == dsp._NET_WM_FULLSCREEN_MONITORS) {
         const auto found = wm_windows.find(e.window);
         if (found != wm_windows.end()) {
@@ -878,12 +902,88 @@ void Manager::set_power_commands(const std::string& restart,
 
 int Manager::next_timeout_ms() const
 {
-    const int pings = ping_timeout_ms();
-    const int others = timers.timeout_ms();
-    if (pings < 0 || others < 0) {
-        return std::max(pings, others);
+    int rv = ping_timeout_ms();
+    const auto join = [&rv](int ms) {
+        rv = (rv < 0 || ms < 0) ? std::max(rv, ms) : std::min(rv, ms);
+    };
+    join(timers.timeout_ms());
+    if (const auto at = startup.next_deadline()) {
+        const auto left = std::chrono::ceil<std::chrono::milliseconds>(
+                *at - StartupNotification::Clock::now());
+        join(static_cast<int>(std::max<long long>(left.count(), 0)));
     }
-    return std::min(pings, others);
+    return rv;
+}
+
+std::string Manager::begin_startup(const xdg::Application& app)
+{
+    // the program, the pid and the time make it different from the ones of
+    // other launchers; the time is the one of the last action of the user
+    const std::string id = "tiny-shell-" + std::to_string(getpid()) + "-" +
+                           std::to_string(++startup_serial) + "_TIME" +
+                           std::to_string(has_user_time ? last_user_time : 0);
+    StartupSequence sequence;
+    sequence.id = id;
+    sequence.name = app.entry.name;
+    sequence.icon = app.entry.icon;
+    sequence.wmclass = app.entry.startup_wm_class;
+    startup.begin(std::move(sequence), StartupNotification::Clock::now());
+    update_busy_cursor();
+    return id;
+}
+
+void Manager::note_started(::Window child)
+{
+    if (startup.sequences().empty()) {
+        return;
+    }
+    const tiny::Display& dsp = tiny::get_display();
+    bool ended = false;
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    if (XGetWindowProperty(display, child, dsp._NET_STARTUP_ID, 0, 64, False,
+                           dsp.UTF8_STRING, &type, &format, &count, &left,
+                           &data) == Success &&
+        data && format == 8 && count > 0) {
+        ended = startup.finish(
+                std::string(reinterpret_cast<const char*>(data), count));
+    }
+    if (data) {
+        XFree(data);
+    }
+    XClassHint klass = {};
+    if (!ended && XGetClassHint(display, child, &klass)) {
+        ended = startup.finish_class(klass.res_name ? klass.res_name : "",
+                                     klass.res_class ? klass.res_class : "");
+        if (klass.res_name) {
+            XFree(klass.res_name);
+        }
+        if (klass.res_class) {
+            XFree(klass.res_class);
+        }
+    }
+    if (ended) {
+        update_busy_cursor();
+    }
+}
+
+void Manager::check_startup()
+{
+    if (startup.expire(StartupNotification::Clock::now())) {
+        update_busy_cursor();
+    }
+}
+
+void Manager::update_busy_cursor()
+{
+    const bool busy = startup.busy();
+    if (busy && busy_cursor == None) {
+        busy_cursor = XCreateFontCursor(display, XC_watch);
+    }
+    XDefineCursor(display, root, busy ? busy_cursor : arrow_cursor);
 }
 
 void Manager::check_pings()
@@ -958,6 +1058,7 @@ bool Manager::wait_for_event()
             return false;
         }
         check_pings();
+        check_startup();
         timers.run_due();
         if (!running) {
             return false; // a timer asked to end the loop
@@ -2163,6 +2264,7 @@ void Manager::on_key_release(const XKeyEvent& xkey)
 Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
                         bool fresh)
 {
+    note_started(child); // also a window that is not framed
     std::set<Atom> properties;
     Window::get_properties(child, properties);
 
