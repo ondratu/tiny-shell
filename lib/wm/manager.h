@@ -484,9 +484,9 @@ class Manager : public tiny::Object {
      *
      * The window follows the pointer; a click of any of the three buttons
      * ends it and Escape puts the window back. A move needs no motion of the
-     * pointer first, the window keeps its distance from it. A resize takes
-     * the bottom right corner of the window to the pointer, so the pointer
-     * has to be moved to the corner first. Nothing happens when the window
+     * pointer first, the window keeps its distance from it. A resize puts
+     * the pointer on the bottom right corner of the window, which then
+     * follows it. Nothing happens when the window
      * may not be moved or resized, or the pointer is held by something else.
      */
     void start_click_drag(Window* window, bool resize);

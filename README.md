@@ -439,9 +439,8 @@ The items depend on the window, and what the window cannot do is not listed:
 - **Minimize**;
 - **Move** and **Resize**: the window follows the pointer until you click (any
   of the three buttons), Escape puts it back. Moving does not need the pointer
-  to go anywhere first, the window keeps its distance from it. Resizing takes
-  the bottom right corner of the window to the pointer, so move the pointer
-  to the corner you want;
+  to go anywhere first, the window keeps its distance from it. Resizing moves
+  the pointer to the bottom right corner of the window, which then follows it;
 - **Roll Up** or **Roll Down**: the window is rolled up to its title bar (a
   double click on the title bar does the same);
 - **Always on Top** or **Not Always on Top**;

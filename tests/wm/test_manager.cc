@@ -2283,6 +2283,8 @@ TEST_F(ManagerTest,
 
     manager->start_click_drag(window, true);
     ASSERT_EQ(manager->dragged, window);
+    // the pointer went to the corner
+    EXPECT_EQ(pointer_place(), std::make_pair(corner_x, corner_y));
     // the size follows the pointer from the corner, not from where it was
     manager->move_resize_to(corner_x + 25, corner_y + 15);
 
