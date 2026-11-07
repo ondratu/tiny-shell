@@ -3,6 +3,9 @@
 #include "wm/shell_theme.h"
 
 #include <memory>
+#include <vector>
+
+#include <X11/Xatom.h>
 
 #include "image/pixmap.h"
 #include "wm/dock.h"
@@ -1019,6 +1022,83 @@ TEST_F(DockTest, dock_stays_centered_when_it_grows)
     auto attrs = attributes_of(dock);
     EXPECT_EQ(attrs.x, (root.width / 2 - dock.get_width() / 2));
     EXPECT_EQ(attrs.y, ((root.height - dock.get_height() - border())));
+}
+
+namespace {
+
+std::vector<long> icon_geometry_of(const FakeClient& c)
+{
+    XSync(dsp(), False);
+    Atom type;
+    int format;
+    unsigned long count;
+    unsigned long left;
+    unsigned char* data = nullptr;
+    std::vector<long> values;
+    if (XGetWindowProperty(dsp(), c.window, dsp()._NET_WM_ICON_GEOMETRY, 0, 4,
+                           False, XA_CARDINAL, &type, &format, &count, &left,
+                           &data) == Success &&
+        data) {
+        const auto* first = reinterpret_cast<const long*>(data);
+        values.assign(first, first + count);
+        XFree(data);
+    }
+    return values;
+}
+
+} // namespace
+
+TEST_F(DockTest, a_window_is_told_where_its_icon_is)
+{
+    FakeClient c1;
+    FakeClient c2;
+    add(manage(c1));
+    add(manage(c2));
+    pump_events();
+
+    // the root coordinates of the icons, as the server has them
+    for (const FakeClient* c : {&c1, &c2}) {
+        const auto geometry = icon_geometry_of(*c);
+        ASSERT_EQ(geometry.size(), 4u);
+        bool found = false;
+        for (const ::Window kid : mapped_children_of(dock.get_window())) {
+            int x = 0;
+            int y = 0;
+            ::Window unused;
+            XTranslateCoordinates(dsp(), kid, root_window(), 0, 0, &x, &y,
+                                  &unused);
+            found = found ||
+                    (x == geometry[0] && y == geometry[1] &&
+                     geometry[2] == icon_size() && geometry[3] == icon_size());
+        }
+        EXPECT_TRUE(found);
+    }
+    EXPECT_NE(icon_geometry_of(c1)[0], icon_geometry_of(c2)[0]);
+}
+
+TEST_F(DockTest, a_window_that_leaves_the_dock_has_no_icon_geometry)
+{
+    FakeClient c;
+    WmWindow* window = manage(c);
+    add(window);
+    ASSERT_FALSE(icon_geometry_of(c).empty());
+
+    remove(window);
+
+    EXPECT_TRUE(icon_geometry_of(c).empty());
+}
+
+TEST_F(DockTest, the_icons_follow_the_dock_to_another_monitor)
+{
+    FakeClient c;
+    add(manage(c));
+    const long before = icon_geometry_of(c)[0];
+
+    dock.set_screen({100, 50, 800, 600});
+
+    const auto geometry = icon_geometry_of(c);
+    EXPECT_NE(geometry[0], before);
+    EXPECT_EQ(geometry[1], dock.area().y + border());
 }
 
 TEST_F(DockTest, remove_deletes_the_icon_and_shrinks_the_dock)

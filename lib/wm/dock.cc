@@ -10,6 +10,7 @@
 #include "wm/dock.h"
 #include "object.h"
 #include "wm/window.h"
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 
@@ -549,6 +550,9 @@ void Dock::remove(Window* window_arg)
         return;
     }
     tasks.erase(it);
+    // the window is not in the dock any more, or is gone (then nothing happens)
+    XDeleteProperty(display, window_arg->get_child(),
+                    tiny::get_display()._NET_WM_ICON_GEOMETRY);
     if (std::find(menu_windows.begin(), menu_windows.end(), window_arg) !=
         menu_windows.end()) {
         hide_menus(); // the list of the windows is not true any more
@@ -690,6 +694,23 @@ void Dock::rebuild()
         task_icon->map_all();
     }
     resize_to_children();
+}
+
+void Dock::publish_icon_geometry(const tiny::Rect& place)
+{
+    for (size_t i = 0; i < icons.size(); ++i) {
+        // the square of the icon, the dots of the windows are under it
+        const long geometry[] = {place.x + icon_x[i],
+                                 place.y + shell_theme.dock_border,
+                                 shell_theme.icon, shell_theme.icon};
+        for (const Window* task : icons[i]->get_windows()) {
+            XChangeProperty(display, task->get_child(),
+                            tiny::get_display()._NET_WM_ICON_GEOMETRY,
+                            XA_CARDINAL, 32, PropModeReplace,
+                            reinterpret_cast<const unsigned char*>(geometry),
+                            4);
+        }
+    }
 }
 
 size_t Dock::drop_place(const DockIcon& dragged, int x_root) const
@@ -956,6 +977,7 @@ void Dock::set_screen(const tiny::Rect& monitor)
     if (is_realized) {
         const tiny::Rect place = area();
         XMoveWindow(display, window, place.x, place.y);
+        publish_icon_geometry(place);
     }
 }
 
@@ -967,6 +989,7 @@ void Dock::resize(int w, int h)
         // the width is the old one until the server tells
         const tiny::Rect place = place_for(w, h);
         XMoveWindow(display, window, place.x, place.y);
+        publish_icon_geometry(place);
     }
 }
 

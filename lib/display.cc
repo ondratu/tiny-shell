@@ -147,6 +147,7 @@ Display::Display(::Display* display_arg):
     _NET_MOVERESIZE_WINDOW(
             XInternAtom(display_arg, "_NET_MOVERESIZE_WINDOW", 0)),
     _NET_RESTACK_WINDOW(XInternAtom(display_arg, "_NET_RESTACK_WINDOW", 0)),
+    _NET_WM_ICON_GEOMETRY(XInternAtom(display_arg, "_NET_WM_ICON_GEOMETRY", 0)),
     _GTK_FRAME_EXTENTS(XInternAtom(display_arg, "_GTK_FRAME_EXTENTS", 0)),
     display(display_arg),
     serial(++last_serial)
