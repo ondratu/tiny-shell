@@ -146,6 +146,7 @@ void Client::realize(::Window parent_arg, int x, int y)
                                  static_cast<tiny::Widget*>(&min_btn)}) {
         header.add(button, 0, 0, SouthEastGravity);
     }
+    header.add(&menu_btn, 0, 0); // at the left edge
     layout_buttons();
 
     XSetWindowBorderWidth(display, child, 0);
@@ -184,6 +185,13 @@ void Client::set_events(long mask)
     min_btn.on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
         on_minimize_click(o, e, d);
     });
+
+    menu_btn.on_click.connect([this](tiny::Object* o, const XEvent& e,
+                                     void* d) { on_menu_click(o, e, d); });
+    header.get_title_box()->on_context_menu.connect(
+            [this](tiny::Object* o, const XEvent& e, void* d) {
+                on_menu_click(o, e, d);
+            });
 
     cls_btn.on_click.connect([this](tiny::Object* o, const XEvent& e, void* d) {
         on_close_click(o, e, d);
@@ -226,6 +234,18 @@ void Client::map_all()
 void Client::layout_buttons()
 {
     const int padding = header.get_padding();
+    if (has_menu_button()) { // the title starts after it
+        XMoveWindow(display, menu_btn.get_window(), padding,
+                    padding - menu_btn.get_border());
+        if (header.get_maped()) {
+            menu_btn.map();
+        }
+        header.set_left_inset(2 * padding + menu_btn.get_width() +
+                              2 * menu_btn.get_border());
+    } else {
+        menu_btn.unmap();
+        header.set_left_inset(0);
+    }
     int x = header.get_width() - 1; // like Box::push_back
     const struct {
         tiny::Widget* button;
@@ -697,6 +717,26 @@ void Client::on_minimize_click(tiny::Object*, const XEvent&, void*)
 void Client::on_close_click(tiny::Object*, const XEvent&, void*)
 {
     close();
+}
+
+void Client::on_menu_click(tiny::Object* o, const XEvent& e, void*)
+{
+    if (o == &menu_btn) { // below the button, like any menu of a button
+        XWindowAttributes frame;
+        XWindowAttributes button;
+        if (!XGetWindowAttributes(display, window, &frame) ||
+            !XGetWindowAttributes(display, menu_btn.get_window(), &button)) {
+            return;
+        }
+        on_window_menu_request(
+                nullptr,
+                make_pointer_event(frame.x + frame.border_width + button.x,
+                                   frame.y + frame.border_width +
+                                           header_height()));
+        return;
+    }
+    on_window_menu_request(
+            nullptr, make_pointer_event(e.xbutton.x_root, e.xbutton.y_root));
 }
 
 void Client::on_maximize_click(tiny::Object*, const XEvent&, void*)

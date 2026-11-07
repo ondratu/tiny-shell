@@ -42,6 +42,9 @@ void TitleBox::set_events(long mask)
 
 void TitleBox::on_button_press(const XEvent& e, void*)
 {
+    if (e.xbutton.button == Button3) {
+        return; // the menu opens when it is released
+    }
     XGrabPointer(display, window, false,
                  ButtonPressMask | ButtonReleaseMask | Button1MotionMask,
                  GrabModeAsync, GrabModeAsync, None,
@@ -51,6 +54,10 @@ void TitleBox::on_button_press(const XEvent& e, void*)
 
 void TitleBox::on_button_release(const XEvent& e, void*)
 {
+    if (e.xbutton.button == Button3) {
+        on_context_menu(this, e);
+        return;
+    }
     XUngrabPointer(display, CurrentTime);
     on_drag_end(this, e);
 }
@@ -108,6 +115,14 @@ void Header::set_title(const std::string& title_arg)
     }
 }
 
+void Header::set_left_inset(int inset)
+{
+    left_inset = inset;
+    if (is_maped) {
+        on_expose(XEvent(), nullptr);
+    }
+}
+
 void Header::set_disable(bool disable)
 {
     is_disabled = disable;
@@ -142,7 +157,7 @@ void Header::on_expose(const XEvent&, void*)
     if ((x + extents.width) > get_end_offset()) {
         x = get_end_offset() - extents.width;
     }
-    x = std::max(x, get_padding());
+    x = std::max({x, get_padding(), left_inset});
 
     XSetWindowBackground(display, window, shell_theme.header.get_bg(state));
     XClearWindow(display, window);

@@ -16,6 +16,7 @@ class Probe : public tiny::wm::Client {
     using tiny::wm::Client::cls_btn;
     using tiny::wm::Client::header;
     using tiny::wm::Client::max_btn;
+    using tiny::wm::Client::menu_btn;
     using tiny::wm::Client::min_btn;
     using tiny::wm::Client::on_responding_changed;
     using tiny::wm::Client::shadow;
@@ -132,12 +133,12 @@ TEST_F(ClientTest, title_comes_from_the_client)
     EXPECT_EQ(win->header.get_title(), "hello");
 }
 
-TEST_F(ClientTest, header_has_three_buttons)
+TEST_F(ClientTest, header_has_four_buttons)
 {
     build();
 
     EXPECT_EQ(mapped_children_of(win->header.get_window()).size(),
-              4u); // + title
+              5u); // + the menu button and the title
 }
 
 TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
@@ -146,7 +147,7 @@ TEST_F(ClientTest, window_without_maximize_function_has_no_maximize_button)
           tiny::wm::MotifWMHints::FUNC_MINIMIZE |
           tiny::wm::MotifWMHints::FUNC_CLOSE);
 
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
 }
 
 TEST_F(ClientTest, window_without_minimize_function_has_no_minimize_button)
@@ -155,7 +156,7 @@ TEST_F(ClientTest, window_without_minimize_function_has_no_minimize_button)
           tiny::wm::MotifWMHints::FUNC_CLOSE);
 
     EXPECT_FALSE(win->is_minimizable());
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
 }
 
 TEST_F(ClientTest, window_without_close_function_has_no_close_button)
@@ -164,7 +165,7 @@ TEST_F(ClientTest, window_without_close_function_has_no_close_button)
           tiny::wm::MotifWMHints::FUNC_MINIMIZE);
 
     EXPECT_FALSE(win->is_closable());
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
 }
 
 TEST_F(ClientTest, decorations_decide_which_buttons_are_drawn)
@@ -291,13 +292,13 @@ TEST_F(ClientTest, a_maximized_window_follows_the_title_decoration)
 TEST_F(ClientTest, the_buttons_follow_a_change_of_the_motif_hints)
 {
     build();
-    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
+    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 5u);
 
     client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
                      tiny::wm::MotifWMHints::FUNC_CLOSE, 0);
     pump_events();
 
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 2u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
     EXPECT_FALSE(win->is_minimizable());
     EXPECT_FALSE(win->is_maximizable());
 }
@@ -307,13 +308,13 @@ TEST_F(ClientTest, the_buttons_come_back_when_the_motif_hints_are_gone)
     client.set_motif(tiny::wm::MotifWMHints::FLAG_FUNCTIONS,
                      tiny::wm::MotifWMHints::FUNC_CLOSE, 0);
     build(tiny::wm::MotifWMHints::FUNC_CLOSE);
-    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 2u);
+    ASSERT_EQ(mapped_children_of(win->header.get_window()).size(), 3u);
 
     XDeleteProperty(client.display, client.window, dsp()._MOTIF_WM_HINTS);
     client.sync();
     pump_events();
 
-    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 4u);
+    EXPECT_EQ(mapped_children_of(win->header.get_window()).size(), 5u);
 }
 
 TEST_F(ClientTest, a_change_of_the_motif_hints_keeps_a_fixed_size)
@@ -441,7 +442,7 @@ TEST_F(ClientTest, lowering_puts_the_frame_and_its_shadow_at_the_bottom)
 TEST_F(ClientTest, the_buttons_of_the_title_bar_draw_the_icons_they_are_given)
 {
     const IconFiles files({"window-close", "window-minimize", "window-maximize",
-                           "window-restore"});
+                           "window-restore", "open-menu"});
     tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
                                   {files.dir()});
     Probe* w = build();
@@ -449,6 +450,7 @@ TEST_F(ClientTest, the_buttons_of_the_title_bar_draw_the_icons_they_are_given)
     w->set_icons(&icons);
     for (const tiny::Widget* b : {static_cast<tiny::Widget*>(&w->cls_btn),
                                   static_cast<tiny::Widget*>(&w->min_btn),
+                                  static_cast<tiny::Widget*>(&w->menu_btn),
                                   static_cast<tiny::Widget*>(&w->max_btn)}) {
         send(*b, Expose);
         const int icon = tiny::wm::shell_theme.win_icon;
@@ -456,6 +458,73 @@ TEST_F(ClientTest, the_buttons_of_the_title_bar_draw_the_icons_they_are_given)
         EXPECT_EQ(img.at(icon / 2 + 5, icon / 2 + 5),
                   tiny::wm::shell_theme.button.normal_fg);
     }
+}
+
+// ---- the window menu ----
+
+TEST_F(ClientTest, the_menu_button_is_at_the_left_edge_of_the_title_bar)
+{
+    build();
+
+    const XWindowAttributes b = attributes_of(win->menu_btn.get_window());
+    EXPECT_EQ(b.map_state, IsViewable);
+    EXPECT_EQ(b.x, win->header.get_padding());
+}
+
+TEST_F(ClientTest, the_menu_decoration_shows_and_hides_the_menu_button)
+{
+    build();
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                     tiny::wm::MotifWMHints::DECOR_TITLE);
+    pump_events();
+    EXPECT_EQ(attributes_of(win->menu_btn.get_window()).map_state, IsUnmapped);
+
+    client.set_motif(tiny::wm::MotifWMHints::FLAG_DECORATIONS, 0,
+                     tiny::wm::MotifWMHints::DECOR_TITLE |
+                             tiny::wm::MotifWMHints::DECOR_MENU);
+    pump_events();
+    EXPECT_EQ(attributes_of(win->menu_btn.get_window()).map_state, IsViewable);
+}
+
+TEST_F(ClientTest, a_dialog_has_no_menu_button)
+{
+    client.set_atoms(dsp()._NET_WM_WINDOW_TYPE,
+                     {dsp()._NET_WM_WINDOW_TYPE_DIALOG});
+    build();
+
+    EXPECT_EQ(attributes_of(win->menu_btn.get_window()).map_state, IsUnmapped);
+}
+
+TEST_F(ClientTest, a_click_on_the_menu_button_asks_for_the_menu_below_it)
+{
+    build();
+    Recorder menu;
+    win->on_window_menu_request.connect(menu.slot());
+
+    click(win->menu_btn);
+
+    ASSERT_EQ(menu.calls, 1);
+    const XWindowAttributes f = frame();
+    EXPECT_EQ(menu.last_event.xbutton.x_root,
+              f.x + f.border_width + win->header.get_padding());
+    EXPECT_EQ(menu.last_event.xbutton.y_root,
+              f.y + f.border_width + header_height());
+}
+
+TEST_F(ClientTest, the_right_button_on_the_title_bar_asks_for_the_menu)
+{
+    build();
+    Recorder menu;
+    win->on_window_menu_request.connect(menu.slot());
+    XEvent e = pointer(120, 60, ButtonRelease);
+    e.xbutton.button = Button3;
+
+    win->header.get_title_box()->on_context_menu(win->header.get_title_box(),
+                                                 e);
+
+    ASSERT_EQ(menu.calls, 1);
+    EXPECT_EQ(menu.last_event.xbutton.x_root, 120);
+    EXPECT_EQ(menu.last_event.xbutton.y_root, 60);
 }
 
 TEST_F(ClientTest, create_places_a_window_under_the_panel)
