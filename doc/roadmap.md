@@ -17,9 +17,10 @@ repository, the D-Bus plan is in
 
 ## Could: nice to have
 
-- Virtual desktops (there is one desktop now)
+- Virtual desktops (there is one desktop now), with moving windows between them like GNOME
 - Plugins and scripting in Lua, as an optional build feature
 - Window snapping to the screen edges and half-screen maximize
+- Move and resize a window with Alt + drag
+- More in the settings: keyboard and mouse, logout dialog, autostart, default applications
 - A simple animation of minimizing, which can be turned off in the settings
 - Session management
-- Focus follows mouse as an option
