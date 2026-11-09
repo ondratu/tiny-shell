@@ -74,7 +74,7 @@ Checks: >
 #  modernize-use-trailing-return-type, modernize-use-nodiscard
 #                                         (style, not a defect)
 #  modernize-avoid-c-arrays               (X structures need C arrays)
-#  portability-avoid-pragma-once          (CONTRIBUTING.md chooses #pragma once)
+#  portability-avoid-pragma-once          (doc/developers/conventions.md chooses #pragma once)
 #  readability-identifier-length          (x, y, w, h, e, dsp are clear here)
 #  readability-implicit-bool-conversion   (Xlib returns int as bool)
 #  readability-magic-numbers              (pixel sizes of the drawing code)

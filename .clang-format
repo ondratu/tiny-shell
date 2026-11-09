@@ -1,4 +1,4 @@
-# The style of CONTRIBUTING.md: 4 spaces, braces on the same line.
+# The style of doc/developers/conventions.md: 4 spaces, braces on the same line.
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++17
