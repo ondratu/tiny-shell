@@ -19,3 +19,6 @@ compile_flags.txt
 # files of one machine, see examples/
 local/
 *.log
+
+# the web site, see doc/build.py
+build-site/
