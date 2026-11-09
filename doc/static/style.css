@@ -248,23 +248,24 @@ tbody tr:hover td { background: var(--bg-alt); }
 
 /* the comparison: a symbol in every cell */
 
-td.yes, td.no, td.plan { text-align: center; font-weight: 700; }
+td.yes, td.no, td.plan, td.maybe { text-align: center; font-weight: 700; }
 td.yes { color: var(--yes); }
 td.no { color: var(--no); font-weight: 400; }
 td.plan { color: var(--plan); }
+td.maybe { color: var(--no); font-weight: 400; }
 
 /* the column of tiny-shell is tinted from the head to the end */
-table:has(td.yes, td.no, td.plan) :is(th, td):nth-child(2) {
+table:has(td.yes, td.no, td.plan, td.maybe) :is(th, td):nth-child(2) {
   background: var(--hl);
   border-left: 2px solid var(--accent);
   border-right: 2px solid var(--accent);
 }
 
-table:has(td.yes, td.no, td.plan) th:not(:first-child) { text-align: center; }
-table:has(td.yes, td.no, td.plan) th:first-child { width: 36%; }
-table:has(td.yes, td.no, td.plan) th:not(:first-child) { padding-left: 0.5rem; padding-right: 0.5rem; }
-table:has(td.yes, td.no, td.plan) { min-width: 46rem; }
-table:has(td.yes, td.no, td.plan) tbody tr:hover td:nth-child(2) { background: var(--hl); }
+table:has(td.yes, td.no, td.plan, td.maybe) th:not(:first-child) { text-align: center; }
+table:has(td.yes, td.no, td.plan, td.maybe) th:first-child { width: 36%; }
+table:has(td.yes, td.no, td.plan, td.maybe) th:not(:first-child) { padding-left: 0.5rem; padding-right: 0.5rem; }
+table:has(td.yes, td.no, td.plan, td.maybe) { min-width: 46rem; }
+table:has(td.yes, td.no, td.plan, td.maybe) tbody tr:hover td:nth-child(2) { background: var(--hl); }
 
 /* the home page */
 

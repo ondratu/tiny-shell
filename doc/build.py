@@ -90,7 +90,8 @@ CARDS = [
      "compositor.", "developers/index.md"),
 ]
 
-SYMBOLS = {"✓": ("yes", "Yes"), "✗": ("no", "No"), "◔": ("plan", "Planned")}
+SYMBOLS = {"✓": ("yes", "Yes"), "✗": ("no", "No"), "◔": ("plan", "Planned"),
+           "?": ("maybe", "Undecided")}
 
 
 def title_of(md: str) -> str:
@@ -124,7 +125,7 @@ def post(body: str) -> str:
         css, word = SYMBOLS[m.group(1)]
         return ('<td class="%s"><p><span aria-hidden="true">%s</span>'
                 '<span class="sr-only">%s</span></p></td>' % (css, m.group(1), word))
-    body = re.sub(r"<td><p>([✓✗◔])</p></td>", cell, body)
+    body = re.sub(r"<td><p>([✓✗◔?])</p></td>", cell, body)
     # wide tables scroll inside their box, not the page
     body = re.sub(r"(<table\b.*?</table>)", r'<div class="table">\1</div>', body, flags=re.S)
     return body
