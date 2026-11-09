@@ -11,10 +11,9 @@
   --accent-fg: #ffffff;
   --code-bg: #f3f4f6;
   --yes: #1a7f37;
-  --yes-bg: #e6f4ea;
+  --hl: #eaf2fb;
   --no: #8a929b;
   --plan: #9a6700;
-  --plan-bg: #fff4d6;
   --icon-filter: none;
   color-scheme: light;
 }
@@ -30,11 +29,10 @@
     --accent-fg: #101114;
     --code-bg: #212328;
     --yes: #5cc277;
-    --yes-bg: #1c3025;
+    --hl: #1d2a3a;
     --no: #6b727b;
     --plan: #e3b341;
-    --plan-bg: #352c14;
-    --icon-filter: invert(1);
+      --icon-filter: invert(1);
     color-scheme: dark;
   }
 }
@@ -77,7 +75,7 @@ a:hover { text-decoration-thickness: 2px; }
 
 .brand {
   display: flex; align-items: center; gap: 0.5rem;
-  font-weight: 700; font-size: 1.2rem;
+  font-weight: 700; font-size: 1.2rem; white-space: nowrap; flex: none;
   color: var(--fg); text-decoration: none;
 }
 
@@ -255,13 +253,18 @@ td.yes { color: var(--yes); }
 td.no { color: var(--no); font-weight: 400; }
 td.plan { color: var(--plan); }
 
-table:has(td.yes, td.no, td.plan) :is(th, td):nth-child(2) { border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); }
-table td.yes:nth-child(2) { background: var(--yes-bg); }
-td.plan:nth-child(2) { background: var(--plan-bg); }
+/* the column of tiny-shell is tinted from the head to the end */
+table:has(td.yes, td.no, td.plan) :is(th, td):nth-child(2) {
+  background: var(--hl);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+}
 
 table:has(td.yes, td.no, td.plan) th:not(:first-child) { text-align: center; }
-table:has(td.yes, td.no, td.plan) { table-layout: fixed; min-width: 44rem; }
-table:has(td.yes, td.no, td.plan) th:first-child { width: 38%; }
+table:has(td.yes, td.no, td.plan) th:first-child { width: 36%; }
+table:has(td.yes, td.no, td.plan) th:not(:first-child) { padding-left: 0.5rem; padding-right: 0.5rem; }
+table:has(td.yes, td.no, td.plan) { min-width: 46rem; }
+table:has(td.yes, td.no, td.plan) tbody tr:hover td:nth-child(2) { background: var(--hl); }
 
 /* the home page */
 
