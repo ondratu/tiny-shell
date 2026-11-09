@@ -42,15 +42,15 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 mkdir -p "$OUT" "$WORK/config" "$WORK/shots"
-DISPLAY=:$DISPLAY_NUMBER
+DISPLAY=:${DISPLAY_NUMBER}
 export DISPLAY
 # The language of the dates in the panel, the same on every machine
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
-export XDG_CONFIG_HOME=$WORK/config
+export XDG_CONFIG_HOME="$WORK/config"
 # The icons and the desktop files of the repository first, then the ones of the
 # user (the favorites are found there)
-export XDG_DATA_DIRS=$ROOT/data:${XDG_DATA_HOME:-$HOME/.local/share}:/usr/local/share:/usr/share
-export PATH=$ROOT/build:$PATH
+export XDG_DATA_DIRS="$ROOT/data:${XDG_DATA_HOME:-$HOME/.local/share}:/usr/local/share:/usr/share"
+export PATH="$ROOT/build:$PATH"
 # kitty and other terminals that draw with OpenGL
 export LIBGL_ALWAYS_SOFTWARE=1 GDK_BACKEND=x11
 
@@ -67,6 +67,8 @@ session() {
     sleep 2
     case $TERMINAL in
     kitty)
+        # the inner shell expands the version, so the quotes are right
+        # shellcheck disable=SC2016
         kitty -o remember_window_size=no -o initial_window_width=80c \
             -o initial_window_height=22c -o background=#1e1f22 \
             -o foreground=#d8d8d8 -o font_size=11 -o hide_window_decorations=no \
