@@ -70,7 +70,7 @@ session() {
         kitty -o remember_window_size=no -o initial_window_width=80c \
             -o initial_window_height=22c -o background=#1e1f22 \
             -o foreground=#d8d8d8 -o font_size=11 -o hide_window_decorations=no \
-            sh -c 'printf "$ tiny-shell --version\ntiny-shell 0.1\n$ uname -sm\nLinux x86_64\n$ "; exec sh' \
+            sh -c 'printf "$ tiny-shell --version\n$(build/tiny-shell --version)\n$ uname -sm\nLinux x86_64\n$ "; exec sh' \
             >/dev/null 2>&1 &
         ;;
     *)

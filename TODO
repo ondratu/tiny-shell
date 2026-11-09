@@ -97,8 +97,9 @@ keys are ignored by the reader, so keys can be added without a new format.
   to be opened and registered again; for a directory compare `stat` after
   the event and rescan.
 - A separate library for this is fine if it is widespread and probably there
-  on every target system (it still needs a build switch, see CONTRIBUTING,
-  Dependencies); we do not need an own implementation of everything.
+  on every target system (it still needs a build switch, see
+  doc/developers/dependencies.md); we do not need an
+  own implementation of everything.
   Candidates to check: `libinotify-kqueue`, libuv, libevent, efsw.
 
 ### freedesktop.org: desktop entries and launcher
@@ -310,7 +311,7 @@ Things to discuss before they go to a section above.
 - Run the shell (panel, dock, launcher) as a separate process that uses only
   EWMH. It makes the window manager smaller and crash-proof, and tint2 and
   others could replace it, but the second process costs memory. Keep the
-  boundary clean (CONTRIBUTING.md, Architecture) and decide when EWMH is
+  boundary clean (doc/developers/architecture.md) and decide when EWMH is
   complete.
 - Themes: only two built-in, finely tuned themes (light and dark; they are
   there, `Style::colorize()` has the colors of both), no user themes and no

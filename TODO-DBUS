@@ -53,12 +53,12 @@ GLib, sdbus-c++ pulls in sd-bus; none of them fits.
   that exports methods and signals, proxy that calls them). `lib/wm` does not
   include `<dbus/dbus.h>`; with `DBUS=no` only an empty implementation is
   built. The tests use a fake bus, so they do not need a daemon.
-- **CONTRIBUTING.md and doc/developers/ have to change with it.** It says "No D-Bus ... required.
-  Everything extra is optional and off by default" and "Everything else needs
-  a discussion first". A build that finds libdbus-1 by itself is optional at
-  build time but not off by default. Update the goal 4 (CONTRIBUTING.md and
-  doc/developers/index.md) and doc/developers/dependencies.md in the same change
-  that adds `DBUS`.
+- **CONTRIBUTING.md and doc/developers/ have to change with it.** Goal 4
+  (CONTRIBUTING.md and doc/developers/index.md) says "No D-Bus ... required.
+  Everything extra is optional and off by default", and doc/developers/dependencies.md
+  says "Everything else needs a discussion first". A build that finds libdbus-1
+  by itself is optional at build time but not off by default, so update both in
+  the same change that adds `DBUS`.
 
 ## D-Bus services
 

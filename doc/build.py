@@ -116,7 +116,7 @@ def to_html(md: str) -> str:
     return parts["body"]
 
 
-def post(body: str, page: str) -> str:
+def post(body: str) -> str:
     # links to the other pages
     body = re.sub(r'href="([^":#]+)\.md(#[^"]*)?"', r'href="\1.html\2"', body)
     # a symbol of the comparison is a colored cell
@@ -235,7 +235,7 @@ def build(out: Path) -> int:
     for src in sources:
         md = (DOC / src).read_text(encoding="utf-8")
         page = src[:-3] + ".html"
-        body = post(to_html(md), src)
+        body = post(to_html(md))
         if src == "index.md":
             at = body.index('<section id="what-it-is">')
             body = body[:at] + hero(src) + "\n" + body[at:]
@@ -271,7 +271,6 @@ def build(out: Path) -> int:
         elif frag and dest.endswith(".html") and frag not in ids.get(dest, set()):
             print("%s: no anchor %s" % (page, href), file=sys.stderr)
             bad += 1
-    (out / ".nojekyll").write_text("")
     print("%d pages in %s" % (len(sources), out))
     return 1 if bad else 0
 
