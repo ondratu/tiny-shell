@@ -112,7 +112,11 @@ keys are ignored by the reader, so keys can be added without a new format.
 - Launcher (the Applications item of the main menu opens it): group entries
   by the main categories (`AudioVideo`, `Development`, `Education`, `Game`, `Graphics`,
   `Network`, `Office`, `Settings`, `System`, `Utility`); do not implement
-  `applications.menu` (XML merge rules), see the ideas at the end.
+  `applications.menu` (XML merge rules), see the ideas at the end. The wanted
+  look is the extension Applications Menu of GNOME Shell (the menu in the
+  panel: the categories in a column on the left, Favorites first, and the
+  applications of the category under the pointer on the right; a click starts
+  the application and closes the menu).
 - Launcher: the recently used applications in a file
   (`~/.cache/tiny-shell/recent`, now only in memory), a button for the
   launcher in the panel, `Super` as a modifier of other shortcuts (now a
@@ -221,7 +225,12 @@ next steps:
 - Virtual desktops: more than the one desktop that is published now
   (`_NET_NUMBER_OF_DESKTOPS`, `_NET_CURRENT_DESKTOP`, `_NET_WM_DESKTOP`,
   sticky windows work with it), switching, hiding the windows of the other
-  desktops; pager in the panel.
+  desktops; pager in the panel. Moving a window between desktops the way GNOME
+  does: Ctrl+Alt+Left/Right switches, Shift+Ctrl+Alt+Left/Right (or
+  Super+Shift+PageUp/PageDown) moves the active window with it, the window menu
+  has "Move to Workspace Left/Right" and "Always on Visible Workspace" (that is
+  the sticky state), and the desktops are dynamic (an empty one is always at
+  the end).
 - Lua scripting (optional build, `make LUA=1`, Lua 5.4): a `tiny` module with
   the action registry (`tiny.bind("Mod4+t", "exec:xterm")`,
   `tiny.action("name", fn)` = `ActionRegistry::add`), window events
@@ -246,9 +255,18 @@ next steps:
   resizing with the arrows (the keyboard directions of `_NET_WM_MOVERESIZE`:
   `SIZE_KEYBOARD` and `MOVE_KEYBOARD`), the menu of a minimized window from its icon in the
   dock.
+- Move and resize a window with Alt + drag anywhere in the window (Alt + left
+  button moves, Alt + right button resizes; Openbox, Fluxbox and Xfce have it).
+  The title bar and the window menu do it now. Take the code of the window menu
+  (`_NET_WM_MOVERESIZE`) and grab the buttons with `Mod1Mask` on the client.
+- More in `tiny-settings` (new sections, the model of `lib/app/settings_form.*`):
+  the keyboard and the mouse (the layout, the repeat of keys, the speed of the
+  pointer, the buttons for the left hand: `XkbSetControls`,
+  `XChangePointerControl`), a dialog of logout, restart and shutdown (`loginctl`
+  or `systemctl`, the commands in `[commands]`), the programs that start with
+  the session (autostart), and the default applications (terminal is there;
+  the browser and the file manager through `xdg-open` and `mimeapps.list`).
 - Session management / saving the layout.
-- Focus follows mouse as a configuration option (click to focus is the
-  default).
 - Startup notification, what is left (the shell and other launchers start a
   sequence, the pointer is busy until the window comes or 15 seconds pass, see
   doc/usage.md): the dock marks the icon of an application that is starting
