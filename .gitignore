@@ -22,3 +22,6 @@ local/
 
 # the web site, see doc/build.py
 build-site/
+
+# the private work list
+todo.txt
