@@ -75,6 +75,7 @@ python3 -m venv .venv && .venv/bin/pip install -r doc/requirements.txt
   shell in Xvfb with a configuration of its own; `FAVORITES` sets the
   applications in the dock, see the script), and the pictures are committed.
 - The comparison (`doc/comparison.md`) uses the symbols ✓ (has it), ✗ (does not
-  have it) and ◔ (planned for tiny-shell); the build colors them.
+  have it), ◔ (planned for tiny-shell) and ? (not decided); the build colors
+  them.
 - The workflow `.github/workflows/pages.yml` builds the site for every pull
   request and publishes it with GitHub Pages when `master` changes.
