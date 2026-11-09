@@ -40,7 +40,12 @@
     burger.setAttribute("aria-expanded", open ? "true" : "false");
   });
 
+  var width = 0;
+
   function fit() {
+    // a resize of the height only (the keyboard of a phone) leaves the menu as it is
+    if (window.innerWidth === width) return;
+    width = window.innerWidth;
     top.classList.remove("collapsed", "open");
     burger.setAttribute("aria-expanded", "false");
     if (bar.scrollWidth > bar.clientWidth) top.classList.add("collapsed");
