@@ -34,7 +34,8 @@ The documentation is in [doc/](doc/) and is published as a web site at
 
 ## What it is not
 
-- Not a desktop environment. No file manager, session manager or desktop icons.
+- Not a desktop environment. No session manager and no desktop icons, and the
+  only programs are small ones for the settings, the fonts and the wallpaper.
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not themable to the last pixel. There is one look, which can be scaled and

@@ -6,10 +6,15 @@ reasons is in the file
 [TODO](https://github.com/ondratu/tiny-shell/blob/master/TODO) of the
 repository, the D-Bus plan is in
 [TODO-DBUS](https://github.com/ondratu/tiny-shell/blob/master/TODO-DBUS).
+What is not decided yet is in the
+[backlog](https://github.com/ondratu/tiny-shell/blob/master/backlog.md), and
+what was left out on purpose, with the reason, is in
+[wont.md](https://github.com/ondratu/tiny-shell/blob/master/wont.md).
 
 ## Should: what people expect from a desktop
 
-- Applications of the launcher grouped by category
+- Applications of the launcher grouped by category, like the Applications Menu
+  extension of GNOME Shell
 - More in the configuration file: key bindings, panel layout, plugins
 - No flicker: double buffered drawing of the panel and the dock
 - Optional D-Bus (libdbus-1): the base, the icons of modern applications
@@ -17,10 +22,21 @@ repository, the D-Bus plan is in
 
 ## Could: nice to have
 
-- Virtual desktops (there is one desktop now), with moving windows between them like GNOME
+- Virtual desktops (there is one desktop now), with moving windows between
+  them like GNOME
 - Plugins and scripting in Lua, as an optional build feature
 - Window snapping to the screen edges and half-screen maximize
 - Move and resize a window with Alt + drag
-- More in the settings: keyboard and mouse, logout dialog, autostart, default applications
+- More in the settings: keyboard and mouse, logout dialog, autostart, default
+  applications
 - A simple animation of minimizing, which can be turned off in the settings
 - Session management
+
+## Not decided
+
+These may come one day, or may not. They are marked with `?` in the
+[comparison](comparison.md).
+
+- Focus follows mouse
+- Screen lock, power saving of the display, accessibility
+- A very small file manager, a screenshot tool
