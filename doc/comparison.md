@@ -8,7 +8,7 @@ GNOME Shell.
 
 Legend: ✓ the project has it, ✗ it does not (it may be possible with an
 external program), ◔ it is planned for tiny-shell (see the
-[roadmap](roadmap.md)).
+[roadmap](roadmap.md)), ? it is not decided: it may come one day, it may not.
 
 This is a comparison of what is shipped and enabled by default, made from the
 documentation of the projects. It is not a benchmark and no judgement of
@@ -25,9 +25,12 @@ cell is wrong, please
 | Shade (roll up to the title bar) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 | Window menu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Window switcher (Alt+Tab) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Live thumbnails of windows | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Always on top | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
+| Move and resize with Alt + drag | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Snapping to the screen edges | ◔ | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
 | Half-screen maximize | ◔ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Focus follows mouse | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Focus follows mouse | ? | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Virtual desktops | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Minimize animation | ◔ | ✓ | ✗ | ✗ | ✓ | ✗ | ✓ |
 | Compositor (transparency, shadows) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
@@ -35,6 +38,11 @@ cell is wrong, please
 | Themes made by the user | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Plugins or scripting | ◔ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 | Session management | ◔ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
+
+tiny-shell has no live thumbnails of windows, and it is a choice: they need a
+compositor or a copy of the window contents (see the [list of what was left
+out](https://github.com/ondratu/tiny-shell/blob/master/wont.md)). In Xfce they
+work only with its compositor turned on.
 
 ## Standards
 
@@ -64,13 +72,21 @@ describe the last releases that had it.
 | Panel | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Dock with running applications and favorites | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
 | Task bar (list of windows in the panel) | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ |
-| Menu of applications | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Menu of applications by category | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Launcher with search | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Run dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Clock | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Wallpaper | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Settings application | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| File manager | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Keyboard and mouse settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Logout, restart and shutdown dialog | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Autostart settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Default applications settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Screenshot tool | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Screen lock | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Power saving of the display (DPMS) | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Accessibility settings (sticky keys, high contrast) | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| File manager | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 
 ## Size
 
