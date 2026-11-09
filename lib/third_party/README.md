@@ -1,6 +1,6 @@
 # Vendored libraries
 
-Copied unchanged from upstream; see CONTRIBUTING.md (Dependencies).
+Copied unchanged from upstream; see doc/developers/dependencies.md.
 
 | File | Upstream | Version | Licence |
 |------|----------|---------|---------|

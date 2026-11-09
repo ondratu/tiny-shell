@@ -270,7 +270,7 @@ $(TESTS_WIDGET): %: %.o $(BUILD)/tests/main.o $(WIDGET_LIB)
 $(TESTS_SHELL): %: %.o $(BUILD)/tests/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
 
-# The widget toolkit must not include the shell (the layers of CONTRIBUTING.md)
+# The widget toolkit must not include the shell (the layers of doc/developers/architecture.md)
 layers:
 	@! grep -nE '#include "(wm|xdg|app)/' lib/*.h lib/*.cc lib/image/*.h \
 	    lib/image/*.cc || { echo "layers: the widgets include the shell" >&2; \

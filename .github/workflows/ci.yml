@@ -1,5 +1,5 @@
 # Every job builds with STRICT=1 (warnings are errors) and runs the tests
-# under Xvfb (make check). The same commands work locally, see CONTRIBUTING.md.
+# under Xvfb (make check). The same commands work locally, see doc/developers/testing.md.
 name: CI
 
 on:

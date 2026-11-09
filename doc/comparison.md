@@ -1,0 +1,80 @@
+# Comparison
+
+What tiny-shell has next to other window managers and desktops for X11. The
+columns are the window managers on their own and, where a window manager is
+part of a desktop, the desktop: **LXDE** is Openbox with LXPanel and PCManFM,
+**Xfce** is xfwm4 with the Xfce panel and the rest, **GNOME** is Mutter and
+GNOME Shell.
+
+Legend: ✓ the project has it, ✗ it does not (it may be possible with an
+external program), ◔ it is planned for tiny-shell (see the
+[roadmap](roadmap.md)).
+
+This is a comparison of what is shipped and enabled by default, made from the
+documentation of the projects. It is not a benchmark and no judgement of
+quality: tiny-shell is deliberately small and does less than a desktop. If a
+cell is wrong, please
+[open an issue](https://github.com/ondratu/tiny-shell/issues) or a pull request.
+
+## Windows
+
+| Feature | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
+| ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| Reparenting frames with a title bar | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Minimize, maximize and close buttons | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Shade (roll up to the title bar) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Window menu | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Window switcher (Alt+Tab) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Snapping to the screen edges | ◔ | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
+| Half-screen maximize | ◔ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Focus follows mouse | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Virtual desktops | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Minimize animation | ◔ | ✓ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Compositor (transparency, shadows) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Configurable key bindings | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Themes made by the user | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Plugins or scripting | ◔ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Session management | ◔ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
+
+## Standards
+
+| Feature | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
+| ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| ICCCM | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| EWMH | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Resize without tearing (`_NET_WM_SYNC_REQUEST`) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Finds applications that do not respond (`_NET_WM_PING`) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Startup notification | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
+| Desktop Entry and icon themes | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| XSETTINGS for GTK and Qt programs | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| System tray of the XEMBED protocol | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ |
+| StatusNotifierItem tray (modern applications) | ◔ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| Notifications of D-Bus | ◔ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Several monitors with RandR | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Scaling for high-DPI screens | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Wayland session | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+GNOME has been phasing out its X11 session. The X11 cells of the GNOME column
+describe the last releases that had it.
+
+## Shell
+
+| Feature | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
+| ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| Panel | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Dock with running applications and favorites | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Task bar (list of windows in the panel) | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ | ✗ |
+| Menu of applications | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Launcher with search | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Run dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Clock | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Wallpaper | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Settings application | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| File manager | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+
+## Size
+
+| Feature | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
+| ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
+| Runs without GLib and GTK | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Runs without D-Bus | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |

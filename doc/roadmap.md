@@ -1,0 +1,25 @@
+# Roadmap
+
+What is planned, grouped by importance. What a window manager must do for other
+programs is done, only small details are left. The detailed list with the
+reasons is in the file
+[TODO](https://github.com/ondratu/tiny-shell/blob/master/TODO) of the
+repository, the D-Bus plan is in
+[TODO-DBUS](https://github.com/ondratu/tiny-shell/blob/master/TODO-DBUS).
+
+## Should: what people expect from a desktop
+
+- Applications of the launcher grouped by category
+- More in the configuration file: key bindings, panel layout, plugins
+- No flicker: double buffered drawing of the panel and the dock
+- Optional D-Bus (libdbus-1): the base, the icons of modern applications
+  (StatusNotifierItem) and the activation of applications
+
+## Could: nice to have
+
+- Virtual desktops (there is one desktop now)
+- Plugins and scripting in Lua, as an optional build feature
+- Window snapping to the screen edges and half-screen maximize
+- A simple animation of minimizing, which can be turned off in the settings
+- Session management
+- Focus follows mouse as an option
