@@ -1,0 +1,329 @@
+# TODO
+
+The work list with implementation details. The overview for people is in
+README.md and doc/, the rules are in CONTRIBUTING.md and doc/developers/.
+
+Priority says how important an item is for a usable window manager, not when
+it will be done. The order inside a section is the order of work; `after:`
+names a dependency. Every item needs a test (see CONTRIBUTING.md).
+
+## Must
+
+Window management that other programs can rely on.
+
+### Repository and quality tooling (what is left)
+
+- Try `tools/run-xephyr.sh` on another machine (never run without a display).
+- Require the CI jobs in the branch protection of `master` (the CI is green,
+  the protection is not set).
+
+### ConfigureRequest and geometry
+
+- From the code review: the first Tab of the run dialog reads the
+  directories of `$PATH` in the handler (move it off the event loop, like the
+  scan of the launcher); `tiny-shell --reload` trusts `_NET_WM_PID` of the check
+  window (any client of the display can change it); a reload that changes the
+  style and the XSETTINGS together publishes them twice; `sync_allows_resize`
+  asks the server for the counter at every motion.
+
+- `_NET_WM_SYNC_REQUEST` is used by the interactive resize by the edges
+  (`Window::sync_request_resize`, `SyncGate`). Left: the size that waits for
+  the client is applied at the next motion or at the end of the resize (an
+  alarm of the SYNC extension or a timer would show it as soon as the client
+  has drawn), the frame counter of the extended protocol (the second counter
+  of `_NET_WM_SYNC_REQUEST_COUNTER`), and the resize by the keyboard, by
+  `_NET_WM_MOVERESIZE` from the client and by a maximize.
+
+- Work area: the start and the end of a partial strut are ignored (the whole
+  edge is reserved); the screen size is read at each change (cache it,
+  refresh by RandR); the minimum size from the hints is not honoured when the
+  area is tiny.
+
+## Should
+
+### Panel and shell
+
+- System tray, what is left: the balloon
+  texts (`BEGIN_MESSAGE`), `_NET_SYSTEM_TRAY_VISUAL` for icons with an alpha
+  channel, and a change of the clock while the shell runs must put the tray after it
+  again (the clock is at the end only when it is set first).
+- Drawing: `on_expose` creates and frees a `GC` each time. Keep one `GC` per
+  widget (or per display) and draw into a `Pixmap`, then `XCopyArea`, to stop
+  the flicker of hover in the panel and the dock. `Widget` gets
+  `begin_paint()`/`end_paint()`.
+
+- Dock mode `autohide`: a short delay before the dock appears and hides (now it
+  reacts at once). The reveal strip is at the bottom edge of the primary
+  monitor.
+
+### Configuration
+
+The ini file is there (see doc/configuration.md); these are the next steps. Unknown
+keys are ignored by the reader, so keys can be added without a new format.
+
+- More keys: `[commands] logout`, `[panel]` (layout; `clock_format` is there),
+  `[plugins]` (the list of the plugins and their own sections, with the optional build of
+  Lua). `[theme] style = dark|light` and `[theme] font` are there.
+- Key bindings: the actions are in `ActionRegistry` (`lib/wm/action_registry.*`).
+  Missing: more actions (`close-window`, `maximize`, `minimize`), and the key
+  table of `Manager::set_events` / `on_key_press` / `on_key_release` (now hard
+  coded Alt+Tab, Alt+Shift+Tab, Alt+;, Alt+F2, Super; `Manager::grab_shortcuts`
+  grabs them again when the layout changes) becomes a table of bindings, a
+  `[keys]` section (`Alt+Tab = next-window`) parsed with `XStringToKeysym`. Lua
+  uses the same registry.
+- Switching the colors (`Manager::set_variant`, the actions `theme-*`).
+  Missing: a menu item or a key for `theme-toggle`, `tiny-settings` (the field
+  for the style, and `tiny-fonts`/`tiny-settings` following it: their colors
+  are fixed now), a switch by time of day.
+- Reload without a restart (`reload_config` in `src/main.cc`). What is left:
+  the scale and the font of the shell itself still need a restart (the sizes of
+  the panel, the dock and the frames are computed once), and a key or a menu
+  item for it.
+- `tiny-settings` (`src/settings.cc`, the logic in `lib/app/settings_form.*`).
+  Still missing: applying a setting at once when it can (the monitors and the
+  wallpaper are applied at once, a running shell is told over X: a
+  `ClientMessage` or a property on the root window; the dock mode and the
+  clock are the first candidates), the other keys (`reboot`, `poweroff`) in the
+  form and the theme (Appearance).
+
+### Watching files
+
+- Watching `ApplicationIndex` (and maybe the configuration) is a mix of the
+  system mechanisms behind one small interface (`FileWatcher`: `fd()` for the
+  poll loop and `dispatch()`): `inotify` on Linux, `kqueue` (`EVFILT_VNODE`)
+  on the BSDs and macOS, event ports (`PORT_SOURCE_FILE`) on illumos/Solaris.
+  A fallback with `stat` polling on a timer where nothing else exists.
+  kqueue watches open files, not names: after an atomic `rename` the file has
+  to be opened and registered again; for a directory compare `stat` after
+  the event and rescan.
+- A separate library for this is fine if it is widespread and probably there
+  on every target system (it still needs a build switch, see CONTRIBUTING,
+  Dependencies); we do not need an own implementation of everything.
+  Candidates to check: `libinotify-kqueue`, libuv, libevent, efsw.
+
+### freedesktop.org: desktop entries and launcher
+
+- `ApplicationIndex` (`lib/xdg/application_index.{h,cc}`): rescan on
+  `inotify` (`IN_CREATE|IN_DELETE|IN_MODIFY`) as one more fd in the poll loop
+  (see "Watching files" above for the other systems);
+  `OnlyShowIn`/`NotShowIn` (`tiny-shell` is not a desktop name; treat as
+  unknown); `Path`, `Actions`.
+- Launcher (the Applications item of the main menu opens it): group entries
+  by the main categories (`AudioVideo`, `Development`, `Education`, `Game`, `Graphics`,
+  `Network`, `Office`, `Settings`, `System`, `Utility`); do not implement
+  `applications.menu` (XML merge rules), see the ideas at the end.
+- Launcher: the recently used applications in a file
+  (`~/.cache/tiny-shell/recent`, now only in memory), a button for the
+  launcher in the panel, `Super` as a modifier of other shortcuts (now a
+  shortcut with `Super` is lost).
+- Firefox: the window cannot be moved by its title bar (other clients were not
+  checked). Find out if it is the grab of the buttons in `Header`/`Window`
+  and what Firefox does with the pointer.
+- Search by `Exec` (`lib/xdg/application_search.*`) uses the program name of the first
+  word, so `flatpak run org.x.App`, `env VAR=1 app` or `sh -c ...` match by
+  the wrapper instead of the application. Skip the known wrappers (`env`
+  with its assignments, `flatpak run`, `sh -c`) or take the class name.
+  The search folds the texts at each call; fold them once in
+  `ApplicationIndex::scan` if the measurement on old hardware shows it.
+- Run dialog (`wm/run_dialog.cc`): Tab completes the names of programs from
+  `$PATH` (`wm/command_completer.*`). What is left: file names after the first
+  word and for a path (`./`, `~/`, `/`), and a list of the matches (now Tab
+  walks through them). The dialog is centered on the primary monitor.
+
+### Icons
+
+- Icon theme: the theme from the configuration/GTK settings (`--theme` in
+  `examples/applications` today), `.ico` given by absolute path (STM32 tools),
+  `Context`/`Scale` of the directories.
+- Symbolic icons that are installed but not used yet (`data/tiny-shell/icons`):
+  icons in the items of the main menu (`system-shutdown`, `system-log-out`,
+  `system-lock-screen`...), `window-shade` and `window-switch` for the shade
+  button and Alt+Tab, the dialogs (`dialog-warning`...), `pan-*` and
+  `system-search` in the launcher.
+- Measure the icon loading on old hardware (Atom, Raspberry Pi 1, x86 32 bit),
+  before anything is optimized. The estimate for a 512x512 icon scaled to
+  48x48: `scale_image` ~0.7 ms (Atom), ~5 ms (RPi 1); the PNG decoding is
+  10 to 40 ms and is the real cost, an SVG is more. Compare `scale_image` with
+  `XPutImage` of the whole source + an XRender transform (it sends 1 MB
+  instead of 9 KB, so it is probably slower without a GPU). Measure also the
+  decoding (`stb_image`, `nanosvg`) and the whole launcher start. The real
+  case is about 32 icons (8x4), bigger than 48 px. If `scale_image` shows up,
+  use fixed point instead of `double` and `lround` (~5x on RPi 1); a box
+  filter is better than bilinear for a big reduction (512 -> 48 aliases).
+- Load the icons lazily and in the background: show the launcher at once with
+  a placeholder, decode the icons that are visible first, maybe in worker
+  threads (a part of the icons per thread; `IconTheme` is not thread safe, its
+  caches would need a lock or one instance per thread); X calls stay in the
+  main thread, the workers only give back an `Image`. Cache the finished
+  pixmaps (for one size). To be designed after the measurement.
+- ARGB icons: `_NET_WM_ICON` is converted to a `Pixmap` + mask. Keep an
+  ARGB `Picture` and composite with `XRenderComposite` for smooth alpha
+  instead of a 1-bit mask (`DockIcon::on_expose`, `TODO: move to wm/window`).
+- Dock icons: `_GTK_APPLICATION_ID`, a changed
+  `WM_CLASS` (it is read once, so the application of a window, its favorite
+  place and its right click menu follow the first one), and the icon in the
+  size of the dock only (`theme.wm_icon`).
+- Dock: a tooltip with the name of the application, a keyboard way to the
+  menu of an icon, and the dock follows a new or removed
+  desktop file (with the `ApplicationIndex` rescan). The icons of the dock
+  are made again at every change (cheap for a few icons); keep the ones that
+  do not change if the flicker shows. The write of the file runs in the
+  handler of the menu (a few hundred bytes); move it out of the loop if it
+  ever blocks (a network home directory). A drag of a running application that
+  is not a favorite into the favorites would add it.
+
+### Font viewer
+
+`tiny-fonts` (`src/fonts.cc`, the logic in `lib/app/font_browser.*`) is there; the
+next steps:
+
+- Show the styles of a family (bold, italic, the other widths) in the
+  specimen, today only the regular one is shown (`FC_FAMILY` + the default
+  weight). List them with `FcFontList` by the family.
+- A keyboard way to the previous and next family in the specimen; search by
+  more than the name (the style, the languages, the foundry).
+- The info (the button Info) shows the texts of the main face only: the
+  variable axes and the texts of the other faces are missing.
+- Open the families in the background: `XftFontOpen` of the visible cells runs
+  in the event loop (a few ms each); measure on old hardware, keep the cache
+  across the scrolling (it is closed when it has more than 128 fonts).
+- Sizes in points with `Xft.dpi` instead of pixels.
+- Copy the name of a family (the selection, `XA_PRIMARY`).
+
+### Quality
+
+- Tests of the manager in `tests/wm/test_manager.cc` with fake clients
+  (`tests/fake_client.h`) for every `_NET_WM_STATE` message.
+- Measure and write down in doc/: resident memory after start, with and
+  without windows (the binary size is checked by CI).
+- Screen instead of `0`: `XDefaultDepth(dsp, 0)` and friends
+  (`wm/window.cc`, `x_util.cc`); take the screen from the root window of the
+  manager.
+- Replace the `TODO` comments in the code that duplicate items here with a
+  link to the item (`container.cc`: popover must stay on the root,
+  `wm/dock.cc`: the click must end on the button, `wm/client.cc`: set state).
+
+## Could
+
+- Multiple monitors, what is left (the monitors, the panel and the dock on the
+  primary one, the work area per monitor, maximize and fullscreen on the
+  monitor of the window, the numbers on the screens and the layout by `xrandr`
+  are done, see doc/configuration.md): a dock on every monitor (`[dock] monitors =
+  primary|all`; it needs a `WindowList` model of the windows, then one `Dock` per
+  monitor is a view of it), the panel on every monitor, a
+  key for `identify-monitors` and a button for it in `tiny-settings`, a
+  picture of the layout in the form (drag a monitor to the side of another one
+  instead of the choice), the rotation and the resolution (now only `xrandr`
+  by hand), a wallpaper per monitor, the start and the end of a partial strut
+  (see the work area; a dock's strut now reaches every monitor along its edge), and the unresponsive dialog and the menus that are kept
+  inside of the whole screen, not of one monitor.
+- Virtual desktops: more than the one desktop that is published now
+  (`_NET_NUMBER_OF_DESKTOPS`, `_NET_CURRENT_DESKTOP`, `_NET_WM_DESKTOP`,
+  sticky windows work with it), switching, hiding the windows of the other
+  desktops; pager in the panel.
+- Lua scripting (optional build, `make LUA=1`, Lua 5.4): a `tiny` module with
+  the action registry (`tiny.bind("Mod4+t", "exec:xterm")`,
+  `tiny.action("name", fn)` = `ActionRegistry::add`), window events
+  (`on_manage`, `on_focus`, `on_title`), read-only window information, and
+  small widgets for the panel: a plugin makes a `Label`, `Button` or `Box`
+  by name and puts it in the panel with `Panel::add_applet()` (there). The
+  widgets need a way to be made and changed by name (a factory and setters for
+  text, size and `on_click`), written when the first plugin is. No access to
+  Xlib from Lua. The script runs in the main loop and must not block it (the
+  timers are `Manager::get_timers()`). The library of the widgets
+  (`libtiny-widgets.a`) is what the binding links with; it has no dependency
+  on the shell. after: key bindings, configuration.
+- Window snapping to the edges of the screen and to other windows while
+  moving; half-screen maximize (Super+Left/Right).
+- A simple animation of minimizing: the window disappears and its frame
+  shrinks to the icon in the dock (or a snapshot of the window shrinks, if
+  that is cheap). It must be possible to turn it off in `tiny-settings`. (The
+  README, the user interface guidelines and "Not a compositor" say no
+  animations: decide first, and change them with the feature.)
+- Window menu, what is left: choosing an item with the keyboard (the arrows
+  and Return; Alt+Space opens the menu, the pointer chooses), moving and
+  resizing with the arrows (the keyboard directions of `_NET_WM_MOVERESIZE`:
+  `SIZE_KEYBOARD` and `MOVE_KEYBOARD`), the menu of a minimized window from its icon in the
+  dock.
+- Session management / saving the layout.
+- Focus follows mouse as a configuration option (click to focus is the
+  default).
+- Startup notification, what is left (the shell and other launchers start a
+  sequence, the pointer is busy until the window comes or 15 seconds pass, see
+  doc/usage.md): the dock marks the icon of an application that is starting
+  (the sequence names the `WMCLASS`, `BIN` and `ICON`), the shell sends `new:`
+  and `remove:` to the other watchers (pagers), a window that has the id only
+  on its group leader or in `WM_CLIENT_LEADER` does not end the sequence, and
+  the `_TIME` of the id could be the user time of a window that has none.
+- A configurable cursor theme through `Xcursor`, only if it stays optional.
+- Appearance for applications (light/dark, font, antialiasing, DPI): tiny-shell
+  becomes the settings daemon and publishes one source of truth (the ini
+  file) to every channel applications read. The design is below; the open
+  questions are in "Ideas that are not decided".
+  - XSETTINGS manager (`wm/xsettings.*`). Missing: the cursor
+    (`Gtk/CursorThemeName`, `Gtk/CursorThemeSize`, with `Xcursor.*`),
+    `Net/IconThemeName`, and the colors (`Gtk/ColorScheme` is only for GTK
+    3.24+ with a new theme).
+  - `RESOURCE_MANAGER` property on the root window (`lib/wm/xresources.*`).
+    Read by an application at its start only; has no light/dark flag. Output
+    only, the storage is the ini file. Missing: `Xft.dpi` and `Xcursor.*`
+    (XSETTINGS has the DPI).
+  - Portal `org.freedesktop.appearance` `color-scheme` (0 none, 1 dark,
+    2 light; signal `SettingChanged`): the only real standard for dark/light,
+    read by GTK4/libadwaita, Firefox, Chromium/Electron, newer Qt 6.
+    Cheapest: write the gsettings key `org.gnome.desktop.interface
+    color-scheme` and let `xdg-desktop-portal-gtk` relay it. Clean: our own
+    `org.freedesktop.impl.portal.Settings` backend (a `.portal` file and
+    `portals.conf`); more work, no dconf dependency.
+  - Environment (`QT_QPA_PLATFORMTHEME`, `GTK_THEME`) only at the start of the
+    session: it cannot change while running, so it cannot follow a switch.
+  - Automatic switch by time: the shell rewrites the channels above; running
+    applications repaint themselves.
+  - Check what applications get now: `busctl --user call
+    org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop
+    org.freedesktop.portal.Settings Read ss org.freedesktop.appearance
+    color-scheme`, `xprop -root RESOURCE_MANAGER`,
+    `xprop -root -notype _XSETTINGS_SETTINGS`.
+- Default wallpaper: choose the 3840x2160 picture for a screen that is wider
+  than 1920 px (`default_wallpaper()` takes the 1920x1080 one now), and offer
+  the installed wallpapers in `tiny-settings` as a list.
+- Wallpaper (the first version is `tiny-wallpaper`, see doc/configuration.md): what is
+  left is to remove a wallpaper at once (now the plain color of the theme is
+  back at the next login; `tiny-wallpaper` would need the theme color, or
+  `tiny-shell` an action `wallpaper-clear`), a color around a centered
+  picture (it is black), a picture per monitor (RandR, `XRRGetMonitors`), and
+  a path field with completion in `tiny-settings` (a file browser is too much
+  code for Xlib).
+- Optional decoders, as `make` variables with the feature off by default,
+  chosen by `pkg-config`: `libpng` instead of `stb_image` (about 21 kB less
+  code in the programs, a faster inflate, but PNG only: it brings no new
+  format), `libjpeg-turbo` for photos (much faster than `stb_image` on a 4K
+  wallpaper), `libwebp`. Two code paths need a CI job of their own. For SVG,
+  `resvg` (Rust, a C API in `crates/c-api`, a cargo build, megabytes, not in
+  the distributions) instead of `nanosvg` only on request; `librsvg` is out
+  (GLib, cairo, pango).
+
+## Ideas that are not decided
+
+Things to discuss before they go to a section above.
+
+- Run the shell (panel, dock, launcher) as a separate process that uses only
+  EWMH. It makes the window manager smaller and crash-proof, and tint2 and
+  others could replace it, but the second process costs memory. Keep the
+  boundary clean (CONTRIBUTING.md, Architecture) and decide when EWMH is
+  complete.
+- Themes: only two built-in, finely tuned themes (light and dark; they are
+  there, `Style::colorize()` has the colors of both), no user themes and no
+  CSS (decided to lean this way, not final; a third, custom one would be
+  another `Variant` read from the ini file). Open: the light variant is a first
+  version (the title bars and window buttons are light in both), and the real
+  work is a matching look in GTK3, GTK4 and Qt, since each toolkit is themed
+  differently; probably take a ready pair (Adwaita / Adwaita-dark for GTK,
+  `QT_QPA_PLATFORMTHEME=gtk3` or Kvantum for Qt) and own only the colors of
+  the shell. Also open: the storage format (ini; `.XDefaults` has no dark
+  flag and does not change at run time), a switch by time of day, and the
+  settings channels in "Appearance for applications" (Could).
+- `applications.menu` (Desktop Menu Specification): leaning to "no", the
+  category grouping is enough.
+- Wayland / a compositor: out of scope (README). If any of these gets a
+  reason to return, record it in `wont.md` with the condition.
