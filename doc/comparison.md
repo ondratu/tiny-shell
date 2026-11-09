@@ -8,7 +8,8 @@ GNOME Shell.
 
 Legend: ✓ the project has it, ✗ it does not (it may be possible with an
 external program), ◔ it is planned for tiny-shell (see the
-[roadmap](roadmap.md)), ? it is not decided: it may come one day, it may not.
+[roadmap](roadmap.md)), ? it is not decided yet: it may come one day, it may
+not.
 
 This is a comparison of what is shipped and enabled by default, made from the
 documentation of the projects. It is not a benchmark and no judgement of
