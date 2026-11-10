@@ -1,12 +1,13 @@
 // tiny-settings: changes the font, the terminal, the scale and the rendering
 // of text of tiny-shell.
 //
-// The form has a panel at the left with the sections: Fonts (the font, its
-// size and style, and the antialiasing, hinting and subpixel order of the text
-// of the programs), Appearance (the scale, the wallpaper, the mode of the dock
-// and the format of the clock), Applications (the terminal) and Screens (the
-// primary and the secondary monitor, where the secondary one is, and the
-// numbers on the monitors). The choices
+// The form has a panel at the left with the sections, in the order of the
+// settings of GNOME: Appearance (the scale, the wallpaper and how it covers the
+// screen), Fonts (the font, its size and style, and the antialiasing, hinting
+// and subpixel order of the text of the programs), Desktop (the mode of the
+// dock and the format of the clock), Displays (the primary and the secondary
+// monitor, where the secondary one is, and the numbers on the monitors), Power
+// (when the lock screen goes black) and Applications (the terminal). The choices
 // go through their values with the arrows, Space and a click; a field has a
 // cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
 // Down and Ctrl+Page Up go through the sections. The button next to the font opens a list of the fonts of
@@ -54,6 +55,15 @@
 #include "xft_window.h"
 
 namespace {
+
+//! What the form has for `[lock] blank_after`: "" is the default minute
+std::string blank_value(int minutes)
+{
+    if (minutes == 1) {
+        return "";
+    }
+    return minutes == 0 ? "never" : std::to_string(minutes);
+}
 
 using tiny::app::SettingsForm;
 
@@ -119,7 +129,8 @@ class SettingsApp : public tiny::XftWindow {
                 SettingsForm::monitor_value(monitors, config.monitor_secondary),
                 config.monitor_placement == tiny::wm::Placement::Keep
                         ? ""
-                        : tiny::wm::placement_name(config.monitor_placement)},
+                        : tiny::wm::placement_name(config.monitor_placement),
+                blank_value(config.lock_blank_minutes)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -326,6 +337,12 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"dock", "mode", v.dock.empty() ? "autohide" : v.dock});
             }
+            if (v.blank_screen != initial.blank_screen) {
+                // the first choice, "", is one minute
+                changed.push_back(
+                        {"lock", "blank_after",
+                         v.blank_screen.empty() ? "1" : v.blank_screen});
+            }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
                                    v.primary_monitor.empty()
@@ -441,7 +458,7 @@ class SettingsApp : public tiny::XftWindow {
     void paint() override
     {
         show_numbers(form.view() == SettingsForm::View::Form &&
-                     form.section() == SettingsForm::Section::Screens);
+                     form.section() == SettingsForm::Section::Displays);
         fill(background, {0, 0, width, height});
         if (form.view() == SettingsForm::View::Picker) {
             paint_picker();
@@ -602,7 +619,8 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Dock, "Dock"},
                     {SettingsForm::Field::PrimaryMonitor, "Primary"},
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
-                    {SettingsForm::Field::MonitorPlacement, "Position"}};
+                    {SettingsForm::Field::MonitorPlacement, "Position"},
+                    {SettingsForm::Field::BlankScreen, "Blank after"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

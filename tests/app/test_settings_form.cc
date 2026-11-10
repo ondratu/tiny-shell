@@ -26,12 +26,15 @@ SettingsForm::Values V(const char* font, const char* terminal,
     return {font, terminal, scale, "12", "", "", "", ""};
 }
 
+//! A form that shows the Fonts: most of the tests are about the text fields
+//! there (the program itself starts in the first section, Appearance)
 SettingsForm make(const SettingsForm::Values& values = V("Gamma", "xterm -e",
                                                          "1"),
                   const Strings& list = families)
 {
     SettingsForm form(values, list, SettingsForm::Metrics());
     form.resize(500, 600);
+    form.set_section(SettingsForm::Section::Fonts);
     return form;
 }
 
@@ -768,6 +771,7 @@ SettingsForm make_with_styles(const std::string& style = "")
     SettingsForm form({"Gamma", "xterm -e", "1", "12", style, "", "", ""},
                       families, SettingsForm::Metrics(), styles_of);
     form.resize(500, 600);
+    form.set_section(SettingsForm::Section::Fonts);
     return form;
 }
 
@@ -1314,25 +1318,28 @@ TEST(SettingsFormTest, a_click_on_the_placement_steps_through_the_values)
 
 // The sections
 
-TEST(SettingsFormSectionTest, the_form_starts_in_the_fonts)
+TEST(SettingsFormSectionTest, the_form_starts_in_the_first_section)
 {
-    const SettingsForm form = make();
+    const SettingsForm form(V("Gamma", "xterm -e", "1"), families,
+                            SettingsForm::Metrics());
 
-    EXPECT_EQ(form.section(), SettingsForm::Section::Fonts);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Appearance);
+    EXPECT_EQ(form.focus(), Field::Scale);
 }
 
 TEST(SettingsFormSectionTest, every_field_is_in_one_section)
 {
     using Section = SettingsForm::Section;
     size_t count = 0;
-    for (const Section section : {Section::Fonts, Section::Appearance,
-                                  Section::Applications, Section::Screens}) {
+    for (const Section section :
+         {Section::Appearance, Section::Fonts, Section::Desktop,
+          Section::Displays, Section::Power, Section::Applications}) {
         for (const Field f : SettingsForm::section_fields(section)) {
             EXPECT_EQ(SettingsForm::section_of(f), section);
             ++count;
         }
     }
-    EXPECT_EQ(count, 15u);
+    EXPECT_EQ(count, 16u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1343,18 +1350,19 @@ TEST(SettingsFormSectionTest, the_sections_have_names)
                  "Appearance");
     EXPECT_STREQ(SettingsForm::section_title(Section::Applications),
                  "Applications");
-    EXPECT_STREQ(SettingsForm::section_title(Section::Screens), "Screens");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Desktop), "Desktop");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Displays), "Displays");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Power), "Power");
 }
 
 TEST(SettingsFormSectionTest, a_click_on_an_item_of_the_panel_shows_its_section)
 {
     SettingsForm form = make();
 
-    EXPECT_TRUE(
-            click(form, form.section_rect(SettingsForm::Section::Appearance)));
+    EXPECT_TRUE(click(form, form.section_rect(SettingsForm::Section::Desktop)));
 
-    EXPECT_EQ(form.section(), SettingsForm::Section::Appearance);
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Desktop);
+    EXPECT_EQ(form.focus(), Field::Dock);
     EXPECT_TRUE(click(form, form.field_rect(Field::ClockFormat)));
     EXPECT_EQ(form.focus(), Field::ClockFormat);
 }
@@ -1364,9 +1372,9 @@ TEST(SettingsFormSectionTest, the_items_of_the_panel_are_one_under_another)
     const SettingsForm form = make();
     using Section = SettingsForm::Section;
 
-    const Rect first = form.section_rect(Section::Fonts);
-    const Rect second = form.section_rect(Section::Appearance);
-    const Rect third = form.section_rect(Section::Applications);
+    const Rect first = form.section_rect(Section::Appearance);
+    const Rect second = form.section_rect(Section::Fonts);
+    const Rect third = form.section_rect(Section::Desktop);
     EXPECT_EQ(first.y + first.height, second.y);
     EXPECT_EQ(second.y + second.height, third.y);
     EXPECT_EQ(first.width, form.sidebar_rect().width);
@@ -1377,16 +1385,17 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     SettingsForm form = make();
     using Section = SettingsForm::Section;
 
-    EXPECT_TRUE(form.key(Key::NextSection));
-    EXPECT_EQ(form.section(), Section::Appearance);
-    EXPECT_TRUE(form.key(Key::NextSection));
-    EXPECT_EQ(form.section(), Section::Applications);
-    EXPECT_TRUE(form.key(Key::NextSection));
-    EXPECT_EQ(form.section(), Section::Screens);
-    EXPECT_TRUE(form.key(Key::NextSection));
-    EXPECT_EQ(form.section(), Section::Fonts); // round
+    ASSERT_EQ(form.section(), Section::Fonts); // where `make()` starts
+    for (const Section next :
+         {Section::Desktop, Section::Displays, Section::Power,
+          Section::Applications, Section::Appearance, Section::Fonts}) {
+        EXPECT_TRUE(form.key(Key::NextSection));
+        EXPECT_EQ(form.section(), next);
+    }
     EXPECT_TRUE(form.key(Key::PrevSection));
-    EXPECT_EQ(form.section(), Section::Screens);
+    EXPECT_EQ(form.section(), Section::Appearance); // round
+    EXPECT_TRUE(form.key(Key::PrevSection));
+    EXPECT_EQ(form.section(), Section::Applications);
 }
 
 TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
@@ -1668,7 +1677,7 @@ TEST(SettingsFormScreensTest, wrong_values_are_a_problem)
 TEST(SettingsFormScreensTest, the_fields_have_hints)
 {
     for (const Field f :
-         SettingsForm::section_fields(SettingsForm::Section::Screens)) {
+         SettingsForm::section_fields(SettingsForm::Section::Displays)) {
         EXPECT_NE(std::string(SettingsForm::hint(f)), "");
     }
 }
@@ -1677,9 +1686,10 @@ TEST(SettingsFormScreensTest, a_click_on_the_section_shows_its_fields)
 {
     SettingsForm form = make();
 
-    EXPECT_TRUE(click(form, form.section_rect(SettingsForm::Section::Screens)));
+    EXPECT_TRUE(
+            click(form, form.section_rect(SettingsForm::Section::Displays)));
 
-    EXPECT_EQ(form.section(), SettingsForm::Section::Screens);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Displays);
     EXPECT_EQ(form.focus(), Field::PrimaryMonitor);
     EXPECT_TRUE(click(form, form.field_rect(Field::MonitorPlacement)));
     EXPECT_EQ(form.text(Field::MonitorPlacement), "right");
@@ -1688,9 +1698,75 @@ TEST(SettingsFormScreensTest, a_click_on_the_section_shows_its_fields)
 TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
 {
     SettingsForm form = make();
-    form.set_section(SettingsForm::Section::Screens);
+    form.set_section(SettingsForm::Section::Displays);
     form.resize(700, form.form_height());
 
     const Rect last = form.field_rect(Field::MonitorPlacement);
     EXPECT_LT(last.y + last.height, form.message_rect().y);
+}
+
+// The black screen of the lock
+
+TEST(SettingsFormPowerTest, the_power_section_has_the_blank_screen)
+{
+    EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
+              (std::vector<Field>{Field::BlankScreen}));
+    EXPECT_EQ(SettingsForm::section_of(Field::BlankScreen),
+              SettingsForm::Section::Power);
+    EXPECT_TRUE(SettingsForm::is_choice(Field::BlankScreen));
+    EXPECT_NE(std::string(SettingsForm::hint(Field::BlankScreen)), "");
+}
+
+TEST(SettingsFormPowerTest, one_minute_is_the_first_choice_and_the_default)
+{
+    SettingsForm form = make();
+
+    EXPECT_EQ(form.text(Field::BlankScreen), "");
+    EXPECT_EQ(form.choice_label(Field::BlankScreen), "1 minute");
+    EXPECT_EQ(form.problem(Field::BlankScreen), "");
+}
+
+TEST(SettingsFormPowerTest, the_arrows_go_through_the_times_and_never)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::BlankScreen);
+
+    for (const char* label :
+         {"5 minutes", "10 minutes", "15 minutes", "Never"}) {
+        form.key(Key::Right);
+        EXPECT_EQ(form.choice_label(Field::BlankScreen), label);
+    }
+    form.key(Key::Right);
+    EXPECT_EQ(form.choice_label(Field::BlankScreen), "1 minute"); // round
+    form.key(Key::Left);
+    EXPECT_EQ(form.choice_label(Field::BlankScreen), "Never");
+}
+
+TEST(SettingsFormPowerTest, a_value_that_is_not_a_choice_is_a_problem)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.blank_screen = "7";
+    const SettingsForm form = make(values);
+
+    EXPECT_NE(form.problem(Field::BlankScreen), "");
+    EXPECT_NE(form.problem(), "");
+}
+
+TEST(SettingsFormPowerTest, the_value_is_kept_in_the_values_of_the_form)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.blank_screen = "never";
+    const SettingsForm form = make(values);
+
+    EXPECT_EQ(form.values().blank_screen, "never");
+    EXPECT_EQ(form.clean_values().blank_screen, "never");
+}
+
+TEST(SettingsFormPowerTest, one_written_as_a_number_is_right_too)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.blank_screen = "1";
+    const SettingsForm form = make(values);
+
+    EXPECT_EQ(form.problem(Field::BlankScreen), "");
 }

@@ -269,7 +269,7 @@ monitor.
   is. The command is run again when the monitors change, only when the placement
   is not as asked, and not twice in a row. `secondary` must be the name of an
   output for it to work (the monitors that `--setmonitor` made are not outputs).
-- **Numbers.** Only `tiny-settings` shows them: while the section Screens is
+- **Numbers.** Only `tiny-settings` shows them: while the section Displays is
   shown, the number, the name and the size of every monitor are in its corner,
   over all the windows (the primary one says so), and they go away when the
   section is left or the settings are closed (the settings ask the shell for it

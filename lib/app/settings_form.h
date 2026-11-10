@@ -16,8 +16,7 @@ namespace tiny::app {
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has a panel at its left with the sections (Fonts, Appearance,
- * Applications, Screens) and the fields of the chosen section: text fields (the font,
+ * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Applications) and the fields of the chosen section: text fields (the font,
  * its size and style, the scale, the format of the clock, the wallpaper, the
  * terminal), choices (antialiasing, hinting and subpixel order of the text,
  * the placement of the wallpaper, the mode of the dock: the left and right
@@ -46,7 +45,14 @@ class SettingsForm {
     enum class View { Form, Picker };
 
     //! The groups of the settings, in the panel at the left
-    enum class Section { Fonts, Appearance, Applications, Screens };
+    enum class Section {
+        Appearance,
+        Fonts,
+        Desktop,
+        Displays,
+        Power,
+        Applications
+    };
 
     enum class Field {
         Font,
@@ -63,7 +69,8 @@ class SettingsForm {
         Dock,             //!< a choice: auto-hide, on or off
         PrimaryMonitor,   //!< auto (empty), a number or the name of an output
         SecondaryMonitor, //!< the same
-        MonitorPlacement  //!< a choice: keep, right, left, above or below
+        MonitorPlacement, //!< a choice: keep, right, left, above or below
+        BlankScreen       //!< a choice: the minutes to a black lock screen
     };
 
     //! What has the keyboard in the list of fonts
@@ -115,6 +122,9 @@ class SettingsForm {
         std::string primary_monitor{};
         std::string secondary_monitor{};
         std::string monitor_placement{};
+        //! The minutes without input to a black lock screen ("" is 1, then
+        //! 5, 10, 15 and "never")
+        std::string blank_screen{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -173,7 +183,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 4;
+    static constexpr size_t section_count = 6;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -361,10 +371,12 @@ class SettingsForm {
         SearchBox,
         SizeBox,
         StyleBox,
-        SectionFonts, //!< the items of the panel, in the order of `Section`
-        SectionAppearance,
+        SectionAppearance, //!< the items of the panel, in the order of `Section`
+        SectionFonts,
+        SectionDesktop,
+        SectionDisplays,
+        SectionPower,
         SectionApplications,
-        SectionScreens,
         FirstRow //!< and the rows of the list from here
     };
 
@@ -395,7 +407,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 15> fields_;
+    std::array<TextField, 16> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
@@ -412,8 +424,8 @@ class SettingsForm {
     Metrics metrics_;
     View view_ = View::Form;
     Result result_ = Result::Editing;
-    Field focus_ = Field::Font;
-    Section section_ = Section::Fonts;
+    Field focus_ = Field::Scale;
+    Section section_ = Section::Appearance;
     Pane pane_ = Pane::Search;
     int width_ = 1;
     int height_ = 1;
