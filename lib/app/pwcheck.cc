@@ -7,11 +7,11 @@
 #include <cstring>
 #include <ctime>
 
-#if defined(__linux__)
+#ifdef __linux__
 #include <sys/prctl.h>
 #endif
 
-#if defined(__has_include)
+#ifdef __has_include
 #if __has_include(<crypt.h>)
 #include <crypt.h>
 #endif
@@ -86,7 +86,7 @@ bool drop_privileges()
 {
     const gid_t group = getgid();
     const uid_t user = getuid();
-#if defined(__linux__)
+#ifdef __linux__
     // sets the real, the effective and the saved id: it can't be undone
     if (setresgid(group, group, group) != 0 ||
         setresuid(user, user, user) != 0) {
@@ -100,7 +100,7 @@ bool drop_privileges()
     if (getegid() != group || geteuid() != user) {
         return false;
     }
-#if defined(__linux__)
+#ifdef __linux__
     gid_t real_group;
     gid_t effective_group;
     gid_t saved_group;
@@ -115,12 +115,13 @@ void protect_memory()
 {
     const rlimit none = {0, 0};
     setrlimit(RLIMIT_CORE, &none);
-#if defined(__linux__)
+#ifdef __linux__
     prctl(PR_SET_DUMPABLE, 0);
 #endif
 }
 
-int run_pwcheck(int argc, char* argv[], int input, unsigned delay_ms)
+int run_pwcheck(int argc, const char* const argv[], int input,
+                unsigned delay_ms)
 {
     const bool probe = argc == 2 && strcmp(argv[1], "--probe") == 0;
     if (argc != 1 && !probe) {

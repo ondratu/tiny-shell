@@ -115,7 +115,7 @@ class LineDialog : public Dialog {
     void finish(const Outcome& outcome);
 
   private:
-    bool write_line(const std::string& line);
+    bool write_line(const std::string& line) const;
 
     int input;
     int output;

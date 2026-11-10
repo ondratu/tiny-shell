@@ -48,7 +48,7 @@ class LockScreenTest : public ::testing::Test {
 
 TEST_F(LockScreenTest, it_covers_the_screen_with_a_window_no_manager_moves)
 {
-    LockScreen screen(tiny::get_display(), shell("sleep 5"), "anna");
+    const LockScreen screen(tiny::get_display(), shell("sleep 5"), "anna");
     const auto attributes = attributes_of(screen.window());
     EXPECT_TRUE(attributes.override_redirect);
     EXPECT_EQ(attributes.map_state, IsViewable);
@@ -169,7 +169,7 @@ TEST_F(LockScreenTest, a_failed_try_is_tried_again_after_a_while)
                           std::istreambuf_iterator<char>(), '\n');
     };
     ASSERT_TRUE(screen.lock());
-    ASSERT_TRUE(wait_for(screen, [&] { return screen.status() != ""; }));
+    ASSERT_TRUE(wait_for(screen, [&] { return !screen.status().empty(); }));
     for (int i = 0; i < 5; ++i) { // not at once: a failure waits, no spinning
         screen.step(20);
     }

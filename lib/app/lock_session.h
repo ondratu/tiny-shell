@@ -44,7 +44,7 @@ class AuthSession {
     std::vector<Message> read();
 
     //! Send the answer to a question; false if the program is gone
-    bool answer(const std::string& text);
+    bool answer(const std::string& text) const;
 
     //! End the program now
     void stop();

@@ -134,7 +134,7 @@ LineDialog::LineDialog(int input_fd, int output_fd):
 
 LineDialog::~LineDialog() = default;
 
-bool LineDialog::write_line(const std::string& line)
+bool LineDialog::write_line(const std::string& line) const
 {
     const char* bytes = line.data();
     size_t left = line.size();

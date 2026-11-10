@@ -11,7 +11,7 @@
 #include <cerrno>
 #include <cstring>
 
-#if defined(__has_include)
+#ifdef __has_include
 #if __has_include(<shadow.h>)
 #include <shadow.h>
 #define TINY_HAVE_SHADOW 1

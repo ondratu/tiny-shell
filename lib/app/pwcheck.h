@@ -41,6 +41,7 @@ void protect_memory();
  * account for `--probe`), 1 for the wrong one, 2 if it can't be checked.
  * `delay_ms` is the wait after a wrong password.
  */
-int run_pwcheck(int argc, char* argv[], int input, unsigned delay_ms);
+int run_pwcheck(int argc, const char* const argv[], int input,
+                unsigned delay_ms);
 
 } // namespace tiny::app
