@@ -131,7 +131,7 @@ int main(int argc, char** argv)
         int status = EXIT_SUCCESS;
         {
             tiny::app::LockScreen screen(tiny::get_display(), command,
-                                         tiny::app::user_name());
+                                         tiny::app::user_full_name());
             if (screen.lock()) {
                 locked = true;
                 screen.run();

@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cmath>
+#include <ctime>
 #include <thread>
 #include <utility>
 
@@ -20,49 +22,96 @@ namespace tiny::app {
 
 namespace {
 
-constexpr int spacing = 10;
-constexpr int line_height = 20;
-constexpr int entry_height = 28;
-constexpr int dialog_width = 440;
+//! The sizes at the scale 1 (`px()` makes them as big as the theme)
+constexpr int base_spacing = 14;
+constexpr int base_width = 440;
+constexpr int base_entry_height = 28;
+//! The name of the user is this much bigger than the text, the time more
+constexpr double name_scale = 1.6;
+constexpr double clock_scale = 4.5;
 //! A failure that is not a wrong password waits, so the tries don't spin
 constexpr std::chrono::milliseconds failure_delay(1000);
 
+int px(int value)
+{
+    return static_cast<int>(std::lround(value * tiny::theme.scale_factor));
+}
+
+//! The height of one line of the label at this scale of its font
+int line_of(double font_scale)
+{
+    tiny::Label probe(1, 1);
+    probe.set_font_scale(font_scale);
+    return probe.natural_height();
+}
+
+int entry_height()
+{
+    const XftFont* font = tiny::theme.entry.get_font();
+    return std::max(px(base_entry_height),
+                    font->ascent + font->descent +
+                            2 * (tiny::theme.entry.padding_width + 4));
+}
+
 } // namespace
 
+/**
+ * The dialog: the name of the user, what is asked, the entry and what is said
+ * about the last try, one under another with a space between them, all in the
+ * middle. Over it is the time in big letters.
+ */
 class LockScreen::Dialog : public tiny::Box {
   public:
     explicit Dialog(const std::string& user):
         tiny::Box(tiny::Box::Type::Vertical, width(), height()),
-        who(inner_width(), line_height, user),
-        question(inner_width(), line_height, ""),
-        entry(inner_width() - 2 * tiny::theme.entry.border_width, entry_height),
-        status(inner_width(), line_height, "")
-    {}
-
-    void build(::Window parent_window, int x, int y)
+        who(inner_width(), line_of(name_scale), user),
+        question(inner_width(), line_of(1), ""),
+        entry(inner_width() - 2 * tiny::theme.entry.border_width,
+              entry_height()),
+        status(inner_width(), line_of(1), ""),
+        clock(width(), line_of(clock_scale), "")
     {
-        realize(parent_window, x, y);
-        push_start(&who, spacing, spacing);
-        push_start(&question, spacing, spacing / 2);
-        push_start(&entry, spacing, spacing / 2);
-        push_start(&status, spacing, spacing / 2);
+        who.set_font_scale(name_scale);
+        who.set_align(tiny::Label::Align::Center);
+        question.set_align(tiny::Label::Align::Center);
+        status.set_align(tiny::Label::Align::Center);
+        clock.set_font_scale(clock_scale);
+        clock.set_align(tiny::Label::Align::Center);
     }
 
-    static int width() { return dialog_width * 1; }
+    void build(::Window parent_window)
+    {
+        realize(parent_window, 0, 0);
+        const int gap = px(base_spacing);
+        push_start(&who, gap, gap);
+        push_start(&question, gap, gap / 2);
+        push_start(&entry, gap, gap / 2);
+        push_start(&status, gap, gap / 2);
+        clock.realize(parent_window, 0, 0);
+    }
+
+    static int width() { return px(base_width); }
 
     static int height()
     {
-        return spacing + 3 * line_height + 3 * (spacing / 2) + entry_height +
-               2 * tiny::theme.entry.border_width + spacing;
+        const int gap = px(base_spacing);
+        return gap + line_of(name_scale) + gap + line_of(1) + gap / 2 +
+               entry_height() + 2 * tiny::theme.entry.border_width + gap / 2 +
+               line_of(1) + gap;
     }
+
+    //! The time over the dialog and the space between them
+    static int clock_height() { return line_of(clock_scale); }
+    static int clock_gap() { return px(base_spacing) * 2; }
 
     tiny::Label who;
     tiny::Label question;
     tiny::Entry entry;
     tiny::Label status;
+    tiny::Label clock;
 
   private:
-    static int inner_width() { return dialog_width - 2 * spacing; }
+    static int inner_width() { return width() - 2 * px(base_spacing); }
 };
 
 LockScreen::LockScreen(tiny::Display& display_arg,
@@ -91,7 +140,7 @@ LockScreen::LockScreen(tiny::Display& display_arg,
     XDefineCursor(display, cover, blank_cursor);
 
     dialog = std::make_unique<Dialog>(user);
-    dialog->build(cover, 0, 0);
+    dialog->build(cover);
     // NOLINTNEXTLINE(clang-analyzer-optin.cplusplus.VirtualCall): nothing derives from Dialog
     dialog->set_events();
     dialog->entry.set_password();
@@ -114,7 +163,10 @@ LockScreen::LockScreen(tiny::Display& display_arg,
             VisibilityNotify, cover,
             [this](const XEvent& event) { on_visibility(event); });
     XMapWindow(display, cover);
+    dialog->clock.set_events();
     dialog->map_all();
+    dialog->clock.map();
+    update_clock(std::time(nullptr));
     XRaiseWindow(display, cover);
     XFlush(display);
 }
@@ -132,6 +184,21 @@ LockScreen::~LockScreen()
         XFreeCursor(display, blank_cursor);
     }
     XFlush(display);
+}
+
+void LockScreen::update_clock(std::time_t now)
+{
+    char text[16];
+    tm local = {};
+    localtime_r(&now, &local);
+    if (strftime(text, sizeof text, "%H:%M", &local) == 0) {
+        text[0] = '\0';
+    }
+    clock_text_ = text;
+    dialog->clock.set_text(clock_text_);
+    // the next change is at the start of the next minute
+    const int left = 60 - local.tm_sec;
+    next_clock = Clock::now() + std::chrono::seconds(left);
 }
 
 Entry& LockScreen::entry()
@@ -156,9 +223,14 @@ void LockScreen::place_dialog()
             }
         }
     }
+    // the time and the dialog are one block in the middle of the monitor
+    const int block =
+            Dialog::clock_height() + Dialog::clock_gap() + Dialog::height();
     const int x = area.x + (area.width - Dialog::width()) / 2;
-    const int y = area.y + (area.height - Dialog::height()) / 2;
-    XMoveWindow(display, dialog->get_window(), x, y);
+    const int y = area.y + (area.height - block) / 2;
+    XMoveWindow(display, dialog->clock.get_window(), x, y);
+    XMoveWindow(display, dialog->get_window(), x,
+                y + Dialog::clock_height() + Dialog::clock_gap());
 }
 
 bool LockScreen::lock(std::chrono::milliseconds patience)
@@ -251,9 +323,9 @@ void LockScreen::submit()
         return;
     }
     asking = false;
-    if (!session.answer(text)) {
-        set_status("The check is not running");
-    }
+    // a check can take its time (a wrong password waits)
+    set_status(session.answer(text) ? "Checking..."
+                                    : "The check is not running");
     wipe(text);
     dialog->entry.clear();
 }
@@ -344,6 +416,17 @@ bool LockScreen::step(int timeout_ms)
         return true;
     }
     int wait = timeout_ms;
+    if (Clock::now() >= next_clock) {
+        update_clock(std::time(nullptr));
+    }
+    {
+        const auto until_clock =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                        next_clock - Clock::now())
+                        .count();
+        const int ms = static_cast<int>(std::max<long long>(until_clock, 0));
+        wait = wait < 0 ? ms : std::min(wait, ms);
+    }
     if (retry_at != Clock::time_point()) {
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
                                   retry_at - Clock::now())

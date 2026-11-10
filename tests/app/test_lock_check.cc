@@ -160,3 +160,23 @@ TEST(LockCheckTest, privileges_are_told_from_the_mode_of_the_file)
     EXPECT_FALSE(tiny::app::can_run(file));
     EXPECT_FALSE(tiny::app::can_run(""));
 }
+
+TEST(LockCheckTest, the_whole_name_is_the_text_before_the_first_comma)
+{
+    EXPECT_EQ(tiny::app::full_name_from("Anna Nováková,Room 5,555,", "anna"),
+              "Anna Nováková");
+    EXPECT_EQ(tiny::app::full_name_from("  Anna Nováková  ", "anna"),
+              "Anna Nováková");
+}
+
+TEST(LockCheckTest, without_a_whole_name_the_login_is_shown)
+{
+    EXPECT_EQ(tiny::app::full_name_from("", "anna"), "anna");
+    EXPECT_EQ(tiny::app::full_name_from(",Room 5", "anna"), "anna");
+    EXPECT_EQ(tiny::app::full_name_from("   ", "anna"), "anna");
+}
+
+TEST(LockCheckTest, the_user_has_a_name_to_show)
+{
+    EXPECT_FALSE(tiny::app::user_full_name().empty());
+}

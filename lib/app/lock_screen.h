@@ -3,6 +3,7 @@
 #include <X11/Xlib.h>
 
 #include <chrono>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <vector>
@@ -35,7 +36,8 @@ class LockScreen {
     using Clock = std::chrono::steady_clock;
 
     /**
-     * `command` starts `tiny-lock-auth`; `user` is shown. The window is made
+     * `command` starts `tiny-lock-auth`; `user` is shown (the whole name of
+     * the user, in big letters, with the time over it). The window is made
      * and shown, the keyboard is not grabbed yet (that is `lock()`).
      */
     LockScreen(Display& display, std::vector<std::string> command,
@@ -69,6 +71,11 @@ class LockScreen {
     //! What the dialog says now
     const std::string& prompt() const { return prompt_text; }
     const std::string& status() const { return status_text; }
+    //! The time that is shown over the dialog, "14:05"
+    const std::string& clock_text() const { return clock_text_; }
+
+    //! Show the time `now` (the lock does it itself at every minute)
+    void update_clock(std::time_t now);
     bool unlocked() const { return done; }
     bool is_asking() const { return asking; }
     Entry& entry();
@@ -96,6 +103,8 @@ class LockScreen {
     Cursor blank_cursor = None;
     std::unique_ptr<Dialog> dialog;
     std::string prompt_text;
+    std::string clock_text_;
+    Clock::time_point next_clock; //!< when the time is shown again
     std::string status_text;
     bool asking = false; //!< a question waits for the answer
     bool grabbed = false;

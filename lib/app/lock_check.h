@@ -34,6 +34,13 @@ std::string password_hash(const std::string& user);
 //! and not a mark of a locked account (`!`, `*`, `x`)
 bool hash_usable(const std::string& hash);
 
+//! The whole name of a user from the GECOS field of the passwd entry (the text
+//! before the first comma, without blanks around), `login` when it is empty
+std::string full_name_from(const std::string& gecos, const std::string& login);
+
+//! The whole name of the user that runs the program, or the login name
+std::string user_full_name();
+
 /**
  * @short A program that checks a password it reads from its standard input.
  *

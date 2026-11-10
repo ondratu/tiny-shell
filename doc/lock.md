@@ -13,8 +13,11 @@ set and to forget.
   menu start that one.
 
 The lock puts a black window over all the monitors and takes the keyboard and
-the pointer. The question is in the middle of the first monitor; the typed
-characters are shown as bullets. Return sends the answer, Escape forgets what
+the pointer. In the middle of the first monitor is the time in big letters, and
+under it the dialog: the whole name of the user (the first part of the GECOS
+field of the passwd entry, the login name when there is none), what is asked,
+and the entry where the typed characters are shown as bullets. The sizes follow
+`[theme] scale` and the font. Return sends the answer, Escape forgets what
 was typed. A wrong password says so and asks again. The screen opens only when
 the check says the password is right, never because of an error.
 
