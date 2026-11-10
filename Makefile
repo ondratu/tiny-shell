@@ -144,12 +144,13 @@ ABOUT = $(BUILD)/tiny-about
 WALLPAPER = $(BUILD)/tiny-wallpaper
 LOCK_PWCHECK = $(BUILD)/tiny-lock-pwcheck
 LOCK_AUTH = $(BUILD)/tiny-lock-auth
+LOCK = $(BUILD)/tiny-lock
 
 PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
-    $(LOCK_AUTH) $(EXAMPLES)
+    $(LOCK_AUTH) $(LOCK) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
     $(BUILD)/src/about.o $(BUILD)/src/wallpaper.o $(BUILD)/src/lock_pwcheck.o \
-    $(BUILD)/src/lock_auth.o \
+    $(BUILD)/src/lock_auth.o $(BUILD)/src/lock.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
@@ -158,7 +159,7 @@ DEP = $(OBJ:.o=.d)
 .DELETE_ON_ERROR:
 
 all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
-    $(LOCK_AUTH)
+    $(LOCK_AUTH) $(LOCK)
 
 # A small binary without the debugging information, into build-release.
 # CI measures the size with -flto on top of this (see ci.yml).
@@ -256,6 +257,9 @@ $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 
 $(LOCK_PWCHECK): $(BUILD)/src/lock_pwcheck.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(CRYPT_LIBS) -o $@
+
+$(LOCK): $(BUILD)/src/lock.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 $(LOCK_AUTH): $(BUILD)/src/lock_auth.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(PAM_LIBS) -o $@

@@ -38,6 +38,11 @@ namespace tiny::wm {
  * reboot = sudo reboot
  * poweroff = doas poweroff
  * terminal = xterm -e
+ * lock = tiny-lock
+ *
+ * [lock]
+ * auth = auto
+ * pam_service = tiny-lock
  *
  * [panel]
  * clock_format = %a %e %B %R
@@ -57,6 +62,14 @@ struct Config {
     double scale = 1;                                //!< [theme] scale, (0, 16]
     std::string reboot_command = "systemctl reboot"; //!< [commands]
     std::string poweroff_command = "systemctl poweroff"; //!< [commands]
+    std::string lock_command = "tiny-lock";              //!< [commands] lock
+    std::string lock_auth =
+            "auto"; //!< [lock] auth: auto, pam, checker, pwcheck
+    std::string lock_pam_service = "tiny-lock"; //!< [lock] pam_service
+    std::string
+            lock_checker; //!< [lock] checker: path of unix_chkpwd, "" is searched
+    std::string
+            lock_pwcheck; //!< [lock] pwcheck: path of tiny-lock-pwcheck, "" is the one next to the lock
     std::vector<std::string> terminal = {"xterm", "-e"}; //!< [commands]
     std::string terminal_line = "xterm -e"; //!< the text of `terminal`
     std::string font =
@@ -153,6 +166,12 @@ bool valid_placement_choice(const std::string& text);
  * line break would break the file).
  */
 bool valid_clock_format(const std::string& text);
+
+//! A name of a PAM service: no blanks, no slashes, no control characters
+bool valid_pam_service(const std::string& text);
+
+//! A path of a program: not empty, no control characters
+bool valid_program_path(const std::string& text);
 
 /**
  * @short The ways a wallpaper covers the screen: fill, center and tile.
