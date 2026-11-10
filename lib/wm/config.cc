@@ -173,6 +173,22 @@ bool valid_clock_format(const std::string& text)
     });
 }
 
+bool parse_blank_after(const std::string& text, int& minutes)
+{
+    const std::string_view value = trim(text);
+    if (value == "never") {
+        minutes = 0;
+        return true;
+    }
+    for (const int allowed : {1, 5, 10, 15}) {
+        if (value == std::to_string(allowed)) {
+            minutes = allowed;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool valid_pam_service(const std::string& text)
 {
     return !text.empty() && std::none_of(text.begin(), text.end(), [](char c) {
@@ -373,6 +389,11 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.lock_auth = *value;
         } else {
             problem("[lock] auth must be auto, pam, checker or pwcheck");
+        }
+    }
+    if (const auto value = ini.get("lock", "blank_after")) {
+        if (!parse_blank_after(*value, config.lock_blank_minutes)) {
+            problem("[lock] blank_after must be 1, 5, 10, 15 or never");
         }
     }
     if (const auto value = ini.get("lock", "pam_service")) {
