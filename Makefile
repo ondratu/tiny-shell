@@ -64,6 +64,26 @@ PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
 # The version for --version: the tag, or the commit when there is no tag
+# PAM is optional and only the example examples/password.cc uses it: PAM=auto
+# (the default) uses libpam when it and its header are found, yes insists on
+# it, no leaves it out. There is no pkg-config file on every system (NetBSD has
+# libpam in the base system), so a small program is compiled and linked.
+# UNIX_CHKPWD=/path is the helper of the password check without PAM.
+PAM ?= auto
+ifneq ($(PAM),no)
+PAM_FOUND := $(shell printf '\043include <security/pam_appl.h>\nint main() { return pam_start == 0; }\n' | \
+    $(CXX) -x c++ - -lpam -o /dev/null 2>/dev/null && echo 1)
+ifeq ($(PAM_FOUND),1)
+PAM_CXXFLAGS = -DTINY_HAVE_PAM
+PAM_LIBS = -lpam
+else ifeq ($(PAM),yes)
+$(error PAM=yes, but libpam and <security/pam_appl.h> were not found (libpam0g-dev, pam-devel, linux-pam-dev))
+endif
+endif
+ifneq ($(UNIX_CHKPWD),)
+PAM_CXXFLAGS += -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
+endif
+
 TINY_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null)
 
 # X headers are system headers: their warnings are not ours to fix
@@ -177,6 +197,7 @@ help:
 	@echo "make clean      remove the build directories"
 	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 (no RandR / Xinerama),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
+	@echo "           PAM=auto|yes|no (libpam for examples/password.cc), UNIX_CHKPWD=/path (its helper)"
 
 examples: $(EXAMPLES)
 
@@ -225,6 +246,10 @@ $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 
 $(EXAMPLES): %: %.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+# the password example asks PAM, when there is PAM (see PAM above)
+$(BUILD)/examples/password.o: override CXXFLAGS += $(PAM_CXXFLAGS)
+$(BUILD)/examples/password: override LDLIBS += $(PAM_LIBS)
 
 $(BUILD)/.pkg_check: Makefile
 	@mkdir -p $(BUILD)
