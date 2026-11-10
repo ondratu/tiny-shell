@@ -19,6 +19,7 @@
 
 #include <X11/Xlib.h>
 
+#include <chrono>
 #include <clocale>
 #include <csignal>
 #include <cstdio>
@@ -80,6 +81,7 @@ int main(int argc, char** argv)
         }
     }
     setlocale(LC_CTYPE, "");
+    setlocale(LC_TIME, ""); // the names of the days and the months
     signal(SIGPIPE, SIG_IGN);
 
     std::vector<std::string> problems;
@@ -130,8 +132,14 @@ int main(int argc, char** argv)
         tiny::theme.init();
         int status = EXIT_SUCCESS;
         {
+            // the date is the one of the panel, without its time
+            tiny::app::LockOptions options;
+            options.date_format =
+                    tiny::app::date_format_of(config.clock_format);
+            options.blank_after =
+                    std::chrono::minutes(config.lock_blank_minutes);
             tiny::app::LockScreen screen(tiny::get_display(), command,
-                                         tiny::app::user_full_name());
+                                         tiny::app::user_full_name(), options);
             if (screen.lock()) {
                 locked = true;
                 screen.run();
