@@ -31,10 +31,10 @@ the middle of the primary monitor. The sizes follow `[theme] scale` and the font
    sends the answer. A wrong password says so and asks again. Escape closes the
    dialog, stops the check and forgets what was typed: back to the time. While the
    dialog is open the screen does not go black.
-3. **Black.** After `[lock] blank_after` (it is Blank after in the section Power
-   of `tiny-settings`) (1, 5, 10, 15 minutes or `never`; the
-   default is 1) without input in the first state the screen is entirely black, with no
-   text at all. Any input (a key, a click, a move of the pointer) shows the time
+3. **Black.** After `[lock] blank_after` without input (1, 5, 10 or 15 minutes, or
+   `never`; the default is 1; it is Blank after in the section Power of
+   `tiny-settings`) the first state turns to an entirely black screen with no text
+   at all. Any input (a key, a click, a move of the pointer) shows the time
    again; a key or a click that wakes the screen is not used for anything else.
    The time starts again after Escape.
 

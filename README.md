@@ -27,7 +27,7 @@ The documentation is in [doc/](doc/) and is published as a web site at
 | [Using the shell](doc/usage.md) | the panel, the dock, the launcher, the window menu, the keys |
 | [Configuration](doc/configuration.md) | the ini file, XSETTINGS, the tray, monitors, the command line |
 | [Applications](doc/applications.md) | `tiny-settings`, `tiny-fonts`, `tiny-about`, `tiny-wallpaper` |
-| [Screen lock](doc/lock.md) | `tiny-lock`: the password of the system, PAM, fingerprints, systems without PAM |
+| [Screen lock](doc/lock.md) | `tiny-lock`: the password of the system, locking when idle, PAM, fingerprints, systems without PAM |
 | [Features](doc/features.md) | everything that is implemented |
 | [Comparison](doc/comparison.md) | tiny-shell next to Openbox, Blackbox, Fluxbox, LXDE, Xfce and GNOME |
 | [Roadmap](doc/roadmap.md) | what is planned |
