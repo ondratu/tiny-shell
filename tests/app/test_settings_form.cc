@@ -1339,7 +1339,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 16u);
+    EXPECT_EQ(count, 17u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1710,7 +1710,7 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
 TEST(SettingsFormPowerTest, the_power_section_has_the_blank_screen)
 {
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
-              (std::vector<Field>{Field::BlankScreen}));
+              (std::vector<Field>{Field::BlankScreen, Field::IdleLock}));
     EXPECT_EQ(SettingsForm::section_of(Field::BlankScreen),
               SettingsForm::Section::Power);
     EXPECT_TRUE(SettingsForm::is_choice(Field::BlankScreen));
@@ -1783,6 +1783,59 @@ TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
     EXPECT_EQ(form.view(), View::Form); // not the list of fonts
     EXPECT_EQ(form.focus(), Field::BlankScreen);
     EXPECT_EQ(form.choice_label(Field::BlankScreen), "5 minutes");
+}
+
+// The lock when idle
+
+TEST(SettingsFormPowerTest, the_idle_lock_is_a_choice_of_the_power_section)
+{
+    EXPECT_EQ(SettingsForm::section_of(Field::IdleLock),
+              SettingsForm::Section::Power);
+    EXPECT_TRUE(SettingsForm::is_choice(Field::IdleLock));
+    EXPECT_NE(std::string(SettingsForm::hint(Field::IdleLock)), "");
+}
+
+TEST(SettingsFormPowerTest, never_is_the_first_choice_and_the_default)
+{
+    SettingsForm form = make();
+
+    EXPECT_EQ(form.text(Field::IdleLock), "");
+    EXPECT_EQ(form.choice_label(Field::IdleLock), "Never");
+    EXPECT_EQ(form.problem(Field::IdleLock), "");
+}
+
+TEST(SettingsFormPowerTest, the_arrows_go_through_the_times_of_the_idle_lock)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::IdleLock);
+
+    for (const char* label :
+         {"5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour"}) {
+        form.key(Key::Right);
+        EXPECT_EQ(form.choice_label(Field::IdleLock), label);
+    }
+    form.key(Key::Right);
+    EXPECT_EQ(form.choice_label(Field::IdleLock), "Never"); // round
+}
+
+TEST(SettingsFormPowerTest, an_idle_time_that_is_not_a_choice_is_a_problem)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.idle_lock = "1"; // one minute is a choice of the black screen only
+    const SettingsForm form = make(values);
+
+    EXPECT_NE(form.problem(Field::IdleLock), "");
+    EXPECT_NE(form.problem(), "");
+}
+
+TEST(SettingsFormPowerTest, the_idle_time_is_kept_in_the_values_of_the_form)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.idle_lock = "30";
+    const SettingsForm form = make(values);
+
+    EXPECT_EQ(form.values().idle_lock, "30");
+    EXPECT_EQ(form.clean_values().idle_lock, "30");
 }
 
 TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
