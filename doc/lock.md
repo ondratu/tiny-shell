@@ -13,13 +13,28 @@ set and to forget.
   menu start that one.
 
 The lock puts a black window over all the monitors and takes the keyboard and
-the pointer. In the middle of the first monitor is the time in big letters, and
-under it the dialog: the whole name of the user (the first part of the GECOS
-field of the passwd entry, the login name when there is none), what is asked,
-and the entry where the typed characters are shown as bullets. The sizes follow
-`[theme] scale` and the font. Return sends the answer, Escape forgets what
-was typed. A wrong password says so and asks again. The screen opens only when
-the check says the password is right, never because of an error.
+the pointer. The sizes follow `[theme] scale` and the font. It has three states:
+
+1. **The time.** The time in big letters, under it the date in smaller ones (the
+   format of the clock of the panel, `[panel] clock_format`, without the time of
+   the day), and in the place of the dialog the text "Click or press a key to
+   unlock".
+2. **The dialog.** A click or a key (it is not typed) opens it: the whole name
+   of the user (the first part of the GECOS field of the passwd entry, the login
+   name when there is none), what is asked, and the entry where the typed
+   characters are shown as bullets. **The check of the password starts only now**,
+   so a fingerprint or a face (Howdy) is looked for when somebody is there. Return
+   sends the answer. A wrong password says so and asks again. Escape closes the
+   dialog, stops the check and forgets what was typed: back to the time. While the
+   dialog is open the screen does not go black.
+3. **Black.** After `[lock] blank_after` (1, 5, 10, 15 minutes or `never`; the
+   default is 1) without input in the first state the screen is entirely black, with no
+   text at all. Any input (a key, a click, a move of the pointer) shows the time
+   again; a key or a click that wakes the screen is not used for anything else.
+   The time starts again after Escape.
+
+The screen opens only when the check says the password is right, never because
+of an error.
 
 If the lock dies (a crash, a kill), tiny-shell starts it again, up to five times
 in a row. A restart of tiny-shell itself does not unlock the screen, because the
@@ -86,7 +101,7 @@ open for an empty password.
 ## Configuration
 
 See [The lock](configuration.md#the-lock): `[commands] lock` and the section
-`[lock]` (`auth`, `pam_service`, `checker`, `pwcheck`).
+`[lock]` (`blank_after`, `auth`, `pam_service`, `checker`, `pwcheck`).
 
 PAM is asked for the service `tiny-lock`. No file is needed for it: a service
 without a file uses `other`, and on Debian, Alpine and NetBSD that is the login
