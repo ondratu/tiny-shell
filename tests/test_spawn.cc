@@ -285,6 +285,13 @@ TEST(SiblingProgramTest, a_program_next_to_the_running_one)
     EXPECT_EQ(tiny::sibling_program(main.c_str(), "data"), "data");
     // started from PATH: argv[0] is a bare name
     EXPECT_EQ(tiny::sibling_program("tiny-no-such-program", "other"), "other");
+    // started from PATH and found there: the sibling is next to it
+    const std::string old_path =
+            getenv("PATH") != nullptr ? getenv("PATH") : "";
+    setenv("PATH", (dir.string() + ":" + old_path).c_str(), 1);
+    EXPECT_EQ(tiny::sibling_program("main", "other"),
+              std::filesystem::canonical(dir / "other").string());
+    setenv("PATH", old_path.c_str(), 1);
     std::filesystem::remove_all(dir);
 }
 
