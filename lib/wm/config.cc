@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <initializer_list>
 #include <iterator>
 #include <optional>
 #include <utility>
@@ -191,20 +192,31 @@ bool valid_clock_format(const std::string& text)
     });
 }
 
-bool parse_blank_after(const std::string& text, int& minutes)
+namespace {
+
+//! "never" is 0, one of the allowed numbers is itself; anything else is not
+//! accepted
+bool parse_allowed_minutes(std::string_view value,
+                           std::initializer_list<int> allowed, int& minutes)
 {
-    const std::string_view value = trim(text);
     if (value == "never") {
         minutes = 0;
         return true;
     }
-    for (const int allowed : {1, 5, 10, 15}) {
-        if (value == std::to_string(allowed)) {
-            minutes = allowed;
+    for (const int one : allowed) {
+        if (value == std::to_string(one)) {
+            minutes = one;
             return true;
         }
     }
     return false;
+}
+
+} // namespace
+
+bool parse_blank_after(const std::string& text, int& minutes)
+{
+    return parse_allowed_minutes(trim(text), {1, 5, 10, 15}, minutes);
 }
 
 XftChoices idle_choices()
@@ -225,18 +237,7 @@ bool valid_idle_choice(const std::string& text)
 
 bool parse_idle_after(const std::string& text, int& minutes)
 {
-    const std::string_view value = trim(text);
-    if (value == "never") {
-        minutes = 0;
-        return true;
-    }
-    for (const int allowed : {5, 10, 15, 30, 60}) {
-        if (value == std::to_string(allowed)) {
-            minutes = allowed;
-            return true;
-        }
-    }
-    return false;
+    return parse_allowed_minutes(trim(text), {5, 10, 15, 30, 60}, minutes);
 }
 
 XftChoices display_off_choices()
@@ -262,17 +263,7 @@ bool parse_display_off(const std::string& text, int& minutes)
         minutes = -1;
         return true;
     }
-    if (value == "never") {
-        minutes = 0;
-        return true;
-    }
-    for (const int allowed : {5, 10, 15, 30, 60}) {
-        if (value == std::to_string(allowed)) {
-            minutes = allowed;
-            return true;
-        }
-    }
-    return false;
+    return parse_allowed_minutes(value, {5, 10, 15, 30, 60}, minutes);
 }
 
 bool valid_pam_service(const std::string& text)
