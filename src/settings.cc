@@ -130,7 +130,10 @@ class SettingsApp : public tiny::XftWindow {
                 config.monitor_placement == tiny::wm::Placement::Keep
                         ? ""
                         : tiny::wm::placement_name(config.monitor_placement),
-                blank_value(config.lock_blank_minutes)},
+                blank_value(config.lock_blank_minutes),
+                config.lock_idle_minutes == 0
+                        ? ""
+                        : std::to_string(config.lock_idle_minutes)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -342,6 +345,12 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"lock", "blank_after",
                          v.blank_screen.empty() ? "1" : v.blank_screen});
+            }
+            if (v.idle_lock != initial.idle_lock) {
+                // the first choice, "", is never
+                changed.push_back(
+                        {"lock", "idle_after",
+                         v.idle_lock.empty() ? "never" : v.idle_lock});
             }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
@@ -620,7 +629,8 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::PrimaryMonitor, "Primary"},
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
                     {SettingsForm::Field::MonitorPlacement, "Position"},
-                    {SettingsForm::Field::BlankScreen, "Blank after"}};
+                    {SettingsForm::Field::BlankScreen, "Blank after"},
+                    {SettingsForm::Field::IdleLock, "Lock after"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;
