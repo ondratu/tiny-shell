@@ -5,6 +5,7 @@
 #include <chrono>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -105,6 +106,15 @@ class LockScreen {
     //! Close the dialog, stop the check and forget what was typed
     void hide_dialog();
 
+    /**
+     * @short Fit the lock to the screen as it is now: the window covers all of
+     * it and the dialog is in the middle of the primary monitor.
+     *
+     * Called when RandR says the monitors changed (one was connected, or the
+     * layout was changed), so no part of the screen is left open.
+     */
+    void screen_changed();
+
     //! Make the screen black, and `wake()` shows the time again
     void blank();
     void wake();
@@ -170,6 +180,7 @@ class LockScreen {
     std::string status_text;
     bool asking = false; //!< a question waits for the answer
     bool grabbed = false;
+    std::optional<int> randr_base; //!< the first event of RandR, if it has any
     bool focused = false;
     bool done = false;
     //! When the next try starts; the epoch means none is waiting
