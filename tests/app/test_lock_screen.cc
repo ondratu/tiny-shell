@@ -294,3 +294,28 @@ TEST_F(LockScreenTest, an_answer_with_a_line_break_is_not_sent_changed)
     EXPECT_TRUE(screen.is_asking()); // still asks, nothing was sent
     EXPECT_FALSE(screen.unlocked());
 }
+
+TEST_F(LockScreenTest, the_time_is_shown_in_big_letters_over_the_dialog)
+{
+    LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna Nováková");
+    // 14:05 on some day
+    tm local = {};
+    local.tm_year = 126;
+    local.tm_mon = 5;
+    local.tm_mday = 1;
+    local.tm_hour = 14;
+    local.tm_min = 5;
+    local.tm_isdst = -1;
+
+    screen.update_clock(mktime(&local));
+
+    EXPECT_EQ(screen.clock_text(), "14:05");
+}
+
+TEST_F(LockScreenTest, the_time_is_there_from_the_start)
+{
+    const LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
+
+    EXPECT_EQ(screen.clock_text().size(), 5u);
+    EXPECT_EQ(screen.clock_text()[2], ':');
+}

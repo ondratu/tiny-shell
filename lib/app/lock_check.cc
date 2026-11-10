@@ -70,6 +70,28 @@ std::string user_name()
     return entry != nullptr ? entry->pw_name : "";
 }
 
+std::string full_name_from(const std::string& gecos, const std::string& login)
+{
+    std::string name = gecos.substr(0, gecos.find(','));
+    const size_t first = name.find_first_not_of(" \t");
+    if (first == std::string::npos) {
+        return login;
+    }
+    name.erase(0, first);
+    name.erase(name.find_last_not_of(" \t") + 1);
+    return name;
+}
+
+std::string user_full_name()
+{
+    const passwd* entry = getpwuid(getuid());
+    if (entry == nullptr) {
+        return "";
+    }
+    return full_name_from(entry->pw_gecos != nullptr ? entry->pw_gecos : "",
+                          entry->pw_name);
+}
+
 std::string password_hash(const std::string& user)
 {
 #ifdef TINY_HAVE_SHADOW
