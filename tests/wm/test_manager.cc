@@ -471,11 +471,12 @@ TEST_F(ManagerTest, the_display_power_is_set_only_when_the_time_is_given)
     EXPECT_FALSE(manager->display_power->enabled());
 
     // Unchanged puts back what the server had before the shell
-    const auto before = manager->display_power_before;
-    ASSERT_TRUE(before.has_value());
+    ASSERT_TRUE(manager->display_power_before.has_value());
+    const std::optional<std::chrono::seconds> expected =
+            manager->display_power_before.value_or(std::nullopt);
     manager->set_display_off(std::chrono::minutes(-1));
     EXPECT_FALSE(manager->display_power_before.has_value());
-    EXPECT_EQ(manager->display_power->timeout(), *before);
+    EXPECT_EQ(manager->display_power->timeout(), expected);
 }
 
 TEST_F(ManagerTest, the_lock_is_not_started_again_while_it_runs)
