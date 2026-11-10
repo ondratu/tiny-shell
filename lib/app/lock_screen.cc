@@ -247,9 +247,8 @@ LockScreen::LockScreen(tiny::Display& display_arg,
 LockScreen::~LockScreen()
 {
     tiny::handlers.unset_handler(VisibilityNotify, cover);
-    if (state_ == State::Black) {
-        power.on();
-    }
+    // the monitor must not stay dark after the lock, whatever put it to sleep
+    power.on();
     if (grabbed) {
         XUngrabKeyboard(display, CurrentTime);
         XUngrabPointer(display, CurrentTime);

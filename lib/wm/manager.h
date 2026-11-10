@@ -103,8 +103,9 @@ class Manager : public tiny::Object {
     /**
      * Switch the display off after this long without input
      * (`[display] off_after`); zero keeps it on, less than zero leaves the
-     * X server as it is. The X server counts the time, nothing runs here.
-     * Without DPMS in the server a message says so, once.
+     * X server as it is (and puts back what it had if the shell has changed
+     * it). The X server counts the time, nothing runs here. Without DPMS in
+     * the server a message says so, once.
      */
     void set_display_off(std::chrono::minutes after);
 
@@ -687,6 +688,9 @@ class Manager : public tiny::Object {
     std::unique_ptr<IdleLock> idle_lock;
     tiny::Timers::Id idle_timer = 0;
     std::unique_ptr<tiny::DisplayPower> display_power; //!< made when needed
+    //! What the X server had before the shell changed it (the time, empty
+    //! for DPMS off); "Unchanged" puts it back
+    std::optional<std::optional<std::chrono::seconds>> display_power_before;
     tiny::Timers::Id lock_timer = 0;            //!< while the lock is watched
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
     bool wallpaper_follows_theme = false;

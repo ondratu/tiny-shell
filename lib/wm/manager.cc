@@ -2268,18 +2268,36 @@ void Manager::set_lock_idle(std::chrono::minutes after)
 
 void Manager::set_display_off(std::chrono::minutes after)
 {
-    if (after < std::chrono::minutes::zero()) {
-        return; // the server keeps what it has
-    }
     if (!display_power) {
+        if (after < std::chrono::minutes::zero()) {
+            return; // the server keeps what it has
+        }
         display_power = std::make_unique<tiny::DisplayPower>(display);
-        if (!display_power->available()) {
+        if (!display_power->available() &&
+            after > std::chrono::minutes::zero()) {
             tiny::error("[display] off_after: this X server has no DPMS, the "
                         "display is not switched off");
         }
     }
-    display_power->set_timeout(
-            std::chrono::duration_cast<std::chrono::seconds>(after));
+    if (!display_power->available()) {
+        return;
+    }
+    if (after < std::chrono::minutes::zero()) {
+        // "Unchanged": what the server had before goes back
+        if (display_power_before) {
+            display_power->set_timeout(display_power_before->value_or(
+                    std::chrono::seconds::zero()));
+            display_power_before.reset();
+        }
+        return;
+    }
+    if (!display_power_before) {
+        display_power_before = display_power->timeout();
+    }
+    if (!display_power->set_timeout(
+                std::chrono::duration_cast<std::chrono::seconds>(after))) {
+        tiny::error("[display] off_after: the X server did not accept it");
+    }
 }
 
 void Manager::check_idle_lock()
