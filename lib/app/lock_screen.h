@@ -15,6 +15,24 @@
 
 namespace tiny::app {
 
+//! What the lock shows and when it goes dark
+struct LockOptions {
+    //! `strftime()` format of the date under the time, "" is no date
+    std::string date_format = "%a %e %B";
+    //! After this time without input the screen is black; zero is never
+    std::chrono::milliseconds blank_after = std::chrono::minutes(1);
+};
+
+/**
+ * @short The date of the format of the clock of the panel: the format without
+ * the time of the day.
+ *
+ * The directives of the time (`%H %I %k %l %M %S %p %P %R %T %r %X %Z %z %s`)
+ * and the blanks and separators that were around them are left out; when
+ * nothing is left, the format is the default one of `LockOptions`.
+ */
+std::string date_format_of(const std::string& clock_format);
+
 /**
  * @short The window of the screen lock: it covers the screen, holds the
  * keyboard and the pointer, and asks for the password.
@@ -36,12 +54,22 @@ class LockScreen {
     using Clock = std::chrono::steady_clock;
 
     /**
+     * What the screen shows. At the start it is `Idle`: the time, the date and
+     * a text that says what to do. A click or a key opens the `Dialog` (and
+     * only then the check of the password starts, so a fingerprint or a face
+     * is looked for when somebody is there); Escape goes back to `Idle`. After
+     * `LockOptions::blank_after` without input in `Idle` the screen is `Black`,
+     * and the next input wakes it to `Idle`.
+     */
+    enum class State { Idle, Dialog, Black };
+
+    /**
      * `command` starts `tiny-lock-auth`; `user` is shown (the whole name of
      * the user, in big letters, with the time over it). The window is made
      * and shown, the keyboard is not grabbed yet (that is `lock()`).
      */
     LockScreen(Display& display, std::vector<std::string> command,
-               std::string user);
+               std::string user, LockOptions options = LockOptions());
     ~LockScreen();
 
     LockScreen(const LockScreen&) = delete;
@@ -68,11 +96,38 @@ class LockScreen {
     //! The answer from the entry; what pressing Return does
     void submit();
 
+    State state() const { return state_; }
+
+    //! Open the dialog and start the check (what a key or a click does in
+    //! `Idle`); Escape does `hide_dialog()`
+    void show_dialog();
+
+    //! Close the dialog, stop the check and forget what was typed
+    void hide_dialog();
+
+    //! Make the screen black, and `wake()` shows the time again
+    void blank();
+    void wake();
+
+    /**
+     * @short What `step()` does with an event of the keyboard or the pointer.
+     *
+     * Returns true when the event is used up. In `Black` any input wakes the
+     * screen, in `Idle` a key or a click opens the dialog and a move of the
+     * pointer only restarts the time to the black screen; none of them is
+     * typed into the entry. In the `Dialog` a key is for the entry (also one
+     * that came to the window of the lock instead of the entry).
+     */
+    bool handle_input(XEvent& event);
+
     //! What the dialog says now
     const std::string& prompt() const { return prompt_text; }
     const std::string& status() const { return status_text; }
     //! The time that is shown over the dialog, "14:05"
     const std::string& clock_text() const { return clock_text_; }
+
+    //! The date under the time, "Tue 10 November"; empty without a date
+    const std::string& date_text() const { return date_text_; }
 
     //! Show the time `now` (the lock does it itself at every minute)
     void update_clock(std::time_t now);
@@ -95,6 +150,8 @@ class LockScreen {
     void give_focus();
     void unlock();
     void on_visibility(const XEvent& event);
+    void set_state(State state);
+    void touch(); //!< input: the time to the black screen starts again
 
     Display& display;
     AuthSession session;
@@ -104,6 +161,11 @@ class LockScreen {
     std::unique_ptr<Dialog> dialog;
     std::string prompt_text;
     std::string clock_text_;
+    std::string date_text_;
+    LockOptions options;
+    State state_ = State::Idle;
+    //! When the screen goes black; the epoch means it does not
+    Clock::time_point blank_at;
     Clock::time_point next_clock; //!< when the time is shown again
     std::string status_text;
     bool asking = false; //!< a question waits for the answer

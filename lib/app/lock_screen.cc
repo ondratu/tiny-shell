@@ -12,6 +12,7 @@
 
 #include "object.h"
 #include "theme.h"
+#include "wm/clock_label.h"
 #include "wm/monitors.h"
 
 namespace tiny {
@@ -29,6 +30,7 @@ constexpr int base_entry_height = 28;
 //! The name of the user is this much bigger than the text, the time more
 constexpr double name_scale = 1.6;
 constexpr double clock_scale = 4.5;
+constexpr double date_scale = 1.8;
 //! A failure that is not a wrong password waits, so the tries don't spin
 constexpr std::chrono::milliseconds failure_delay(1000);
 
@@ -69,7 +71,9 @@ class LockScreen::Dialog : public tiny::Box {
         entry(inner_width() - 2 * tiny::theme.entry.border_width,
               entry_height()),
         status(inner_width(), line_of(1), ""),
-        clock(width(), line_of(clock_scale), "")
+        clock(wide(), line_of(clock_scale), ""),
+        date(wide(), line_of(date_scale), ""),
+        hint(wide(), line_of(1), "Click or press a key to unlock")
     {
         who.set_font_scale(name_scale);
         who.set_align(tiny::Label::Align::Center);
@@ -77,7 +81,13 @@ class LockScreen::Dialog : public tiny::Box {
         status.set_align(tiny::Label::Align::Center);
         clock.set_font_scale(clock_scale);
         clock.set_align(tiny::Label::Align::Center);
+        date.set_font_scale(date_scale);
+        date.set_align(tiny::Label::Align::Center);
+        hint.set_align(tiny::Label::Align::Center);
     }
+
+    //! No frame: the text is on the black screen
+    int get_border() const override { return 0; }
 
     void build(::Window parent_window)
     {
@@ -87,10 +97,16 @@ class LockScreen::Dialog : public tiny::Box {
         push_start(&question, gap, gap / 2);
         push_start(&entry, gap, gap / 2);
         push_start(&status, gap, gap / 2);
-        clock.realize(parent_window, 0, 0);
+        for (tiny::Label* label : {&clock, &date, &hint}) {
+            label->realize(parent_window, 0, 0);
+            label->set_events();
+        }
     }
 
     static int width() { return px(base_width); }
+
+    //! The time, the date and the hint are wider than the dialog
+    static int wide() { return width() * 3 / 2; }
 
     static int height()
     {
@@ -100,8 +116,9 @@ class LockScreen::Dialog : public tiny::Box {
                line_of(1) + gap;
     }
 
-    //! The time over the dialog and the space between them
+    //! The time and the date over the dialog, and the space between them
     static int clock_height() { return line_of(clock_scale); }
+    static int date_height() { return line_of(date_scale); }
     static int clock_gap() { return px(base_spacing) * 2; }
 
     tiny::Label who;
@@ -109,14 +126,64 @@ class LockScreen::Dialog : public tiny::Box {
     tiny::Entry entry;
     tiny::Label status;
     tiny::Label clock;
+    tiny::Label date;
+    tiny::Label hint; //!< in the place of the dialog when it is not open
 
   private:
     static int inner_width() { return width() - 2 * px(base_spacing); }
 };
 
+std::string date_format_of(const std::string& clock_format)
+{
+    // the directives of the time of the day
+    const std::string time_of_day = "HIklMSpPRTrXZzs";
+    std::string date;
+    for (size_t i = 0; i < clock_format.size(); ++i) {
+        if (clock_format[i] != '%' || i + 1 >= clock_format.size()) {
+            date += clock_format[i];
+            continue;
+        }
+        size_t end = i + 1;
+        while (end < clock_format.size() &&
+               std::string("-_0^#EO").find(clock_format[end]) !=
+                       std::string::npos) {
+            ++end; // flags and modifiers of the directive
+        }
+        if (end >= clock_format.size()) {
+            date += clock_format.substr(i);
+            break;
+        }
+        if (time_of_day.find(clock_format[end]) == std::string::npos) {
+            date += clock_format.substr(i, end - i + 1);
+        } else {
+            date += '\x01'; // a mark of the place where the time was
+        }
+        i = end;
+    }
+    // the marks and what is around them (blanks, separators) are dropped from
+    // the ends; a mark in the middle takes its separators with it
+    const std::string separators = " \t,;:-/\x01";
+    const size_t first = date.find_first_not_of(separators);
+    if (first == std::string::npos) {
+        return LockOptions().date_format;
+    }
+    date = date.substr(first, date.find_last_not_of(separators) - first + 1);
+    std::string clean;
+    for (const char c : date) {
+        if (c != '\x01') {
+            clean += c;
+        }
+    }
+    return clean;
+}
+
 LockScreen::LockScreen(tiny::Display& display_arg,
-                       std::vector<std::string> command, std::string user_arg):
-    display(display_arg), session(std::move(command)), user(std::move(user_arg))
+                       std::vector<std::string> command, std::string user_arg,
+                       LockOptions options_arg):
+    display(display_arg),
+    session(std::move(command)),
+    user(std::move(user_arg)),
+    options(std::move(options_arg))
 {
     ::Display* const xdisplay = display;
     const int screen = XDefaultScreen(xdisplay);
@@ -146,10 +213,10 @@ LockScreen::LockScreen(tiny::Display& display_arg,
     dialog->entry.set_password();
     dialog->entry.on_activate.connect(
             [this](tiny::Object*, const XEvent&, void*) { submit(); });
-    dialog->entry.on_cancel.connect([this](tiny::Object*, const XEvent&,
-                                           void*) {
-        dialog->entry.clear(); // Escape forgets what was typed, nothing more
-    });
+    dialog->entry.on_cancel.connect(
+            [this](tiny::Object*, const XEvent&, void*) {
+                hide_dialog(); // Escape: back to the time, nothing is typed
+            });
     // what was said about the last try is kept until the user types again
     dialog->entry.on_change.connect(
             [this](tiny::Object*, const XEvent&, void*) {
@@ -163,10 +230,12 @@ LockScreen::LockScreen(tiny::Display& display_arg,
             VisibilityNotify, cover,
             [this](const XEvent& event) { on_visibility(event); });
     XMapWindow(display, cover);
-    dialog->clock.set_events();
     dialog->map_all();
-    dialog->clock.map();
+    for (tiny::Label* label : {&dialog->clock, &dialog->date, &dialog->hint}) {
+        label->map();
+    }
     update_clock(std::time(nullptr));
+    set_state(State::Idle);
     XRaiseWindow(display, cover);
     XFlush(display);
 }
@@ -196,6 +265,13 @@ void LockScreen::update_clock(std::time_t now)
     }
     clock_text_ = text;
     dialog->clock.set_text(clock_text_);
+    // the same function as the clock of the panel: the same text
+    std::string date;
+    if (!options.date_format.empty()) {
+        date = tiny::wm::ClockLabel::format_time(options.date_format, now);
+    }
+    date_text_ = date;
+    dialog->date.set_text(date_text_);
     // the next change is at the start of the next minute
     const int left = 60 - local.tm_sec;
     next_clock = Clock::now() + std::chrono::seconds(left);
@@ -223,25 +299,33 @@ void LockScreen::place_dialog()
             }
         }
     }
-    // the time and the dialog are one block in the middle of the monitor
-    const int block =
-            Dialog::clock_height() + Dialog::clock_gap() + Dialog::height();
+    // the time, the date and the dialog are one block in the middle of the
+    // monitor; the dialog and the hint take the same place
+    const int block = Dialog::clock_height() + Dialog::date_height() +
+                      Dialog::clock_gap() + Dialog::height();
     const int x = area.x + (area.width - Dialog::width()) / 2;
+    const int wide_x = area.x + (area.width - Dialog::wide()) / 2;
     const int y = area.y + (area.height - block) / 2;
-    XMoveWindow(display, dialog->clock.get_window(), x, y);
-    XMoveWindow(display, dialog->get_window(), x,
-                y + Dialog::clock_height() + Dialog::clock_gap());
+    const int dialog_y = y + Dialog::clock_height() + Dialog::date_height() +
+                         Dialog::clock_gap();
+    XMoveWindow(display, dialog->clock.get_window(), wide_x, y);
+    XMoveWindow(display, dialog->date.get_window(), wide_x,
+                y + Dialog::clock_height());
+    XMoveWindow(display, dialog->get_window(), x, dialog_y);
+    XMoveWindow(display, dialog->hint.get_window(), wide_x,
+                dialog_y + (Dialog::height() - line_of(1)) / 2);
 }
 
 bool LockScreen::lock(std::chrono::milliseconds patience)
 {
     const auto until = Clock::now() + patience;
-    // The keyboard goes to the window of the entry, whatever has the focus,
-    // so the typing can't reach another client.
-    const ::Window keys = dialog->entry.get_window();
+    // The keyboard goes to the lock, whatever has the focus, so the typing
+    // can't reach another client (the entry is not shown in Idle, so it can't
+    // be the window of the grab; the keys that do not come to it are given to
+    // it, see `handle_input()`).
     for (;;) {
         XSync(display, False);
-        const int keyboard = XGrabKeyboard(display, keys, False, GrabModeAsync,
+        const int keyboard = XGrabKeyboard(display, cover, True, GrabModeAsync,
                                            GrabModeAsync, CurrentTime);
         if (keyboard == GrabSuccess) {
             const int pointer = XGrabPointer(
@@ -251,8 +335,7 @@ bool LockScreen::lock(std::chrono::milliseconds patience)
                     CurrentTime);
             if (pointer == GrabSuccess) {
                 grabbed = true;
-                give_focus();
-                start_try();
+                touch();
                 return true;
             }
             XUngrabKeyboard(display, CurrentTime);
@@ -302,6 +385,9 @@ void LockScreen::start_try()
 {
     asking = false;
     retry_at = Clock::time_point();
+    if (state_ != State::Dialog) {
+        return;
+    }
     if (!session.start()) {
         set_status("Can't check the password: " + session.error());
         retry_at = Clock::now() + failure_delay;
@@ -394,6 +480,9 @@ void LockScreen::handle_events()
     while (XPending(display) > 0) {
         XEvent event;
         XNextEvent(display, &event);
+        if (handle_input(event)) {
+            continue;
+        }
         const auto id = std::make_pair(event.type, event.xany.window);
         if (tiny::handlers.count(id)) {
             tiny::handlers.call_handler(id, event);
@@ -406,9 +495,6 @@ bool LockScreen::step(int timeout_ms)
     handle_events();
     if (done) {
         return false;
-    }
-    if (!focused && grabbed) {
-        give_focus();
     }
     // A request that waits for a reply reads the events that came meanwhile
     // into the queue of Xlib, and poll() sees only the socket.
@@ -426,6 +512,13 @@ bool LockScreen::step(int timeout_ms)
                         .count();
         const int ms = static_cast<int>(std::max<long long>(until_clock, 0));
         wait = wait < 0 ? ms : std::min(wait, ms);
+    }
+    if (state_ == State::Idle && blank_at != Clock::time_point()) {
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  blank_at - Clock::now())
+                                  .count();
+        const int until_blank = static_cast<int>(std::max<long long>(left, 0));
+        wait = wait < 0 ? until_blank : std::min(wait, until_blank);
     }
     if (retry_at != Clock::time_point()) {
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -453,8 +546,129 @@ bool LockScreen::step(int timeout_ms)
     if (retry_at != Clock::time_point() && Clock::now() >= retry_at && !done) {
         start_try();
     }
+    if (state_ == State::Idle && blank_at != Clock::time_point() &&
+        Clock::now() >= blank_at) {
+        blank();
+    }
     handle_events();
     return !done;
+}
+
+void LockScreen::touch()
+{
+    blank_at = options.blank_after > std::chrono::milliseconds(0)
+                       ? Clock::now() + options.blank_after
+                       : Clock::time_point();
+}
+
+void LockScreen::set_state(State state)
+{
+    const State before = state_;
+    state_ = state;
+    if (before == State::Dialog && state != State::Dialog) {
+        session.stop(); // nothing asks while nobody is there
+        asking = false;
+        retry_at = Clock::time_point();
+        dialog->entry.clear();
+        set_status("");
+        dialog->question.set_text("");
+        prompt_text.clear();
+    }
+    // what is seen in the state
+    const bool seen = state != State::Black;
+    const auto show = [seen](tiny::Widget& widget, bool wanted) {
+        if (seen && wanted) {
+            widget.map();
+        } else {
+            widget.unmap();
+        }
+    };
+    show(dialog->clock, true);
+    show(dialog->date, true);
+    show(dialog->hint, state == State::Idle);
+    show(*dialog, state == State::Dialog);
+    if (state == State::Dialog) {
+        give_focus();
+    }
+    if (state == State::Idle) {
+        touch(); // the time to the black screen counts from here
+    } else {
+        blank_at = Clock::time_point(); // a dialog or a black screen stays
+    }
+    if (state == State::Dialog && before != State::Dialog) {
+        start_try();
+    }
+    XFlush(display);
+}
+
+void LockScreen::show_dialog()
+{
+    if (state_ != State::Dialog) {
+        set_state(State::Dialog);
+    }
+}
+
+void LockScreen::hide_dialog()
+{
+    if (state_ == State::Dialog) {
+        set_state(State::Idle);
+    }
+}
+
+void LockScreen::blank()
+{
+    if (state_ == State::Idle) {
+        set_state(State::Black);
+    }
+}
+
+void LockScreen::wake()
+{
+    if (state_ == State::Black) {
+        set_state(State::Idle);
+    }
+}
+
+bool LockScreen::handle_input(XEvent& event)
+{
+    switch (event.type) {
+        case KeyPress:
+        case ButtonPress:
+            if (state_ == State::Black) {
+                wake();
+                return true;
+            }
+            if (state_ == State::Idle) {
+                show_dialog();
+                return true;
+            }
+            if (event.type == KeyPress &&
+                event.xkey.window != dialog->entry.get_window()) {
+                // the key came to the window of the lock (something else has
+                // the focus): it is for the entry all the same
+                event.xkey.window = dialog->entry.get_window();
+                event.xkey.subwindow = None;
+            }
+            return event.type == ButtonPress;
+        case KeyRelease:
+            if (state_ != State::Dialog) {
+                return true;
+            }
+            event.xkey.window = dialog->entry.get_window();
+            event.xkey.subwindow = None;
+            return false;
+        case ButtonRelease:
+            return true;
+        case MotionNotify:
+            if (state_ == State::Black) {
+                wake();
+            } else if (state_ == State::Idle) {
+                touch();
+            }
+            return true;
+        default:
+            return false;
+    }
 }
 
 void LockScreen::run()
