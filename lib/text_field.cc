@@ -26,6 +26,19 @@ void TextField::set_text(std::string text)
     cursor_ = text_.size();
 }
 
+void TextField::wipe()
+{
+    // up to the capacity: Backspace leaves the old bytes behind the end
+    text_.resize(text_.capacity());
+    // volatile: the writes stay, although the text is not read after them
+    volatile char* bytes = text_.data();
+    for (size_t i = 0; i < text_.size(); ++i) {
+        bytes[i] = 0;
+    }
+    text_.clear();
+    cursor_ = 0;
+}
+
 size_t TextField::previous(size_t offset) const
 {
     while (offset > 0) {

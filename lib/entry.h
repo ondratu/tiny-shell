@@ -21,6 +21,9 @@ namespace tiny {
  * may complete the text). Ctrl+V and Shift+Insert paste
  * the clipboard, the middle button pastes the primary selection, Ctrl+C copies
  * the whole text. What the text means is up to the owner.
+ *
+ * A password entry (`set_password()`) shows a bullet for every character, does
+ * not copy the text, and `clear()` and the destructor overwrite it in memory.
  */
 class Entry : public Widget {
   public:
@@ -41,7 +44,13 @@ class Entry : public Widget {
 
     const std::string& get_text() const { return field.text(); }
 
+    //! Empty the entry; a password is also overwritten in memory
     void clear();
+
+    //! Show bullets instead of the characters, do not copy the text
+    void set_password(bool on = true);
+
+    bool is_password() const { return password; }
 
     //! Give Left and Right to on_key (a grid next to the entry uses them)
     //! instead of moving the cursor
@@ -67,12 +76,15 @@ class Entry : public Widget {
     void redraw();
     //! Where the text starts: it scrolls to keep the cursor visible
     int text_origin(XftFont* font) const;
+    //! The text as it is drawn: the same, or a bullet for every character
+    std::string shown(XftFont* font, const std::string& text) const;
     int text_width(XftFont* font, const std::string& text) const;
     void paste(Clipboard::Which which, const XEvent& e);
     void set_focus_state(bool focus, const XEvent& e);
 
     TextField field; //!< the text and the cursor in it
     bool pass_horizontal = false;
+    bool password = false;
 
     std::unique_ptr<InputMethod> input;   //!< made when the entry is realized
     std::unique_ptr<Clipboard> clipboard; //!< the same

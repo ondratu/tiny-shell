@@ -543,3 +543,128 @@ TEST_F(EntryEditTest, paste_with_nothing_to_paste_changes_nothing)
     EXPECT_EQ(entry.get_text(), "a");
     EXPECT_EQ(changed.calls, 0);
 }
+
+// A password entry
+
+class PasswordEntryTest : public EntryEditTest {
+  protected:
+    //! What the entry looks like with some text; the same size as `entry`
+    static Image picture(tiny::Entry& e)
+    {
+        e.map();
+        send(e, Expose);
+        return Image(e.get_window(), 100, 30);
+    }
+};
+
+TEST_F(PasswordEntryTest, the_text_is_kept_but_bullets_are_drawn)
+{
+    entry.set_password();
+
+    type_text(entry, "abc");
+
+    EXPECT_TRUE(entry.is_password());
+    EXPECT_EQ(entry.get_text(), "abc");
+    EXPECT_EQ(changed.calls, 3);
+
+    tiny::Entry bullets(100, 30);
+    bullets.realize(root_window(), 0, 0);
+    bullets.set_events();
+    bullets.set_text("\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2");
+    send(bullets, FocusIn);
+    EXPECT_TRUE(picture(entry) == picture(bullets));
+}
+
+TEST_F(PasswordEntryTest, a_bullet_is_drawn_for_a_whole_utf8_character)
+{
+    entry.set_password();
+    entry.set_text("p\xC5\x99\xC3\xADlis"); // six characters, nine bytes
+
+    tiny::Entry bullets(100, 30);
+    bullets.realize(root_window(), 0, 0);
+    bullets.set_events();
+    bullets.set_text(std::string("\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2"
+                                 "\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2"));
+    send(bullets, FocusIn);
+
+    EXPECT_TRUE(picture(entry) == picture(bullets));
+}
+
+TEST_F(PasswordEntryTest, a_click_puts_the_cursor_between_the_bullets)
+{
+    entry.set_password();
+    entry.set_text("abc");
+
+    send(entry.get_window(), button(entry, Button1, 0));
+    EXPECT_EQ(entry.get_cursor(), 0u);
+
+    send(entry.get_window(), button(entry, Button1, 90));
+    EXPECT_EQ(entry.get_cursor(), 3u);
+}
+
+TEST_F(PasswordEntryTest, the_password_is_not_copied)
+{
+    tiny::Entry plain(100, 30);
+    plain.realize(root_window(), 0, 0);
+    plain.set_events();
+    plain.map();
+    send(plain, FocusIn);
+    plain.set_text("plain");
+    type_key(plain, XK_c, ControlMask);
+
+    entry.set_password();
+    entry.set_text("secret");
+    type_key(entry, XK_c, ControlMask);
+
+    // the clipboard still has the text of the other entry
+    plain.set_text("");
+    type_key(plain, XK_v, ControlMask);
+    settle();
+    EXPECT_EQ(plain.get_text(), "plain");
+}
+
+TEST_F(PasswordEntryTest, a_password_can_be_pasted)
+{
+    tiny::Entry plain(100, 30);
+    plain.realize(root_window(), 0, 0);
+    plain.set_events();
+    plain.map();
+    send(plain, FocusIn);
+    plain.set_text("from a manager");
+    type_key(plain, XK_c, ControlMask);
+
+    entry.set_password();
+    type_key(entry, XK_v, ControlMask);
+    settle();
+
+    EXPECT_EQ(entry.get_text(), "from a manager");
+}
+
+TEST_F(PasswordEntryTest, clear_empties_the_entry_and_overwrites_the_text)
+{
+    entry.set_password();
+    entry.set_text("secret");
+    const char* bytes = entry.get_text().data();
+
+    entry.clear();
+
+    EXPECT_EQ(entry.get_text(), "");
+    for (int i = 0; i < 6; ++i) {
+        EXPECT_EQ(bytes[i], 0) << i;
+    }
+}
+
+TEST_F(PasswordEntryTest, an_entry_can_stop_being_a_password)
+{
+    entry.set_password();
+    entry.set_text("abc");
+    entry.set_password(false);
+
+    EXPECT_FALSE(entry.is_password());
+    tiny::Entry bullets(100, 30);
+    bullets.realize(root_window(), 0, 0);
+    bullets.set_events();
+    bullets.set_text("abc");
+    send(bullets, FocusIn);
+    EXPECT_TRUE(picture(entry) == picture(bullets));
+}

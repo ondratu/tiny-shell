@@ -29,6 +29,14 @@ class TextField {
     /// Replace the text; the cursor goes to its end.
     void set_text(std::string text);
 
+    /// Make room for `size` bytes, so that a text that grows does not move
+    /// to a new buffer and leave a copy of itself in the old one.
+    void reserve(size_t size) { text_.reserve(size); }
+
+    /// Empty the text and overwrite the bytes it was kept in, also the ones
+    /// that an edit left behind the end (a password must not stay in memory).
+    void wipe();
+
     /// Put a text at the cursor; true when there was something to put.
     bool insert(const std::string& added);
 

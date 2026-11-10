@@ -143,3 +143,33 @@ TEST(TextFieldTest, without_a_measure_the_pointer_gives_the_end)
     EXPECT_EQ(TextField("abc").offset_at(0, nullptr), 3u);
     EXPECT_EQ(TextField().offset_at(10, ten_per_byte), 0u);
 }
+
+TEST(TextFieldTest, wipe_empties_the_text_and_overwrites_the_bytes)
+{
+    TextField field("secret");
+    field.backspace();
+    field.backspace(); // the removed bytes stay behind the end
+    const char* bytes = field.text().data();
+
+    field.wipe();
+
+    EXPECT_EQ(field.text(), "");
+    EXPECT_EQ(field.cursor(), 0u);
+    for (int i = 0; i < 6; ++i) {
+        EXPECT_EQ(bytes[i], 0) << i; // the buffer is kept, only emptied
+    }
+}
+
+TEST(TextFieldTest, reserve_keeps_the_buffer_while_the_text_grows)
+{
+    TextField field;
+    field.reserve(64);
+    field.insert("a");
+    const char* bytes = field.text().data();
+
+    for (int i = 0; i < 40; ++i) {
+        field.insert("b");
+    }
+
+    EXPECT_EQ(field.text().data(), bytes);
+}
