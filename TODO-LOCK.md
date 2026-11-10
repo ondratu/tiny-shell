@@ -23,9 +23,8 @@ the work is accepted; this file keeps the reasons and the details.
   not checked; XDM has nothing). It is shown only when it is set.
 - **OpenBSD:** no PAM; `tiny-lock-pwcheck` would use `auth_userokay` of
   `bsd_auth` and a set-group-ID `auth` binary. Not tried: no OpenBSD here.
-- **NetBSD and FreeBSD with the set-user-ID bit:** built and run without the bit
-  only. Try `make install-setuid` there and `tiny-lock --probe`. FreeBSD was not
-  tried at all.
+- **FreeBSD with the set-user-ID bit:** not tried at all (NetBSD was, see
+  doc/developers/screen-lock.md).
 - **PAM files of the distributions:** a service without a file uses `other`. That
   is the login password on Debian, Alpine and NetBSD; Fedora and Arch are not
   checked (`other` may deny everything there). The files for `/etc/pam.d`

@@ -73,7 +73,7 @@ tiny-lock --probe           # the same check that tiny-lock makes before it lock
 | Debian, Ubuntu, Raspberry Pi OS, Armbian | there (`login` needs it) | install `libpam0g-dev` to build with it; nothing more |
 | Fedora, Arch | there | install the development package (`pam-devel`, `pam`); not tried by us |
 | Alpine | `linux-pam` is a package, a plain install has none | `apk add linux-pam linux-pam-dev` and build with it, or use `tiny-lock-pwcheck` |
-| NetBSD, FreeBSD | OpenPAM in the base system, but an ordinary user can't read the hashes of the passwords | `make install-setuid` (see below) |
+| NetBSD, FreeBSD | OpenPAM in the base system, but `pam_unix` reads the hash itself and an ordinary user can't, so PAM refuses the right password (tried on NetBSD); there is no `unix_chkpwd` | `make install-setuid` and `PAM=no`; `tiny-lock-pwcheck` checks the password (tried on NetBSD, FreeBSD not) |
 | OpenBSD | no PAM (it has `bsd_auth`) | not supported yet |
 
 `make` finds PAM by itself (`PAM=auto`); `make PAM=no` builds without it and
