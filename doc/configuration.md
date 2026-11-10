@@ -149,8 +149,9 @@ it needs a restart or `tiny-shell --reload`.
 `[display] off_after` switches the display off after the given minutes without
 input: 5, 10, 15, 30, 60, or `never`, which keeps it on. Without the key tiny-shell
 does not touch the setting of the X server, so what `xset dpms` or the
-configuration of Xorg says stays. Taking the key out again does not undo what the
-shell has set: the X server keeps it until it is started again.
+configuration of Xorg says stays. If the key is taken out (or Unchanged is
+chosen in `tiny-settings`) and the settings are read again, the shell puts back
+what the X server had before it changed it.
 
 The X server counts the time, so nothing runs in tiny-shell for it; the same
 setting is Display off in the section Power of `tiny-settings`. The shell sets it
