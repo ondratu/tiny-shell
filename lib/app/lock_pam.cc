@@ -1,6 +1,10 @@
 #include "app/lock_pam.h"
 
+#include <cctype>
 #include <cstdlib>
+#include <fstream>
+#include <iterator>
+#include <sstream>
 #include <cstring>
 
 #ifdef TINY_HAVE_PAM
@@ -8,6 +12,67 @@
 #endif
 
 namespace tiny::app {
+
+std::vector<std::string> pam_directories()
+{
+    return {"/etc/pam.d", "/usr/lib/pam.d", "/usr/etc/pam.d"};
+}
+
+namespace {
+
+//! The text of the file of the service, "" if there is none
+std::string read_service(const std::string& service,
+                         const std::vector<std::string>& directories)
+{
+    for (const std::string& directory : directories) {
+        std::string file = directory;
+        file += '/';
+        file += service;
+        std::ifstream in(file);
+        if (in) {
+            return {std::istreambuf_iterator<char>(in),
+                    std::istreambuf_iterator<char>()};
+        }
+    }
+    return "";
+}
+
+} // namespace
+
+bool pam_service_denies(const std::string& service,
+                        const std::vector<std::string>& directories)
+{
+    std::string text = read_service(service, directories);
+    if (text.empty()) {
+        text = read_service("other", directories); // the fallback of PAM
+    }
+    std::istringstream lines(text);
+    std::string line;
+    bool any = false;
+    while (std::getline(lines, line)) {
+        const size_t start = line.find_first_not_of(" \t");
+        if (start == std::string::npos || line[start] == '#') {
+            continue;
+        }
+        const bool is_auth =
+                line.compare(start, 4, "auth") == 0 &&
+                line.size() > start + 4 &&
+                std::isspace(static_cast<unsigned char>(line[start + 4])) != 0;
+        const bool include = line[start] == '@' ||
+                             line.find("include", start) != std::string::npos ||
+                             line.find("substack", start) != std::string::npos;
+        if (include && (is_auth || line[start] == '@')) {
+            return false; // it leads somewhere else
+        }
+        if (is_auth) {
+            if (line.find("pam_deny", start) == std::string::npos) {
+                return false;
+            }
+            any = true;
+        }
+    }
+    return any;
+}
 
 #ifdef TINY_HAVE_PAM
 

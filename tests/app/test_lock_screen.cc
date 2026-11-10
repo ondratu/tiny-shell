@@ -282,3 +282,15 @@ TEST_F(LockScreenTest, a_window_over_the_lock_is_put_under_it)
     XFree(children);
     XDestroyWindow(tiny::get_display(), over);
 }
+
+TEST_F(LockScreenTest, an_answer_with_a_line_break_is_not_sent_changed)
+{
+    LockScreen screen(tiny::get_display(), shell(asks_for_secret), "anna");
+    ASSERT_TRUE(screen.lock());
+    ASSERT_TRUE(wait_for(screen, [&] { return screen.is_asking(); }));
+    screen.entry().set_text("sec\nret");
+    screen.submit();
+    EXPECT_NE(screen.status().find("line break"), std::string::npos);
+    EXPECT_TRUE(screen.is_asking()); // still asks, nothing was sent
+    EXPECT_FALSE(screen.unlocked());
+}

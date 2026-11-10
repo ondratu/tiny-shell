@@ -1,11 +1,28 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "app/lock_check.h"
 #include "app/lock_protocol.h"
 
 namespace tiny::app {
+
+/**
+ * @short Whether the PAM configuration of the service denies everybody.
+ *
+ * A service with no file in the directories uses `other`. On Fedora and Arch
+ * that is `pam_deny`, so the right password would be refused and a lock that
+ * can't be unlocked is worse than none. It is told only when the file of the
+ * service (or `other`) has `auth` lines and every one of them is `pam_deny`
+ * (an `include`, `substack` or `@include` leads to the real configuration).
+ * `directories` are the places of the files (`/etc/pam.d`, `/usr/lib/pam.d`).
+ */
+bool pam_service_denies(const std::string& service,
+                        const std::vector<std::string>& directories);
+
+//! The directories where the system keeps the files of the PAM services
+std::vector<std::string> pam_directories();
 
 //! Whether this build has PAM (the make variable `PAM`, see Makefile)
 bool pam_built();

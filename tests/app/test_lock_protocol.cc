@@ -262,3 +262,16 @@ TEST(LockProtocolTest, information_and_the_result_are_written)
     EXPECT_EQ(drain(pipes.auth_to_lock[0]),
               "INFO Place your finger\nERROR Too many tries\nRESULT WRONG\n");
 }
+
+TEST(LockProtocolTest, clear_forgets_that_a_line_was_too_long)
+{
+    LineBuffer buffer;
+    const std::string long_line(LineBuffer::max_line + 1, 'a');
+    buffer.feed(long_line.data(), long_line.size());
+    buffer.next();
+    ASSERT_TRUE(buffer.overflow());
+
+    buffer.clear(); // the next try of the check starts clean
+
+    EXPECT_FALSE(buffer.overflow());
+}

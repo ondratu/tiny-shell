@@ -268,8 +268,11 @@ $(ABOUT): $(BUILD)/src/about.o $(LIB)
 $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
-$(LOCK_PWCHECK): $(BUILD)/src/lock_pwcheck.o $(LIB)
-	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(CRYPT_LIBS) -o $@
+# the program with the rights links only what it needs: no X libraries, no
+# toolkit (that is why it does not use $(LIB) and $(LDLIBS))
+$(LOCK_PWCHECK): $(BUILD)/src/lock_pwcheck.o $(BUILD)/lib/app/pwcheck.o \
+    $(BUILD)/lib/app/lock_check.o
+	$(CXX) $^ $(LDFLAGS) $(CRYPT_LIBS) -o $@
 
 $(LOCK): $(BUILD)/src/lock.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@

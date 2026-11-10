@@ -33,6 +33,9 @@ struct Backend {
     std::string pam_service;
     Checker checker;
     std::string description; //!< for a message: "PAM, service tiny-lock"
+    //! The wait after a wrong password, for a checker that has none of its own
+    //! (`unix_chkpwd`; PAM and `tiny-lock-pwcheck` wait themselves)
+    unsigned wrong_delay_ms = 0;
 };
 
 /**

@@ -5,16 +5,17 @@
 // tiny-shell). It does not check the password: tiny-lock-auth does, in a
 // process of its own. It has no privileges. The rules are in TODO-LOCK.md.
 //
-//   tiny-lock [--auth path-of-tiny-lock-auth] [auth options...]
+//   tiny-lock [--probe]
 //
-// The options of tiny-lock-auth that come after `--` are passed to it. The
-// configuration ([lock] in the file of tiny-shell) is read here and handed to
-// it.
+// --probe only checks that the password can be checked. The configuration
+// ([lock] in the file of tiny-shell) is read here and handed to
+// tiny-lock-auth, which is next to this program.
 //
 // Exit status: 0 the screen was unlocked, 1 it could not be locked (no way to
 // check the password, another program holds the keyboard...) and the screen
 // was left alone, which tiny-shell does not try again. A death by a signal or
-// another status is a crash of the lock, which tiny-shell starts again.
+// another status (an error after the screen was locked ends with 3) is a crash
+// of the lock, which tiny-shell starts again.
 
 #include <X11/Xlib.h>
 
@@ -23,6 +24,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 #include <exception>
 #include <string>
 #include <vector>
@@ -38,6 +40,22 @@
 namespace {
 
 constexpr int cant_lock = 1;
+//! An error after the screen is locked: not 1, which says "do not try again"
+constexpr int failed_while_locked = 3;
+
+// An error of X must not end the lock with the status 1 (Xlib's exit()): a
+// crash is started again, and a failed request is not worth a crash
+int on_x_error(Display*, XErrorEvent* event)
+{
+    fprintf(stderr, "tiny-lock: X error %d of request %d\n", event->error_code,
+            event->request_code);
+    return 0;
+}
+
+int on_x_io_error(Display*)
+{
+    _exit(failed_while_locked); // the connection is gone, nothing is left to do
+}
 
 void usage(const char* program)
 {
@@ -99,8 +117,11 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
+    bool locked = false;
     try {
         tiny::Display::init();
+        XSetErrorHandler(on_x_error);
+        XSetIOErrorHandler(on_x_io_error);
         tiny::theme.set_font_size(config.font_size);
         tiny::theme.scale(config.scale);
         tiny::theme.set_font(config.font);
@@ -112,6 +133,7 @@ int main(int argc, char** argv)
             tiny::app::LockScreen screen(tiny::get_display(), command,
                                          tiny::app::user_name());
             if (screen.lock()) {
+                locked = true;
                 screen.run();
             } else {
                 fprintf(stderr,
@@ -125,6 +147,6 @@ int main(int argc, char** argv)
         return status;
     } catch (const std::exception& e) {
         fprintf(stderr, "%s: %s\n", argv[0], e.what());
-        return cant_lock;
+        return locked ? failed_while_locked : cant_lock;
     }
 }

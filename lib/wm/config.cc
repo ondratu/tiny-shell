@@ -183,7 +183,9 @@ bool valid_pam_service(const std::string& text)
 
 bool valid_program_path(const std::string& text)
 {
-    return !text.empty() && valid_clock_format(text);
+    return !text.empty() && std::none_of(text.begin(), text.end(), [](char c) {
+        return std::iscntrl(static_cast<unsigned char>(c)) != 0;
+    });
 }
 
 bool valid_wallpaper_mode(const std::string& text)

@@ -126,6 +126,7 @@ std::optional<std::string> LineBuffer::next()
 void LineBuffer::clear()
 {
     wipe(pending);
+    too_long = false;
 }
 
 LineDialog::LineDialog(int input_fd, int output_fd):

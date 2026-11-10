@@ -242,6 +242,14 @@ void LockScreen::submit()
         return; // nothing asks; what was typed stays
     }
     std::string text = dialog->entry.get_text();
+    if (text.find_first_of("\r\n") != std::string::npos) {
+        // the protocol has one line for an answer; a changed password would
+        // only be "wrong" without a reason
+        set_status("The password can't have a line break");
+        wipe(text);
+        dialog->entry.clear();
+        return;
+    }
     asking = false;
     if (!session.answer(text)) {
         set_status("The check is not running");

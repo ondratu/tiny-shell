@@ -6,6 +6,7 @@ namespace tiny::wm {
 
 void LockGuard::start()
 {
+    checks = 0;
     pid = hooks.start();
     if (pid < 0) {
         pid = 0;
@@ -25,7 +26,13 @@ void LockGuard::lock()
 void LockGuard::check()
 {
     int status = 0;
-    if (!running() || !hooks.ended(pid, &status)) {
+    if (!running()) {
+        return;
+    }
+    if (++checks >= stable_checks) {
+        restarts = 0; // it has run for a while: the next crash is a new one
+    }
+    if (!hooks.ended(pid, &status)) {
         return;
     }
     if (WIFEXITED(status) && WEXITSTATUS(status) == 0) { // unlocked

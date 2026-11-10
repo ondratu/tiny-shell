@@ -223,3 +223,25 @@ TEST(LockGuardTest, check_without_a_lock_does_nothing)
 
     EXPECT_EQ(fake.starts, 0);
 }
+
+TEST(LockGuardTest, a_lock_that_ran_for_a_while_has_its_crashes_counted_anew)
+{
+    FakeLock fake;
+    LockGuard guard = fake.make();
+    guard.lock();
+    fake.end_with_signal(SIGSEGV);
+    for (int i = 0; i < LockGuard::max_restarts; ++i) {
+        guard.check();
+    }
+    ASSERT_TRUE(guard.running());
+    // the restarted lock runs on for a minute, then it crashes once more
+    fake.has_ended = false;
+    for (int i = 0; i < LockGuard::stable_checks; ++i) {
+        guard.check();
+    }
+    fake.end_with_signal(SIGSEGV);
+    guard.check();
+
+    EXPECT_TRUE(guard.running());
+    EXPECT_EQ(fake.starts, 1 + LockGuard::max_restarts + 1);
+}

@@ -14,10 +14,11 @@ namespace tiny {
 
 namespace {
 
-// The child that is watched and how it ended; set by the handler of SIGCHLD
-volatile sig_atomic_t watched_pid = 0;
-volatile sig_atomic_t watched_ended = 0;
-volatile sig_atomic_t watched_status = 0;
+// The statuses of the children that ended, a ring, written by the handler of
+// SIGCHLD
+volatile sig_atomic_t kept_pid[kept_statuses] = {};
+volatile sig_atomic_t kept_status[kept_statuses] = {};
+volatile sig_atomic_t kept_next = 0;
 
 void on_sigchld(int)
 {
@@ -25,10 +26,10 @@ void on_sigchld(int)
     int status = 0;
     pid_t pid;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        if (pid == watched_pid) {
-            watched_status = status;
-            watched_ended = 1;
-        }
+        const sig_atomic_t slot = kept_next;
+        kept_status[slot] = status;
+        kept_pid[slot] = pid;
+        kept_next = (slot + 1) % kept_statuses;
     }
     errno = saved_errno;
 }
@@ -162,21 +163,20 @@ std::string sibling_program(const char* argv0, const std::string& name)
     return access(sibling.c_str(), X_OK) == 0 ? sibling : name;
 }
 
-void watch_child(pid_t pid)
-{
-    watched_ended = 0;
-    watched_pid = pid;
-}
-
 bool child_ended(pid_t pid, int* status)
 {
-    if (pid <= 0 || pid != watched_pid || watched_ended == 0) {
+    if (pid <= 0) {
         return false;
     }
-    if (status != nullptr) {
-        *status = watched_status;
+    for (int i = 0; i < kept_statuses; ++i) {
+        if (kept_pid[i] == pid) {
+            if (status != nullptr) {
+                *status = kept_status[i];
+            }
+            return true;
+        }
     }
-    return true;
+    return false;
 }
 
 void reap_children()
