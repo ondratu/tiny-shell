@@ -171,6 +171,14 @@ bool valid_placement_choice(const std::string& text);
  */
 bool valid_clock_format(const std::string& text);
 
+//! The choices of `[lock] blank_after` that a form offers: "" is the default,
+//! 1 minute, then 5, 10 and 15 minutes and `never`
+XftChoices blank_choices();
+
+//! Whether the text is one of the values of `blank_choices()`, or "1" (the
+//! same as "")
+bool valid_blank_choice(const std::string& text);
+
 //! The values of `[lock] blank_after` in minutes; 0 is never
 bool parse_blank_after(const std::string& text, int& minutes);
 

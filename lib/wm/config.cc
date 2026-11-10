@@ -149,6 +149,24 @@ bool valid_dock_choice(const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
+XftChoices blank_choices()
+{
+    static constexpr XftChoice times[] = {{"", "1 minute"},
+                                          {"5", "5 minutes"},
+                                          {"10", "10 minutes"},
+                                          {"15", "15 minutes"},
+                                          {"never", "Never"}};
+    return {std::begin(times), std::end(times)};
+}
+
+bool valid_blank_choice(const std::string& text)
+{
+    const XftChoices choices = blank_choices();
+    return text == "1" ||
+           std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
 XftChoices placement_choices()
 {
     static constexpr XftChoice where[] = {{"", "Keep"},
