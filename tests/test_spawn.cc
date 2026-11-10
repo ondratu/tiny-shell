@@ -271,9 +271,11 @@ TEST(SiblingProgramTest, a_program_next_to_the_running_one)
     std::filesystem::create_directories(dir);
     std::ofstream(dir / "main") << "#!/bin/sh\n";
     std::ofstream(dir / "other") << "#!/bin/sh\n";
-    std::filesystem::permissions(dir / "other",
-                                 std::filesystem::perms::owner_all,
-                                 std::filesystem::perm_options::add);
+    for (const char* name : {"main", "other"}) {
+        std::filesystem::permissions(dir / name,
+                                     std::filesystem::perms::owner_all,
+                                     std::filesystem::perm_options::add);
+    }
     std::ofstream(dir / "data") << "text\n"; // not executable
     const std::string main = (dir / "main").string();
 
