@@ -65,6 +65,16 @@ std::string blank_value(int minutes)
     return minutes == 0 ? "never" : std::to_string(minutes);
 }
 
+//! What the form has for `[display] off_after`: "" leaves the X server as it
+//! is
+std::string display_off_value(int minutes)
+{
+    if (minutes < 0) {
+        return "";
+    }
+    return minutes == 0 ? "never" : std::to_string(minutes);
+}
+
 using tiny::app::SettingsForm;
 
 constexpr const char* title = "Settings";
@@ -133,7 +143,8 @@ class SettingsApp : public tiny::XftWindow {
                 blank_value(config.lock_blank_minutes),
                 config.lock_idle_minutes == 0
                         ? ""
-                        : std::to_string(config.lock_idle_minutes)},
+                        : std::to_string(config.lock_idle_minutes),
+                display_off_value(config.display_off_minutes)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -351,6 +362,10 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"lock", "idle_after",
                          v.idle_lock.empty() ? "never" : v.idle_lock});
+            }
+            if (v.display_off != initial.display_off) {
+                // the first choice, "", leaves the X server as it is
+                changed.push_back({"display", "off_after", v.display_off});
             }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
@@ -630,7 +645,8 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
                     {SettingsForm::Field::MonitorPlacement, "Position"},
                     {SettingsForm::Field::BlankScreen, "Blank after"},
-                    {SettingsForm::Field::IdleLock, "Lock after"}};
+                    {SettingsForm::Field::IdleLock, "Lock after"},
+                    {SettingsForm::Field::DisplayOff, "Display off"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;
