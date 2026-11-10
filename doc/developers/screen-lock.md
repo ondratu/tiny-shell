@@ -117,6 +117,5 @@ while locked (Xephyr with RandR: the window grew with the screen).
 ## What is left
 
 The plan is in `TODO-LOCK.md`: logind (`Lock`, `PrepareForSleep` with an
-inhibitor, `SetLockedHint`), a command to switch the user, OpenBSD
-(`auth_userokay`), and the files of `/etc/pam.d` for
+inhibitor, `SetLockedHint`), a command to switch the user, and the files of `/etc/pam.d` for
 the distributions.
