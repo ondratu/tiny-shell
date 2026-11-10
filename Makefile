@@ -143,11 +143,13 @@ SETTINGS = $(BUILD)/tiny-settings
 ABOUT = $(BUILD)/tiny-about
 WALLPAPER = $(BUILD)/tiny-wallpaper
 LOCK_PWCHECK = $(BUILD)/tiny-lock-pwcheck
+LOCK_AUTH = $(BUILD)/tiny-lock-auth
 
 PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
-    $(EXAMPLES)
+    $(LOCK_AUTH) $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
     $(BUILD)/src/about.o $(BUILD)/src/wallpaper.o $(BUILD)/src/lock_pwcheck.o \
+    $(BUILD)/src/lock_auth.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
@@ -155,7 +157,8 @@ DEP = $(OBJ:.o=.d)
     lint-analyze asan cppcheck help layers install uninstall
 .DELETE_ON_ERROR:
 
-all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK)
+all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
+    $(LOCK_AUTH)
 
 # A small binary without the debugging information, into build-release.
 # CI measures the size with -flto on top of this (see ci.yml).
@@ -254,8 +257,14 @@ $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 $(LOCK_PWCHECK): $(BUILD)/src/lock_pwcheck.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(CRYPT_LIBS) -o $@
 
+$(LOCK_AUTH): $(BUILD)/src/lock_auth.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(PAM_LIBS) -o $@
+
 $(EXAMPLES): %: %.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+# PAM is used by tiny-lock-auth (lib/app/lock_pam.cc) and the example
+$(BUILD)/lib/app/lock_pam.o: override CXXFLAGS += $(PAM_CXXFLAGS)
 
 # the password example asks PAM, when there is PAM (see PAM above)
 $(BUILD)/examples/password.o: override CXXFLAGS += $(PAM_CXXFLAGS)
@@ -302,7 +311,9 @@ $(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS) -I./tests
 $(TESTS_WIDGET): %: %.o $(BUILD)/tests/main.o $(WIDGET_LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
 
-# crypt() is needed by what checks a password
+# crypt() is needed by what checks a password, libpam by what asks PAM
+$(BUILD)/tests/app/test_lock_pam: override LDLIBS += $(PAM_LIBS)
+$(BUILD)/tests/app/test_lock_auth: override LDLIBS += $(PAM_LIBS)
 $(BUILD)/tests/app/test_pwcheck: override LDLIBS += $(CRYPT_LIBS)
 
 $(TESTS_SHELL): %: %.o $(BUILD)/tests/main.o $(LIB)

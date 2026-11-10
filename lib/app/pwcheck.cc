@@ -1,6 +1,5 @@
 #include "app/pwcheck.h"
 
-#include <pwd.h>
 #include <sys/resource.h>
 #include <unistd.h>
 
@@ -13,10 +12,6 @@
 #endif
 
 #if defined(__has_include)
-#if __has_include(<shadow.h>)
-#include <shadow.h>
-#define TINY_HAVE_SHADOW 1
-#endif
 #if __has_include(<crypt.h>)
 #include <crypt.h>
 #endif
@@ -70,27 +65,6 @@ void sleep_ms(unsigned ms)
 }
 
 } // namespace
-
-std::string password_hash(const std::string& user)
-{
-#ifdef TINY_HAVE_SHADOW
-    if (const spwd* shadow = getspnam(user.c_str());
-        shadow != nullptr && shadow->sp_pwdp != nullptr) {
-        return shadow->sp_pwdp;
-    }
-#endif
-    // BSD: the hash is in the passwd entry, and only the user 0 sees it
-    if (const passwd* entry = getpwnam(user.c_str());
-        entry != nullptr && entry->pw_passwd != nullptr) {
-        return entry->pw_passwd;
-    }
-    return "";
-}
-
-bool hash_usable(const std::string& hash)
-{
-    return !hash.empty() && hash[0] != '!' && hash[0] != '*' && hash != "x";
-}
 
 Verdict verify_password(const std::string& hash, const std::string& password)
 {
