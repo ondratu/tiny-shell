@@ -13,10 +13,6 @@ the work is accepted; this file keeps the reasons and the details.
   `SetLockedHint`, and `PrepareForSleep` with a delay inhibitor, so that the
   screen is locked before the computer sleeps. The shell starts `tiny-lock`, as
   it does for Super + L.
-- **The idle time:** lock after some minutes without input. The SYNC counter
-  `IDLETIME` (not checked yet that Xorg has it everywhere) or the extension
-  MIT-SCREEN-SAVER. It belongs together with the power saving of the display
-  (backlog.md).
 - **Switch the user** from the lock screen, as GNOME does: a command in
   `[lock] switch_user_command` (GDM: `CreateTransientDisplay` and
   `ActivateSessionOnSeat` of logind; LightDM: `dm-tool switch-to-greeter`; SDDM

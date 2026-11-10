@@ -8,6 +8,8 @@ set and to forget.
 
 - **Super + L** or the item **Lock Screen** of the [main menu](usage.md#the-main-menu).
 - `tiny-lock` from a terminal, a script or a launcher.
+- **After some time without input**, when `[lock] idle_after` is set (see
+  [the section below](#lock-when-idle)).
 - `[commands] lock` in the [configuration](configuration.md#the-lock) says
   another program (`slock`, `i3lock`, `xsecurelock`), and then the key and the
   menu start that one.
@@ -40,6 +42,22 @@ of an error.
 If the lock dies (a crash, a kill), tiny-shell starts it again, up to five times
 in a row. A restart of tiny-shell itself does not unlock the screen, because the
 lock is a program of its own.
+
+## Lock when idle
+
+`[lock] idle_after = 10` makes tiny-shell lock the screen after 10 minutes
+without a key or a move of the pointer (5, 10, 15, 30 and 60 minutes, or
+`never`, which is the default). It is the section Power of `tiny-settings`,
+Lock after. The time is the idle time of the X server (the counter `IDLETIME`
+of the SYNC extension, which every Xorg has), so it counts all input, in any
+program, and a video that runs full screen without input is locked too: there
+is no way to tell it to the shell yet. A change is read when tiny-shell starts and when it
+is told to read the settings again (`tiny-shell --reload`). If the X server has
+no such counter, the shell says so and does not lock.
+
+The shell only looks at the idle time when the time that is left is over, so an
+unused computer is not woken every few seconds. A lock that is already shown is
+not started again.
 
 ## How the password is checked
 
@@ -102,7 +120,7 @@ open for an empty password.
 ## Configuration
 
 See [The lock](configuration.md#the-lock): `[commands] lock` and the section
-`[lock]` (`blank_after`, `auth`, `pam_service`, `checker`, `pwcheck`).
+`[lock]` (`blank_after`, `idle_after`, `auth`, `pam_service`, `checker`, `pwcheck`).
 
 PAM is asked for the service `tiny-lock`. No file is needed for it: a service
 without a file uses `other`, and on Debian, Alpine and NetBSD that is the login
@@ -115,9 +133,8 @@ and Arch `auth include system-auth`), or set `pam_service = login`.
 - It does not stop a switch to a text console (Ctrl+Alt+F1) or Ctrl+Alt+Backspace
   where the X server allows them. No program that runs inside X can.
 - It does not follow a change of the monitors while it is locked.
-- It does not lock before the computer sleeps, does not lock after some idle time
-  and does not let another user log in from the lock screen. These need logind
-  (`TODO-LOCK.md` has the plan).
+- It does not lock before the computer sleeps and does not let another user log
+  in from the lock screen. These need logind (`TODO-LOCK.md` has the plan).
 - A program of the same user can start `tiny-lock-pwcheck` or `unix_chkpwd` and
   try passwords; only the wait after a wrong one limits it. It is the same with
   every locker.

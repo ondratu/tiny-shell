@@ -29,7 +29,10 @@ settings of GNOME:
   clock.
 - **Power:** Blank after, the time without input after which the
   [lock screen](lock.md) goes black: 1, 5, 10 or 15 minutes, or Never (`[lock]
-  blank_after`). It is read the next time the screen is locked.
+  blank_after`; it is read the next time the screen is locked), and Lock after,
+  the time without input after which the screen is locked: 5, 10, 15, 30 or 60
+  minutes, or Never (`[lock] idle_after`; tiny-shell reads it after
+  `tiny-shell --reload`).
 - **Applications:** the terminal.
 - **Displays:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
