@@ -25,8 +25,6 @@ the work is accepted; this file keeps the reasons and the details.
   checked (`other` may deny everything there). The files for `/etc/pam.d`
   (`@include common-auth` on Debian, `system-auth` on Fedora and Arch) can be
   installed by `make install` when it is known they are right.
-- **A change of the monitors while locked:** the window has the size of the screen
-  at the start; a connected monitor shows the desktop. It should follow RandR.
 - **The gap after a crash of `tiny-lock`:** between the crash and the new start
   the screen is open. A window of the lock that is kept by the X server (a
   second client that holds the screen) would close it; an idea only.
