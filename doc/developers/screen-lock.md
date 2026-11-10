@@ -37,7 +37,9 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    closes**, so biometrics run when somebody is there) and `Black` (no window
    mapped; after `[lock] blank_after` in `Idle`, woken by any input, which is
    not used for anything else). `handle_input()` decides it for every key and
-   pointer event. It rises when something covers it. If a grab fails (another client
+   pointer event. It rises when something covers it. A change of the monitors
+   (RandR, `select_monitor_events()` as in the shell) makes `screen_changed()`
+   fit the window and the dialog to the new screen. If a grab fails (another client
    holds one) it tries for two seconds and then exits with 1.
 3. **tiny-lock-auth** runs one try and ends. It chooses the way (`resolve_backend`:
    PAM where it can work without the hash, then the checker, then
@@ -109,11 +111,12 @@ NetBSD 10 and FreeBSD 15: without the bit it says "can't check" (2); with the se
 through `tiny-lock-auth` works there only for a process that may read
 `master.passwd`: for an ordinary user it refuses the right password, which is why
 `auto` leaves PAM out (shown on NetBSD; FreeBSD has the same `pam_unix` design).
-Several monitors (Xinerama) were tried by hand.
+Several monitors (Xinerama) were tried by hand, and a change of the screen size
+while locked (Xephyr with RandR: the window grew with the screen).
 
 ## What is left
 
 The plan is in `TODO-LOCK.md`: logind (`Lock`, `PrepareForSleep` with an
 inhibitor, `SetLockedHint`), a command to switch the user, OpenBSD
-(`auth_userokay`), the change of the monitors, and the files of `/etc/pam.d` for
+(`auth_userokay`), and the files of `/etc/pam.d` for
 the distributions.

@@ -15,7 +15,9 @@ set and to forget.
   menu start that one.
 
 The lock puts a black window over all the monitors and takes the keyboard and
-the pointer. The sizes follow `[theme] scale` and the font. It has three states:
+the pointer. When a monitor is connected or the layout changes while it is
+locked (RandR), the window covers the new screen at once and the dialog moves to
+the middle of the primary monitor. The sizes follow `[theme] scale` and the font. It has three states:
 
 1. **The time.** The time in big letters, under it the date in smaller ones (the
    format of the clock of the panel, `[panel] clock_format`, without the time of
@@ -132,7 +134,6 @@ and Arch `auth include system-auth`), or set `pam_service = login`.
 
 - It does not stop a switch to a text console (Ctrl+Alt+F1) or Ctrl+Alt+Backspace
   where the X server allows them. No program that runs inside X can.
-- It does not follow a change of the monitors while it is locked.
 - It does not lock before the computer sleeps and does not let another user log
   in from the lock screen. These need logind (`TODO-LOCK.md` has the plan).
 - A program of the same user can start `tiny-lock-pwcheck` or `unix_chkpwd` and
