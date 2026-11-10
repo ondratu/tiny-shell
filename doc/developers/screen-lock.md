@@ -91,12 +91,13 @@ Where the tests can't go (they run as an ordinary user), `tiny-lock-pwcheck` was
 tried as a user with a known password and the group bit set: Debian stable and
 Alpine (right, wrong and empty password, `--probe`, an argument, a locked
 account, and without the bit). PAM through `tiny-lock-auth` was tried on Debian.
-NetBSD 10: without the bit it says "can't check" (2); with the set-user-ID bit
+NetBSD 10 and FreeBSD 15: without the bit it says "can't check" (2); with the set-user-ID bit
 (`make install-setuid`) a right password gives `RESULT OK`, a wrong one
-`RESULT WRONG`, and the lock opens and closes. PAM through `tiny-lock-auth` works
-there only for a process that may read `master.passwd`: for an ordinary user it
-refuses the right password, which is why `auto` leaves PAM out. FreeBSD was not
-tried. Several monitors (Xinerama) were tried by hand.
+`RESULT WRONG`, and the lock opens and closes (on FreeBSD with `PAM=no`). PAM
+through `tiny-lock-auth` works there only for a process that may read
+`master.passwd`: for an ordinary user it refuses the right password, which is why
+`auto` leaves PAM out (shown on NetBSD; FreeBSD has the same `pam_unix` design).
+Several monitors (Xinerama) were tried by hand.
 
 ## What is left
 
