@@ -46,8 +46,9 @@ HARDENING = -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -fstack-protector-strong
 endif
 
 # fontconfig is a dependency of Xft; it is named because the list of fonts uses it.
-# xext has the SYNC extension (resizing without tearing)
-PKGS = x11 xft xrender fontconfig xext
+# xext has the SYNC extension (resizing without tearing); freetype2 is used
+# directly by the information about fonts (FreeBSD does not link it through Xft)
+PKGS = x11 xft xrender fontconfig xext freetype2
 # RandR (several monitors) is used when it is installed; RANDR=0 builds without
 # it (the whole screen is one monitor then)
 RANDR ?= $(shell pkg-config --exists xrandr && echo 1 || echo 0)
