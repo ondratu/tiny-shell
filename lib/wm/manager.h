@@ -15,6 +15,8 @@
 #include "wm/window.h"
 #include "wm/recent_list.h"
 #include "wm/clock_label.h"
+#include "wm/idle_lock.h"
+#include "wm/idle_time.h"
 #include "wm/lock_guard.h"
 #include "wm/panel.h"
 #include "wm/action_registry.h"
@@ -89,6 +91,13 @@ class Manager : public tiny::Object {
     {
         lock_command = std::move(command);
     }
+
+    /**
+     * Lock the screen after this long without input (`[lock] idle_after`);
+     * zero is never. Without the counter of the idle time in the X server
+     * nothing is locked and a message says so, once.
+     */
+    void set_lock_idle(std::chrono::minutes after);
 
     //! The program of the Settings item of the main menu (`tiny-settings`
     //! is searched in PATH by default)
@@ -394,6 +403,8 @@ class Manager : public tiny::Object {
 
     //! Lock the screen and watch the lock (see `LockGuard`)
     void lock_screen();
+    //! Look at the idle time and set the timer for the next look
+    void check_idle_lock();
 
     void connect_window(Window* window);
 
@@ -663,6 +674,9 @@ class Manager : public tiny::Object {
     std::string about_command = "tiny-about";
     std::string lock_command = Config().lock_command;
     std::unique_ptr<LockGuard> lock_guard;
+    std::unique_ptr<IdleTime> idle_time; //!< made with the first limit
+    std::unique_ptr<IdleLock> idle_lock;
+    tiny::Timers::Id idle_timer = 0;
     tiny::Timers::Id lock_timer = 0;            //!< while the lock is watched
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
     bool wallpaper_follows_theme = false;

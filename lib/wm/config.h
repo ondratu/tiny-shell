@@ -44,6 +44,7 @@ namespace tiny::wm {
  * auth = auto
  * pam_service = tiny-lock
  * blank_after = 1
+ * idle_after = 10
  *
  * [panel]
  * clock_format = %a %e %B %R
@@ -70,6 +71,9 @@ struct Config {
     //! [lock] blank_after: minutes without input to a black screen (1, 5, 10
     //! or 15); 0 is `never`
     int lock_blank_minutes = 1;
+    //! [lock] idle_after: minutes without input to lock the screen (5, 10,
+    //! 15, 30 or 60); 0 is `never`, the default
+    int lock_idle_minutes = 0;
     std::string
             lock_checker; //!< [lock] checker: path of unix_chkpwd, "" is searched
     std::string
@@ -181,6 +185,17 @@ bool valid_blank_choice(const std::string& text);
 
 //! The values of `[lock] blank_after` in minutes; 0 is never
 bool parse_blank_after(const std::string& text, int& minutes);
+
+//! The choices of `[lock] idle_after` that a form offers: "" is `never` (the
+//! default), then 5, 10, 15, 30 and 60 minutes
+XftChoices idle_choices();
+
+//! Whether the text is one of the values of `idle_choices()`, or "never"
+//! (the same as "")
+bool valid_idle_choice(const std::string& text);
+
+//! The values of `[lock] idle_after` in minutes; 0 is never
+bool parse_idle_after(const std::string& text, int& minutes);
 
 //! A name of a PAM service: no blanks, no slashes, no control characters
 bool valid_pam_service(const std::string& text);
