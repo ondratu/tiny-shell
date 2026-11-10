@@ -93,10 +93,11 @@ TEST(PwcheckTest, a_locked_account_is_not_checked)
     EXPECT_EQ(tiny::app::verify_password("x", "x"), Verdict::Failed);
 }
 
-TEST(PwcheckTest, a_hash_in_an_unknown_format_fails)
+TEST(PwcheckTest, a_hash_in_an_unknown_format_is_never_right)
 {
-    EXPECT_EQ(tiny::app::verify_password("$99$what$ever", "x"),
-              Verdict::Failed);
+    // glibc refuses the format, musl may read it as another one: it is never
+    // the right password
+    EXPECT_NE(tiny::app::verify_password("$99$what$ever", "x"), Verdict::Right);
 }
 
 TEST(PwcheckTest, only_a_real_hash_is_usable)

@@ -39,9 +39,9 @@ class LockScreen::Dialog : public tiny::Box {
         status(inner_width(), line_height, "")
     {}
 
-    void build(::Window parent, int x, int y)
+    void build(::Window parent_window, int x, int y)
     {
-        realize(parent, x, y);
+        realize(parent_window, x, y);
         push_start(&who, spacing, spacing);
         push_start(&question, spacing, spacing / 2);
         push_start(&entry, spacing, spacing / 2);
