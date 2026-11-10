@@ -92,3 +92,69 @@ TEST(LabelLifeTest, destructor_disconnects_the_expose_handler)
 
     EXPECT_FALSE(tiny::handlers.count({Expose, window}));
 }
+
+TEST_F(LabelTest, it_says_how_big_its_text_is)
+{
+    EXPECT_GT(label.text_width(), 0);
+    EXPECT_GT(label.natural_height(), 0);
+    const int before = label.text_width();
+
+    label.set_text("A much longer text than before");
+
+    EXPECT_GT(label.text_width(), before);
+}
+
+TEST_F(LabelTest, an_empty_text_has_no_width_but_a_height)
+{
+    label.set_text("");
+
+    EXPECT_EQ(label.text_width(), 0);
+    EXPECT_GT(label.natural_height(), 0);
+}
+
+TEST_F(LabelTest, a_bigger_font_makes_the_text_bigger)
+{
+    const int width = label.text_width();
+    const int height = label.natural_height();
+
+    label.set_font_scale(2);
+
+    EXPECT_GT(label.text_width(), width * 3 / 2);
+    EXPECT_GT(label.natural_height(), height);
+}
+
+TEST_F(LabelTest, the_scale_one_goes_back_to_the_font_of_the_style)
+{
+    const int width = label.text_width();
+    label.set_font_scale(2);
+
+    label.set_font_scale(1);
+
+    EXPECT_EQ(label.text_width(), width);
+}
+
+TEST_F(LabelTest, a_bigger_font_is_drawn)
+{
+    label.set_font_scale(2);
+
+    send(label, Expose);
+
+    EXPECT_GT(drawn(), 0u);
+}
+
+TEST_F(LabelTest, text_in_the_middle_leaves_the_left_edge_empty)
+{
+    label.set_align(tiny::Label::Align::Center);
+
+    send(label, Expose);
+
+    const Image img = Image(label.get_window(), 100, 30);
+    // the text is about 30 px wide: the first 20 columns are the background
+    for (int x = 0; x < 20; ++x) {
+        for (int y = 0; y < 30; ++y) {
+            ASSERT_EQ(img.at(x, y), tiny::theme.widget.normal_bg)
+                    << x << "," << y;
+        }
+    }
+    EXPECT_GT(drawn(), 0u);
+}
