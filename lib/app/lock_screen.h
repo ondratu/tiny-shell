@@ -11,6 +11,7 @@
 
 #include "app/lock_session.h"
 #include "container.h"
+#include "display_power.h"
 #include "entry.h"
 #include "label.h"
 
@@ -60,7 +61,8 @@ class LockScreen {
      * only then the check of the password starts, so a fingerprint or a face
      * is looked for when somebody is there); Escape goes back to `Idle`. After
      * `LockOptions::blank_after` without input in `Idle` the screen is `Black`,
-     * and the next input wakes it to `Idle`.
+     * and the next input wakes it to `Idle`. A black screen also switches the monitor
+     * off, when the X server has DPMS and it is on (`DisplayPower`).
      */
     enum class State { Idle, Dialog, Black };
 
@@ -164,6 +166,7 @@ class LockScreen {
     void touch(); //!< input: the time to the black screen starts again
 
     Display& display;
+    DisplayPower power; //!< the monitor is switched off with the black screen
     AuthSession session;
     std::string user;
     ::Window cover = None;

@@ -2,6 +2,8 @@
 
 #include <sys/stat.h>
 
+#include <X11/extensions/dpms.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -9,6 +11,7 @@
 #include <iterator>
 
 #include "app/lock_screen.h"
+#include "display_power.h"
 
 using namespace tiny::app;
 
@@ -554,6 +557,37 @@ TEST_F(LockScreenTest, the_screen_goes_black_after_the_time)
     }
     if (children != nullptr) {
         XFree(children);
+    }
+}
+
+TEST_F(LockScreenTest, a_black_screen_switches_the_display_off_and_input_on)
+{
+    tiny::DisplayPower power(tiny::get_display());
+    if (!power.available()) {
+        GTEST_SKIP() << "the X server has no DPMS";
+    }
+    const bool was_enabled = power.enabled();
+    const auto was = power.timeout();
+    power.set_timeout(std::chrono::seconds(600));
+    const auto level = [] {
+        CARD16 level = DPMSModeOn;
+        BOOL state = False;
+        DPMSInfo(tiny::get_display(), &level, &state);
+        return level;
+    };
+    {
+        LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
+        screen.blank();
+        XSync(tiny::get_display(), False);
+        EXPECT_EQ(level(), DPMSModeOff);
+        screen.wake();
+        XSync(tiny::get_display(), False);
+        EXPECT_EQ(level(), DPMSModeOn);
+    }
+    if (was_enabled && was) {
+        power.set_timeout(*was);
+    } else {
+        power.set_timeout(std::chrono::seconds(0));
     }
 }
 

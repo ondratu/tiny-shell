@@ -181,6 +181,7 @@ LockScreen::LockScreen(tiny::Display& display_arg,
                        std::vector<std::string> command, std::string user_arg,
                        LockOptions options_arg):
     display(display_arg),
+    power(display_arg),
     session(std::move(command)),
     user(std::move(user_arg)),
     options(std::move(options_arg))
@@ -246,6 +247,9 @@ LockScreen::LockScreen(tiny::Display& display_arg,
 LockScreen::~LockScreen()
 {
     tiny::handlers.unset_handler(VisibilityNotify, cover);
+    if (state_ == State::Black) {
+        power.on();
+    }
     if (grabbed) {
         XUngrabKeyboard(display, CurrentTime);
         XUngrabPointer(display, CurrentTime);
@@ -596,6 +600,11 @@ void LockScreen::set_state(State state)
         set_status("");
         dialog->question.set_text("");
         prompt_text.clear();
+    }
+    if (state == State::Black && before != State::Black) {
+        power.off(); // nothing to see, so the monitor can rest
+    } else if (before == State::Black && state != State::Black) {
+        power.on();
     }
     // what is seen in the state
     const bool seen = state != State::Black;
