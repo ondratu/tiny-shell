@@ -69,10 +69,11 @@ comparison with other window managers is in the [comparison](comparison.md).
   monitor, and each monitor has its own work area. The secondary monitor can be
   put on one side of the primary one, and the number of every monitor can be
   shown in its corner (see [Configuration](configuration.md#multiple-monitors)).
-- **Settings:** `tiny-settings`, a small form with the sections Fonts,
-  Appearance, Applications and Screens that changes the font, the rendering of
-  text (antialiasing, hinting, subpixel order), the scale, the wallpaper, the
-  mode of the dock, the format of the clock, the terminal and the monitors in
+- **Settings:** `tiny-settings`, a small form with the sections Appearance,
+  Fonts, Desktop, Displays, Power and Applications that changes the font, the
+  rendering of text (antialiasing, hinting, subpixel order), the scale, the
+  wallpaper, the mode of the dock, the format of the clock, the monitors, the
+  time to a black lock screen and the terminal in
   the configuration file of the user (see [Applications](applications.md#settings)).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a

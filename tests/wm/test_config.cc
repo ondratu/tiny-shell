@@ -935,3 +935,18 @@ TEST(ConfigTest, another_blank_after_is_a_problem_and_keeps_the_default)
         EXPECT_EQ(problems.size(), 1u) << value;
     }
 }
+
+TEST(ConfigTest, the_form_offers_the_times_of_the_black_screen)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::blank_choices();
+
+    ASSERT_EQ(choices.size(), 5u);
+    EXPECT_STREQ(choices[0].value, ""); // one minute, the default
+    EXPECT_STREQ(choices[4].value, "never");
+    for (const auto& choice : choices) {
+        EXPECT_TRUE(tiny::wm::valid_blank_choice(choice.value));
+    }
+    EXPECT_TRUE(tiny::wm::valid_blank_choice("1"));
+    EXPECT_FALSE(tiny::wm::valid_blank_choice("2"));
+    EXPECT_FALSE(tiny::wm::valid_blank_choice("0"));
+}

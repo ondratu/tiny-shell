@@ -66,22 +66,22 @@ constexpr size_t thumbnail_rows = 3;
 
 //! All the fields, in the order of `SettingsForm::Field` (the order of the
 //! texts and of the targets)
-constexpr SettingsForm::Field fields[] = {
-        SettingsForm::Field::Font,
-        SettingsForm::Field::Size,
-        SettingsForm::Field::Style,
-        SettingsForm::Field::Terminal,
-        SettingsForm::Field::Scale,
-        SettingsForm::Field::Antialias,
-        SettingsForm::Field::Hinting,
-        SettingsForm::Field::Rgba,
-        SettingsForm::Field::Wallpaper,
-        SettingsForm::Field::WallpaperMode,
-        SettingsForm::Field::ClockFormat,
-        SettingsForm::Field::Dock,
-        SettingsForm::Field::PrimaryMonitor,
-        SettingsForm::Field::SecondaryMonitor,
-        SettingsForm::Field::MonitorPlacement};
+constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
+                                          SettingsForm::Field::Size,
+                                          SettingsForm::Field::Style,
+                                          SettingsForm::Field::Terminal,
+                                          SettingsForm::Field::Scale,
+                                          SettingsForm::Field::Antialias,
+                                          SettingsForm::Field::Hinting,
+                                          SettingsForm::Field::Rgba,
+                                          SettingsForm::Field::Wallpaper,
+                                          SettingsForm::Field::WallpaperMode,
+                                          SettingsForm::Field::ClockFormat,
+                                          SettingsForm::Field::Dock,
+                                          SettingsForm::Field::PrimaryMonitor,
+                                          SettingsForm::Field::SecondaryMonitor,
+                                          SettingsForm::Field::MonitorPlacement,
+                                          SettingsForm::Field::BlankScreen};
 
 } // namespace
 
@@ -117,7 +117,8 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.dock),
             TextField(initial.primary_monitor),
             TextField(initial.secondary_monitor),
-            TextField(initial.monitor_placement)},
+            TextField(initial.monitor_placement),
+            TextField(initial.blank_screen)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -139,8 +140,9 @@ int SettingsForm::form_height() const
 {
     // the rows of the longest section, the message of two rows and the buttons
     size_t longest = 0;
-    for (const Section section : {Section::Fonts, Section::Appearance,
-                                  Section::Applications, Section::Screens}) {
+    for (const Section section :
+         {Section::Appearance, Section::Fonts, Section::Desktop,
+          Section::Displays, Section::Power, Section::Applications}) {
         longest = std::max(
                 longest,
                 section_fields(section).size() +
@@ -167,7 +169,8 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::Dock),
             text(Field::PrimaryMonitor),
             text(Field::SecondaryMonitor),
-            text(Field::MonitorPlacement)};
+            text(Field::MonitorPlacement),
+            text(Field::BlankScreen)};
 }
 
 // The sections
@@ -175,16 +178,20 @@ SettingsForm::Values SettingsForm::values() const
 const char* SettingsForm::section_title(Section section)
 {
     switch (section) {
-        case Section::Fonts:
-            return "Fonts";
         case Section::Appearance:
             return "Appearance";
+        case Section::Fonts:
+            return "Fonts";
+        case Section::Desktop:
+            return "Desktop";
+        case Section::Displays:
+            return "Displays";
+        case Section::Power:
+            return "Power";
         case Section::Applications:
-            return "Applications";
-        case Section::Screens:
             break;
     }
-    return "Screens";
+    return "Applications";
 }
 
 const std::vector<SettingsForm::Field>&
@@ -194,29 +201,35 @@ SettingsForm::section_fields(Section section)
                                              Field::Style,   Field::Antialias,
                                              Field::Hinting, Field::Rgba};
     static const std::vector<Field> appearance = {
-            Field::Scale, Field::Wallpaper, Field::WallpaperMode, Field::Dock,
-            Field::ClockFormat};
+            Field::Scale, Field::Wallpaper, Field::WallpaperMode};
+    static const std::vector<Field> desktop = {Field::Dock, Field::ClockFormat};
+    static const std::vector<Field> displays = {Field::PrimaryMonitor,
+                                                Field::SecondaryMonitor,
+                                                Field::MonitorPlacement};
+    static const std::vector<Field> power = {Field::BlankScreen};
     static const std::vector<Field> applications = {Field::Terminal};
-    static const std::vector<Field> screens = {Field::PrimaryMonitor,
-                                               Field::SecondaryMonitor,
-                                               Field::MonitorPlacement};
     switch (section) {
-        case Section::Fonts:
-            return fonts;
         case Section::Appearance:
             return appearance;
+        case Section::Fonts:
+            return fonts;
+        case Section::Desktop:
+            return desktop;
+        case Section::Displays:
+            return displays;
+        case Section::Power:
+            return power;
         case Section::Applications:
-            return applications;
-        case Section::Screens:
             break;
     }
-    return screens;
+    return applications;
 }
 
 SettingsForm::Section SettingsForm::section_of(Field field)
 {
     for (const Section section :
-         {Section::Fonts, Section::Appearance, Section::Screens}) {
+         {Section::Appearance, Section::Fonts, Section::Desktop,
+          Section::Displays, Section::Power}) {
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;
@@ -252,6 +265,8 @@ const char* SettingsForm::hint(Field field)
         case Field::MonitorPlacement:
             return "Where the secondary monitor is, seen from the primary "
                    "one (runs xrandr).";
+        case Field::BlankScreen:
+            return "The lock screen goes black after this time.";
         case Field::Terminal:
             return "The program and its arguments, e.g. xterm -e.";
         case Field::Wallpaper:
@@ -267,7 +282,8 @@ bool SettingsForm::is_choice(Field field)
     return field == Field::Antialias || field == Field::Hinting ||
            field == Field::Rgba || field == Field::WallpaperMode ||
            field == Field::Dock || field == Field::PrimaryMonitor ||
-           field == Field::SecondaryMonitor || field == Field::MonitorPlacement;
+           field == Field::SecondaryMonitor ||
+           field == Field::MonitorPlacement || field == Field::BlankScreen;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -315,6 +331,9 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     }
     if (field == Field::MonitorPlacement) {
         return wm::placement_choices();
+    }
+    if (field == Field::BlankScreen) {
+        return wm::blank_choices();
     }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
                                          : wm::xft_choices(xft_option(field));
@@ -392,6 +411,10 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_dock_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::BlankScreen:
+            return wm::valid_blank_choice(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::MonitorPlacement:
             return wm::valid_placement_choice(value)
                            ? ""
@@ -447,7 +470,8 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.dock),
             clean(v.primary_monitor),
             clean(v.secondary_monitor),
-            clean(v.monitor_placement)};
+            clean(v.monitor_placement),
+            clean(v.blank_screen)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -746,7 +770,7 @@ bool SettingsForm::choose()
 void SettingsForm::close_picker()
 {
     view_ = View::Form;
-    section_ = Section::Fonts;
+    section_ = Section::Fonts; // the picker is opened from there
     focus_ = Field::Font;
     pressed_ = NoTarget;
 }
@@ -784,7 +808,7 @@ size_t SettingsForm::target_at(int x, int y) const
     }
     for (size_t i = 0; i < section_count; ++i) {
         if (inside(section_rect(static_cast<Section>(i)), x, y)) {
-            return SectionFonts + i;
+            return SectionAppearance + i;
         }
     }
     for (const Field f : section_fields(section_)) {
@@ -852,11 +876,13 @@ bool SettingsForm::act(size_t target, int x)
         case ChooseButton:
             open_picker();
             return true;
-        case SectionFonts:
         case SectionAppearance:
+        case SectionFonts:
+        case SectionDesktop:
+        case SectionDisplays:
+        case SectionPower:
         case SectionApplications:
-        case SectionScreens:
-            set_section(static_cast<Section>(target - SectionFonts));
+            set_section(static_cast<Section>(target - SectionAppearance));
             return true;
         case CancelButton:
             if (view_ == View::Picker) {

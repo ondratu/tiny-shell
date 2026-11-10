@@ -18,15 +18,20 @@ their icons.
 ## Settings
 
 `build/tiny-settings` (made by `make`) has a panel at the left with the sections
-and the fields of the chosen section:
+and the fields of the chosen section. The sections are in the order of the
+settings of GNOME:
 
+- **Appearance:** the scale, the wallpaper and how it covers the screen (a small
+  picture of the file above the path shows that the path is right).
 - **Fonts:** the font (a family or a list of families separated by commas, like
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
-- **Appearance:** the scale, the wallpaper and how it covers the screen (a small
-  picture of the file above the path shows that the path is right), the mode of
-  the dock (Auto-hide, On, Off) and the format of the clock.
+- **Desktop:** the mode of the dock (Auto-hide, On, Off) and the format of the
+  clock.
+- **Power:** Blank after, the time without input after which the
+  [lock screen](lock.md) goes black: 1, 5, 10 or 15 minutes, or Never (`[lock]
+  blank_after`). It is read the next time the screen is locked.
 - **Applications:** the terminal.
-- **Screens:** the primary and the secondary monitor (a choice of the monitors
+- **Displays:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
   one is (Keep, Right, Left, Above or Below the primary one). While this section
   is shown, the number of every monitor is on its screen, over all the windows,
