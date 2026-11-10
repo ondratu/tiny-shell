@@ -16,13 +16,6 @@ namespace tiny::app {
  * it has the hash. It is kept small on purpose; see TODO-LOCK.md.
  */
 
-//! The hash of the password of the user, "" if it can't be read or there is none
-std::string password_hash(const std::string& user);
-
-//! Whether an account can be unlocked with a password: the hash is not empty
-//! and not a mark of a locked account (`!`, `*`, `x`)
-bool hash_usable(const std::string& hash);
-
 /**
  * @short Compare the password with the hash, with `crypt()`.
  *

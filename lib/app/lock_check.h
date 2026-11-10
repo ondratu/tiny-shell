@@ -20,9 +20,19 @@ struct Outcome {
 //! Overwrite the text with zeros (the compiler can't remove it) and empty it
 void wipe(std::string& text);
 
+//! Overwrite the bytes with zeros
+void wipe(char* bytes, size_t size);
+
 //! The name of the user that runs the program. It comes from the user id, not
 //! from `$USER`: the environment can say anything.
 std::string user_name();
+
+//! The hash of the password of the user, "" if it can't be read or there is none
+std::string password_hash(const std::string& user);
+
+//! Whether an account can be unlocked with a password: the hash is not empty
+//! and not a mark of a locked account (`!`, `*`, `x`)
+bool hash_usable(const std::string& hash);
 
 /**
  * @short A program that checks a password it reads from its standard input.

@@ -11,6 +11,13 @@
 #include <cerrno>
 #include <cstring>
 
+#if defined(__has_include)
+#if __has_include(<shadow.h>)
+#include <shadow.h>
+#define TINY_HAVE_SHADOW 1
+#endif
+#endif
+
 #ifndef TINY_UNIX_CHKPWD
 #define TINY_UNIX_CHKPWD ""
 #endif
@@ -43,12 +50,17 @@ bool write_all(int fd, const char* bytes, size_t left)
 
 } // namespace
 
+void wipe(char* bytes, size_t size)
+{
+    volatile char* target = bytes;
+    for (size_t i = 0; i < size; ++i) {
+        target[i] = 0;
+    }
+}
+
 void wipe(std::string& text)
 {
-    volatile char* bytes = text.data();
-    for (size_t i = 0; i < text.size(); ++i) {
-        bytes[i] = 0;
-    }
+    wipe(text.data(), text.size());
     text.clear();
 }
 
@@ -56,6 +68,27 @@ std::string user_name()
 {
     const passwd* entry = getpwuid(getuid());
     return entry != nullptr ? entry->pw_name : "";
+}
+
+std::string password_hash(const std::string& user)
+{
+#ifdef TINY_HAVE_SHADOW
+    if (const spwd* shadow = getspnam(user.c_str());
+        shadow != nullptr && shadow->sp_pwdp != nullptr) {
+        return shadow->sp_pwdp;
+    }
+#endif
+    // BSD: the hash is in the passwd entry, and only the user 0 sees it
+    if (const passwd* entry = getpwnam(user.c_str());
+        entry != nullptr && entry->pw_passwd != nullptr) {
+        return entry->pw_passwd;
+    }
+    return "";
+}
+
+bool hash_usable(const std::string& hash)
+{
+    return !hash.empty() && hash[0] != '!' && hash[0] != '*' && hash != "x";
 }
 
 Outcome run_checker(const Checker& checker, const std::string& password)

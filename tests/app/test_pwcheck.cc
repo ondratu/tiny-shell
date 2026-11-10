@@ -4,6 +4,7 @@
 
 #include <cstring>
 
+#include "app/lock_check.h"
 #include "app/pwcheck.h"
 
 #if defined(__has_include)
