@@ -7,6 +7,15 @@
 
 namespace tiny {
 
+namespace {
+
+//! Bytes kept for a password, so that typing does not move it in memory
+constexpr size_t PASSWORD_RESERVE = 256;
+
+constexpr FcChar32 BULLET = 0x2022;
+
+} // namespace
+
 Entry::Entry(int w, int h): Widget(Type::Normal, w, h)
 {
     name = "entry";
@@ -14,6 +23,9 @@ Entry::Entry(int w, int h): Widget(Type::Normal, w, h)
 
 Entry::~Entry()
 {
+    if (password) {
+        field.wipe();
+    }
     if (event_done) {
         disconnect(KeyPress);
         disconnect(Expose);
@@ -68,7 +80,21 @@ void Entry::set_text(const std::string& text_arg)
 
 void Entry::clear()
 {
+    if (password) {
+        field.wipe();
+        redraw();
+        return;
+    }
     set_text("");
+}
+
+void Entry::set_password(bool on)
+{
+    password = on;
+    if (on) {
+        field.reserve(PASSWORD_RESERVE);
+    }
+    redraw();
 }
 
 void Entry::paste(Clipboard::Which which, const XEvent& e)
@@ -99,8 +125,9 @@ void Entry::on_key_press(const XEvent& e, void*)
     }
     if (control && (keysym == XK_c || keysym == XK_C)) {
         // there is no selection inside of the entry: the whole text is copied;
-        // an empty entry leaves the clipboard as it is
-        if (!field.text().empty()) {
+        // an empty entry leaves the clipboard as it is, a password is never
+        // copied
+        if (!password && !field.text().empty()) {
             clipboard->own(Clipboard::Which::Clipboard, field.text(),
                            e.xkey.time);
         }
@@ -180,12 +207,30 @@ void Entry::on_button_press(const XEvent& e, void*)
     }
 }
 
+std::string Entry::shown(XftFont* font, const std::string& text) const
+{
+    if (!password) {
+        return text;
+    }
+    // the bullet may be missing in a font; an asterisk is always there
+    const char* mark =
+            XftCharExists(display, font, BULLET) != 0 ? "\xE2\x80\xA2" : "*";
+    std::string masked;
+    for (const char c : text) {
+        if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) { // not a tail
+            masked += mark;
+        }
+    }
+    return masked;
+}
+
 int Entry::text_width(XftFont* font, const std::string& text) const
 {
+    const std::string drawn = shown(font, text);
     XGlyphInfo extents;
     XftTextExtentsUtf8(display, font,
-                       reinterpret_cast<const FcChar8*>(text.c_str()),
-                       static_cast<int>(text.size()), &extents);
+                       reinterpret_cast<const FcChar8*>(drawn.c_str()),
+                       static_cast<int>(drawn.size()), &extents);
     return extents.xOff;
 }
 
@@ -219,6 +264,7 @@ void Entry::on_expose(const XEvent&, void*)
     XftDraw* draw = XftDrawCreate(display, window, visual, colormap);
 
     const std::string& text = field.text();
+    const std::string drawn = shown(font, text);
     const int x = text_origin(font);
     const int y = (height + font->ascent - font->descent) / 2;
 
@@ -226,8 +272,8 @@ void Entry::on_expose(const XEvent&, void*)
     XSetWindowBorder(display, window, style.get_br(state));
     XClearWindow(display, window);
     XftDrawStringUtf8(draw, &color, font, x, y,
-                      reinterpret_cast<const FcChar8*>(text.c_str()),
-                      static_cast<int>(text.size()));
+                      reinterpret_cast<const FcChar8*>(drawn.c_str()),
+                      static_cast<int>(drawn.size()));
 
     if (is_focus) { // the cursor
         const int cursor_height = font->ascent + font->descent;
