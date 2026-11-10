@@ -24,7 +24,8 @@ the work is accepted; this file keeps the reasons and the details.
 - **OpenBSD:** no PAM; `tiny-lock-pwcheck` would use `auth_userokay` of
   `bsd_auth` and a set-group-ID `auth` binary. Not tried: no OpenBSD here.
 - **PAM files of the distributions:** a service without a file uses `other`. That
-  is the login password on Debian, Alpine and NetBSD; Fedora and Arch are not
+  is the login password on Debian and Alpine (NetBSD and FreeBSD do not use PAM
+  without the right to read the hash, see below); Fedora and Arch are not
   checked (`other` may deny everything there). The files for `/etc/pam.d`
   (`@include common-auth` on Debian, `system-auth` on Fedora and Arch) can be
   installed by `make install` when it is known they are right.
@@ -36,5 +37,9 @@ the work is accepted; this file keeps the reasons and the details.
 - **Systems that were not checked:** Void, Buildroot, Fedora, Arch, ARM (no
   emulation in Docker here), Raspberry Pi OS and Armbian (the same packages as
   Debian, so `tiny-lock-auth` should work the same).
-- **Is `tiny-lock-pwcheck` always built?** It is now (it is small and needs only
-  libcrypt). It could be left out where `unix_chkpwd` exists.
+- **PAM on NetBSD and FreeBSD:** `auto` leaves PAM out there, because an ordinary
+  user can't read `master.passwd` and there is no `unix_chkpwd`. So only the
+  password works; PAM modules for a camera or a fingerprint (which are for Linux
+  anyway) can't be used. A privileged PAM host (the set bit on `tiny-lock-auth`)
+  would change it, but it puts PAM modules into a program with root, so it was
+  not built. Decide only if somebody needs it.
