@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
+#include <csignal>
+
 #include "app/lock_protocol.h"
 
 using namespace tiny::app;
