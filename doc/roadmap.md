@@ -26,6 +26,8 @@ what was left out on purpose, with the reason, is in
   them like GNOME
 - Plugins and scripting in Lua, as an optional build feature
 - Window snapping to the screen edges and half-screen maximize
+- Screen lock: lock before the computer sleeps and after some idle time (both
+  need logind, see TODO-DBUS.md), a switch of the user from the lock screen
 - Move and resize a window with Alt + drag
 - More in the settings: keyboard and mouse, logout dialog, autostart, default
   applications
@@ -38,5 +40,5 @@ These may come one day, or may not. They are marked with `?` in the
 [comparison](comparison.md).
 
 - Focus follows mouse
-- Screen lock, power saving of the display, accessibility
+- Power saving of the display, accessibility
 - A very small file manager, a screenshot tool

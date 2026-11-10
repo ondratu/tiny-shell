@@ -27,7 +27,7 @@ sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev \
     libxinerama-dev libfontconfig-dev
 
-make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper
+make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper, tiny-lock
 make release         # the same, small and stripped, into build-release/
 make DEBUG=1         # into build-debug/, with the debugging information (-Og -g), much bigger,
                      # and with diagnostic messages on stderr (TINY_LOG)
@@ -40,6 +40,10 @@ The names of the packages on other systems:
 | Fedora | `gcc-c++ make pkgconf libX11-devel libXft-devel libXrender-devel libXext-devel libXrandr-devel libXinerama-devel fontconfig-devel` |
 | Alpine | `build-base pkgconf libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev fontconfig-dev` |
 
+PAM is optional: with `libpam0g-dev` (Debian and Ubuntu), `pam-devel` (Fedora) or
+`linux-pam-dev` (Alpine) installed, `make` builds the screen lock with it
+(`make PAM=no` does not, `make PAM=yes` insists on it). See [Screen lock](lock.md).
+
 ## Installation
 
 ```sh
@@ -48,7 +52,11 @@ make install PREFIX=/usr DESTDIR=/tmp/stage   # a package: /tmp/stage/usr/...
 sudo make uninstall               # the same PREFIX
 ```
 
-It installs the programs into `bin/` and the contents of `data/` into `share/`:
+It installs the programs into `bin/` and the contents of `data/` into `share/`.
+No program gets a special mode: where the screen lock needs `tiny-lock-pwcheck`
+to read the hash of the password (no PAM, or a BSD system), run `sudo make
+install-setuid`, see [Screen lock](lock.md#tiny-lock-pwcheck-and-its-rights).
+The files:
 
 - `share/tiny-shell/icons/white` and `black`: the symbolic icons of the shell.
   The shell paints them with the color of the text, so it reads the `white`

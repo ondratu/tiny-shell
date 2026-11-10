@@ -13,6 +13,7 @@ their icons.
 | ![](static/icons/tiny-fonts.svg) `tiny-fonts` | the viewer of fonts, [below](#fonts) |
 | ![](static/icons/tiny-shell.svg) `tiny-about` | a window with the version, the system and the license, started by the main menu |
 | `tiny-wallpaper` | draws a picture as the background, see [Wallpaper](configuration.md#wallpaper) |
+| `tiny-lock` | the screen lock, with `tiny-lock-auth` and `tiny-lock-pwcheck` that check the password, see [Screen lock](lock.md) |
 
 ## Settings
 

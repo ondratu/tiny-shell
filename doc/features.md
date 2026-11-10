@@ -35,7 +35,8 @@ comparison with other window managers is in the [comparison](comparison.md).
     `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry and the Icon
     Theme specification (PNG, SVG, XPM).
 - **Shell:** top panel with the logo, which opens the main menu (About,
-  Settings, Applications, Terminal, Force Quit, Restart, Shutdown, Logout), the
+  Settings, Applications, Terminal, Force Quit, Restart, Shutdown, Lock Screen,
+  Logout), the
   date and time at its right end (the names and the order follow `LANG`), the
   system tray (the icons of programs, left of the clock), a dock with one icon
   for every application (a dot under it for every window, also for an

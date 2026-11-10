@@ -58,6 +58,15 @@ poweroff = systemctl poweroff
 # Runs the applications with Terminal=true, the command follows it; the
 # Terminal item of the main menu starts the program alone (xterm)
 terminal = xterm -e
+# Super + L and the Lock Screen item of the main menu; see The lock below
+lock = tiny-lock
+
+[lock]
+# How tiny-lock-auth checks the password: auto (the default), pam, checker or
+# pwcheck
+auth = auto
+# The PAM service; a service with no file in /etc/pam.d uses "other"
+pam_service = tiny-lock
 
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
@@ -102,6 +111,25 @@ and the sections come in the order of their names; the values of the global file
 are not copied into it. The new file replaces the old one in one step, and a
 failure is reported on stderr and leaves the old file as it was. The file says
 so at the top.
+
+## The lock
+
+`[commands] lock` is the command that Super + L and the Lock Screen item run;
+the default is `tiny-lock`, the screen lock of tiny-shell
+(see [Screen lock](lock.md)). Another locker (`slock`, `i3lock`) can be set
+here.
+
+`[lock]` is read by `tiny-lock`:
+
+| Key | Value | What it says |
+| --- | ----- | ------------ |
+| `auth` | `auto`, `pam`, `checker`, `pwcheck` | how the password is checked; `auto` takes PAM where it can work, then `unix_chkpwd`, then `tiny-lock-pwcheck` |
+| `pam_service` | a name | the PAM service, `tiny-lock` by default; no file is needed for it |
+| `checker` | a path | the program like `unix_chkpwd`, when it is not where the system keeps it |
+| `pwcheck` | a path | `tiny-lock-pwcheck`, when it is not next to `tiny-lock` |
+
+A wrong value is reported on stderr and the default is kept. A change is read
+the next time the screen is locked.
 
 ## The clock
 
