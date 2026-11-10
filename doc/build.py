@@ -37,6 +37,7 @@ NAV = [
         ("usage.md", "Using the shell"),
         ("configuration.md", "Configuration"),
         ("applications.md", "Applications"),
+        ("lock.md", "Screen lock"),
     ]),
     ("Project", [
         ("features.md", "Features"),
@@ -51,6 +52,7 @@ NAV = [
         ("developers/code-layout.md", "Layout of the sources"),
         ("developers/architecture.md", "Architecture"),
         ("developers/dependencies.md", "Dependencies"),
+        ("developers/screen-lock.md", "Screen lock"),
         ("developers/ui-guidelines.md", "User interface"),
         ("developers/testing.md", "Setup and tests"),
     ]),

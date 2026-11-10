@@ -24,6 +24,7 @@ display is in `lib/`.
 | `tiny-settings`, the settings form | `src/settings.cc` | `lib/app/settings_form.*` |
 | `tiny-about`, the about window | `src/about.cc` | `lib/app/about.*` |
 | `tiny-wallpaper`, draws the wallpaper | `src/wallpaper.cc` | `lib/app/wallpaper.*`, the decoder of photos in `lib/image/photo.*` |
+| `tiny-lock`, `tiny-lock-auth`, `tiny-lock-pwcheck`, the screen lock | `src/lock.cc`, `src/lock_auth.cc`, `src/lock_pwcheck.cc` | `lib/app/lock_*.*`, `lib/app/pwcheck.*`; see [The screen lock](screen-lock.md) |
 
 `tiny-fonts` and `tiny-settings` are windows of `tiny::XftWindow` (the window,
 the pixmap, the colors, the font cache and the loop are there).

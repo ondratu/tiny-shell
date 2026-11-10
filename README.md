@@ -12,7 +12,7 @@ as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog, an application launcher and a clock.
+> dialog, an application launcher, a clock and a screen lock.
 
 ![The desktop of tiny-shell](doc/static/screenshots/desktop-day.png)
 
@@ -27,6 +27,7 @@ The documentation is in [doc/](doc/) and is published as a web site at
 | [Using the shell](doc/usage.md) | the panel, the dock, the launcher, the window menu, the keys |
 | [Configuration](doc/configuration.md) | the ini file, XSETTINGS, the tray, monitors, the command line |
 | [Applications](doc/applications.md) | `tiny-settings`, `tiny-fonts`, `tiny-about`, `tiny-wallpaper` |
+| [Screen lock](doc/lock.md) | `tiny-lock`: the password of the system, PAM, fingerprints, systems without PAM |
 | [Features](doc/features.md) | everything that is implemented |
 | [Comparison](doc/comparison.md) | tiny-shell next to Openbox, Blackbox, Fluxbox, LXDE, Xfce and GNOME |
 | [Roadmap](doc/roadmap.md) | what is planned |
@@ -35,7 +36,8 @@ The documentation is in [doc/](doc/) and is published as a web site at
 ## What it is not
 
 - Not a desktop environment. No session manager and no desktop icons, and the
-  only programs are small ones for the settings, the fonts and the wallpaper.
+  only programs are small ones for the settings, the fonts, the wallpaper and the
+  screen lock.
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not themable to the last pixel. There is one look, which can be scaled and

@@ -12,11 +12,14 @@
   Lua for scripting is the planned example.
 - Optional at build time, now: **libpam** (the make variable `PAM=auto|yes|no`;
   `auto` uses it when `<security/pam_appl.h>` and `-lpam` are found, there is no
-  `pkg-config` file on every system). Only the example `examples/password.cc`
-  uses it, to try how a password is checked; the shell does not link it.
-  Without PAM that example runs a helper that checks the password of the user
-  from its standard input (`unix_chkpwd` of Linux-PAM, `make UNIX_CHKPWD=/path`
-  sets where it is).
+  `pkg-config` file on every system). Only `tiny-lock-auth` of the
+  [screen lock](screen-lock.md) and the example `examples/password.cc` use it;
+  the shell and `tiny-lock` do not link it. Without PAM the password goes to a
+  program that checks it: `unix_chkpwd` of Linux-PAM (`make UNIX_CHKPWD=/path`
+  sets where it is) or `tiny-lock-pwcheck`.
+- **crypt()** (libcrypt: in the C library of musl and the BSD systems, a library
+  of its own with glibc, which comes with its development files). Only
+  `tiny-lock-pwcheck` links it, to compare a password with a hash.
 - Prefer a small vendored single-file library (public domain or permissive,
   e.g. `stb_image.h`) over a new shared library.
 - Vendored libraries live in `lib/third_party/` unchanged, with their licence

@@ -18,6 +18,7 @@ and [The system tray](configuration.md#the-system-tray)).
 | Alt+; | the window switcher for the windows of the current application |
 | Alt+Space | the [window menu](#the-window-menu) of the active window |
 | Alt+F4 | close the window |
+| Super + L | lock the screen, see [Screen lock](lock.md) |
 | F11 | fullscreen |
 | Super + mouse | move a window |
 
@@ -65,6 +66,7 @@ The logo at the left of the panel opens a menu with these items, in groups
   `[commands] terminal` (without the `-e` at its end).
 - **Force Quit** starts `xkill`: click a window to end its program.
 - **Restart** and **Shutdown** run `[commands] reboot` and `poweroff`.
+- **Lock Screen** starts `tiny-lock` (or `[commands] lock`), see [Screen lock](lock.md).
 - **Logout** ends tiny-shell.
 
 A click on an item closes the menu. A program that cannot be started is reported

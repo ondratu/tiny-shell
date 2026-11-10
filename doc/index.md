@@ -12,7 +12,7 @@ as it can give.
 
 **Status:** a working prototype. It manages, decorates, moves, resizes,
 minimizes, maximizes and closes windows, and has a panel, a dock, a run
-dialog, an application launcher and a clock. See the [roadmap](roadmap.md) for
+dialog, an application launcher, a clock and a screen lock. See the [roadmap](roadmap.md) for
 what is planned.
 
 ![The desktop of tiny-shell](static/screenshots/desktop-day.png)

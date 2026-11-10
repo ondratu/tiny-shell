@@ -18,16 +18,6 @@ wont.md (what was judged and left out on purpose).
   `tiny-settings`.
 - **Mentioned in:** `doc/comparison.md` (the symbol `?`).
 
-## Screen lock
-
-- **What:** lock the screen (a key, the main menu, before sleep) and ask for a
-  password. LXDE, Xfce and GNOME have it, the plain window managers use an
-  external locker (`i3lock`, `slock`, `xscreensaver`).
-- **Status:** not decided (`?` in `doc/comparison.md`). The simplest way is to start a configured command
-  (`[commands] lock`) and to show a lock item in the main menu, so tiny-shell
-  does not read passwords. A locker of its own is a security feature that
-  needs a careful design. `TODO-DBUS.md` has the logind side (lock before sleep).
-
 ## Power saving of the display (DPMS) and idle
 
 - **What:** switch the display off after a time without input (`DPMS`
