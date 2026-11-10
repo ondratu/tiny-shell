@@ -568,7 +568,7 @@ TEST_F(PasswordEntryTest, the_text_is_kept_but_bullets_are_drawn)
     EXPECT_EQ(changed.calls, 3);
 
     tiny::Entry bullets(100, 30);
-    bullets.realize(root_window(), 0, 0);
+    bullets.realize(root_window(), 0, 100); // not over `entry`: it would hide it
     bullets.set_events();
     bullets.set_text("\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2");
     send(bullets, FocusIn);
@@ -581,7 +581,7 @@ TEST_F(PasswordEntryTest, a_bullet_is_drawn_for_a_whole_utf8_character)
     entry.set_text("p\xC5\x99\xC3\xADlis"); // six characters, nine bytes
 
     tiny::Entry bullets(100, 30);
-    bullets.realize(root_window(), 0, 0);
+    bullets.realize(root_window(), 0, 100); // not over `entry`: it would hide it
     bullets.set_events();
     bullets.set_text(std::string("\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2"
                                  "\xE2\x80\xA2\xE2\x80\xA2\xE2\x80\xA2"));
@@ -662,7 +662,7 @@ TEST_F(PasswordEntryTest, an_entry_can_stop_being_a_password)
 
     EXPECT_FALSE(entry.is_password());
     tiny::Entry bullets(100, 30);
-    bullets.realize(root_window(), 0, 0);
+    bullets.realize(root_window(), 0, 100); // not over `entry`: it would hide it
     bullets.set_events();
     bullets.set_text("abc");
     send(bullets, FocusIn);

@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <sys/wait.h>
 
+#include <csignal>
+
 #include <vector>
 
 #include "wm/lock_guard.h"
