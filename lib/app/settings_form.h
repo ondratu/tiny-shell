@@ -71,7 +71,8 @@ class SettingsForm {
         SecondaryMonitor, //!< the same
         MonitorPlacement, //!< a choice: keep, right, left, above or below
         BlankScreen,      //!< a choice: the minutes to a black lock screen
-        IdleLock          //!< a choice: the minutes to the lock, or never
+        IdleLock,         //!< a choice: the minutes to the lock, or never
+        DisplayOff        //!< a choice: the minutes to switch the display off
     };
 
     //! What has the keyboard in the list of fonts
@@ -129,6 +130,9 @@ class SettingsForm {
         //! The minutes without input to lock the screen ("" is never, then
         //! 5, 10, 15, 30 and 60)
         std::string idle_lock{};
+        //! The minutes without input to switch the display off ("" leaves
+        //! the X server as it is, then "never", 5, 10, 15, 30 and 60)
+        std::string display_off{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -370,7 +374,8 @@ class SettingsForm {
         SecondaryMonitorField,
         MonitorPlacementField,
         BlankScreenField,
-        IdleLockField, //!< the fields are in the order of `Field`
+        IdleLockField,
+        DisplayOffField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -413,7 +418,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 17> fields_;
+    std::array<TextField, 18> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
