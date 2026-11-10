@@ -85,7 +85,7 @@ describe the last releases that had it.
 | Default applications settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Screenshot tool | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Screen lock | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| Power saving of the display (DPMS) | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Power saving of the display (DPMS) | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Accessibility settings (sticky keys, high contrast) | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | File manager | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 

@@ -36,7 +36,8 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    entry; **`tiny-lock-auth` is started only here and stopped when the dialog
    closes**, so biometrics run when somebody is there) and `Black` (no window
    mapped; after `[lock] blank_after` in `Idle`, woken by any input, which is
-   not used for anything else). `handle_input()` decides it for every key and
+   not used for anything else; the monitor is switched off with `DisplayPower` while it is
+   black, on again when it is left, and in the destructor). `handle_input()` decides it for every key and
    pointer event. It rises when something covers it. A change of the monitors
    (RandR, `select_monitor_events()` as in the shell) makes `screen_changed()`
    fit the window and the dialog to the new screen. If a grab fails (another client

@@ -32,6 +32,9 @@ settings of GNOME:
   blank_after`; it is read the next time the screen is locked), and Lock after,
   the time without input after which the screen is locked: 5, 10, 15, 30 or 60
   minutes, or Never (`[lock] idle_after`; tiny-shell reads it after
+  `tiny-shell --reload`), and Display off, the time without input after which
+  the display is switched off: Unchanged (the X server keeps its setting), Never,
+  5, 10, 15, 30 or 60 minutes (`[display] off_after`; read after
   `tiny-shell --reload`).
 - **Applications:** the terminal.
 - **Displays:** the primary and the secondary monitor (a choice of the monitors

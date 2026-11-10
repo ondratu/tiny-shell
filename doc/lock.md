@@ -36,7 +36,10 @@ the middle of the primary monitor. The sizes follow `[theme] scale` and the font
    `tiny-settings`) the first state turns to an entirely black screen with no text
    at all. Any input (a key, a click, a move of the pointer) shows the time
    again; a key or a click that wakes the screen is not used for anything else.
-   The time starts again after Escape.
+   The time starts again after Escape. If the X server has DPMS and it is on,
+   the monitor is switched off as well while the screen is black (any input
+   switches it on again), so the black screen saves power too; see
+   [the power saving of the display](configuration.md#the-power-saving-of-the-display).
 
 The screen opens only when the check says the password is right, never because
 of an error.

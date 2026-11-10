@@ -73,8 +73,12 @@ comparison with other window managers is in the [comparison](comparison.md).
   Fonts, Desktop, Displays, Power and Applications that changes the font, the
   rendering of text (antialiasing, hinting, subpixel order), the scale, the
   wallpaper, the mode of the dock, the format of the clock, the monitors, the
-  times of the lock screen (to black, and to the lock when idle) and the
-  terminal in the configuration file of the user (see [Applications](applications.md#settings)).
+  times of the lock screen (to black, and to the lock when idle), the time to
+  switch the display off and the terminal in the configuration file of the user (see [Applications](applications.md#settings)).
+- **Power saving of the display:** `[display] off_after` switches the display
+  off after a time without input (DPMS, so the X server counts the time), it is
+  Display off in `tiny-settings`, and the black screen of the lock switches the
+  monitor off too (see [Configuration](configuration.md#the-power-saving-of-the-display)).
 - **Screen lock:** `tiny-lock` (Super + L, the main menu, or after
   `[lock] idle_after` minutes without input) asks for the password of the
   system through PAM, a checker such as `unix_chkpwd`, or the small
