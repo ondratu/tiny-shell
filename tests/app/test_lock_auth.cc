@@ -148,13 +148,13 @@ TEST(LockAuthTest, a_checker_gets_the_user_and_nonull)
     EXPECT_EQ(backend.description, checker.str());
 
     ScriptedDialog right;
-    right.answers.push("x");
+    right.answers.emplace("x");
     EXPECT_EQ(authenticate(backend, "anna", right).verdict, Verdict::Right);
     // the script checks the arguments: 7 is the wrong password of unix_chkpwd
     Backend for_bob;
     ASSERT_TRUE(resolve_backend(settings, "bob", for_bob, why));
     ScriptedDialog other_user;
-    other_user.answers.push("x");
+    other_user.answers.emplace("x");
     EXPECT_EQ(authenticate(for_bob, "bob", other_user).verdict, Verdict::Wrong);
 }
 
@@ -174,13 +174,13 @@ TEST(LockAuthTest, the_password_goes_to_the_program_that_checks)
     const ScriptFile script(secret_body);
     const Backend backend = pwcheck_with(script);
     ScriptedDialog right;
-    right.answers.push("secret");
+    right.answers.emplace("secret");
     EXPECT_EQ(authenticate(backend, "anna", right).verdict, Verdict::Right);
     EXPECT_EQ(right.asked, std::vector<std::string>{"Password:"});
     EXPECT_EQ(right.hidden_prompts, 1);
 
     ScriptedDialog wrong;
-    wrong.answers.push("other");
+    wrong.answers.emplace("other");
     EXPECT_EQ(authenticate(backend, "anna", wrong).verdict, Verdict::Wrong);
 }
 
@@ -188,7 +188,7 @@ TEST(LockAuthTest, an_empty_password_is_wrong_and_is_not_checked)
 {
     const ScriptFile script("exit 0"); // would say right to anything
     ScriptedDialog dialog;
-    dialog.answers.push("");
+    dialog.answers.emplace("");
     EXPECT_EQ(authenticate(pwcheck_with(script), "anna", dialog).verdict,
               Verdict::Wrong);
 }
@@ -285,7 +285,7 @@ TEST(LockAuthTest,
         GTEST_SKIP() << "built without PAM";
     }
     ScriptedDialog dialog;
-    dialog.answers.push("tiny-lock-test-password-no-one-has");
+    dialog.answers.emplace("tiny-lock-test-password-no-one-has");
     const Outcome outcome = check_pam("root", "other", dialog);
     EXPECT_NE(outcome.verdict, Verdict::Right);
 }

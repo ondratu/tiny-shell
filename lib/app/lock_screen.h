@@ -102,7 +102,7 @@ class LockScreen {
     bool focused = false;
     bool done = false;
     //! When the next try starts; the epoch means none is waiting
-    Clock::time_point retry_at = Clock::time_point();
+    Clock::time_point retry_at;
 };
 
 } // namespace tiny::app

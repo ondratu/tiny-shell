@@ -7,7 +7,7 @@
 #include "app/lock_check.h"
 #include "app/pwcheck.h"
 
-#if defined(__has_include)
+#ifdef __has_include
 #if __has_include(<crypt.h>)
 #include <crypt.h>
 #endif
@@ -41,7 +41,7 @@ int run(std::vector<const char*> arguments, const std::string& input)
     arguments.insert(arguments.begin(), "tiny-lock-pwcheck");
     const int status = tiny::app::run_pwcheck(
             static_cast<int>(arguments.size()),
-            const_cast<char**>(arguments.data()), pipes[0], 0);
+            const_cast<char* const*>(arguments.data()), pipes[0], 0);
     close(pipes[0]);
     return status;
 }

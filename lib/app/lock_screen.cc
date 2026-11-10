@@ -31,7 +31,7 @@ constexpr std::chrono::milliseconds failure_delay(1000);
 
 class LockScreen::Dialog : public tiny::Box {
   public:
-    Dialog(const std::string& user):
+    explicit Dialog(const std::string& user):
         tiny::Box(tiny::Box::Type::Vertical, width(), height()),
         who(inner_width(), line_height, user),
         question(inner_width(), line_height, ""),
@@ -83,7 +83,7 @@ LockScreen::LockScreen(tiny::Display& display_arg,
             CWOverrideRedirect | CWBackPixel | CWEventMask, &attributes);
     // no pointer to see on a locked screen
     const char empty = 0;
-    Pixmap bitmap = XCreateBitmapFromData(display, cover, &empty, 1, 1);
+    const Pixmap bitmap = XCreateBitmapFromData(display, cover, &empty, 1, 1);
     XColor black = {};
     blank_cursor =
             XCreatePixmapCursor(display, bitmap, bitmap, &black, &black, 0, 0);

@@ -63,26 +63,28 @@ TEST(LockProtocolTest, every_message_is_read_back)
     for (const Kind kind :
          {Kind::PromptHidden, Kind::PromptVisible, Kind::Info, Kind::Error,
           Kind::Result, Kind::Answer, Kind::Cancel}) {
-        const auto message = parse_message(format_message(kind, "text here"));
-        ASSERT_TRUE(message);
-        EXPECT_EQ(message->kind, kind);
-        EXPECT_EQ(message->text, "text here");
+        const Message message =
+                parse_message(format_message(kind, "text here"))
+                        .value_or(Message{Kind::Info, "not a message"});
+        EXPECT_EQ(message.kind, kind);
+        EXPECT_EQ(message.text, "text here");
     }
 }
 
 TEST(LockProtocolTest, a_message_without_a_text_has_an_empty_one)
 {
-    const auto message = parse_message("CANCEL\n");
-    ASSERT_TRUE(message);
-    EXPECT_EQ(message->kind, Kind::Cancel);
-    EXPECT_EQ(message->text, "");
+    const Message message =
+            parse_message("CANCEL\n")
+                    .value_or(Message{Kind::Info, "not a message"});
+    EXPECT_EQ(message.kind, Kind::Cancel);
+    EXPECT_EQ(message.text, "");
 }
 
 TEST(LockProtocolTest, the_text_keeps_the_spaces)
 {
-    const auto message = parse_message("ANSWER  a  b ");
-    ASSERT_TRUE(message);
-    EXPECT_EQ(message->text, " a  b ");
+    const Message message = parse_message("ANSWER  a  b ")
+                                    .value_or(Message{Kind::Info, "not one"});
+    EXPECT_EQ(message.text, " a  b ");
 }
 
 TEST(LockProtocolTest, a_line_that_is_not_a_message_is_not_one)
@@ -162,7 +164,7 @@ TEST(LockProtocolTest, clear_forgets_what_is_waiting)
 
 TEST(LockProtocolTest, the_dialog_asks_and_gets_the_answer)
 {
-    Pipes pipes;
+    const Pipes pipes;
     put(pipes.lock_to_auth[1], "ANSWER secret\n");
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     std::string answer;
@@ -174,7 +176,7 @@ TEST(LockProtocolTest, the_dialog_asks_and_gets_the_answer)
 
 TEST(LockProtocolTest, a_visible_prompt_is_told_as_visible)
 {
-    Pipes pipes;
+    const Pipes pipes;
     put(pipes.lock_to_auth[1], "ANSWER 123\n");
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     std::string answer;
@@ -185,7 +187,7 @@ TEST(LockProtocolTest, a_visible_prompt_is_told_as_visible)
 
 TEST(LockProtocolTest, the_dialog_skips_what_is_not_an_answer)
 {
-    Pipes pipes;
+    const Pipes pipes;
     put(pipes.lock_to_auth[1], "noise\nINFO hi\nANSWER x\n");
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     std::string answer;
@@ -195,7 +197,7 @@ TEST(LockProtocolTest, the_dialog_skips_what_is_not_an_answer)
 
 TEST(LockProtocolTest, an_answer_may_come_in_pieces)
 {
-    Pipes pipes;
+    const Pipes pipes;
     put(pipes.lock_to_auth[1], "ANSWER sec");
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     const pid_t child = fork();
@@ -211,7 +213,7 @@ TEST(LockProtocolTest, an_answer_may_come_in_pieces)
 
 TEST(LockProtocolTest, cancel_is_no_answer)
 {
-    Pipes pipes;
+    const Pipes pipes;
     put(pipes.lock_to_auth[1], "CANCEL\n");
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     std::string answer;
@@ -220,7 +222,7 @@ TEST(LockProtocolTest, cancel_is_no_answer)
 
 TEST(LockProtocolTest, a_lock_that_is_gone_is_no_answer)
 {
-    Pipes pipes;
+    const Pipes pipes;
     close(pipes.lock_to_auth[1]);
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     std::string answer;
@@ -229,7 +231,7 @@ TEST(LockProtocolTest, a_lock_that_is_gone_is_no_answer)
 
 TEST(LockProtocolTest, a_line_that_does_not_end_is_no_answer)
 {
-    Pipes pipes;
+    const Pipes pipes;
     const std::string endless(LineBuffer::max_line + 10, 'a');
     put(pipes.lock_to_auth[1], endless);
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
@@ -251,7 +253,7 @@ TEST(LockProtocolTest, nobody_to_write_to_is_no_answer)
 
 TEST(LockProtocolTest, information_and_the_result_are_written)
 {
-    Pipes pipes;
+    const Pipes pipes;
     LineDialog dialog(pipes.lock_to_auth[0], pipes.auth_to_lock[1]);
     dialog.say(false, "Place your finger");
     dialog.say(true, "Too many tries");

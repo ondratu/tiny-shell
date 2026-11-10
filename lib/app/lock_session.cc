@@ -39,8 +39,10 @@ bool AuthSession::start()
         return false;
     }
     std::vector<char*> arguments;
-    for (std::string& word : command) {
-        arguments.push_back(word.data());
+    arguments.reserve(command.size() + 1);
+    for (const std::string& word : command) {
+        // execvp() takes char*, but does not change the strings
+        arguments.push_back(const_cast<char*>(word.c_str()));
     }
     arguments.push_back(nullptr);
 
@@ -99,7 +101,7 @@ std::vector<Message> AuthSession::read()
     return messages;
 }
 
-bool AuthSession::answer(const std::string& text)
+bool AuthSession::answer(const std::string& text) const
 {
     if (input < 0) {
         return false;
@@ -152,10 +154,10 @@ int run_to_end(const std::vector<std::string>& command)
     if (command.empty()) {
         return -1;
     }
-    std::vector<std::string> words = command;
     std::vector<char*> arguments;
-    for (std::string& word : words) {
-        arguments.push_back(word.data());
+    arguments.reserve(command.size() + 1);
+    for (const std::string& word : command) {
+        arguments.push_back(const_cast<char*>(word.c_str()));
     }
     arguments.push_back(nullptr);
     const pid_t pid = fork();

@@ -87,7 +87,7 @@ int main(int argc, char** argv)
     // Fail closed: if the password can't be checked, nothing is locked,
     // because the screen could not be unlocked
     std::vector<std::string> probing = command;
-    probing.push_back("--probe");
+    probing.emplace_back("--probe");
     if (tiny::app::run_to_end(probing) != 0) {
         fprintf(stderr,
                 "%s: the screen is not locked, the password can't be checked "
