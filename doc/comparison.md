@@ -89,9 +89,17 @@ describe the last releases that had it.
 | Accessibility settings (sticky keys, high contrast) | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | File manager | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 
-## Size
+## Other libraries
 
-| Feature | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
+**tiny-shell supports other libraries, but it does not require them.** It
+builds and runs with libX11 and a few light X libraries; the rest is switched on
+where it is installed. A tick means that the project has the support, whether
+the library is optional or required there is not compared. For the window
+managers the usual companions count too (Openbox: `obconf`, which is GTK;
+Fluxbox: `fbsetbg`; Blackbox: `bsetroot`), but not the panels and lockers that
+people add by their own choice.
+
+| Library | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
 | ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
-| Runs without GLib and GTK | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| Runs without D-Bus | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| D-Bus | ◔ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
+| PAM | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
