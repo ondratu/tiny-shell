@@ -150,11 +150,45 @@ pid_t spawn_command(const std::string& text)
     return spawn(argv);
 }
 
+namespace {
+
+//! The program called `name` in the directories of PATH, or `name` itself
+std::string find_in_path(const std::string& name)
+{
+    const char* path = getenv("PATH");
+    if (path == nullptr || name.empty()) {
+        return name;
+    }
+    const std::string dirs = path;
+    size_t start = 0;
+    while (start <= dirs.size()) {
+        size_t end = dirs.find(':', start);
+        if (end == std::string::npos) {
+            end = dirs.size();
+        }
+        if (end > start) {
+            const std::string candidate =
+                    dirs.substr(start, end - start) + "/" + name;
+            if (access(candidate.c_str(), X_OK) == 0) {
+                return candidate;
+            }
+        }
+        start = end + 1;
+    }
+    return name;
+}
+
+} // namespace
+
 std::string sibling_program(const char* argv0, const std::string& name)
 {
     char resolved[PATH_MAX];
+    std::string found = argv0;
+    if (found.find('/') == std::string::npos) { // started from PATH
+        found = find_in_path(argv0);
+    }
     const std::string program =
-            realpath(argv0, resolved) != nullptr ? resolved : argv0;
+            realpath(found.c_str(), resolved) != nullptr ? resolved : found;
     const size_t slash = program.rfind('/');
     if (slash == std::string::npos) {
         return name;
