@@ -48,6 +48,23 @@ pid_t spawn_command(const std::string& text);
  */
 std::string sibling_program(const char* argv0, const std::string& name);
 
+/**
+ * @short Keep the exit status of the child `pid` when it is collected.
+ *
+ * `reap_children()` collects every child, so the status would be lost. One
+ * child is watched at a time (a new call replaces the old one). Call it right
+ * after `spawn()`, before the child can end, or `child_ended()` never says it
+ * has.
+ */
+void watch_child(pid_t pid);
+
+/**
+ * @short Whether the watched child `pid` has ended; `status` is its wait
+ * status (`WIFEXITED`, `WEXITSTATUS`...). False while it runs and for a child
+ * that is not the watched one.
+ */
+bool child_ended(pid_t pid, int* status);
+
 /// Collect finished children (SIGCHLD) so they do not stay as zombies.
 void reap_children();
 

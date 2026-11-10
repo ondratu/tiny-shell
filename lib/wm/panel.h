@@ -16,7 +16,7 @@ class DockLine;
  * ways to leave it.
  *
  * The items are in groups with a line between them: About; Settings;
- * Applications and Terminal; Force Quit; Restart and Shutdown; Logout. The
+ * Applications and Terminal; Force Quit; Restart and Shutdown; Lock Screen and Logout. The
  * owner connects
  * `on_click` of the items (and hides the menu).
  */
@@ -35,6 +35,7 @@ class MainMenu : public tiny::Popover {
     tiny::LabelButton force_quit;
     tiny::LabelButton restart;
     tiny::LabelButton shutdown;
+    tiny::LabelButton lock;
     tiny::LabelButton logout;
 
   private:

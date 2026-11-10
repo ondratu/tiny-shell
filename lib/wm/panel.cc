@@ -8,7 +8,7 @@ namespace tiny::wm {
 namespace {
 
 //! The number of the items and of the lines between their groups
-constexpr int main_menu_items = 8;
+constexpr int main_menu_items = 9;
 constexpr int main_menu_lines = 5;
 
 } // namespace
@@ -27,6 +27,7 @@ MainMenu::MainMenu():
                "Force Quit"),
     restart(shell_theme.menu_width, shell_theme.popup_item_height, "Restart"),
     shutdown(shell_theme.menu_width, shell_theme.popup_item_height, "Shutdown"),
+    lock(shell_theme.menu_width, shell_theme.popup_item_height, "Lock Screen"),
     logout(shell_theme.menu_width, shell_theme.popup_item_height, "Logout")
 {
     name = "wm_mainmenu";
@@ -44,7 +45,7 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
     tiny::LabelButton* const groups[][2] = {
             {&about, nullptr},          {&settings, nullptr},
             {&applications, &terminal}, {&force_quit, nullptr},
-            {&restart, &shutdown},      {&logout, nullptr}};
+            {&restart, &shutdown},      {&lock, &logout}};
     const int separator = shell_theme.menu_separator;
     int top = 0;
     for (const auto& group : groups) {
