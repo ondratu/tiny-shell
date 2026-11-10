@@ -570,10 +570,10 @@ TEST_F(LockScreenTest, a_black_screen_switches_the_display_off_and_input_on)
     const auto was = power.timeout();
     power.set_timeout(std::chrono::seconds(600));
     const auto level = [] {
-        CARD16 level = DPMSModeOn;
+        CARD16 current = DPMSModeOn;
         BOOL state = False;
-        DPMSInfo(tiny::get_display(), &level, &state);
-        return level;
+        DPMSInfo(tiny::get_display(), &current, &state);
+        return current;
     };
     {
         LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
