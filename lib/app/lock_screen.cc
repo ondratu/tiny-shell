@@ -185,6 +185,9 @@ LockScreen::LockScreen(tiny::Display& display_arg,
     user(std::move(user_arg)),
     options(std::move(options_arg))
 {
+    // before the screen is read: a change after this is not missed
+    randr_base = tiny::wm::select_monitor_events(display,
+                                                 XDefaultRootWindow(display));
     ::Display* const xdisplay = display;
     const int screen = XDefaultScreen(xdisplay);
     XSetWindowAttributes attributes = {};
@@ -226,8 +229,6 @@ LockScreen::LockScreen(tiny::Display& display_arg,
             });
     place_dialog();
 
-    randr_base = tiny::wm::select_monitor_events(display,
-                                                 XDefaultRootWindow(display));
     tiny::handlers.set_handler(
             VisibilityNotify, cover,
             [this](const XEvent& event) { on_visibility(event); });
@@ -320,6 +321,9 @@ void LockScreen::place_dialog()
 
 void LockScreen::screen_changed()
 {
+    if (done) {
+        return; // unlocked: the window is gone
+    }
     ::Display* const xdisplay = display;
     const int screen = XDefaultScreen(xdisplay);
     XMoveResizeWindow(display, cover, 0, 0,
