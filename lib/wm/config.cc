@@ -239,6 +239,42 @@ bool parse_idle_after(const std::string& text, int& minutes)
     return false;
 }
 
+XftChoices display_off_choices()
+{
+    static constexpr XftChoice times[] = {
+            {"", "Unchanged"},    {"never", "Never"},   {"5", "5 minutes"},
+            {"10", "10 minutes"}, {"15", "15 minutes"}, {"30", "30 minutes"},
+            {"60", "1 hour"}};
+    return {std::begin(times), std::end(times)};
+}
+
+bool valid_display_off_choice(const std::string& text)
+{
+    const XftChoices choices = display_off_choices();
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+bool parse_display_off(const std::string& text, int& minutes)
+{
+    const std::string_view value = trim(text);
+    if (value.empty()) {
+        minutes = -1;
+        return true;
+    }
+    if (value == "never") {
+        minutes = 0;
+        return true;
+    }
+    for (const int allowed : {5, 10, 15, 30, 60}) {
+        if (value == std::to_string(allowed)) {
+            minutes = allowed;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool valid_pam_service(const std::string& text)
 {
     return !text.empty() && std::none_of(text.begin(), text.end(), [](char c) {
@@ -449,6 +485,11 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     if (const auto value = ini.get("lock", "idle_after")) {
         if (!parse_idle_after(*value, config.lock_idle_minutes)) {
             problem("[lock] idle_after must be 5, 10, 15, 30, 60 or never");
+        }
+    }
+    if (const auto value = ini.get("display", "off_after")) {
+        if (!parse_display_off(*value, config.display_off_minutes)) {
+            problem("[display] off_after must be 5, 10, 15, 30, 60 or never");
         }
     }
     if (const auto value = ini.get("lock", "pam_service")) {
