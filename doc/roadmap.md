@@ -5,7 +5,7 @@ programs is done, only small details are left. The detailed list with the
 reasons is in the file
 [TODO](https://github.com/ondratu/tiny-shell/blob/master/TODO) of the
 repository, the D-Bus plan is in
-[TODO-DBUS](https://github.com/ondratu/tiny-shell/blob/master/TODO-DBUS).
+[TODO-DBUS.md](https://github.com/ondratu/tiny-shell/blob/master/TODO-DBUS.md).
 What is not decided yet is in the
 [backlog](https://github.com/ondratu/tiny-shell/blob/master/backlog.md), and
 what was left out on purpose, with the reason, is in

@@ -26,7 +26,7 @@ wont.md (what was judged and left out on purpose).
 - **Status:** not decided (`?` in `doc/comparison.md`). The simplest way is to start a configured command
   (`[commands] lock`) and to show a lock item in the main menu, so tiny-shell
   does not read passwords. A locker of its own is a security feature that
-  needs a careful design. `TODO-DBUS` has the logind side (lock before sleep).
+  needs a careful design. `TODO-DBUS.md` has the logind side (lock before sleep).
 
 ## Power saving of the display (DPMS) and idle
 
