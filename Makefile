@@ -63,10 +63,9 @@ endif
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
-# The version for --version: the tag, or the commit when there is no tag
-# PAM is optional and only the example examples/password.cc uses it: PAM=auto
-# (the default) uses libpam when it and its header are found, yes insists on
-# it, no leaves it out. There is no pkg-config file on every system (NetBSD has
+# PAM is optional and only tiny-lock-auth and the example examples/password.cc
+# use it: PAM=auto (the default) uses libpam when it and its header are found,
+# yes insists on it, no leaves it out. There is no pkg-config file on every system (NetBSD has
 # libpam in the base system), so a small program is compiled and linked.
 # UNIX_CHKPWD=/path is the helper of the password check without PAM.
 PAM ?= auto
@@ -81,14 +80,15 @@ $(error PAM=yes, but libpam and <security/pam_appl.h> were not found (libpam0g-d
 endif
 endif
 ifneq ($(UNIX_CHKPWD),)
-PAM_CXXFLAGS += -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
+CHKPWD_CXXFLAGS = -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
 endif
 
 # crypt() of tiny-lock-pwcheck is in libc (musl, BSD) or in libcrypt (glibc);
 # CRYPT_LIBS is what the linker needs on this system
-CRYPT_LIBS := $(shell printf '\043include <unistd.h>\nint main() { return crypt("a", "ab") == 0; }\n' | \
+CRYPT_LIBS := $(shell printf '\043include <unistd.h>\n\043if __has_include(<crypt.h>)\n\043include <crypt.h>\n\043endif\nint main() { return crypt("a", "ab") == 0; }\n' | \
     $(CXX) -x c++ - -o /dev/null 2>/dev/null || echo -lcrypt)
 
+# The version for --version: the tag, or the commit when there is no tag
 TINY_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null)
 
 # X headers are system headers: their warnings are not ours to fix
@@ -155,7 +155,7 @@ OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.
 DEP = $(OBJ:.o=.d)
 
 .PHONY: FORCE all release examples clean check coverage format lint lint-fast \
-    lint-analyze asan cppcheck help layers install uninstall
+    lint-analyze asan cppcheck help layers install install-setuid uninstall
 .DELETE_ON_ERROR:
 
 all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
@@ -175,7 +175,8 @@ release:
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
-INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER)
+INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK) \
+    $(LOCK_AUTH) $(LOCK_PWCHECK)
 
 install: all
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
@@ -185,16 +186,28 @@ install: all
 	-gtk-update-icon-cache -q -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null
 	-update-desktop-database -q $(DESTDIR)$(DATADIR)/applications 2>/dev/null
 
+# tiny-lock-pwcheck is the only program that needs rights, and only where the
+# system has no unix_chkpwd of its own (see doc/install.md). `make install` does
+# not give them: this target does, as root. Linux reads the hash of the
+# password as the group shadow, the BSD systems only as root.
+PWCHECK_OWNER ?= $(shell [ -e /etc/shadow ] && echo root:shadow || echo root:wheel)
+PWCHECK_MODE ?= $(shell [ -e /etc/shadow ] && echo 2755 || echo 4755)
+
+install-setuid: install
+	chown $(PWCHECK_OWNER) $(DESTDIR)$(BINDIR)/tiny-lock-pwcheck
+	chmod $(PWCHECK_MODE) $(DESTDIR)$(BINDIR)/tiny-lock-pwcheck
+
 uninstall:
 	for p in $(INSTALLED_PROGS); do rm -f $(DESTDIR)$(BINDIR)/$$(basename $$p); done
 	cd data && find . -type f | while read -r f; do \
 	    rm -f "$(DESTDIR)$(DATADIR)/$$f"; done
 
 help:
-	@echo "make            build tiny-shell, tiny-fonts, tiny-settings, tiny-about and tiny-wallpaper"
+	@echo "make            build tiny-shell, its programs (tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper, tiny-lock...)"
 	@echo "make layers     check that the widgets do not include the shell"
 	@echo "make release    build small stripped programs into build-release"
 	@echo "make install    install the programs and data/ (PREFIX=/usr/local, DESTDIR)"
+	@echo "make install-setuid  install, and give tiny-lock-pwcheck the rights to read the hash of the password (root)"
 	@echo "make uninstall  remove what install put there"
 	@echo "make examples   build the toolkit examples"
 	@echo "make check      run the unit tests (against Xvfb)"
@@ -208,7 +221,7 @@ help:
 	@echo "make clean      remove the build directories"
 	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 (no RandR / Xinerama),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
-	@echo "           PAM=auto|yes|no (libpam for examples/password.cc), UNIX_CHKPWD=/path (its helper)"
+	@echo "           PAM=auto|yes|no (libpam for tiny-lock-auth), UNIX_CHKPWD=/path (the helper of PAM)"
 
 examples: $(EXAMPLES)
 
@@ -269,9 +282,10 @@ $(EXAMPLES): %: %.o $(LIB)
 
 # PAM is used by tiny-lock-auth (lib/app/lock_pam.cc) and the example
 $(BUILD)/lib/app/lock_pam.o: override CXXFLAGS += $(PAM_CXXFLAGS)
+$(BUILD)/lib/app/lock_check.o: override CXXFLAGS += $(CHKPWD_CXXFLAGS)
 
 # the password example asks PAM, when there is PAM (see PAM above)
-$(BUILD)/examples/password.o: override CXXFLAGS += $(PAM_CXXFLAGS)
+$(BUILD)/examples/password.o: override CXXFLAGS += $(PAM_CXXFLAGS) $(CHKPWD_CXXFLAGS)
 $(BUILD)/examples/password: override LDLIBS += $(PAM_LIBS)
 
 $(BUILD)/.pkg_check: Makefile
