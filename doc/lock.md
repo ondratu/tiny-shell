@@ -94,7 +94,13 @@ tiny-lock --probe           # the same check that tiny-lock makes before it lock
 | Fedora, Arch | there | install the development package (`pam-devel`, `pam`); not tried by us |
 | Alpine | `linux-pam` is a package, a plain install has none | `apk add linux-pam linux-pam-dev` and build with it, or use `tiny-lock-pwcheck` |
 | NetBSD, FreeBSD | OpenPAM in the base system, but `pam_unix` reads the hash itself and an ordinary user can't, so PAM refuses the right password (tried on NetBSD); there is no `unix_chkpwd` | `make install-setuid` and `PAM=no`; `tiny-lock-pwcheck` checks the password (tried on NetBSD and FreeBSD) |
-| OpenBSD | no PAM (it has `bsd_auth`) | not supported yet |
+| OpenBSD | no PAM (it has `bsd_auth`) | not supported and not tried; a report or a patch is welcome (`tiny-lock-pwcheck` would use `auth_userokay`) |
+
+On NetBSD and FreeBSD only the password works: the PAM modules for a camera or a
+fingerprint are made for Linux, and to use PAM there `tiny-lock-auth` would have
+to run with root rights and load modules as root. That is left out on purpose,
+because it would put code of the modules into a privileged program;
+`tiny-lock-pwcheck` stays the one small program with rights.
 
 `make` finds PAM by itself (`PAM=auto`); `make PAM=no` builds without it and
 `make PAM=yes` insists on it.
@@ -125,7 +131,7 @@ See [The lock](configuration.md#the-lock): `[commands] lock` and the section
 `[lock]` (`blank_after`, `idle_after`, `auth`, `pam_service`, `checker`, `pwcheck`).
 
 PAM is asked for the service `tiny-lock`. No file is needed for it: a service
-without a file uses `other`, and on Debian, Alpine and NetBSD that is the login
+without a file uses `other`, and on Debian and Alpine that is the login
 password. Where `other` denies everything (not tried on Fedora and Arch), add
 the file `/etc/pam.d/tiny-lock` (on Debian `@include common-auth`, on Fedora
 and Arch `auth include system-auth`), or set `pam_service = login`.

@@ -17,8 +17,6 @@ the work is accepted; this file keeps the reasons and the details.
   `[lock] switch_user_command` (GDM: `CreateTransientDisplay` and
   `ActivateSessionOnSeat` of logind; LightDM: `dm-tool switch-to-greeter`; SDDM
   not checked; XDM has nothing). It is shown only when it is set.
-- **OpenBSD:** no PAM; `tiny-lock-pwcheck` would use `auth_userokay` of
-  `bsd_auth` and a set-group-ID `auth` binary. Not tried: no OpenBSD here.
 - **PAM files of the distributions:** a service without a file uses `other`. That
   is the login password on Debian and Alpine (NetBSD and FreeBSD do not use PAM
   without the right to read the hash, see below); Fedora and Arch are not
@@ -31,9 +29,3 @@ the work is accepted; this file keeps the reasons and the details.
 - **Systems that were not checked:** Void, Buildroot, Fedora, Arch, ARM (no
   emulation in Docker here), Raspberry Pi OS and Armbian (the same packages as
   Debian, so `tiny-lock-auth` should work the same).
-- **PAM on NetBSD and FreeBSD:** `auto` leaves PAM out there, because an ordinary
-  user can't read `master.passwd` and there is no `unix_chkpwd`. So only the
-  password works; PAM modules for a camera or a fingerprint (which are for Linux
-  anyway) can't be used. A privileged PAM host (the set bit on `tiny-lock-auth`)
-  would change it, but it puts PAM modules into a program with root, so it was
-  not built. Decide only if somebody needs it.
