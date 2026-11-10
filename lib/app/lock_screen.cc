@@ -226,6 +226,8 @@ LockScreen::LockScreen(tiny::Display& display_arg,
             });
     place_dialog();
 
+    randr_base = tiny::wm::select_monitor_events(display,
+                                                 XDefaultRootWindow(display));
     tiny::handlers.set_handler(
             VisibilityNotify, cover,
             [this](const XEvent& event) { on_visibility(event); });
@@ -314,6 +316,18 @@ void LockScreen::place_dialog()
     XMoveWindow(display, dialog->get_window(), x, dialog_y);
     XMoveWindow(display, dialog->hint.get_window(), wide_x,
                 dialog_y + (Dialog::height() - line_of(1)) / 2);
+}
+
+void LockScreen::screen_changed()
+{
+    ::Display* const xdisplay = display;
+    const int screen = XDefaultScreen(xdisplay);
+    XMoveResizeWindow(display, cover, 0, 0,
+                      static_cast<unsigned>(DisplayWidth(xdisplay, screen)),
+                      static_cast<unsigned>(DisplayHeight(xdisplay, screen)));
+    place_dialog();
+    XRaiseWindow(display, cover);
+    XFlush(display);
 }
 
 bool LockScreen::lock(std::chrono::milliseconds patience)
@@ -480,6 +494,11 @@ void LockScreen::handle_events()
     while (XPending(display) > 0) {
         XEvent event;
         XNextEvent(display, &event);
+        if (randr_base && tiny::wm::is_monitor_event(event, *randr_base)) {
+            tiny::wm::accept_monitor_event(event);
+            screen_changed();
+            continue;
+        }
         if (handle_input(event)) {
             continue;
         }

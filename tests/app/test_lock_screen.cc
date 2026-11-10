@@ -57,6 +57,26 @@ TEST_F(LockScreenTest, it_covers_the_screen_with_a_window_no_manager_moves)
                             XDefaultScreen(tiny::get_display())));
 }
 
+TEST_F(LockScreenTest, a_change_of_the_screen_makes_the_window_cover_it_again)
+{
+    LockScreen screen(tiny::get_display(), shell("sleep 5"), "anna");
+    ::Display* const xdisplay = tiny::get_display();
+    // what a screen that grew (a monitor was connected) looks like to the lock:
+    // the window is smaller than the screen
+    XResizeWindow(xdisplay, screen.window(), 10, 10);
+    XSync(xdisplay, False);
+    ASSERT_EQ(attributes_of(screen.window()).width, 10);
+
+    screen.screen_changed();
+    XSync(xdisplay, False);
+
+    const auto attributes = attributes_of(screen.window());
+    const int screen_number = XDefaultScreen(xdisplay);
+    EXPECT_EQ(attributes.width, XDisplayWidth(xdisplay, screen_number));
+    EXPECT_EQ(attributes.height, XDisplayHeight(xdisplay, screen_number));
+    EXPECT_EQ(attributes.map_state, IsViewable);
+}
+
 TEST_F(LockScreenTest, it_shows_what_the_check_asks)
 {
     LockScreen screen(tiny::get_display(), shell(asks_for_secret), "anna");
