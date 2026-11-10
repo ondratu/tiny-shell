@@ -69,7 +69,8 @@ GLib, sdbus-c++ pulls in sd-bus; none of them fits.
   solves "reboot and poweroff in the form" of tiny-settings without setuid.
 - `org.freedesktop.ScreenSaver` and `org.gnome.SessionManager.Inhibit`: video
   players and browsers ask not to blank the screen. Without the service it does
-  not work.
+  not work: the shell would have to keep the display on (`DisplayPower`, set from
+  `[display] off_after`) and not lock (`[lock] idle_after`) while an inhibitor is held.
 - Register the session (`XDG_SESSION_ID`), end it properly.
 
 ### Notifications (`org.freedesktop.Notifications`)
