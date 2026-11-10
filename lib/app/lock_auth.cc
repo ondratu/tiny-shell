@@ -118,6 +118,12 @@ bool resolve_backend(const AuthSettings& settings, const std::string& user,
           "unix_chkpwd, or give tiny-lock-pwcheck the set-user-ID or "
           "set-group-ID bit (see doc/install.md); [lock] auth = pam takes PAM "
           "as it is";
+    if (pam_built()) {
+        why += ". PAM is built in, but it is not used: this user can't read "
+               "the hash of the password (and there is no unix_chkpwd), so "
+               "PAM would refuse the right password; run `make "
+               "install-setuid`";
+    }
     return false;
 }
 
