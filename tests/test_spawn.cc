@@ -287,3 +287,44 @@ TEST(SiblingProgramTest, a_program_next_to_the_running_one)
     EXPECT_EQ(tiny::sibling_program("tiny-no-such-program", "other"), "other");
     std::filesystem::remove_all(dir);
 }
+
+TEST(SpawnTest, the_exit_status_of_a_watched_child_is_kept)
+{
+    tiny::reap_children();
+    const pid_t pid = tiny::spawn_shell("exit 3");
+    ASSERT_GT(pid, 0);
+    tiny::watch_child(pid);
+    int status = 0;
+    ASSERT_TRUE(wait_for([&] { return tiny::child_ended(pid, &status); }));
+    EXPECT_TRUE(WIFEXITED(status));
+    EXPECT_EQ(WEXITSTATUS(status), 3);
+}
+
+TEST(SpawnTest, a_child_that_runs_has_not_ended)
+{
+    tiny::reap_children();
+    const pid_t pid = tiny::spawn({"sleep", "30"});
+    ASSERT_GT(pid, 0);
+    tiny::watch_child(pid);
+    EXPECT_FALSE(tiny::child_ended(pid, nullptr));
+    kill(pid, SIGKILL);
+    int status = 0;
+    ASSERT_TRUE(wait_for([&] { return tiny::child_ended(pid, &status); }));
+    EXPECT_TRUE(WIFSIGNALED(status));
+}
+
+TEST(SpawnTest, only_the_watched_child_is_told_about)
+{
+    tiny::reap_children();
+    const pid_t watched = tiny::spawn({"sleep", "30"});
+    const pid_t other = tiny::spawn({"true"});
+    ASSERT_GT(watched, 0);
+    tiny::watch_child(watched);
+    EXPECT_TRUE(wait_for([&] { return waitpid(other, nullptr, WNOHANG) < 0; }));
+    EXPECT_FALSE(tiny::child_ended(other, nullptr));
+    EXPECT_FALSE(tiny::child_ended(watched, nullptr));
+    EXPECT_FALSE(tiny::child_ended(0, nullptr));
+    EXPECT_FALSE(tiny::child_ended(-1, nullptr));
+    kill(watched, SIGKILL);
+    wait_for([&] { return tiny::child_ended(watched, nullptr); });
+}

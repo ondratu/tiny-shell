@@ -208,9 +208,9 @@ TEST_F(ManagerTest, the_actions_of_the_shell_are_registered_by_name)
     const std::vector<std::string> names = manager->get_actions().names();
     for (const char* name :
          {"about", "settings", "terminal", "force-quit", "restart", "shutdown",
-          "logout", "applications", "launcher", "run-dialog", "next-window",
-          "prev-window", "show-desktop", "theme-dark", "theme-light",
-          "theme-toggle"}) {
+          "logout", "lock", "applications", "launcher", "run-dialog",
+          "next-window", "prev-window", "show-desktop", "theme-dark",
+          "theme-light", "theme-toggle"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), name), names.end())
                 << name;
     }
@@ -413,6 +413,55 @@ TEST_F(ManagerTest, about_of_the_main_menu_starts_the_about_program)
     EXPECT_TRUE(manager->running);
     std::filesystem::remove(marker);
     std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, lock_screen_of_the_main_menu_starts_the_lock_program)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-lock-");
+    const auto program = marker_program(marker);
+    manager->set_lock_command(program.string());
+
+    auto& lock = manager->wm_panel.menu_main.lock;
+    lock.on_click(&lock, make_event(ButtonRelease));
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->running);
+    EXPECT_NE(manager->lock_timer, 0u); // the lock is watched
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, the_lock_is_not_started_again_while_it_runs)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-lock-once-");
+    auto program = marker;
+    program += ".sh";
+    std::ofstream(program) << "#!/bin/sh\necho x >> '" << marker.string()
+                           << "'\nsleep 5\n";
+    std::filesystem::permissions(program, std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::add);
+    manager->set_lock_command(program.string());
+
+    manager->get_actions().run("lock");
+    manager->get_actions().run("lock");
+    ASSERT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    usleep(200000);
+
+    EXPECT_EQ(std::filesystem::file_size(marker), 2u); // one line "x\n"
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, a_lock_that_can_not_be_started_is_reported_and_not_watched)
+{
+    start();
+    manager->set_lock_command("/nonexistent/tiny-lock");
+
+    manager->get_actions().run("lock");
+
+    EXPECT_EQ(manager->lock_timer, 0u);
 }
 
 TEST_F(ManagerTest, settings_of_the_main_menu_starts_the_settings_program)
@@ -3696,6 +3745,51 @@ TEST_F(ManagerTest, alt_f2_opens_the_run_dialog)
 
     EXPECT_EQ(attributes_of(manager->wm_run).map_state, IsViewable);
     EXPECT_TRUE(manager->key_done);
+}
+
+TEST_F(ManagerTest, super_l_locks_the_screen_and_does_not_open_the_launcher)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    start();
+    const auto marker = marker_file("tiny-manager-superl-");
+    const auto program = marker_program(marker);
+    manager->set_lock_command(program.string());
+
+    manager->on_key_press(key(XK_Super_L, 0));
+    manager->on_key_press(key(XK_l, Mod4Mask));
+    manager->on_key_release(key(XK_Super_L, Mod4Mask));
+    XSync(dsp(), False);
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->key_done);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, l_without_super_is_not_the_lock)
+{
+    start();
+    manager->set_lock_command("/nonexistent/tiny-lock");
+
+    manager->on_key_press(key(XK_l, 0));
+
+    EXPECT_FALSE(manager->key_done);
+    EXPECT_EQ(manager->lock_timer, 0u);
+}
+
+TEST_F(ManagerTest, grabs_super_l_for_the_lock)
+{
+    start();
+
+    const XErrors errors;
+    const FakeClient other;
+    XGrabKey(other.display, XKeysymToKeycode(other.display, XK_l), Mod4Mask,
+             root_window(), True, GrabModeAsync, GrabModeAsync);
+    other.sync();
+
+    EXPECT_EQ(errors.errors(), 1); // BadAccess: already grabbed
 }
 
 TEST_F(ManagerTest, super_opens_the_launcher_when_it_is_released)

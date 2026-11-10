@@ -15,6 +15,7 @@
 #include "wm/window.h"
 #include "wm/recent_list.h"
 #include "wm/clock_label.h"
+#include "wm/lock_guard.h"
 #include "wm/panel.h"
 #include "wm/action_registry.h"
 #include "wm/config.h"
@@ -79,6 +80,14 @@ class Manager : public tiny::Object {
     void set_about_command(std::string command)
     {
         about_command = std::move(command);
+    }
+
+    //! The command that locks the screen (`tiny-lock`, searched in PATH by
+    //! default). Super + L, the Lock Screen item and the action "lock" run it,
+    //! and the manager starts it again if it dies without unlocking.
+    void set_lock_command(std::string command)
+    {
+        lock_command = std::move(command);
     }
 
     //! The program of the Settings item of the main menu (`tiny-settings`
@@ -383,6 +392,9 @@ class Manager : public tiny::Object {
     //! splitting; an empty one does nothing, a failure is reported on stderr
     void run_program(const std::vector<std::string>& argv);
 
+    //! Lock the screen and watch the lock (see `LockGuard`)
+    void lock_screen();
+
     void connect_window(Window* window);
 
     //! The managed window that `window` is a dialog of, null if it is none
@@ -649,6 +661,9 @@ class Manager : public tiny::Object {
     // until there is a configuration the commands are the systemd ones
     std::string settings_command = "tiny-settings";
     std::string about_command = "tiny-about";
+    std::string lock_command = Config().lock_command;
+    std::unique_ptr<LockGuard> lock_guard;
+    tiny::Timers::Id lock_timer = 0;            //!< while the lock is watched
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
     bool wallpaper_follows_theme = false;
     int screen_width = 0; //!< the root window, to see a change

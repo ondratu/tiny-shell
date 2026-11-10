@@ -253,6 +253,18 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         wm_launcher.refocus();
         update_dock_visibility(); // a menu kept the dock shown
     };
+    lock_guard = std::make_unique<LockGuard>(LockGuard::Hooks{
+            [this]() -> pid_t {
+                const pid_t pid = tiny::spawn_command(lock_command);
+                if (pid > 0) {
+                    tiny::watch_child(pid);
+                }
+                return pid;
+            },
+            [](pid_t pid, int* status) {
+                return tiny::child_ended(pid, status);
+            },
+            [](const std::string& text) { tiny::error("%s", text.c_str()); }});
     register_actions();
     wm_dock.get_menu_button().on_click.connect(
             [this](const XEvent&) { actions.run("launcher"); });
@@ -271,6 +283,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     connect_item(menu.force_quit, "force-quit");
     connect_item(menu.restart, "restart");
     connect_item(menu.shutdown, "shutdown");
+    connect_item(menu.lock, "lock");
     connect_item(menu.logout, "logout");
 
     XClearWindow(display_arg, root_arg);
@@ -309,6 +322,7 @@ void Manager::register_actions()
     actions.add("force-quit", [this] { run_program({force_quit_program}); });
     actions.add("restart", [this] { run_system_command(restart_command); });
     actions.add("shutdown", [this] { run_system_command(shutdown_command); });
+    actions.add("lock", [this] { lock_screen(); });
     actions.add("logout", [this] { running = false; });
     actions.add("applications", [this] {
         if (!wm_launcher.is_open()) { // the item opens it, never closes it
@@ -2214,6 +2228,21 @@ size_t Manager::pointer_monitor() const
     return monitor_at(monitors, x, y);
 }
 
+void Manager::lock_screen()
+{
+    lock_guard->lock();
+    if (lock_guard->running() && lock_timer == 0) {
+        // the lock is watched until it says it is unlocked
+        lock_timer = timers.every(std::chrono::milliseconds(500), [this] {
+            lock_guard->check();
+            if (!lock_guard->running()) {
+                timers.cancel(lock_timer);
+                lock_timer = 0;
+            }
+        });
+    }
+}
+
 void Manager::run_program(const std::vector<std::string>& argv)
 {
     if (argv.empty() || argv.front().empty()) {
@@ -2257,6 +2286,8 @@ void Manager::grab_shortcuts(bool grab)
     add(key_of(XK_F2), Mod1Mask);
     // Alt + Space, the window menu
     add(key_of(XK_space), Mod1Mask);
+    // Super + L, lock the screen
+    add(key_of(XK_l), Mod4Mask);
     // Super alone opens the launcher, so a shortcut with Super is not passed
     // to an application
     add(key_of(XK_Super_L), 0);
@@ -2441,6 +2472,15 @@ void Manager::on_key_press(const XKeyEvent& xkey)
     if (xkey.keycode == XKeysymToKeycode(display, XK_space) &&
         xkey.state & Mod1Mask) {
         actions.run("window-menu");
+        key_done = true;
+        return;
+    }
+    /* Super + L, lock the screen (Super is held, so it must not open the
+     * launcher when it is released) */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_l) &&
+        xkey.state & Mod4Mask) {
+        super_down = false;
+        actions.run("lock");
         key_done = true;
         return;
     }
