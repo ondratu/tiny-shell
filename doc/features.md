@@ -73,8 +73,14 @@ comparison with other window managers is in the [comparison](comparison.md).
   Fonts, Desktop, Displays, Power and Applications that changes the font, the
   rendering of text (antialiasing, hinting, subpixel order), the scale, the
   wallpaper, the mode of the dock, the format of the clock, the monitors, the
-  time to a black lock screen and the terminal in
-  the configuration file of the user (see [Applications](applications.md#settings)).
+  times of the lock screen (to black, and to the lock when idle) and the
+  terminal in the configuration file of the user (see [Applications](applications.md#settings)).
+- **Screen lock:** `tiny-lock` (Super + L, the main menu, or after
+  `[lock] idle_after` minutes without input) asks for the password of the
+  system through PAM, a checker such as `unix_chkpwd`, or the small
+  `tiny-lock-pwcheck`; only the last one has any privileges. It covers every
+  monitor, follows a change of the monitors, goes black when nobody is there and
+  is started again if it dies (see [Screen lock](lock.md)).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a
   transparent terminal can show it; tiny-shell runs it at the start and when the
