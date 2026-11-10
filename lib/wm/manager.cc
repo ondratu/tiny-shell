@@ -254,13 +254,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         update_dock_visibility(); // a menu kept the dock shown
     };
     lock_guard = std::make_unique<LockGuard>(LockGuard::Hooks{
-            [this]() -> pid_t {
-                const pid_t pid = tiny::spawn_command(lock_command);
-                if (pid > 0) {
-                    tiny::watch_child(pid);
-                }
-                return pid;
-            },
+            [this]() -> pid_t { return tiny::spawn_command(lock_command); },
             [](pid_t pid, int* status) {
                 return tiny::child_ended(pid, status);
             },

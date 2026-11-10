@@ -26,6 +26,9 @@ class LockGuard {
   public:
     static constexpr int max_restarts = 5;
     static constexpr int cant_lock_status = 1;
+    //! A lock that ran this many calls of `check()` (500 ms each: a minute)
+    //! without ending was not crashing in a loop: the count starts again
+    static constexpr int stable_checks = 120;
 
     struct Hooks {
         //! Start the lock; its pid, -1 if it can't be started
@@ -54,6 +57,7 @@ class LockGuard {
     Hooks hooks;
     pid_t pid = 0;
     int restarts = 0; //!< starts in a row after a crash
+    int checks = 0;   //!< calls of `check()` since the last start
 };
 
 } // namespace tiny::wm

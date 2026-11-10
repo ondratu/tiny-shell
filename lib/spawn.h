@@ -7,6 +7,9 @@
 
 namespace tiny {
 
+//! How many exit statuses of ended children `child_ended()` remembers
+constexpr int kept_statuses = 16;
+
 /**
  * @short Start the program argv[0] with arguments in a new session.
  *
@@ -49,19 +52,13 @@ pid_t spawn_command(const std::string& text);
 std::string sibling_program(const char* argv0, const std::string& name);
 
 /**
- * @short Keep the exit status of the child `pid` when it is collected.
+ * @short Whether the child `pid` has ended; `status` is its wait status
+ * (`WIFEXITED`, `WEXITSTATUS`...).
  *
- * `reap_children()` collects every child, so the status would be lost. One
- * child is watched at a time (a new call replaces the old one). Call it right
- * after `spawn()`, before the child can end, or `child_ended()` never says it
- * has.
- */
-void watch_child(pid_t pid);
-
-/**
- * @short Whether the watched child `pid` has ended; `status` is its wait
- * status (`WIFEXITED`, `WEXITSTATUS`...). False while it runs and for a child
- * that is not the watched one.
+ * `reap_children()` collects every child, so it keeps the status of the last
+ * `kept_statuses` ones that ended (also those that ended before this is
+ * asked, so there is no race with `spawn()`). False while the child runs and
+ * for a pid it does not know.
  */
 bool child_ended(pid_t pid, int* status);
 

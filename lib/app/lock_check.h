@@ -62,8 +62,8 @@ Outcome run_checker(const Checker& checker, const std::string& password);
 //! The path is empty if there is no such program.
 Checker unix_chkpwd(const std::string& path, const std::string& user);
 
-//! `tiny-lock-pwcheck`, searched for by `path` (or next to the running program
-//! when `path` is a name only)
+//! `tiny-lock-pwcheck` at `path` (`tiny-lock-auth` makes a name into the path
+//! next to itself before it calls this)
 Checker tiny_pwcheck(const std::string& path);
 
 //! Whether the file can be run and has the set-user-ID or set-group-ID bit

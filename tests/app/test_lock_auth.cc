@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <queue>
@@ -153,6 +154,7 @@ TEST(LockAuthTest, a_checker_gets_the_user_and_nonull)
     // the script checks the arguments: 7 is the wrong password of unix_chkpwd
     Backend for_bob;
     ASSERT_TRUE(resolve_backend(settings, "bob", for_bob, why));
+    for_bob.wrong_delay_ms = 0; // the delay has a test of its own
     ScriptedDialog other_user;
     other_user.answers.emplace("x");
     EXPECT_EQ(authenticate(for_bob, "bob", other_user).verdict, Verdict::Wrong);
@@ -229,8 +231,11 @@ TEST(LockAuthTest, the_probe_of_pam_cannot_know_more)
 {
     Backend backend;
     backend.method = Method::Pam;
+    backend.pam_service = "tiny-lock-test-no-such-service";
     std::string why;
-    EXPECT_TRUE(probe_backend(backend, why));
+    // all it can see is a configuration that denies everybody
+    EXPECT_EQ(probe_backend(backend, why),
+              !pam_service_denies(backend.pam_service, pam_directories()));
 }
 
 TEST(LockAuthTest, nothing_to_check_with_is_told_and_not_guessed)
@@ -309,4 +314,116 @@ TEST(LockAuthTest, a_build_without_pam_says_so)
     const Outcome outcome = check_pam("root", "other", dialog);
     EXPECT_EQ(outcome.verdict, Verdict::Failed);
     EXPECT_NE(outcome.text.find("PAM"), std::string::npos);
+}
+
+TEST(LockAuthTest, a_checker_makes_a_wrong_password_wait)
+{
+    const ScriptFile checker("exit 7");
+    AuthSettings settings;
+    settings.method = Method::Checker;
+    settings.checker = checker.str();
+    Backend backend;
+    std::string why;
+    ASSERT_TRUE(resolve_backend(settings, "anna", backend, why));
+    EXPECT_GE(backend.wrong_delay_ms, 1000u);
+
+    backend.wrong_delay_ms = 200;
+    ScriptedDialog dialog;
+    dialog.answers.emplace("x");
+    const auto start = std::chrono::steady_clock::now();
+    EXPECT_EQ(authenticate(backend, "anna", dialog).verdict, Verdict::Wrong);
+    EXPECT_GE(std::chrono::steady_clock::now() - start,
+              std::chrono::milliseconds(190));
+}
+
+TEST(LockAuthTest, pwcheck_has_no_delay_of_ours)
+{
+    const ScriptFile script(secret_body);
+    EXPECT_EQ(pwcheck_with(script).wrong_delay_ms, 0u); // it waits itself
+}
+
+namespace {
+
+//! A directory with the files of PAM services
+class PamDirectory {
+  public:
+    PamDirectory():
+        path(std::filesystem::temp_directory_path() /
+             ("tiny-lock-pam-" + std::to_string(getpid())))
+    {
+        std::filesystem::create_directories(path);
+    }
+    ~PamDirectory() { std::filesystem::remove_all(path); }
+
+    void file(const std::string& name, const std::string& text) const
+    {
+        std::ofstream(path / name) << text;
+    }
+
+    std::vector<std::string> list() const { return {path.string()}; }
+
+  private:
+    std::filesystem::path path;
+};
+
+} // namespace
+
+TEST(LockAuthTest, an_other_that_denies_everybody_is_seen)
+{
+    const PamDirectory directory;
+    directory.file("other", "auth required pam_deny.so\n"
+                            "account required pam_deny.so\n");
+    EXPECT_TRUE(pam_service_denies("tiny-lock", directory.list()));
+}
+
+TEST(LockAuthTest, an_other_that_includes_the_login_is_not_a_denial)
+{
+    const PamDirectory directory;
+    directory.file("other", "@include common-auth\n");
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+    directory.file("other", "auth include system-auth\n");
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+    directory.file("other", "auth substack system-auth\n");
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+}
+
+TEST(LockAuthTest, a_file_of_the_service_is_used_before_other)
+{
+    const PamDirectory directory;
+    directory.file("other", "auth required pam_deny.so\n");
+    directory.file("tiny-lock", "# the login\nauth sufficient pam_unix.so\n");
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+    EXPECT_TRUE(pam_service_denies("another", directory.list()));
+}
+
+TEST(LockAuthTest, no_file_at_all_is_not_a_denial_that_can_be_told)
+{
+    const PamDirectory directory;
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+    EXPECT_FALSE(pam_service_denies("tiny-lock", {"/nonexistent"}));
+}
+
+TEST(LockAuthTest, one_line_that_asks_a_module_is_enough_not_to_deny)
+{
+    const PamDirectory directory;
+    directory.file("other", "auth required pam_unix.so\n"
+                            "auth required pam_deny.so\n");
+    EXPECT_FALSE(pam_service_denies("tiny-lock", directory.list()));
+}
+
+TEST(LockAuthTest, the_probe_of_pam_refuses_a_service_that_denies)
+{
+    if (!pam_built()) {
+        GTEST_SKIP() << "built without PAM";
+    }
+    const PamDirectory directory;
+    directory.file("other", "auth required pam_deny.so\n");
+    // a service that has no file in the real directories either
+    Backend backend;
+    backend.method = Method::Pam;
+    backend.pam_service = "tiny-lock-test-no-such-service";
+    std::string why;
+    // the real /etc/pam.d is used: this holds only where other is not a denial
+    EXPECT_EQ(probe_backend(backend, why),
+              !pam_service_denies(backend.pam_service, pam_directories()));
 }

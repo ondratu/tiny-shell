@@ -288,16 +288,24 @@ TEST(SiblingProgramTest, a_program_next_to_the_running_one)
     std::filesystem::remove_all(dir);
 }
 
-TEST(SpawnTest, the_exit_status_of_a_watched_child_is_kept)
+TEST(SpawnTest, the_exit_status_of_a_child_that_ended_is_kept)
 {
     tiny::reap_children();
     const pid_t pid = tiny::spawn_shell("exit 3");
     ASSERT_GT(pid, 0);
-    tiny::watch_child(pid);
     int status = 0;
     ASSERT_TRUE(wait_for([&] { return tiny::child_ended(pid, &status); }));
     EXPECT_TRUE(WIFEXITED(status));
     EXPECT_EQ(WEXITSTATUS(status), 3);
+}
+
+TEST(SpawnTest, a_child_that_ended_before_the_question_is_known)
+{
+    tiny::reap_children();
+    const pid_t pid = tiny::spawn({"true"});
+    ASSERT_GT(pid, 0);
+    usleep(300000); // it has ended and has been collected long ago
+    EXPECT_TRUE(tiny::child_ended(pid, nullptr));
 }
 
 TEST(SpawnTest, a_child_that_runs_has_not_ended)
@@ -305,7 +313,6 @@ TEST(SpawnTest, a_child_that_runs_has_not_ended)
     tiny::reap_children();
     const pid_t pid = tiny::spawn({"sleep", "30"});
     ASSERT_GT(pid, 0);
-    tiny::watch_child(pid);
     EXPECT_FALSE(tiny::child_ended(pid, nullptr));
     kill(pid, SIGKILL);
     int status = 0;
@@ -313,18 +320,23 @@ TEST(SpawnTest, a_child_that_runs_has_not_ended)
     EXPECT_TRUE(WIFSIGNALED(status));
 }
 
-TEST(SpawnTest, only_the_watched_child_is_told_about)
+TEST(SpawnTest, a_pid_that_is_not_a_child_has_not_ended)
 {
-    tiny::reap_children();
-    const pid_t watched = tiny::spawn({"sleep", "30"});
-    const pid_t other = tiny::spawn({"true"});
-    ASSERT_GT(watched, 0);
-    tiny::watch_child(watched);
-    EXPECT_TRUE(wait_for([&] { return waitpid(other, nullptr, WNOHANG) < 0; }));
-    EXPECT_FALSE(tiny::child_ended(other, nullptr));
-    EXPECT_FALSE(tiny::child_ended(watched, nullptr));
     EXPECT_FALSE(tiny::child_ended(0, nullptr));
     EXPECT_FALSE(tiny::child_ended(-1, nullptr));
-    kill(watched, SIGKILL);
-    wait_for([&] { return tiny::child_ended(watched, nullptr); });
+    EXPECT_FALSE(tiny::child_ended(999999, nullptr));
+}
+
+TEST(SpawnTest, only_the_last_children_are_remembered)
+{
+    tiny::reap_children();
+    const pid_t first = tiny::spawn({"true"});
+    ASSERT_GT(first, 0);
+    ASSERT_TRUE(wait_for([&] { return tiny::child_ended(first, nullptr); }));
+    for (int i = 0; i < tiny::kept_statuses; ++i) {
+        const pid_t pid = tiny::spawn({"true"});
+        ASSERT_GT(pid, 0);
+        ASSERT_TRUE(wait_for([&] { return tiny::child_ended(pid, nullptr); }));
+    }
+    EXPECT_FALSE(tiny::child_ended(first, nullptr)); // pushed out of the ring
 }

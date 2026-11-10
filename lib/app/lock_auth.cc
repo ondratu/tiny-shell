@@ -1,5 +1,7 @@
 #include "app/lock_auth.h"
 
+#include <unistd.h>
+
 #include "app/lock_pam.h"
 
 namespace tiny::app {
@@ -47,6 +49,8 @@ Backend checker_backend(const AuthSettings& settings, const std::string& user)
     backend.method = Method::Checker;
     backend.checker = unix_chkpwd(settings.checker, user);
     backend.description = backend.checker.path;
+    backend.wrong_delay_ms =
+            2000; // like pam_unix, which waits in the PAM layer
     return backend;
 }
 
@@ -121,7 +125,17 @@ bool probe_backend(const Backend& backend, std::string& why)
 {
     switch (backend.method) {
         case Method::Pam:
-            return true; // what PAM asks is known only when it runs
+            // what PAM asks is known only when it runs; a configuration that
+            // denies everybody can be seen
+            if (pam_service_denies(backend.pam_service, pam_directories())) {
+                why = "PAM would refuse every password: the service " +
+                      backend.pam_service +
+                      " has no file and \"other\" denies everybody; add "
+                      "/etc/pam.d/" +
+                      backend.pam_service + " or set [lock] pam_service";
+                return false;
+            }
+            return true;
         case Method::Checker:
             if (!can_run(backend.checker.path)) {
                 why = "can't run " + backend.checker.path;
@@ -158,6 +172,11 @@ Outcome authenticate(const Backend& backend, const std::string& user,
     }
     const Outcome outcome = run_checker(backend.checker, password);
     wipe(password);
+    if (outcome.verdict == Verdict::Wrong && backend.wrong_delay_ms > 0) {
+        // a try that is wrong costs time, or a keyboard that types for itself
+        // could guess as fast as the hash is checked
+        usleep(backend.wrong_delay_ms * 1000);
+    }
     return outcome;
 }
 
