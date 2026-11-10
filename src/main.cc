@@ -138,6 +138,11 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     if (old == nullptr || old->lock_idle_minutes != config.lock_idle_minutes) {
         manager.set_lock_idle(std::chrono::minutes(config.lock_idle_minutes));
     }
+    if (old == nullptr ||
+        old->display_off_minutes != config.display_off_minutes) {
+        manager.set_display_off(
+                std::chrono::minutes(config.display_off_minutes));
+    }
     const std::string user_file = tiny::wm::user_config_file(
             getenv("XDG_CONFIG_HOME"), getenv("HOME"));
     manager.set_favorites(

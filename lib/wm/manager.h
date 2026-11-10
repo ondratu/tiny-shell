@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "display_power.h"
 #include "object.h"
 #include "timers.h"
 #include "wm/window.h"
@@ -98,6 +99,14 @@ class Manager : public tiny::Object {
      * nothing is locked and a message says so, once.
      */
     void set_lock_idle(std::chrono::minutes after);
+
+    /**
+     * Switch the display off after this long without input
+     * (`[display] off_after`); zero keeps it on, less than zero leaves the
+     * X server as it is. The X server counts the time, nothing runs here.
+     * Without DPMS in the server a message says so, once.
+     */
+    void set_display_off(std::chrono::minutes after);
 
     //! The program of the Settings item of the main menu (`tiny-settings`
     //! is searched in PATH by default)
@@ -677,6 +686,7 @@ class Manager : public tiny::Object {
     std::unique_ptr<IdleTime> idle_time; //!< made with the first limit
     std::unique_ptr<IdleLock> idle_lock;
     tiny::Timers::Id idle_timer = 0;
+    std::unique_ptr<tiny::DisplayPower> display_power; //!< made when needed
     tiny::Timers::Id lock_timer = 0;            //!< while the lock is watched
     std::vector<std::string> wallpaper_command; //!< empty: no wallpaper
     bool wallpaper_follows_theme = false;

@@ -454,6 +454,23 @@ TEST_F(ManagerTest, the_idle_lock_sets_one_timer_and_never_removes_it)
     EXPECT_EQ(manager->idle_lock, nullptr);
 }
 
+TEST_F(ManagerTest, the_display_power_is_set_only_when_the_time_is_given)
+{
+    start();
+    manager->set_display_off(std::chrono::minutes(-1)); // as the server is
+    EXPECT_EQ(manager->display_power, nullptr);
+
+    manager->set_display_off(std::chrono::minutes(15));
+    ASSERT_NE(manager->display_power, nullptr);
+    if (!manager->display_power->available()) {
+        GTEST_SKIP() << "the X server has no DPMS";
+    }
+    EXPECT_EQ(manager->display_power->timeout(), std::chrono::seconds(900));
+
+    manager->set_display_off(std::chrono::minutes(0)); // never
+    EXPECT_FALSE(manager->display_power->enabled());
+}
+
 TEST_F(ManagerTest, the_lock_is_not_started_again_while_it_runs)
 {
     start();

@@ -1017,8 +1017,8 @@ TEST(ConfigTest, off_after_is_one_of_the_choices_or_never)
 TEST(ConfigTest, an_empty_off_after_leaves_the_display_as_it_is)
 {
     Strings problems;
-    const Config c = parse_config({{"a", "[display]\noff_after =\n"}},
-                                  &problems);
+    const Config c =
+            parse_config({{"a", "[display]\noff_after =\n"}}, &problems);
     EXPECT_EQ(c.display_off_minutes, -1);
     EXPECT_TRUE(problems.empty());
 }

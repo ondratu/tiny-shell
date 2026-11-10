@@ -4,8 +4,8 @@
 
 #include "display_power.h"
 
-using tiny::DisplayPower;
 using std::chrono::seconds;
+using tiny::DisplayPower;
 
 namespace {
 

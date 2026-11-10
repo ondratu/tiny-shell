@@ -2266,6 +2266,22 @@ void Manager::set_lock_idle(std::chrono::minutes after)
     check_idle_lock();
 }
 
+void Manager::set_display_off(std::chrono::minutes after)
+{
+    if (after < std::chrono::minutes::zero()) {
+        return; // the server keeps what it has
+    }
+    if (!display_power) {
+        display_power = std::make_unique<tiny::DisplayPower>(display);
+        if (!display_power->available()) {
+            tiny::error("[display] off_after: this X server has no DPMS, the "
+                        "display is not switched off");
+        }
+    }
+    display_power->set_timeout(
+            std::chrono::duration_cast<std::chrono::seconds>(after));
+}
+
 void Manager::check_idle_lock()
 {
     idle_timer = 0;
