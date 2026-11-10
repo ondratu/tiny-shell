@@ -846,3 +846,62 @@ TEST(ConfigTest, the_choices_of_the_monitors_start_with_the_default)
     EXPECT_TRUE(tiny::wm::valid_placement_choice(""));
     EXPECT_FALSE(tiny::wm::valid_placement_choice("keep")); // "" is keep
 }
+
+TEST(ConfigTest, the_lock_has_its_defaults)
+{
+    const Config c = parse_config({});
+
+    EXPECT_EQ(c.lock_command, "tiny-lock");
+    EXPECT_EQ(c.lock_auth, "auto");
+    EXPECT_EQ(c.lock_pam_service, "tiny-lock");
+    EXPECT_EQ(c.lock_checker, "");
+    EXPECT_EQ(c.lock_pwcheck, "");
+}
+
+TEST(ConfigTest, reads_the_lock)
+{
+    const Config c = parse_config(
+            {{"a", "[commands]\nlock = my-lock --now\n"
+                   "[lock]\nauth = pwcheck\npam_service = login\n"
+                   "checker = /sbin/unix_chkpwd\npwcheck = /opt/pwcheck\n"}});
+
+    EXPECT_EQ(c.lock_command, "my-lock --now");
+    EXPECT_EQ(c.lock_auth, "pwcheck");
+    EXPECT_EQ(c.lock_pam_service, "login");
+    EXPECT_EQ(c.lock_checker, "/sbin/unix_chkpwd");
+    EXPECT_EQ(c.lock_pwcheck, "/opt/pwcheck");
+}
+
+TEST(ConfigTest, a_wrong_value_of_the_lock_is_a_problem_and_keeps_the_default)
+{
+    Strings problems;
+    const Config c = parse_config(
+            {{"a", "[commands]\nlock =\n"
+                   "[lock]\nauth = fingerprint\npam_service = my service\n"
+                   "checker =\npwcheck =\n"}},
+            &problems);
+
+    EXPECT_EQ(c.lock_command, "tiny-lock");
+    EXPECT_EQ(c.lock_auth, "auto");
+    EXPECT_EQ(c.lock_pam_service, "tiny-lock");
+    EXPECT_EQ(c.lock_checker, "");
+    EXPECT_EQ(c.lock_pwcheck, "");
+    EXPECT_EQ(problems.size(), 5u);
+}
+
+TEST(ConfigTest, a_pam_service_is_a_name_and_not_a_path)
+{
+    EXPECT_TRUE(tiny::wm::valid_pam_service("tiny-lock"));
+    EXPECT_TRUE(tiny::wm::valid_pam_service("login"));
+    EXPECT_FALSE(tiny::wm::valid_pam_service(""));
+    EXPECT_FALSE(tiny::wm::valid_pam_service("my service"));
+    EXPECT_FALSE(tiny::wm::valid_pam_service("../other"));
+    EXPECT_FALSE(tiny::wm::valid_pam_service("a\nb"));
+}
+
+TEST(ConfigTest, a_program_path_is_a_text_without_control_characters)
+{
+    EXPECT_TRUE(tiny::wm::valid_program_path("/sbin/unix_chkpwd"));
+    EXPECT_FALSE(tiny::wm::valid_program_path(""));
+    EXPECT_FALSE(tiny::wm::valid_program_path("a\nb"));
+}

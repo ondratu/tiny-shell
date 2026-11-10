@@ -173,6 +173,19 @@ bool valid_clock_format(const std::string& text)
     });
 }
 
+bool valid_pam_service(const std::string& text)
+{
+    return !text.empty() && std::none_of(text.begin(), text.end(), [](char c) {
+        return std::isspace(static_cast<unsigned char>(c)) != 0 ||
+               std::iscntrl(static_cast<unsigned char>(c)) != 0 || c == '/';
+    });
+}
+
+bool valid_program_path(const std::string& text)
+{
+    return !text.empty() && valid_clock_format(text);
+}
+
 bool valid_wallpaper_mode(const std::string& text)
 {
     const XftChoices choices = wallpaper_choices();
@@ -343,6 +356,42 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[commands] poweroff must be a command");
         } else {
             config.poweroff_command = *value;
+        }
+    }
+    if (const auto value = ini.get("commands", "lock"); value) {
+        if (value->empty()) {
+            problem("[commands] lock must be a command");
+        } else {
+            config.lock_command = *value;
+        }
+    }
+    if (const auto value = ini.get("lock", "auth")) {
+        if (*value == "auto" || *value == "pam" || *value == "checker" ||
+            *value == "pwcheck") {
+            config.lock_auth = *value;
+        } else {
+            problem("[lock] auth must be auto, pam, checker or pwcheck");
+        }
+    }
+    if (const auto value = ini.get("lock", "pam_service")) {
+        if (valid_pam_service(*value)) {
+            config.lock_pam_service = *value;
+        } else {
+            problem("[lock] pam_service must be a name without blanks and "
+                    "slashes");
+        }
+    }
+    for (const auto& [key, target] :
+         {std::pair<const char*, std::string*>{"checker", &config.lock_checker},
+          {"pwcheck", &config.lock_pwcheck}}) {
+        if (const auto value = ini.get("lock", key)) {
+            if (valid_program_path(*value)) {
+                *target = *value;
+            } else {
+                problem((std::string("[lock] ") + key +
+                         " must be a path of a program")
+                                .c_str());
+            }
         }
     }
     if (const auto value = ini.get("commands", "terminal")) {
