@@ -862,7 +862,8 @@ bool SettingsForm::act(size_t target, int x)
         case DockField:
         case PrimaryMonitorField:
         case SecondaryMonitorField:
-        case MonitorPlacementField: {
+        case MonitorPlacementField:
+        case BlankScreenField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on

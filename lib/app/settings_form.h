@@ -365,6 +365,7 @@ class SettingsForm {
         PrimaryMonitorField,
         SecondaryMonitorField,
         MonitorPlacementField,
+        BlankScreenField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,

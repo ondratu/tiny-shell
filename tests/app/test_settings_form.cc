@@ -1770,3 +1770,37 @@ TEST(SettingsFormPowerTest, one_written_as_a_number_is_right_too)
 
     EXPECT_EQ(form.problem(Field::BlankScreen), "");
 }
+
+TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
+{
+    SettingsForm form = make();
+    form.resize(500, form.form_height());
+    form.set_section(SettingsForm::Section::Power);
+
+    const Rect r = form.field_rect(Field::BlankScreen);
+    EXPECT_TRUE(click(form, {r.x + r.width - 2, r.y + 2, 1, 1}));
+
+    EXPECT_EQ(form.view(), View::Form); // not the list of fonts
+    EXPECT_EQ(form.focus(), Field::BlankScreen);
+    EXPECT_EQ(form.choice_label(Field::BlankScreen), "5 minutes");
+}
+
+TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
+{
+    // every field has its own target: a field that was added and has none
+    // would be taken for another control (the button that opens the fonts)
+    using Section = SettingsForm::Section;
+    SettingsForm form = make();
+    form.resize(500, form.form_height());
+    for (const Section section :
+         {Section::Appearance, Section::Fonts, Section::Desktop,
+          Section::Displays, Section::Power, Section::Applications}) {
+        form.set_section(section);
+        for (const Field f : SettingsForm::section_fields(section)) {
+            const Rect r = form.field_rect(f);
+            EXPECT_TRUE(click(form, {r.x + 2, r.y + 2, 1, 1}));
+            EXPECT_EQ(form.view(), View::Form);
+            EXPECT_EQ(form.focus(), f);
+        }
+    }
+}
