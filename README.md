@@ -12,7 +12,8 @@ as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog, an application launcher, a clock and a screen lock.
+> dialog, an application launcher, a clock, a screen lock and the power saving
+> of the display.
 
 ![The desktop of tiny-shell](doc/static/screenshots/desktop-day.png)
 
