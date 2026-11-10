@@ -995,3 +995,57 @@ TEST(ConfigTest, the_form_offers_the_times_of_the_idle_lock)
     EXPECT_FALSE(tiny::wm::valid_idle_choice("1"));
     EXPECT_FALSE(tiny::wm::valid_idle_choice("0"));
 }
+
+TEST(ConfigTest, the_display_is_left_as_it_is_by_default)
+{
+    EXPECT_EQ(parse_config({}).display_off_minutes, -1);
+}
+
+TEST(ConfigTest, off_after_is_one_of_the_choices_or_never)
+{
+    for (const int minutes : {5, 10, 15, 30, 60}) {
+        const Config c = parse_config(
+                {{"a",
+                  "[display]\noff_after = " + std::to_string(minutes) + "\n"}});
+        EXPECT_EQ(c.display_off_minutes, minutes);
+    }
+    EXPECT_EQ(parse_config({{"a", "[display]\noff_after = never\n"}})
+                      .display_off_minutes,
+              0);
+}
+
+TEST(ConfigTest, an_empty_off_after_leaves_the_display_as_it_is)
+{
+    Strings problems;
+    const Config c = parse_config({{"a", "[display]\noff_after =\n"}},
+                                  &problems);
+    EXPECT_EQ(c.display_off_minutes, -1);
+    EXPECT_TRUE(problems.empty());
+}
+
+TEST(ConfigTest, another_off_after_is_a_problem_and_keeps_the_default)
+{
+    for (const char* value : {"1", "7", "0", "-5", "soon"}) {
+        Strings problems;
+        const Config c = parse_config(
+                {{"a", std::string("[display]\noff_after = ") + value + "\n"}},
+                &problems);
+        EXPECT_EQ(c.display_off_minutes, -1) << value;
+        EXPECT_EQ(problems.size(), 1u) << value;
+    }
+}
+
+TEST(ConfigTest, the_form_offers_the_times_of_the_display_power_saving)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::display_off_choices();
+
+    ASSERT_EQ(choices.size(), 7u);
+    EXPECT_STREQ(choices[0].value, ""); // unchanged, the default
+    EXPECT_STREQ(choices[1].value, "never");
+    EXPECT_STREQ(choices[6].value, "60");
+    for (const auto& choice : choices) {
+        EXPECT_TRUE(tiny::wm::valid_display_off_choice(choice.value));
+    }
+    EXPECT_FALSE(tiny::wm::valid_display_off_choice("1"));
+    EXPECT_FALSE(tiny::wm::valid_display_off_choice("0"));
+}

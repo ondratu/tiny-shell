@@ -46,6 +46,9 @@ namespace tiny::wm {
  * blank_after = 1
  * idle_after = 10
  *
+ * [display]
+ * off_after = 15
+ *
  * [panel]
  * clock_format = %a %e %B %R
  * system_tray = yes
@@ -74,6 +77,10 @@ struct Config {
     //! [lock] idle_after: minutes without input to lock the screen (5, 10,
     //! 15, 30 or 60); 0 is `never`, the default
     int lock_idle_minutes = 0;
+    //! [display] off_after: minutes without input to switch the display off
+    //! (5, 10, 15, 30 or 60); 0 is `never` (the power saving is switched off),
+    //! -1 leaves the X server as it is, the default
+    int display_off_minutes = -1;
     std::string
             lock_checker; //!< [lock] checker: path of unix_chkpwd, "" is searched
     std::string
@@ -196,6 +203,17 @@ bool valid_idle_choice(const std::string& text);
 
 //! The values of `[lock] idle_after` in minutes; 0 is never
 bool parse_idle_after(const std::string& text, int& minutes);
+
+//! The choices of `[display] off_after` that a form offers: "" leaves the
+//! server as it is (the default), then `never`, 5, 10, 15, 30 and 60 minutes
+XftChoices display_off_choices();
+
+//! Whether the text is one of the values of `display_off_choices()`
+bool valid_display_off_choice(const std::string& text);
+
+//! The values of `[display] off_after` in minutes; 0 is never, -1 (an empty
+//! text) leaves the X server as it is
+bool parse_display_off(const std::string& text, int& minutes);
 
 //! A name of a PAM service: no blanks, no slashes, no control characters
 bool valid_pam_service(const std::string& text);
