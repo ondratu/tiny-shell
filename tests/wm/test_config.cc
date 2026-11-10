@@ -950,3 +950,48 @@ TEST(ConfigTest, the_form_offers_the_times_of_the_black_screen)
     EXPECT_FALSE(tiny::wm::valid_blank_choice("2"));
     EXPECT_FALSE(tiny::wm::valid_blank_choice("0"));
 }
+
+TEST(ConfigTest, the_screen_is_not_locked_when_idle_by_default)
+{
+    EXPECT_EQ(parse_config({}).lock_idle_minutes, 0);
+}
+
+TEST(ConfigTest, idle_after_is_one_of_the_choices_or_never)
+{
+    for (const int minutes : {5, 10, 15, 30, 60}) {
+        const Config c = parse_config(
+                {{"a",
+                  "[lock]\nidle_after = " + std::to_string(minutes) + "\n"}});
+        EXPECT_EQ(c.lock_idle_minutes, minutes);
+    }
+    EXPECT_EQ(parse_config({{"a", "[lock]\nidle_after = never\n"}})
+                      .lock_idle_minutes,
+              0);
+}
+
+TEST(ConfigTest, another_idle_after_is_a_problem_and_keeps_the_default)
+{
+    for (const char* value : {"1", "7", "0", "-5", "soon", ""}) {
+        Strings problems;
+        const Config c = parse_config(
+                {{"a", std::string("[lock]\nidle_after = ") + value + "\n"}},
+                &problems);
+        EXPECT_EQ(c.lock_idle_minutes, 0) << value;
+        EXPECT_EQ(problems.size(), 1u) << value;
+    }
+}
+
+TEST(ConfigTest, the_form_offers_the_times_of_the_idle_lock)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::idle_choices();
+
+    ASSERT_EQ(choices.size(), 6u);
+    EXPECT_STREQ(choices[0].value, ""); // never, the default
+    EXPECT_STREQ(choices[5].value, "60");
+    for (const auto& choice : choices) {
+        EXPECT_TRUE(tiny::wm::valid_idle_choice(choice.value));
+    }
+    EXPECT_TRUE(tiny::wm::valid_idle_choice("never"));
+    EXPECT_FALSE(tiny::wm::valid_idle_choice("1"));
+    EXPECT_FALSE(tiny::wm::valid_idle_choice("0"));
+}

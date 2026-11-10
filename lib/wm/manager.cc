@@ -2237,6 +2237,46 @@ void Manager::lock_screen()
     }
 }
 
+void Manager::set_lock_idle(std::chrono::minutes after)
+{
+    timers.cancel(idle_timer);
+    idle_timer = 0;
+    if (after <= std::chrono::minutes::zero()) {
+        idle_lock.reset();
+        return;
+    }
+    if (!idle_time) {
+        idle_time = std::make_unique<IdleTime>(display);
+        if (!idle_time->available()) {
+            tiny::error("[lock] idle_after: this X server has no IDLETIME "
+                        "counter, the screen is not locked when idle");
+        }
+    }
+    if (!idle_time->available()) {
+        idle_lock.reset();
+        return;
+    }
+    if (!idle_lock) {
+        idle_lock = std::make_unique<IdleLock>(
+                IdleLock::Hooks{[this] { return idle_time->idle(); },
+                                [this] { return lock_guard->running(); },
+                                [this] { lock_screen(); }});
+    }
+    idle_lock->set_limit(after);
+    check_idle_lock();
+}
+
+void Manager::check_idle_lock()
+{
+    idle_timer = 0;
+    if (!idle_lock) {
+        return;
+    }
+    if (const auto wait = idle_lock->check()) {
+        idle_timer = timers.after(*wait, [this] { check_idle_lock(); });
+    }
+}
+
 void Manager::run_program(const std::vector<std::string>& argv)
 {
     if (argv.empty() || argv.front().empty()) {

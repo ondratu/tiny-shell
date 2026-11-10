@@ -135,6 +135,7 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     manager.set_power_commands(config.reboot_command, config.poweroff_command);
     manager.set_terminal(config.terminal);
     manager.set_lock_command(config.lock_command);
+    manager.set_lock_idle(std::chrono::minutes(config.lock_idle_minutes));
     const std::string user_file = tiny::wm::user_config_file(
             getenv("XDG_CONFIG_HOME"), getenv("HOME"));
     manager.set_favorites(
