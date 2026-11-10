@@ -171,7 +171,7 @@ bool child_ended(pid_t pid, int* status)
     for (int i = 0; i < kept_statuses; ++i) {
         if (kept_pid[i] == pid) {
             if (status != nullptr) {
-                *status = kept_status[i];
+                *status = static_cast<int>(kept_status[i]);
             }
             return true;
         }
