@@ -20,7 +20,7 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
 | `tiny-lock-pwcheck` | `src/lock_pwcheck.cc` | `lib/app/pwcheck.*`, `lib/app/lock_check.*` | set-group-ID `shadow` or set-user-ID root | libcrypt |
 
 1. **tiny-shell never sees a password.** It only asks for the lock (Super + L,
-   the main menu, the action `lock`) and watches it: `LockGuard` starts it again
+   the main menu, the action `lock`, or the idle time, see below) and watches it: `LockGuard` starts it again
    when it ends by a signal or with another status than 0 (unlocked) or 1 (it
    could not lock), up to five times in a row. `spawn.h` keeps the exit status of
    one watched child, because `reap_children()` collects all of them.
@@ -48,6 +48,18 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    (0 right, 1 wrong, 2 can't be checked). It reads the hash, drops the rights
    for good (and verifies it), switches off core dumps, and wipes the password
    and the hash. A wrong password waits two seconds.
+
+### The idle lock
+
+`[lock] idle_after` is the one part of the lock that lives in the shell:
+`IdleLock` (`lib/wm/idle_lock.*`) decides, `IdleTime` (`lib/wm/idle_time.*`)
+reads the counter `IDLETIME` of the SYNC extension (libXext, already linked; the
+extension MIT-SCREEN-SAVER would need another library for the same number) and
+`Manager::set_lock_idle()` sets one timer. `IdleLock::check()` returns when to
+look next: the time that is left to the limit, at least a second, so a computer
+that nobody uses is woken once in the limit. A lock that runs (`LockGuard`) is
+not started again. Without the counter the feature is off and one message says
+so.
 
 ## The protocol of tiny-lock and tiny-lock-auth
 
@@ -102,6 +114,6 @@ Several monitors (Xinerama) were tried by hand.
 ## What is left
 
 The plan is in `TODO-LOCK.md`: logind (`Lock`, `PrepareForSleep` with an
-inhibitor, `SetLockedHint`), the idle time, a command to switch the user, OpenBSD
+inhibitor, `SetLockedHint`), a command to switch the user, OpenBSD
 (`auth_userokay`), the change of the monitors, and the files of `/etc/pam.d` for
 the distributions.

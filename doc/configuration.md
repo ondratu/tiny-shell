@@ -64,6 +64,9 @@ lock = tiny-lock
 [lock]
 # Minutes without input to a black screen: 1 (the default), 5, 10, 15 or never
 blank_after = 1
+# Minutes without input that lock the screen: 5, 10, 15, 30, 60 or never (the
+# default)
+idle_after = never
 # How tiny-lock-auth checks the password: auto (the default), pam, checker or
 # pwcheck
 auth = auto
@@ -126,13 +129,15 @@ here.
 | Key | Value | What it says |
 | --- | ----- | ------------ |
 | `blank_after` | `1`, `5`, `10`, `15`, `never` | minutes without input in the screen with the time to a black screen with no text; 1 is the default |
+| `idle_after` | `5`, `10`, `15`, `30`, `60`, `never` | minutes without input (in any program) after which tiny-shell locks the screen; `never` is the default |
 | `auth` | `auto`, `pam`, `checker`, `pwcheck` | how the password is checked; `auto` takes PAM where it can work, then `unix_chkpwd`, then `tiny-lock-pwcheck` |
 | `pam_service` | a name | the PAM service, `tiny-lock` by default; no file is needed for it |
 | `checker` | a path | the program like `unix_chkpwd`, when it is not where the system keeps it |
 | `pwcheck` | a path | `tiny-lock-pwcheck`, when it is not next to `tiny-lock` |
 
 A wrong value is reported on stderr and the default is kept. A change is read
-the next time the screen is locked.
+the next time the screen is locked; `idle_after` is read by tiny-shell itself, so
+it needs a restart or `tiny-shell --reload`.
 
 ## The clock
 

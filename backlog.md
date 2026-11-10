@@ -30,11 +30,13 @@ wont.md (what was judged and left out on purpose).
   process that holds the keyboard), or the picture is drawn by `tiny-wallpaper`
   into a pixmap that the lock uses.
 
-## Power saving of the display (DPMS) and idle
+## Power saving of the display (DPMS)
 
 - **What:** switch the display off after a time without input (`DPMS`
   extension, `XSetScreenSaver`), maybe a setting in `tiny-settings` and the
-  keys of brightness and volume (`XF86*`).
+  keys of brightness and volume (`XF86*`). The lock after an idle time is done
+  (`[lock] idle_after`, [Screen lock](doc/lock.md)); its idle time comes from the
+  same counter that this would use.
 - **Status:** not decided. Today the X server defaults apply and `xset` works.
 
 ## Accessibility
