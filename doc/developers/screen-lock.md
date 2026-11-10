@@ -29,9 +29,15 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    to the X server. It does not link libpam, so a bug of a PAM module cannot reach
    the process that holds the grabs, and the process stays small. The window is
    an `override_redirect` window over the whole root window (every monitor); the
-   keyboard is grabbed to the window of the entry, so the typing can't reach
-   another client, and the pointer is confined to the lock window with no
-   cursor. It rises when something covers it. If a grab fails (another client
+   keyboard is grabbed to the lock window (a key that has not come to the entry
+   is given to it), so the typing can't reach another client, and the pointer is
+   confined to the lock window with no cursor. The screen has three states
+   (`LockScreen::State`): `Idle` (the time, the date and a hint), `Dialog` (the
+   entry; **`tiny-lock-auth` is started only here and stopped when the dialog
+   closes**, so biometrics run when somebody is there) and `Black` (no window
+   mapped; after `[lock] blank_after` in `Idle`, woken by any input, which is
+   not used for anything else). `handle_input()` decides it for every key and
+   pointer event. It rises when something covers it. If a grab fails (another client
    holds one) it tries for two seconds and then exits with 1.
 3. **tiny-lock-auth** runs one try and ends. It chooses the way (`resolve_backend`:
    PAM where it can work without the hash, then the checker, then

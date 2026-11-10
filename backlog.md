@@ -18,6 +18,18 @@ wont.md (what was judged and left out on purpose).
   `tiny-settings`.
 - **Mentioned in:** `doc/comparison.md` (the symbol `?`).
 
+## Background of the lock screen
+
+- **What:** a picture (or a color) behind the time and the dialog of the lock
+  screen, e.g. the wallpaper of the shell blurred or dimmed. Now the screen is
+  black, which is also what it is after `[lock] blank_after`.
+- **Status:** not decided. A setting `[lock] background` (a file, like
+  `[wallpaper] file`, or `wallpaper` for the one of the shell) and a field in
+  `tiny-settings`. `tiny-lock` has no image decoder: it would have to link the
+  one of `lib/image/` (the size of the program, and the memory of a picture in a
+  process that holds the keyboard), or the picture is drawn by `tiny-wallpaper`
+  into a pixmap that the lock uses.
+
 ## Power saving of the display (DPMS) and idle
 
 - **What:** switch the display off after a time without input (`DPMS`

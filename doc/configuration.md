@@ -62,6 +62,8 @@ terminal = xterm -e
 lock = tiny-lock
 
 [lock]
+# Minutes without input to a black screen: 1 (the default), 5, 10, 15 or never
+blank_after = 1
 # How tiny-lock-auth checks the password: auto (the default), pam, checker or
 # pwcheck
 auth = auto
@@ -123,6 +125,7 @@ here.
 
 | Key | Value | What it says |
 | --- | ----- | ------------ |
+| `blank_after` | `1`, `5`, `10`, `15`, `never` | minutes without input in the screen with the time to a black screen with no text; 1 is the default |
 | `auth` | `auto`, `pam`, `checker`, `pwcheck` | how the password is checked; `auto` takes PAM where it can work, then `unix_chkpwd`, then `tiny-lock-pwcheck` |
 | `pam_service` | a name | the PAM service, `tiny-lock` by default; no file is needed for it |
 | `checker` | a path | the program like `unix_chkpwd`, when it is not where the system keeps it |
