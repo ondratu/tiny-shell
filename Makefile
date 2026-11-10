@@ -84,6 +84,11 @@ ifneq ($(UNIX_CHKPWD),)
 PAM_CXXFLAGS += -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
 endif
 
+# crypt() of tiny-lock-pwcheck is in libc (musl, BSD) or in libcrypt (glibc);
+# CRYPT_LIBS is what the linker needs on this system
+CRYPT_LIBS := $(shell printf '\043include <unistd.h>\nint main() { return crypt("a", "ab") == 0; }\n' | \
+    $(CXX) -x c++ - -o /dev/null 2>/dev/null || echo -lcrypt)
+
 TINY_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null)
 
 # X headers are system headers: their warnings are not ours to fix
@@ -137,10 +142,12 @@ FONTS = $(BUILD)/tiny-fonts
 SETTINGS = $(BUILD)/tiny-settings
 ABOUT = $(BUILD)/tiny-about
 WALLPAPER = $(BUILD)/tiny-wallpaper
+LOCK_PWCHECK = $(BUILD)/tiny-lock-pwcheck
 
-PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(EXAMPLES)
+PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK) \
+    $(EXAMPLES)
 OBJ = $(LIB_OBJ) $(BUILD)/src/main.o $(BUILD)/src/fonts.o $(BUILD)/src/settings.o \
-    $(BUILD)/src/about.o $(BUILD)/src/wallpaper.o \
+    $(BUILD)/src/about.o $(BUILD)/src/wallpaper.o $(BUILD)/src/lock_pwcheck.o \
     $(addsuffix .o,$(EXAMPLES))
 DEP = $(OBJ:.o=.d)
 
@@ -148,7 +155,7 @@ DEP = $(OBJ:.o=.d)
     lint-analyze asan cppcheck help layers install uninstall
 .DELETE_ON_ERROR:
 
-all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER)
+all: $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK_PWCHECK)
 
 # A small binary without the debugging information, into build-release.
 # CI measures the size with -flto on top of this (see ci.yml).
@@ -244,6 +251,9 @@ $(ABOUT): $(BUILD)/src/about.o $(LIB)
 $(WALLPAPER): $(BUILD)/src/wallpaper.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
+$(LOCK_PWCHECK): $(BUILD)/src/lock_pwcheck.o $(LIB)
+	$(CXX) $^ $(LDFLAGS) $(LDLIBS) $(CRYPT_LIBS) -o $@
+
 $(EXAMPLES): %: %.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
@@ -291,6 +301,9 @@ $(BUILD)/tests/%.o: override CXXFLAGS += $(GTEST_CFLAGS) -I./tests
 # the tests of the widgets link the widgets only: they cannot need the shell
 $(TESTS_WIDGET): %: %.o $(BUILD)/tests/main.o $(WIDGET_LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
+
+# crypt() is needed by what checks a password
+$(BUILD)/tests/app/test_pwcheck: override LDLIBS += $(CRYPT_LIBS)
 
 $(TESTS_SHELL): %: %.o $(BUILD)/tests/main.o $(LIB)
 	$(CXX) $^ $(LDFLAGS) $(shell pkg-config --libs gtest) $(LDLIBS) -o $@
