@@ -5,7 +5,7 @@
 - Allowed without discussion: libX11, Xft, Xrender, fontconfig and FreeType (Xft
   uses them; we use fontconfig for the list of fonts and FreeType to read the
   `name` table of a font file), libXext (the SYNC extension for resizing
-  without tearing) and, when needed for a feature, Xrandr or other extensions
+  without tearing and for the idle time, DPMS for the power saving of the display) and, when needed for a feature, Xrandr or other extensions
   that are on every Xorg system.
 - Everything else needs a discussion first and must be **optional at build
   time** (a make variable, with the feature compiled out when it is off).

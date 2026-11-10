@@ -40,5 +40,5 @@ These may come one day, or may not. They are marked with `?` in the
 [comparison](comparison.md).
 
 - Focus follows mouse
-- Power saving of the display, accessibility
+- Accessibility
 - A very small file manager, a screenshot tool

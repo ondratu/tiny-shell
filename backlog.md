@@ -30,14 +30,14 @@ wont.md (what was judged and left out on purpose).
   process that holds the keyboard), or the picture is drawn by `tiny-wallpaper`
   into a pixmap that the lock uses.
 
-## Power saving of the display (DPMS)
+## Keys of brightness and volume
 
-- **What:** switch the display off after a time without input (`DPMS`
-  extension, `XSetScreenSaver`), maybe a setting in `tiny-settings` and the
-  keys of brightness and volume (`XF86*`). The lock after an idle time is done
-  (`[lock] idle_after`, [Screen lock](doc/lock.md)); its idle time comes from the
-  same counter that this would use.
-- **Status:** not decided. Today the X server defaults apply and `xset` works.
+- **What:** the keys `XF86MonBrightness*` and `XF86Audio*` change the brightness
+  and the volume. A key is only a request: the work is done by a command
+  (`brightnessctl`, `wpctl`, `amixer`) that a setting names, as `[commands]
+  lock` does, so the shell would not link anything new. A small bar can show
+  the new value.
+- **Status:** not decided. Today a program like `xbindkeys` can do it.
 
 ## Accessibility
 

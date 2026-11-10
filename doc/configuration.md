@@ -73,6 +73,11 @@ auth = auto
 # The PAM service; a service with no file in /etc/pam.d uses "other"
 pam_service = tiny-lock
 
+[display]
+# Minutes without input to switch the display off: 5, 10, 15, 30, 60 or never;
+# without the key the X server keeps what it has (see xset)
+off_after = 15
+
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
 # no clock. The names of the days and the order of the date follow LC_TIME / LANG.
@@ -138,6 +143,29 @@ here.
 A wrong value is reported on stderr and the default is kept. A change is read
 the next time the screen is locked; `idle_after` is read by tiny-shell itself, so
 it needs a restart or `tiny-shell --reload`.
+
+## The power saving of the display
+
+`[display] off_after` switches the display off after the given minutes without
+input: 5, 10, 15, 30, 60, or `never`, which keeps it on. Without the key tiny-shell
+does not touch the setting of the X server, so what `xset dpms` or the
+configuration of Xorg says stays. Taking the key out again does not undo what the
+shell has set: the X server keeps it until it is started again.
+
+The X server counts the time, so nothing runs in tiny-shell for it; the same
+setting is Display off in the section Power of `tiny-settings`. The shell sets it
+when it starts and when it is told to read the settings again
+(`tiny-shell --reload`). Any key or move of the pointer switches the display on.
+The extension is DPMS (libXext, which is linked anyway); an X server without it
+(Xvfb, Xephyr, some remote servers) gets one message and nothing else changes.
+
+A program that plays a video and asks the X server not to save the power
+(`xdg-screensaver reset` or `XResetScreenSaver`, as some video players do)
+keeps the display on; one that asks through D-Bus only (`org.freedesktop.ScreenSaver`)
+does not, because the shell has no D-Bus yet.
+
+The black screen of [the lock](lock.md) also switches the monitor off while it is
+black, if DPMS is on.
 
 ## The clock
 
