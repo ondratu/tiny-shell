@@ -1340,7 +1340,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 20u);
+    EXPECT_EQ(count, 22u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1715,7 +1715,7 @@ TEST(SettingsFormPowerTest, power_has_the_display_and_security_has_the_lock)
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
               (std::vector<Field>{Field::DisplayOff}));
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Security),
-              (std::vector<Field>{Field::LockDelay}));
+              (std::vector<Field>{Field::LockDelay, Field::LockStyle}));
 }
 
 TEST(SettingsFormPowerTest, the_fields_of_power_and_security_have_a_note)
@@ -1891,11 +1891,26 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
 
 TEST(SettingsFormStyleTest, the_styles_are_choices_in_the_appearance)
 {
-    for (const Field f : {Field::Theme, Field::PanelStyle, Field::DockStyle}) {
+    for (const Field f : {Field::Theme, Field::PanelStyle, Field::DockStyle,
+                          Field::LauncherStyle}) {
         EXPECT_TRUE(SettingsForm::is_choice(f));
         EXPECT_EQ(SettingsForm::section_of(f),
                   SettingsForm::Section::Appearance);
     }
+}
+
+TEST(SettingsFormStyleTest, the_lock_style_is_a_choice_in_the_security)
+{
+    EXPECT_TRUE(SettingsForm::is_choice(Field::LockStyle));
+    EXPECT_EQ(SettingsForm::section_of(Field::LockStyle),
+              SettingsForm::Section::Security);
+
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    EXPECT_EQ(make(v).choice_label(Field::LockStyle), "Follow the theme");
+    v.lock_style = "light";
+    EXPECT_EQ(make(v).clean_values().lock_style, "light");
+    v.lock_style = "blue";
+    EXPECT_FALSE(make(v).problem(Field::LockStyle).empty());
 }
 
 TEST(SettingsFormStyleTest, the_values_come_from_the_start)

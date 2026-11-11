@@ -147,7 +147,9 @@ class SettingsApp : public tiny::XftWindow {
                 display_off_value(config.display_off_minutes),
                 config.style == tiny::Variant::Light ? "light" : "",
                 look_value(config.panel_style),
-                look_value(config.dock_style)},
+                look_value(config.dock_style),
+                look_value(config.lock_style),
+                look_value(config.launcher_style)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         colors(tiny::app::app_colors(
@@ -369,6 +371,16 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"dock", "style",
                          v.dock_style.empty() ? "auto" : v.dock_style});
+            }
+            if (v.launcher_style != initial.launcher_style) {
+                changed.push_back(
+                        {"launcher", "style",
+                         v.launcher_style.empty() ? "auto" : v.launcher_style});
+            }
+            if (v.lock_style != initial.lock_style) {
+                changed.push_back(
+                        {"lock", "style",
+                         v.lock_style.empty() ? "auto" : v.lock_style});
             }
             if (v.lock_delay != initial.lock_delay) {
                 // the first choice, "", is never
@@ -661,7 +673,9 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::DisplayOff, "Display off"},
                     {SettingsForm::Field::Theme, "Style"},
                     {SettingsForm::Field::PanelStyle, "Panel"},
-                    {SettingsForm::Field::DockStyle, "Dock"}};
+                    {SettingsForm::Field::DockStyle, "Dock"},
+                    {SettingsForm::Field::LauncherStyle, "Launcher"},
+                    {SettingsForm::Field::LockStyle, "Lock style"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;
