@@ -85,7 +85,9 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::DisplayOff,
                                           SettingsForm::Field::Theme,
                                           SettingsForm::Field::PanelStyle,
-                                          SettingsForm::Field::DockStyle};
+                                          SettingsForm::Field::DockStyle,
+                                          SettingsForm::Field::LockStyle,
+                                          SettingsForm::Field::LauncherStyle};
 
 } // namespace
 
@@ -127,7 +129,9 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.display_off),
             TextField(initial.theme),
             TextField(initial.panel_style),
-            TextField(initial.dock_style)},
+            TextField(initial.dock_style),
+            TextField(initial.lock_style),
+            TextField(initial.launcher_style)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -189,7 +193,9 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::DisplayOff),
             text(Field::Theme),
             text(Field::PanelStyle),
-            text(Field::DockStyle)};
+            text(Field::DockStyle),
+            text(Field::LockStyle),
+            text(Field::LauncherStyle)};
 }
 
 // The sections
@@ -222,8 +228,9 @@ SettingsForm::section_fields(Section section)
                                              Field::Style,   Field::Antialias,
                                              Field::Hinting, Field::Rgba};
     static const std::vector<Field> appearance = {
-            Field::Theme, Field::PanelStyle, Field::DockStyle,
-            Field::Scale, Field::Wallpaper,  Field::WallpaperMode};
+            Field::Theme,         Field::PanelStyle, Field::DockStyle,
+            Field::LauncherStyle, Field::Scale,      Field::Wallpaper,
+            Field::WallpaperMode};
     static const std::vector<Field> desktop = {Field::Dock, Field::ClockFormat};
     static const std::vector<Field> displays = {Field::PrimaryMonitor,
                                                 Field::SecondaryMonitor,
@@ -231,7 +238,8 @@ SettingsForm::section_fields(Section section)
     // TODO: the battery (what happens on low charge, power saver) goes here
     // when the shell can read it; Power is the place for it
     static const std::vector<Field> power = {Field::DisplayOff};
-    static const std::vector<Field> security = {Field::LockDelay};
+    static const std::vector<Field> security = {Field::LockDelay,
+                                                Field::LockStyle};
     static const std::vector<Field> applications = {Field::Terminal};
     switch (section) {
         case Section::Appearance:
@@ -288,6 +296,8 @@ const char* SettingsForm::hint(Field field)
             return "Dark or light, also for the programs.";
         case Field::PanelStyle:
         case Field::DockStyle:
+        case Field::LockStyle:
+        case Field::LauncherStyle:
             return "Or stay light or dark in any theme.";
         case Field::PrimaryMonitor:
             return "The monitor of the panel and the dock; the numbers are "
@@ -335,6 +345,7 @@ bool SettingsForm::is_choice(Field field)
            field == Field::Rgba || field == Field::WallpaperMode ||
            field == Field::Dock || field == Field::Theme ||
            field == Field::PanelStyle || field == Field::DockStyle ||
+           field == Field::LockStyle || field == Field::LauncherStyle ||
            field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff;
@@ -386,7 +397,8 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     if (field == Field::Theme) {
         return wm::style_choices();
     }
-    if (field == Field::PanelStyle || field == Field::DockStyle) {
+    if (field == Field::PanelStyle || field == Field::DockStyle ||
+        field == Field::LockStyle || field == Field::LauncherStyle) {
         return wm::look_choices();
     }
     if (field == Field::MonitorPlacement) {
@@ -480,6 +492,8 @@ std::string SettingsForm::problem(Field field) const
                            : "Choose one of the values that are offered.";
         case Field::PanelStyle:
         case Field::DockStyle:
+        case Field::LockStyle:
+        case Field::LauncherStyle:
             return wm::valid_look_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
@@ -551,7 +565,9 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.display_off),
             clean(v.theme),
             clean(v.panel_style),
-            clean(v.dock_style)};
+            clean(v.dock_style),
+            clean(v.lock_style),
+            clean(v.launcher_style)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -959,7 +975,9 @@ bool SettingsForm::act(size_t target, int x)
         case DisplayOffField:
         case ThemeField:
         case PanelStyleField:
-        case DockStyleField: {
+        case DockStyleField:
+        case LockStyleField:
+        case LauncherStyleField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on

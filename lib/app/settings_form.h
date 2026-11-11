@@ -75,7 +75,9 @@ class SettingsForm {
         DisplayOff, //!< a choice: the minutes to switch the display off
         Theme,      //!< a choice: the style of the theme, dark or light
         PanelStyle, //!< a choice: the panel follows the theme, light or dark
-        DockStyle   //!< a choice: the same for the dock
+        DockStyle,  //!< a choice: the same for the dock
+        LockStyle,  //!< a choice: the same for the lock screen
+        LauncherStyle //!< a choice: the same for the launcher
     };
 
     //! What has the keyboard in the list of fonts
@@ -139,6 +141,8 @@ class SettingsForm {
         std::string theme{};
         std::string panel_style{};
         std::string dock_style{};
+        std::string lock_style{};     //!< like the panel: "", light, dark
+        std::string launcher_style{}; //!< the same
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -391,7 +395,9 @@ class SettingsForm {
         DisplayOffField,
         ThemeField,
         PanelStyleField,
-        DockStyleField, //!< the fields are in the order of `Field`
+        DockStyleField,
+        LockStyleField,
+        LauncherStyleField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -436,7 +442,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 20> fields_;
+    std::array<TextField, 22> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
