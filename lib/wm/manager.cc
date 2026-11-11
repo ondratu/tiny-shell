@@ -2750,7 +2750,8 @@ Window* Manager::manage(::Window child, const XWindowAttributes& attrs,
     }
 
     // A window that was there stays on its monitor. One that was just mapped
-    // and has no position (0, 0) opens where the pointer is.
+    // and has no position (0, 0) opens where the pointer is; a window without
+    // a wish for a position is centered in the work area of its monitor.
     size_t at =
             monitor_of(monitors, {attrs.x, attrs.y, attrs.width, attrs.height});
     if (fresh && attrs.x == 0 && attrs.y == 0) {
