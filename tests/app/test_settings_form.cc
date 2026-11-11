@@ -1151,7 +1151,7 @@ TEST(SettingsFormTest, the_rendering_of_text_has_choices_under_the_fields)
     EXPECT_EQ(form.choice_label(Field::Rgba), "RGB");
     EXPECT_EQ(form.clean_values().rgba, "rgb");
     EXPECT_GT(form.field_rect(Field::Antialias).y,
-              form.field_rect(Field::Scale).y);
+              form.field_rect(Field::Font).y);
     EXPECT_GT(form.message_rect().y, form.field_rect(Field::WallpaperMode).y);
     EXPECT_EQ(SettingsForm::xft_option(Field::Hinting),
               tiny::wm::XftOption::Hinting);
@@ -1324,7 +1324,7 @@ TEST(SettingsFormSectionTest, the_form_starts_in_the_first_section)
                             SettingsForm::Metrics());
 
     EXPECT_EQ(form.section(), SettingsForm::Section::Appearance);
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.focus(), Field::Theme);
 }
 
 TEST(SettingsFormSectionTest, every_field_is_in_one_section)
@@ -1340,7 +1340,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 17u);
+    EXPECT_EQ(count, 20u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1406,11 +1406,11 @@ TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
     SettingsForm form = make();
 
     form.set_section(SettingsForm::Section::Appearance);
-    EXPECT_EQ(form.focus(), Field::Scale);
+    EXPECT_EQ(form.focus(), Field::Theme);
     form.set_section(SettingsForm::Section::Appearance); // the same one
     form.key(Key::Tab);
     form.set_section(SettingsForm::Section::Appearance);
-    EXPECT_NE(form.focus(), Field::Scale); // not moved again
+    EXPECT_NE(form.focus(), Field::Theme); // not moved again
 }
 
 TEST(SettingsFormSectionTest, the_button_that_opens_the_fonts_is_in_the_fonts)
@@ -1885,4 +1885,77 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
             EXPECT_EQ(form.focus(), f);
         }
     }
+}
+
+// The style of the theme, of the panel and of the dock
+
+TEST(SettingsFormStyleTest, the_styles_are_choices_in_the_appearance)
+{
+    for (const Field f : {Field::Theme, Field::PanelStyle, Field::DockStyle}) {
+        EXPECT_TRUE(SettingsForm::is_choice(f));
+        EXPECT_EQ(SettingsForm::section_of(f),
+                  SettingsForm::Section::Appearance);
+    }
+}
+
+TEST(SettingsFormStyleTest, the_values_come_from_the_start)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.theme = "light";
+    v.panel_style = "dark";
+    v.dock_style = "light";
+    const SettingsForm form = make(v);
+
+    EXPECT_EQ(form.values().theme, "light");
+    EXPECT_EQ(form.choice_label(Field::Theme), "Light");
+    EXPECT_EQ(form.choice_label(Field::PanelStyle), "Dark");
+    EXPECT_EQ(form.clean_values().dock_style, "light");
+}
+
+TEST(SettingsFormStyleTest, the_theme_is_dark_and_the_rest_follows_by_default)
+{
+    const SettingsForm form = make();
+
+    EXPECT_EQ(form.choice_label(Field::Theme), "Dark");
+    EXPECT_EQ(form.choice_label(Field::PanelStyle), "Follow the theme");
+    EXPECT_EQ(form.choice_label(Field::DockStyle), "Follow the theme");
+}
+
+TEST(SettingsFormStyleTest, the_arrows_go_through_the_choices)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::PanelStyle);
+
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::PanelStyle), "light");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::PanelStyle), "dark");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::PanelStyle), "");
+}
+
+TEST(SettingsFormStyleTest, a_wrong_style_is_a_problem)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.theme = "dark"; // the file's name is not a value of the form
+    EXPECT_FALSE(make(v).problem(Field::Theme).empty());
+    v.theme = "";
+    v.panel_style = "auto";
+    EXPECT_FALSE(make(v).problem(Field::PanelStyle).empty());
+    v.panel_style = "";
+    v.dock_style = "blue";
+    EXPECT_FALSE(make(v).problem(Field::DockStyle).empty());
+    v.dock_style = "dark";
+    EXPECT_TRUE(make(v).problem().empty());
+}
+
+TEST(SettingsFormStyleTest, the_picture_is_between_the_scale_and_the_wallpaper)
+{
+    const SettingsForm form = make();
+    const Rect thumb = form.thumbnail_rect();
+
+    EXPECT_GT(thumb.y, form.field_rect(Field::Scale).y);
+    EXPECT_LT(thumb.y + thumb.height, form.field_rect(Field::Wallpaper).y);
+    EXPECT_LT(form.field_rect(Field::DockStyle).y,
+              form.field_rect(Field::Scale).y);
 }

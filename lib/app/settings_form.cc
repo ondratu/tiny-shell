@@ -82,7 +82,10 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::SecondaryMonitor,
                                           SettingsForm::Field::MonitorPlacement,
                                           SettingsForm::Field::LockDelay,
-                                          SettingsForm::Field::DisplayOff};
+                                          SettingsForm::Field::DisplayOff,
+                                          SettingsForm::Field::Theme,
+                                          SettingsForm::Field::PanelStyle,
+                                          SettingsForm::Field::DockStyle};
 
 } // namespace
 
@@ -121,7 +124,10 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.secondary_monitor),
             TextField(initial.monitor_placement),
             TextField(initial.lock_delay),
-            TextField(initial.display_off)},
+            TextField(initial.display_off),
+            TextField(initial.theme),
+            TextField(initial.panel_style),
+            TextField(initial.dock_style)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -180,7 +186,10 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::SecondaryMonitor),
             text(Field::MonitorPlacement),
             text(Field::LockDelay),
-            text(Field::DisplayOff)};
+            text(Field::DisplayOff),
+            text(Field::Theme),
+            text(Field::PanelStyle),
+            text(Field::DockStyle)};
 }
 
 // The sections
@@ -213,7 +222,8 @@ SettingsForm::section_fields(Section section)
                                              Field::Style,   Field::Antialias,
                                              Field::Hinting, Field::Rgba};
     static const std::vector<Field> appearance = {
-            Field::Scale, Field::Wallpaper, Field::WallpaperMode};
+            Field::Theme, Field::PanelStyle, Field::DockStyle,
+            Field::Scale, Field::Wallpaper,  Field::WallpaperMode};
     static const std::vector<Field> desktop = {Field::Dock, Field::ClockFormat};
     static const std::vector<Field> displays = {Field::PrimaryMonitor,
                                                 Field::SecondaryMonitor,
@@ -274,6 +284,11 @@ const char* SettingsForm::hint(Field field)
         case Field::Dock:
             return "Auto-hide: hidden under a window, the bottom edge shows "
                    "it.";
+        case Field::Theme:
+            return "Dark or light, also for the programs.";
+        case Field::PanelStyle:
+        case Field::DockStyle:
+            return "Or stay light or dark in any theme.";
         case Field::PrimaryMonitor:
             return "The monitor of the panel and the dock; the numbers are "
                    "on the screens.";
@@ -318,8 +333,9 @@ bool SettingsForm::is_choice(Field field)
 {
     return field == Field::Antialias || field == Field::Hinting ||
            field == Field::Rgba || field == Field::WallpaperMode ||
-           field == Field::Dock || field == Field::PrimaryMonitor ||
-           field == Field::SecondaryMonitor ||
+           field == Field::Dock || field == Field::Theme ||
+           field == Field::PanelStyle || field == Field::DockStyle ||
+           field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff;
 }
@@ -366,6 +382,12 @@ wm::XftChoices SettingsForm::choices_of(Field field)
 {
     if (field == Field::Dock) {
         return wm::dock_choices();
+    }
+    if (field == Field::Theme) {
+        return wm::style_choices();
+    }
+    if (field == Field::PanelStyle || field == Field::DockStyle) {
+        return wm::look_choices();
     }
     if (field == Field::MonitorPlacement) {
         return wm::placement_choices();
@@ -452,6 +474,15 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_dock_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::Theme:
+            return wm::valid_style_choice(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
+        case Field::PanelStyle:
+        case Field::DockStyle:
+            return wm::valid_look_choice(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::LockDelay:
             return wm::valid_lock_delay_choice(value)
                            ? ""
@@ -517,7 +548,10 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.secondary_monitor),
             clean(v.monitor_placement),
             clean(v.lock_delay),
-            clean(v.display_off)};
+            clean(v.display_off),
+            clean(v.theme),
+            clean(v.panel_style),
+            clean(v.dock_style)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -544,9 +578,14 @@ static int row_of(SettingsForm::Field field)
             SettingsForm::section_fields(SettingsForm::section_of(field));
     const auto row = static_cast<int>(
             std::find(list.begin(), list.end(), field) - list.begin());
-    // the picture of the wallpaper is under the first field of the appearance
-    return row >= 1 && SettingsForm::section_of(field) ==
-                                   SettingsForm::Section::Appearance
+    // the picture of the wallpaper is over its path
+    const auto wallpaper =
+            static_cast<int>(std::find(list.begin(), list.end(),
+                                       SettingsForm::Field::Wallpaper) -
+                             list.begin());
+    return SettingsForm::section_of(field) ==
+                                   SettingsForm::Section::Appearance &&
+                           row >= wallpaper
                    ? row + static_cast<int>(thumbnail_rows)
                    : row;
 }
@@ -598,7 +637,7 @@ Rect SettingsForm::choose_rect() const
 
 Rect SettingsForm::thumbnail_rect() const
 {
-    // the rows between the first field and the wallpaper
+    // the rows between the scale and the wallpaper
     const Rect first = field_rect(Field::Scale);
     const Rect after = field_rect(Field::Wallpaper);
     const int y = first.y + first.height + metrics_.row_gap;
@@ -917,7 +956,10 @@ bool SettingsForm::act(size_t target, int x)
         case SecondaryMonitorField:
         case MonitorPlacementField:
         case LockDelayField:
-        case DisplayOffField: {
+        case DisplayOffField:
+        case ThemeField:
+        case PanelStyleField:
+        case DockStyleField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
