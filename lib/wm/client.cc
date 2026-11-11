@@ -80,10 +80,11 @@ Client::~Client()
     disconnect(FocusOut);
 }
 
-//! A new window is moved into the work area, a big one is made smaller
+//! A new window is moved into the work area, a big one is made smaller. One
+//! that has no position of its own is put in the middle of the work area.
 static tiny::Rect first_place(const XWindowAttributes& attrs,
                               const XSizeHints& hints, const tiny::Rect& area,
-                              unsigned long decorations)
+                              unsigned long decorations, bool fresh)
 {
     const int border = border_for(decorations); // on both sides
     const int header = header_height_for(decorations);
@@ -97,8 +98,14 @@ static tiny::Rect first_place(const XWindowAttributes& attrs,
                                         Client::frame_extents_for(decorations));
     }
     // the border is drawn outside of the window, so it is not over the panel
-    return fit_in_area({x, y, attrs.width, attrs.height + header},
-                       inner_area(area, border));
+    const tiny::Rect inner = inner_area(area, border);
+    tiny::Rect frame =
+            fit_in_area({x, y, attrs.width, attrs.height + header}, inner);
+    if (fresh && !(hints.flags & (USPosition | PPosition))) {
+        frame.x = inner.x + (inner.width - frame.width) / 2;
+        frame.y = inner.y + (inner.height - frame.height) / 2;
+    }
+    return frame;
 }
 
 Window* Client::create(::Window root, ::Window child,
@@ -112,7 +119,8 @@ Window* Client::create(::Window root, ::Window child,
         !XGetWMNormalHints(tiny::get_display(), child, &hints, &supplied)) {
         hints.flags = 0; // the position of a window that is there is real
     }
-    const tiny::Rect place = first_place(attrs, hints, area, decorations);
+    const tiny::Rect place =
+            first_place(attrs, hints, area, decorations, fresh);
     const int client_height = place.height - header_height_for(decorations);
     auto* win = new Client(child, root, place.width, client_height, functions,
                            decorations, area);
