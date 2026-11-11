@@ -76,14 +76,16 @@ comparison with other window managers is in the [comparison](comparison.md).
   time to switch the display off, the time to lock the screen after that and the
   terminal in the configuration file of the user (see [Applications](applications.md#settings)).
 - **Power saving of the display:** `[display] off_after` switches the display
-  off after a time without input (DPMS, so the X server counts the time), it is
-  Display off in `tiny-settings`; where the server has no DPMS the lock screen
-  goes black instead (see [Configuration](configuration.md#the-power-saving-of-the-display)).
+  off after a time without input, it is Display off in `tiny-settings`. The
+  shell covers the screen with a black window and, with DPMS, the X server
+  switches the display off as well; `[display] dpms = no` leaves DPMS alone,
+  for the drivers where it does nothing or hangs the machine (see
+  [Configuration](configuration.md#the-power-saving-of-the-display)).
 - **Screen lock:** `tiny-lock` (Super + L, the main menu, or `[lock] delay`
   minutes after the display goes off) asks for the password of the
   system through PAM, a checker such as `unix_chkpwd`, or the small
   `tiny-lock-pwcheck`; only the last one has any privileges. It covers every
-  monitor, follows a change of the monitors, goes black on an X server without DPMS
+  monitor, follows a change of the monitors, goes dark when the display would be off
   and is started again if it dies (see [Screen lock](lock.md)).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a

@@ -85,6 +85,10 @@ pam_service = tiny-lock
 # Minutes without input to switch the display off: 5, 10, 15, 30, 60 or never;
 # without the key the X server keeps what it has (see xset)
 off_after = 15
+# yes (the default): the shell sets the time of DPMS in the X server as well;
+# no: DPMS is left alone and only the black window of the shell turns the
+# display off (for drivers where DPMS does nothing or hangs)
+dpms = yes
 
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
@@ -168,23 +172,37 @@ configuration of Xorg says stays. If the key is taken out (or Unchanged is
 chosen in `tiny-settings`) and the settings are read again, the shell puts back
 what the X server had before it changed it.
 
-The X server counts the time, so nothing runs in tiny-shell for it; the same
-setting is Display off in the section Power of `tiny-settings`, and the lock
-after it is Lock after in the section Security. The shell sets it
+The display goes off in two ways, both after the same time:
+
+1. **By software.** The shell covers the screen with a black window and takes
+   the pointer away. The first key or move of the pointer, in any program,
+   uncovers it (the shell looks at the idle time of the X server, so it wakes
+   once in the limit and then often only while the screen is black). A key
+   that wakes the screen still goes to the program that has the focus. This
+   works on every X server, also where the display can't really be switched
+   off (a virtual machine).
+2. **By DPMS.** The X server switches the display off itself (the extension
+   is in libXext, which is linked anyway). An X server without it (Xvfb,
+   Xephyr, some remote servers) gets one message and nothing else changes.
+
+The same setting is Display off in the section Power of `tiny-settings`, and
+the lock after it is Lock after in the section Security. The shell sets it
 when it starts and when it is told to read the settings again
-(`tiny-shell --reload`). Any key or move of the pointer switches the display on.
-The extension is DPMS (libXext, which is linked anyway); an X server without it
-(Xvfb, Xephyr, some remote servers) gets one message and nothing else changes.
+(`tiny-shell --reload`).
+
+`[display] dpms = no` (DPMS in the section Power) leaves DPMS alone: the shell
+does not set its time and the display goes off only by the black window. It is
+for the drivers that say they have DPMS and do nothing (the VESA driver in a
+virtual machine), or that hang the computer with it. The default is `yes`.
 
 A program that plays a video and asks the X server not to save the power
 (`xdg-screensaver reset` or `XResetScreenSaver`, as some video players do)
 keeps the display on; one that asks through D-Bus only (`org.freedesktop.ScreenSaver`)
 does not, because the shell has no D-Bus yet.
 
-On an X server without DPMS the lock screen goes black after the same time, as
-the nearest thing to a switched off display (see [the lock](lock.md)). The lock
-itself follows the display: `[lock] delay` counts from the moment the display
-goes off.
+The lock itself follows the display: `[lock] delay` counts from the moment the
+display goes off, and a lock that comes after it stays dark until the next
+input (see [the lock](lock.md)).
 
 ## The clock
 
