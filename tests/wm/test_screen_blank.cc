@@ -49,7 +49,7 @@ TEST_F(ScreenBlankTest, it_covers_the_whole_screen_and_can_be_hidden)
     blank.show();
     ASSERT_TRUE(blank.shown());
     const int screen = DefaultScreen(display);
-    XWindowAttributes shown = attributes(blank.get_window());
+    const XWindowAttributes shown = attributes(blank.get_window());
     EXPECT_EQ(shown.map_state, IsViewable);
     EXPECT_EQ(shown.width, DisplayWidth(display, screen));
     EXPECT_EQ(shown.height, DisplayHeight(display, screen));
