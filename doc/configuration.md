@@ -26,8 +26,8 @@ font = DejaVu Sans,sans
 # The size in points at the scale 1, from 4 to 96
 font_size = 12
 # The colors of everything the shell draws, the title bars of the windows
-# included: dark (the default) or light. The panel and the dock can differ,
-# see [panel] style and [dock] style
+# included: dark (the default) or light. The panel, the dock, the launcher and the lock
+# screen can differ,# see [panel], [dock], [launcher] and [lock] style
 style = dark
 # The style of the font, a name that the family has ("Bold", "Italic"); empty
 # is the default style. The title bars are always bold.
@@ -63,7 +63,15 @@ terminal = xterm -e
 # Super + L and the Lock Screen item of the main menu; see The lock below
 lock = tiny-lock
 
+[launcher]
+# The colors of the launcher: auto (follows [theme] style),
+# light or dark whatever the theme is
+style = auto
+
 [lock]
+# The colors of the lock screen: auto (follows [theme] style), light or dark
+# whatever the theme is
+style = auto
 # Minutes from the moment the display goes off ([display] off_after) to the lock:
 # 0 (at once), 1, 2, 5, 10, 30 or never (the default)
 delay = never
@@ -140,6 +148,7 @@ here.
 
 | Key | Value | What it says |
 | --- | ----- | ------------ |
+| `style` | `auto`, `light`, `dark` | the colors of the lock screen; `auto` follows `[theme] style`, the others stay the same in any theme (a black lock over the light theme, or a light one over the dark theme) |
 | `delay` | `0`, `1`, `2`, `5`, `10`, `30`, `never` | minutes from the moment the display is switched off (`[display] off_after`) to the lock; `0` locks at once, `never` is the default (see [the order of the display and the lock](lock.md#when-the-screen-goes-off-and-is-locked)) |
 | `auth` | `auto`, `pam`, `checker`, `pwcheck` | how the password is checked; `auto` takes PAM where it can work, then `unix_chkpwd`, then `tiny-lock-pwcheck` |
 | `pam_service` | a name | the PAM service, `tiny-lock` by default; no file is needed for it |

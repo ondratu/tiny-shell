@@ -21,8 +21,8 @@ their icons.
 and the fields of the chosen section. The sections are in the order of the
 settings of GNOME:
 
-- **Appearance:** the style of the theme (Dark or Light), the style of the panel
-  and of the dock (Follow the theme, Light or Dark: each of them can keep its
+- **Appearance:** the style of the theme (Dark or Light), the style of the panel,
+  of the dock and of the launcher (Follow the theme, Light or Dark: each of them can keep its
   look in the other theme), the scale, the wallpaper and how it covers the
   screen (a small picture of the file above the path shows that the path is
   right).
@@ -35,7 +35,7 @@ settings of GNOME:
   or 60 minutes (`[display] off_after`; read after `tiny-shell --reload`). A short
   note under the field says what it does. Other things about power (the battery)
   will come here.
-- **Security:** Lock after, the time from the moment the display is switched off
+- **Security:** Lock style (Follow the theme, Light or Dark, like the panel), Lock after, the time from the moment the display is switched off
   to the lock of the screen: Never, Immediately, 1, 2, 5, 10 or 30 minutes
   (`[lock] delay`; read after `tiny-shell --reload`), like Automatic Screen Lock
   of GNOME.
@@ -87,7 +87,7 @@ without a new login. To remove a wallpaper, clear the row: the plain color of
 the theme is back after the next login.
 
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
-`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`,
+`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`, `[launcher] style`, `[lock] style`,
 `[commands] terminal`, `[xft] antialias`,
 `hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]` ...) to the file of
 the user, so the others still come from the global file, in the way that is
