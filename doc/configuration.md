@@ -114,8 +114,8 @@ secondary = auto
 placement = keep
 
 [dock]
-# The colors of the dock and of its menus: auto (the default: follow
-# [theme] style), light or dark whatever the theme is
+# The colors of the dock and of its menus, the Alt + Tab switcher too: auto
+# (the default: follow [theme] style), light or dark whatever the theme is
 style = auto
 # When the dock is shown: autohide (the default: it is hidden while the active
 # window covers it, and the pointer at the bottom edge of the screen shows it
