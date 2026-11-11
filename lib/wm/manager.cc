@@ -2304,16 +2304,16 @@ void Manager::check_screen_blank()
             screen_blank->hide();
         }
     }
-    if (!screen_blank->shown()) {
-        const auto wait = blank_lock->check(); // it may cover the screen
-        // cppcheck-suppress identicalInnerCondition
-        if (!screen_blank->shown()) {
-            // no idle time to read: try again later, not never
-            blank_timer = timers.after(
-                    wait.value_or(IdleLock::Duration(std::chrono::seconds(30))),
-                    [this] { check_screen_blank(); });
-            return;
-        }
+    // looking may cover the screen
+    const auto wait =
+            screen_blank->shown() ? std::nullopt : blank_lock->check();
+    const bool covered = screen_blank->shown();
+    if (!covered) {
+        // no idle time to read: try again later, not never
+        blank_timer = timers.after(
+                wait.value_or(IdleLock::Duration(std::chrono::seconds(30))),
+                [this] { check_screen_blank(); });
+        return;
     }
     // shown: look often, so the input ends it at once, and keep it on top
     // of what came up since and the size of the screen
