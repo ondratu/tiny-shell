@@ -3,8 +3,9 @@
 //
 // The form has a panel at the left with the sections, in the order of the
 // settings of GNOME: Appearance (the style of the theme, the looks of the panel
-// and the dock, the scale, the wallpaper and how it covers the screen), Fonts (the font, its size and style, and the antialiasing, hinting
-// and subpixel order of the text of the programs), Desktop (the mode of the
+// and the dock, the scale, the wallpaper and how it covers the screen), Fonts
+// (the font, its size and style, and the antialiasing, hinting and subpixel
+// order of the text of the programs), Desktop (the mode of the
 // dock and the format of the clock), Displays (the primary and the secondary
 // monitor, where the secondary one is, and the numbers on the monitors), Power
 // (when the display is switched off), Security (when the screen is locked) and
