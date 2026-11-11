@@ -251,10 +251,6 @@ next steps:
   resizing with the arrows (the keyboard directions of `_NET_WM_MOVERESIZE`:
   `SIZE_KEYBOARD` and `MOVE_KEYBOARD`), the menu of a minimized window from its icon in the
   dock.
-- Move and resize a window with Alt + drag anywhere in the window (Alt + left
-  button moves, Alt + right button resizes; Openbox, Fluxbox and Xfce have it).
-  The title bar and the window menu do it now. Take the code of the window menu
-  (`_NET_WM_MOVERESIZE`) and grab the buttons with `Mod1Mask` on the client.
 - More in `tiny-settings` (new sections, the model of `lib/app/settings_form.*`):
   the keyboard and the mouse (the layout, the repeat of keys, the speed of the
   pointer, the buttons for the left hand: `XkbSetControls`,
