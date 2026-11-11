@@ -971,7 +971,8 @@ tiny::Rect Dock::place_for(int w, int h) const
 
 tiny::Rect Dock::area() const
 {
-    return place_for(width, height);
+    return place_for(wanted_width > 0 ? wanted_width : width,
+                     wanted_height > 0 ? wanted_height : height);
 }
 
 void Dock::set_screen(const tiny::Rect& monitor)
@@ -987,6 +988,8 @@ void Dock::set_screen(const tiny::Rect& monitor)
 void Dock::resize(int w, int h)
 {
     Box::resize(w, h);
+    wanted_width = w;
+    wanted_height = h;
 
     if (is_realized) {
         // the width is the old one until the server tells
