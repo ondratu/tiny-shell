@@ -35,13 +35,13 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    (`LockScreen::State`): `Idle` (the time, the date and a hint), `Dialog` (the
    entry; **`tiny-lock-auth` is started only here and stopped when the dialog
    closes**, so biometrics run when somebody is there) and `Black` (no window
-   mapped; woken by any input, which is not used for anything else). `Black` is
-   the fallback of an X server **without DPMS**: `tiny-lock` asks for it only
-   when `[display] off_after` is set and `DisplayPower::enabled()` is false, and
-   counts the time from the last input in any program (`LockOptions::
-   from_last_input`, the counter of `IdleTime`), so a screen that comes after
-   the time has passed is black at once. With DPMS the server switches the display
-   off and the lock never goes black. `handle_input()` decides it for every key and
+   mapped; woken by any input, which is not used for anything else). `Black`
+   is the display that is off by software: `tiny-lock` asks for it whenever
+   `[display] off_after` is set (DPMS can't be trusted, some drivers do
+   nothing), and counts the time from the last input in any program
+   (`LockOptions::from_last_input`, the counter of `IdleTime`), so a screen
+   that comes after the time has passed is black at once. The shell does the
+   same for an unlocked screen with `ScreenBlank` (`lib/wm/screen_blank.*`). `handle_input()` decides it for every key and
    pointer event. It rises when something covers it. A change of the monitors
    (RandR, `select_monitor_events()` as in the shell) makes `screen_changed()`
    fit the window and the dialog to the new screen. If a grab fails (another client
@@ -77,7 +77,14 @@ the other (`set_display_off()` and `set_lock_delay()` both end in
 
 `DisplayPower` (`lib/display_power.*`) is the small wrapper of DPMS. The shell
 remembers what the server had before it set `off_after`, and puts it back when
-the setting is taken out.
+the setting is taken out or `[display] dpms = no`.
+
+`ScreenBlank` is an `override_redirect` black window over the whole screen with
+no cursor. It takes no input and no grab: `Manager::check_screen_blank()` looks
+at the idle time (an `IdleLock` with the limit `off_after`) and hides it when the
+idle time falls under the limit, every 200 ms while it is shown and once in the
+limit otherwise. It is hidden while `tiny-lock` runs (the lock covers the screen
+itself, black after the same time).
 
 ## The protocol of tiny-lock and tiny-lock-auth
 

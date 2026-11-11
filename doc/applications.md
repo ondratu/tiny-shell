@@ -32,9 +32,10 @@ settings of GNOME:
   clock.
 - **Power:** Display off, the time without input after which the display is
   switched off: Unchanged (the X server keeps its setting), Never, 5, 10, 15, 30
-  or 60 minutes (`[display] off_after`; read after `tiny-shell --reload`). A short
-  note under the field says what it does. Other things about power (the battery)
-  will come here.
+  or 60 minutes (`[display] off_after`), and DPMS, Yes or No (`[display] dpms`,
+  see [the power saving of the display](configuration.md#the-power-saving-of-the-display));
+  both are read after `tiny-shell --reload`. A short note under each field
+  says what it does. Other things about power (the battery) will come here.
 - **Security:** Lock style (Follow the theme, Light or Dark, like the panel), Lock after, the time from the moment the display is switched off
   to the lock of the screen: Never, Immediately, 1, 2, 5, 10 or 30 minutes
   (`[lock] delay`; read after `tiny-shell --reload`), like Automatic Screen Lock

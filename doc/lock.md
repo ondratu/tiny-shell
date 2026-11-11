@@ -32,15 +32,16 @@ the middle of the primary monitor. The sizes follow `[theme] scale` and the font
    sends the answer. A wrong password says so and asks again. Escape closes the
    dialog, stops the check and forgets what was typed: back to the time. While the
    dialog is open the screen does not go black.
-3. **Black.** Only on an X server **without DPMS**, where the display can't be
-   switched off: after `[display] off_after` without input the first state turns
-   to an entirely black screen with no text at all, which is the nearest thing
-   to a switched off display. Any input (a key, a click, a move of the pointer)
-   shows the time again; a key or a click that wakes the screen is not used for
-   anything else. The time starts again after Escape. On an X server with DPMS
-   (every Xorg on real hardware) the lock does not go black: the server
-   switches the display off by itself, see
+3. **Black.** After `[display] off_after` without input the first state turns
+   to an entirely black screen with no text at all: the display that is off.
+   The shell does the same when the screen is not locked, so a lock that comes
+   later (`[lock] delay`) stays dark and does not light the display up. This is
+   done by software, so it works also where DPMS does nothing (a virtual
+   machine); where DPMS works the server switches the display off as well, see
    [the power saving of the display](configuration.md#the-power-saving-of-the-display).
+   Any input (a key, a click, a move of the pointer) shows the time again; a key
+   or a click that wakes the screen is not used for anything else. The time
+   starts again after Escape.
 
 The screen opens only when the check says the password is right, never because
 of an error.
@@ -56,7 +57,7 @@ in any program (the idle time of the X server, the counter `IDLETIME`):
 
 | Setting | In `tiny-settings` | What it does |
 | ------- | ------------------ | ------------ |
-| `[display] off_after` | Power, Display off | switches the display off after this time without input |
+| `[display] off_after` | Power, Display off | switches the display off (a black window, and DPMS where there is one) after this time without input |
 | `[lock] delay` | Security, Lock after | locks the screen this long **after the display goes off**: `0` at the same moment, or 1, 2, 5, 10, 30 minutes; `never` is the default |
 
 The lock waits for the display, so the order is always the same: the display

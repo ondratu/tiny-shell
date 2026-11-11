@@ -22,7 +22,7 @@ wont.md (what was judged and left out on purpose).
 
 - **What:** a picture (or a color) behind the time and the dialog of the lock
   screen, e.g. the wallpaper of the shell blurred or dimmed. Now the screen is
-  black, which is also what it is on an X server without DPMS.
+  black, which is also what the lock does after `[display] off_after`.
 - **Status:** not decided. A setting `[lock] background` (a file, like
   `[wallpaper] file`, or `wallpaper` for the one of the shell) and a field in
   `tiny-settings`. `tiny-lock` has no image decoder: it would have to link the
