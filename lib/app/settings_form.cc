@@ -328,9 +328,8 @@ const char* SettingsForm::note(Field field)
             return "Turns the display off after this time without input. "
                    "Unchanged keeps the setting of the X server.";
         case Field::DisplayDpms:
-            return "Lets the X server switch the display off with DPMS. The "
-                   "screen is covered by software in either case; choose No "
-                   "when DPMS does nothing or the computer hangs with it.";
+            return "The X server switches the display off as well. No leaves "
+                   "DPMS alone, for drivers where it does nothing or hangs.";
         case Field::LockDelay:
             return "Locks the screen this long after the display turns off "
                    "(see Power). Immediately locks it as the display goes off.";
