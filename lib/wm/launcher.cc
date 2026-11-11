@@ -50,6 +50,7 @@ Launcher::Launcher():
     next_page(1, 1, ">")
 {
     name = "launcher";
+    set_style_override(&shell_theme.launcher_widgets);
     entry.pass_horizontal_keys(); // Left and Right move in the grid
     entry.on_change.connect([this](tiny::Object* o, const XEvent& e, void* d) {
         search(o, e, d);

@@ -36,7 +36,7 @@ class HeaderFont {
     tiny::wm::HeaderStyle with_font;
 };
 
-// Gives the styles of the panel and of the dock a font for the lifetime of the
+// Gives the styles of the panel, the dock and the launcher a font for the lifetime of the
 // object (they draw text with their own), like WidgetFont does for the toolkit.
 class ShellFonts {
   public:
@@ -44,18 +44,23 @@ class ShellFonts {
         original_panel(tiny::wm::shell_theme.panel_widgets),
         panel_with_font(original_panel),
         original_dock(tiny::wm::shell_theme.dock_widgets),
-        dock_with_font(original_dock)
+        dock_with_font(original_dock),
+        original_launcher(tiny::wm::shell_theme.launcher_widgets),
+        launcher_with_font(original_launcher)
     {
         panel_with_font.init();
         tiny::wm::shell_theme.panel_widgets = panel_with_font;
         dock_with_font.init();
         tiny::wm::shell_theme.dock_widgets = dock_with_font;
+        launcher_with_font.init();
+        tiny::wm::shell_theme.launcher_widgets = launcher_with_font;
     }
 
     ~ShellFonts()
     {
         tiny::wm::shell_theme.panel_widgets = original_panel;
         tiny::wm::shell_theme.dock_widgets = original_dock;
+        tiny::wm::shell_theme.launcher_widgets = original_launcher;
     }
 
   private:
@@ -63,6 +68,8 @@ class ShellFonts {
     tiny::Style panel_with_font;
     tiny::Style original_dock;
     tiny::Style dock_with_font;
+    tiny::Style original_launcher;
+    tiny::Style launcher_with_font;
 };
 
 // A data directory (the layout of share/) with a full white square as every

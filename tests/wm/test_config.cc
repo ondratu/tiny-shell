@@ -1036,6 +1036,27 @@ TEST(ConfigTest, reads_the_style_of_the_panel_and_of_the_dock)
     EXPECT_EQ(c.style, tiny::Variant::Dark) << "the theme is not changed";
 }
 
+TEST(ConfigTest, the_lock_screen_has_a_style_of_its_own)
+{
+    EXPECT_EQ(Config().lock_style, tiny::Look::Auto);
+    const Config c = parse_config({{"a", "[lock]\nstyle = dark\n"}});
+    EXPECT_EQ(c.lock_style, tiny::Look::Dark);
+    EXPECT_EQ(c.style, tiny::Variant::Dark);
+
+    std::vector<std::string> problems;
+    parse_config({{"a", "[lock]\nstyle = blue\n"}}, &problems);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("[lock] style must be auto, light or dark"),
+              std::string::npos);
+}
+
+TEST(ConfigTest, the_launcher_has_a_style_of_its_own)
+{
+    EXPECT_EQ(Config().launcher_style, tiny::Look::Auto);
+    const Config c = parse_config({{"a", "[launcher]\nstyle = light\n"}});
+    EXPECT_EQ(c.launcher_style, tiny::Look::Light);
+}
+
 TEST(ConfigTest, a_wrong_style_of_the_panel_or_the_dock_is_a_problem)
 {
     std::vector<std::string> problems;

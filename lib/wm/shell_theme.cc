@@ -57,6 +57,7 @@ void ShellTheme::scale_own(double factor)
     dock.scale(factor);
     panel_widgets.scale(factor);
     dock_widgets.scale(factor);
+    launcher_widgets.scale(factor);
 }
 
 void ShellTheme::set_font(const std::string& family)
@@ -66,6 +67,7 @@ void ShellTheme::set_font(const std::string& family)
     header.set_font_family(family);
     panel_widgets.set_font_family(family);
     dock_widgets.set_font_family(family);
+    launcher_widgets.set_font_family(family);
 }
 
 void ShellTheme::set_font_size(double size)
@@ -75,6 +77,7 @@ void ShellTheme::set_font_size(double size)
     header.set_font_size(size);
     panel_widgets.set_font_size(size);
     dock_widgets.set_font_size(size);
+    launcher_widgets.set_font_size(size);
 }
 
 void ShellTheme::set_font_style(const std::string& style)
@@ -83,6 +86,7 @@ void ShellTheme::set_font_style(const std::string& style)
     button.set_font_style(xft_style(style));
     panel_widgets.set_font_style(xft_style(style));
     dock_widgets.set_font_style(xft_style(style));
+    launcher_widgets.set_font_style(xft_style(style));
 }
 
 void ShellTheme::set_variant(Variant new_variant)
@@ -94,10 +98,12 @@ void ShellTheme::set_variant(Variant new_variant)
     apply_looks();
 }
 
-void ShellTheme::set_looks(Look new_panel_look, Look new_dock_look)
+void ShellTheme::set_looks(Look new_panel_look, Look new_dock_look,
+                           Look new_launcher_look)
 {
     panel_look = new_panel_look;
     dock_look = new_dock_look;
+    launcher_look = new_launcher_look;
     apply_looks();
 }
 
@@ -111,6 +117,7 @@ void ShellTheme::apply_looks()
     dock_widgets.colorize(dock_colors);
     dock_separator.colorize(dock_colors);
     dock_mark.colorize(dock_colors);
+    launcher_widgets.colorize(launcher_variant());
     // a widget that is not shown takes the colors when it is mapped
     ++toolkit.generation;
 }
@@ -122,6 +129,7 @@ void ShellTheme::release()
     header.release();
     panel_widgets.release();
     dock_widgets.release();
+    launcher_widgets.release();
 }
 
 void ShellTheme::init()
@@ -131,6 +139,7 @@ void ShellTheme::init()
     header.init();
     panel_widgets.init();
     dock_widgets.init();
+    launcher_widgets.init();
 }
 
 } // namespace tiny::wm
