@@ -616,6 +616,46 @@ TEST_F(LockScreenTest, input_wakes_a_black_screen_and_is_not_used_otherwise)
     EXPECT_EQ(screen.state(), LockScreen::State::Idle);
 }
 
+namespace {
+
+//! The color of a pixel of the window of the lock
+unsigned long pixel_of_cover(const LockScreen& screen)
+{
+    ::Display* const xdisplay = tiny::get_display();
+    XSync(xdisplay, False);
+    return Image(screen.window(), 4, 4).at(1, 1);
+}
+
+class LightTheme {
+  public:
+    LightTheme() { tiny::theme.set_variant(tiny::Variant::Light); }
+    ~LightTheme() { tiny::theme.set_variant(tiny::Variant::Dark); }
+};
+
+} // namespace
+
+TEST_F(LockScreenTest, the_dark_theme_has_a_black_background)
+{
+    const LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
+
+    EXPECT_EQ(pixel_of_cover(screen), 0x000000u);
+}
+
+TEST_F(LockScreenTest,
+       the_light_theme_has_a_light_background_and_blank_is_black)
+{
+    const LightTheme light;
+    LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
+    EXPECT_EQ(pixel_of_cover(screen), tiny::theme.widget.normal_bg);
+    EXPECT_NE(tiny::theme.widget.normal_bg, 0x000000u);
+
+    screen.blank(); // a blank screen is black in any theme, it saves power
+    EXPECT_EQ(pixel_of_cover(screen), 0x000000u);
+
+    screen.wake();
+    EXPECT_EQ(pixel_of_cover(screen), tiny::theme.widget.normal_bg);
+}
+
 TEST_F(LockScreenTest, a_screen_with_a_dialog_does_not_go_black)
 {
     LockOptions options;

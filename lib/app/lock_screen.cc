@@ -192,7 +192,7 @@ LockScreen::LockScreen(tiny::Display& display_arg,
     const int screen = XDefaultScreen(xdisplay);
     XSetWindowAttributes attributes = {};
     attributes.override_redirect = True; // no window manager has a say
-    attributes.background_pixel = BlackPixel(xdisplay, screen);
+    attributes.background_pixel = tiny::theme.widget.normal_bg;
     attributes.event_mask = VisibilityChangeMask;
     cover = XCreateWindow(
             display, XDefaultRootWindow(display), 0, 0,
@@ -610,8 +610,14 @@ void LockScreen::set_state(State state)
         dialog->question.set_text("");
         prompt_text.clear();
     }
-    // what is seen in the state
+    // what is seen in the state: the color of the theme behind the time and
+    // the dialog, black when the screen is blank
     const bool seen = state != State::Black;
+    ::Display* const xdisplay = display;
+    XSetWindowBackground(display, cover,
+                         seen ? tiny::theme.widget.normal_bg
+                              : BlackPixel(xdisplay, XDefaultScreen(xdisplay)));
+    XClearWindow(display, cover);
     const auto show = [seen](tiny::Widget& widget, bool wanted) {
         if (seen && wanted) {
             widget.map();
