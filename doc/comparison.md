@@ -28,7 +28,7 @@ cell is wrong, please
 | Window switcher (Alt+Tab) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Live thumbnails of windows | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Always on top | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
-| Move and resize with Alt + drag | ◔ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Move with Alt + drag | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Snapping to the screen edges | ◔ | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ |
 | Half-screen maximize | ◔ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Focus follows mouse | ? | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -62,6 +62,11 @@ work only with its compositor turned on.
 | Several monitors with RandR | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Scaling for high-DPI screens | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Wayland session | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+GNOME Shell has no tray of its own: the XEMBED tray was removed years ago and
+the StatusNotifierItem tray comes from an extension (AppIndicator), which some
+distributions (Ubuntu, for one) install and enable by default. The two rows of
+the trays count what GNOME ships itself, so both are ✗ for it.
 
 GNOME has been phasing out its X11 session. The X11 cells of the GNOME column
 describe the last releases that had it.

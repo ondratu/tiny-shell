@@ -20,7 +20,7 @@ and [The system tray](configuration.md#the-system-tray)).
 | Alt+F4 | close the window |
 | Super + L | lock the screen, see [Screen lock](lock.md) |
 | F11 | fullscreen |
-| Super + mouse | move a window |
+| Alt + left button, or Super + left button | move a window by any point of it |
 
 The shortcuts of the shell follow a change of the keyboard layout. Alt+; is
 taken only from the keys that type a semicolon without Shift or AltGr (in every
