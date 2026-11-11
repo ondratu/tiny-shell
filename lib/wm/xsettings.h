@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,28 @@ struct XSetting {
  */
 std::vector<unsigned char>
 encode_xsettings(const std::vector<XSetting>& settings, uint32_t serial);
+
+/**
+ * @short The settings in the value of `_XSETTINGS_SETTINGS`, in any byte
+ * order; the colors are skipped. What is cut or wrong ends the list: the
+ * settings before it are returned.
+ */
+std::vector<XSetting> decode_xsettings(const std::vector<unsigned char>& bytes);
+
+/**
+ * @short The variant of the theme in a list of settings: `Net/ThemeName` that
+ * ends with `-dark` is the dark one, any other name is the light one; none
+ * when there is no such setting.
+ */
+std::optional<Variant>
+variant_of_xsettings(const std::vector<XSetting>& settings);
+
+/**
+ * @short The variant that the manager of settings of the display (tiny-shell
+ * or a settings daemon) tells the programs; none when there is none. It is
+ * what a program that starts reads to look like the shell.
+ */
+std::optional<Variant> running_variant(::Display* display, int screen);
 
 /**
  * @short What the programs (GTK, Qt) are told about the look.

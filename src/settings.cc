@@ -45,6 +45,7 @@
 #include "display.h"
 #include "spawn.h"
 #include "entry.h"
+#include "app/app_colors.h"
 #include "app/settings_form.h"
 #include "app/wallpaper.h"
 #include "text.h"
@@ -149,15 +150,17 @@ class SettingsApp : public tiny::XftWindow {
                 look_value(config.dock_style)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
-        background(alloc_color(0xf8, 0xf8, 0xf8)),
-        sidebar(alloc_color(0xed, 0xed, 0xed)),
-        field(alloc_color(0xff, 0xff, 0xff)),
-        text_color(alloc_color(0x2e, 0x34, 0x36)),
-        dim(alloc_color(0x6e, 0x74, 0x76)),
-        rule(alloc_color(0xc8, 0xc8, 0xc8)),
-        accent(alloc_color(0x72, 0x9f, 0xcf)),
-        selected(alloc_color(0xdc, 0xe8, 0xf5)),
-        error(alloc_color(0xc0, 0x1c, 0x28))
+        colors(tiny::app::app_colors(
+                tiny::app::variant_in_use(display_arg, 0, config.style))),
+        background(alloc_rgb(colors.background)),
+        sidebar(alloc_rgb(colors.sidebar)),
+        field(alloc_rgb(colors.field)),
+        text_color(alloc_rgb(colors.text)),
+        dim(alloc_rgb(colors.dim)),
+        rule(alloc_rgb(colors.rule)),
+        accent(alloc_rgb(colors.accent)),
+        selected(alloc_rgb(colors.selected)),
+        error(alloc_rgb(colors.error))
     {
         // the font of the shell, when it can be opened, else any sans
         ui_font = text_font(ui_family);
@@ -813,6 +816,7 @@ class SettingsApp : public tiny::XftWindow {
     SettingsForm form;
     std::string ui_family; //!< the family of `ui_font`
     XftFont* ui_font = nullptr;
+    tiny::app::AppColors colors;
     XftColor& background;
     XftColor& sidebar;
     XftColor& field;
