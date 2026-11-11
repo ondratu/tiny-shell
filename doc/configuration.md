@@ -25,7 +25,9 @@ scale = 1.5
 font = DejaVu Sans,sans
 # The size in points at the scale 1, from 4 to 96
 font_size = 12
-# The colors: dark (the default) or light
+# The colors of everything the shell draws, the title bars of the windows
+# included: dark (the default) or light. The panel and the dock can differ,
+# see [panel] style and [dock] style
 style = dark
 # The style of the font, a name that the family has ("Bold", "Italic"); empty
 # is the default style. The title bars are always bold.
@@ -82,6 +84,10 @@ off_after = 15
 # It changes at the start of every minute (the default is below)
 clock_format = %a %e %B %R
 
+# The colors of the panel and of its main menu: auto (the default: follow
+# [theme] style), light or dark whatever the theme is
+style = auto
+
 # The icons of programs (the system tray) in the panel, left of the clock:
 # yes (the default) or no. Set no when another tray (stalonetray, trayer) runs.
 system_tray = yes
@@ -100,6 +106,9 @@ secondary = auto
 placement = keep
 
 [dock]
+# The colors of the dock and of its menus: auto (the default: follow
+# [theme] style), light or dark whatever the theme is
+style = auto
 # When the dock is shown: autohide (the default: it is hidden while the active
 # window covers it, and the pointer at the bottom edge of the screen shows it
 # until the pointer leaves the dock), on (always) or off (never)

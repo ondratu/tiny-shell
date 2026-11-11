@@ -42,7 +42,8 @@ The documentation is in [doc/](doc/) and is published as a web site at
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not themable to the last pixel. There are two looks, dark and light, each with
-  a wallpaper of its own (a hazel tree by day and by night); they can be scaled and
+  a wallpaper of its own (a hazel tree by day and by night), and the panel and
+  the dock can keep a look of their own in any theme; they can be scaled and
   configured within reason.
 
 ## Quick start

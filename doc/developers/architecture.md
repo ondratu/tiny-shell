@@ -24,7 +24,11 @@
 - **Two looks, same sizes.** The theme has the variants `Dark` (the default)
   and `Light`; a color belongs to `Style::colorize()`, never to a constructor
   or a widget, so that the variant can change while the shell runs
-  (`Widget::restyle()`).
+  (`Widget::restyle()`). The panel and the dock can have a `Look` of their
+  own (`Auto` follows the theme): their widgets draw with
+  `ShellTheme::panel_widgets` and `dock_widgets`, which a container gives to
+  what it holds (`Widget::set_style_override()`); the title bars and the
+  window buttons follow the variant of the theme.
 - **Quiet by default.** A message for developers ("unhandled property") is
   written with `TINY_LOG()`, which prints only in a `make DEBUG=1` build. A
   problem the user can act on goes to `tiny::error()`.
