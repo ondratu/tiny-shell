@@ -21,8 +21,11 @@ their icons.
 and the fields of the chosen section. The sections are in the order of the
 settings of GNOME:
 
-- **Appearance:** the scale, the wallpaper and how it covers the screen (a small
-  picture of the file above the path shows that the path is right).
+- **Appearance:** the style of the theme (Dark or Light), the style of the panel
+  and of the dock (Follow the theme, Light or Dark: each of them can keep its
+  look in the other theme), the scale, the wallpaper and how it covers the
+  screen (a small picture of the file above the path shows that the path is
+  right).
 - **Fonts:** the font (a family or a list of families separated by commas, like
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
 - **Desktop:** the mode of the dock (Auto-hide, On, Off) and the format of the
@@ -84,7 +87,8 @@ without a new login. To remove a wallpaper, clear the row: the plain color of
 the theme is back after the next login.
 
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
-`font_style`, `[theme] scale`, `[commands] terminal`, `[xft] antialias`,
+`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`,
+`[commands] terminal`, `[xft] antialias`,
 `hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]` ...) to the file of
 the user, so the others still come from the global file, in the way that is
 described in [Configuration](configuration.md) (the comments of the file are lost), and closes the program.

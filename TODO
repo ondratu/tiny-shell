@@ -71,10 +71,11 @@ keys are ignored by the reader, so keys can be added without a new format.
   grabs them again when the layout changes) becomes a table of bindings, a
   `[keys]` section (`Alt+Tab = next-window`) parsed with `XStringToKeysym`. Lua
   uses the same registry.
-- Switching the colors (`Manager::set_variant`, the actions `theme-*`).
-  Missing: a menu item or a key for `theme-toggle`, `tiny-settings` (the field
-  for the style, and `tiny-fonts`/`tiny-settings` following it: their colors
-  are fixed now), a switch by time of day.
+- Switching the colors (`Manager::set_variant`, the actions `theme-*`; the
+  style of the theme, of the panel and of the dock is in `tiny-settings`).
+  Missing: a menu item or a key for `theme-toggle`, `tiny-fonts`,
+  `tiny-settings` and `tiny-about` following the style (their colors are fixed
+  and light now), a switch by time of day.
 - Reload without a restart (`reload_config` in `src/main.cc`). What is left:
   the scale and the font of the shell itself still need a restart (the sizes of
   the panel, the dock and the frames are computed once), and a key or a menu
@@ -83,8 +84,8 @@ keys are ignored by the reader, so keys can be added without a new format.
   Still missing: applying a setting at once when it can (the monitors and the
   wallpaper are applied at once, a running shell is told over X: a
   `ClientMessage` or a property on the root window; the dock mode and the
-  clock are the first candidates), the other keys (`reboot`, `poweroff`) in the
-  form and the theme (Appearance).
+  clock are the first candidates) and the other keys (`reboot`, `poweroff`) in
+  the form.
 
 ### Watching files
 

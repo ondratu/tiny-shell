@@ -97,9 +97,13 @@ comparison with other window managers is in the [comparison](comparison.md).
   dock shows their icons) and wallpapers for the light and the dark style,
   installed by `make install` (see [Installation](install.md#installation)).
 - **Look:** two built-in themes, dark (the default) and light, chosen by
-  `[theme] style` and switchable while the shell runs (the actions `theme-dark`,
-  `theme-light` and `theme-toggle`; no key or menu item is bound to them yet,
-  see the key bindings in the plan).
+  `[theme] style` or in `tiny-settings`, and switchable while the shell runs
+  (the actions `theme-dark`, `theme-light` and `theme-toggle`; no key or menu
+  item is bound to them yet, see the key bindings in the plan). The theme
+  changes everything the shell draws, the title bars of the windows too. The
+  panel and the dock each have a style of their own, `[panel] style` and
+  `[dock] style`: `auto` follows the theme, `light` and `dark` keep that look in
+  any theme (a dark panel and dock over a light desktop, for example).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,
   `run-dialog`, `launcher`, `next-window`, `show-desktop`, `window-menu`,
   `exec:<command>`...),
