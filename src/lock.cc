@@ -35,7 +35,6 @@
 #include "app/lock_check.h"
 #include "app/lock_screen.h"
 #include "display.h"
-#include "display_power.h"
 #include "spawn.h"
 #include "theme.h"
 #include "wm/config.h"
@@ -142,10 +141,10 @@ int main(int argc, char** argv)
             tiny::app::LockOptions options;
             options.date_format =
                     tiny::app::date_format_of(config.clock_format);
-            // an X server with DPMS switches the display off itself (the shell
-            // has set the time); without it the lock goes black in that time
-            const tiny::DisplayPower power(tiny::get_display());
-            if (config.display_off_minutes > 0 && !power.enabled()) {
+            // the lock goes black when the display would go off, as the window
+            // of the shell does when it is not locked (some X servers do
+            // nothing for DPMS)
+            if (config.display_off_minutes > 0) {
                 options.blank_after =
                         std::chrono::minutes(config.display_off_minutes);
                 options.from_last_input = true;

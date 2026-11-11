@@ -21,9 +21,9 @@ namespace tiny::app {
 struct LockOptions {
     //! `strftime()` format of the date under the time, "" is no date
     std::string date_format = "%a %e %B";
-    //! After this time without input the screen is black; zero is never. The
-    //! lock does it when the X server can't switch the display off (no
-    //! DPMS), with the time of `[display] off_after`.
+    //! After this time without input the screen is black; zero is never. It
+    //! is the time of `[display] off_after`: the display is off by software
+    //! (some X servers do nothing for DPMS), and the lock goes on being dark.
     std::chrono::milliseconds blank_after{0};
     //! Count `blank_after` from the last input in any program (the idle time
     //! of the X server), not from the moment the screen was shown: a screen
@@ -67,8 +67,8 @@ class LockScreen {
      * only then the check of the password starts, so a fingerprint or a face
      * is looked for when somebody is there); Escape goes back to `Idle`. After
      * `LockOptions::blank_after` without input in `Idle` the screen is `Black`,
-     * and the next input wakes it to `Idle`. The black screen is for an X server
-     * that has no DPMS; with DPMS the server switches the display off.
+     * and the next input wakes it to `Idle`. The black screen is the display that
+     * is off: the shell covers the screen the same way when it is not locked.
      */
     enum class State { Idle, Dialog, Black };
 
