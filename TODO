@@ -71,13 +71,9 @@ keys are ignored by the reader, so keys can be added without a new format.
   grabs them again when the layout changes) becomes a table of bindings, a
   `[keys]` section (`Alt+Tab = next-window`) parsed with `XStringToKeysym`. Lua
   uses the same registry.
-- Switching the colors (`Manager::set_variant`, the actions `theme-*`; the
-  style of the theme, of the panel and of the dock is in `tiny-settings`).
-  `tiny-settings`, `tiny-fonts`, `tiny-about` and `tiny-lock` read the style
-  from XSETTINGS when they start.
-  Missing: a menu item or a key for `theme-toggle`, a program that runs
-  following a change of the style (it would watch `_XSETTINGS_SETTINGS`), a
-  switch by time of day.
+- Switching the colors: a menu item or a key for `theme-toggle` (the actions
+  `theme-*` are there), the run dialog and the unresponsive dialog with a style
+  of their own (they follow the theme only), and a switch by time of day.
 - Reload without a restart (`reload_config` in `src/main.cc`). What is left:
   the scale and the font of the shell itself still need a restart (the sizes of
   the panel, the dock and the frames are computed once), and a key or a menu
@@ -279,10 +275,12 @@ next steps:
   becomes the settings daemon and publishes one source of truth (the ini
   file) to every channel applications read. The design is below; the open
   questions are in "Ideas that are not decided".
-  - XSETTINGS manager (`wm/xsettings.*`). Missing: the cursor
+  - XSETTINGS manager (`wm/xsettings.*`; the theme name, the font, the DPI and
+    the Xft options are published). Missing: the cursor
     (`Gtk/CursorThemeName`, `Gtk/CursorThemeSize`, with `Xcursor.*`),
-    `Net/IconThemeName`, and the colors (`Gtk/ColorScheme` is only for GTK
-    3.24+ with a new theme).
+    `Net/IconThemeName`, and a program of ours that runs following a change
+    of the style (it would watch `_XSETTINGS_SETTINGS`; they read it at the
+    start now).
   - `RESOURCE_MANAGER` property on the root window (`lib/wm/xresources.*`).
     Read by an application at its start only; has no light/dark flag. Output
     only, the storage is the ini file. Missing: `Xft.dpi` and `Xcursor.*`
@@ -334,9 +332,7 @@ Things to discuss before they go to a section above.
 - Themes: only two built-in, finely tuned themes (light and dark; they are
   there, `Style::colorize()` has the colors of both), no user themes and no
   CSS (decided to lean this way, not final; a third, custom one would be
-  another `Variant` read from the ini file). Open: the light variant is a first
-  version (the title bars and window buttons are light in both), and the real
-  work is a matching look in GTK3, GTK4 and Qt, since each toolkit is themed
+  another `Variant` read from the ini file). Open: the real work is a matching look in GTK3, GTK4 and Qt, since each toolkit is themed
   differently; probably take a ready pair (Adwaita / Adwaita-dark for GTK,
   `QT_QPA_PLATFORMTHEME=gtk3` or Kvantum for Qt) and own only the colors of
   the shell. Also open: the storage format (ini; `.XDefaults` has no dark
