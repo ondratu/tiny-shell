@@ -102,8 +102,9 @@ comparison with other window managers is in the [comparison](comparison.md).
   item is bound to them yet, see the key bindings in the plan). The theme
   changes everything the shell draws, the title bars of the windows too, and
   the small programs (settings, fonts, about, the lock screen) start in it. The
-  panel and the dock each have a style of their own, `[panel] style` and
-  `[dock] style`: `auto` follows the theme, `light` and `dark` keep that look in
+  panel, the dock, the launcher and the lock screen each have a style of their
+  own, `[panel] style`, `[dock] style`, `[launcher] style` and `[lock] style`:
+  `auto` follows the theme, `light` and `dark` keep that look in
   any theme (a dark panel and dock over a light desktop, for example).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,
   `run-dialog`, `launcher`, `next-window`, `show-desktop`, `window-menu`,
