@@ -99,7 +99,7 @@ when it starts, so a change of the rest is seen after you log out and in again.
 
 `build/tiny-fonts` (made by `make`) shows the font families of the system, the
 list that `fc-list : family` prints, read from fontconfig. Every family is a
-cell with "Aa" in the family (black on white) and its name under it. Type at the
+cell with "Aa" in the family (in the colors of the style) and its name under it. Type at the
 top to search the families (Escape clears the search). Scroll with the wheel or
 the keys, click a family (or press Return) to see its specimen: the small
 letters, the capitals, the digits and the signs, then one sentence in 8, 12, 16,

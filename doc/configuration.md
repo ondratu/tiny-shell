@@ -209,6 +209,12 @@ changes. The settings come from the configuration file:
 - `Xft/Antialias`, `Xft/Hinting`, `Xft/HintStyle` and `Xft/RGBA` from `[xft]`
   (what is not set is not published)
 
+`tiny-settings`, `tiny-fonts`, `tiny-about` and `tiny-lock` read `Net/ThemeName`
+from the manager of settings when they start and take the dark or the light
+colors from it (a name that ends with `-dark` is the dark one). Without a
+manager of settings they use `[theme] style`. A program that already runs
+keeps its colors until it is started again.
+
 A settings daemon that already runs (`gsd-xsettings`, `xsettingsd`) is left
 alone and tiny-shell publishes nothing; the same happens with `[theme] xsettings
 = no`. The cursor theme is not published yet.
