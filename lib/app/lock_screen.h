@@ -20,7 +20,7 @@ namespace tiny::app {
 //! What the lock shows and when it goes dark
 struct LockOptions {
     //! `strftime()` format of the date under the time, "" is no date
-    std::string date_format = "%a %e %B";
+    std::string date_format = "%A %e %B";
     //! After this time without input the screen is black; zero is never. It
     //! is the time of `[display] off_after`: the display is off by software
     //! (some X servers do nothing for DPMS), and the lock goes on being dark.

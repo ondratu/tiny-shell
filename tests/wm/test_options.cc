@@ -120,7 +120,7 @@ TEST(OptionsTest, info_has_the_settings_and_the_directories)
     EXPECT_NE(tiny::wm::info_text(tiny::wm::Config(), {}, {})
                       .find("Wallpaper: none"),
               std::string::npos);
-    EXPECT_NE(text.find("Clock: %a %e %B %R"), std::string::npos);
+    EXPECT_NE(text.find("Clock: %A %e %B %R"), std::string::npos);
     config.clock_format.clear();
     EXPECT_NE(tiny::wm::info_text(config, {}, {}).find("Clock: none"),
               std::string::npos);

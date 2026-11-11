@@ -49,7 +49,7 @@ namespace tiny::wm {
  * off_after = 15
  *
  * [panel]
- * clock_format = %a %e %B %R
+ * clock_format = %A %e %B %R
  * system_tray = yes
  *
  * [monitors]
@@ -113,7 +113,7 @@ struct Config {
     //! [wallpaper] mode, one of `wallpaper_choices()`; "" is fill
     std::string wallpaper_mode;
     //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
-    std::string clock_format = "%a %e %B %R";
+    std::string clock_format = "%A %e %B %R";
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
     //! [monitors] primary: the monitor of the panel and the dock, a number
