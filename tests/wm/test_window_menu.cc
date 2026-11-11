@@ -159,6 +159,7 @@ TEST_F(WindowMenuStateTest, follows_the_state_of_the_window)
 class WindowMenuTest : public WindowMenuStateTest {
   protected:
     WidgetFont font; // the text of the menu
+    const ShellFonts shell_fonts;
 
     void SetUp() override
     {

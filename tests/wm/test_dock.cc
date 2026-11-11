@@ -1188,6 +1188,7 @@ TEST_F(DockTest, clicking_an_icon_focuses_its_window)
 class DockFavoritesTest : public DockTest {
   protected:
     WidgetFont font; // the text of the menu
+    const ShellFonts shell_fonts;
 
     static std::vector<tiny::wm::DockFavorite>
     favorites(const std::vector<std::string>& ids)

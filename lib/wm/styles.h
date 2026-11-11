@@ -4,8 +4,8 @@
 
 namespace tiny::wm {
 
-// The buttons and the title bar of the windows are light in both variants,
-// like the windows of most applications
+// The buttons and the title bar of the windows follow the variant: they are
+// light in the light one and dark in the dark one
 class ButtonStyle : public tiny::Style {
   public:
     ButtonStyle()
@@ -17,13 +17,14 @@ class ButtonStyle : public tiny::Style {
     void colorize(Variant variant) override
     {
         Style::colorize(variant);
-        normal_bg = 0xF8F8F8;
-        normal_fg = 0x2E3436;
+        const bool dark = variant == Variant::Dark;
+        normal_bg = dark ? 0x303436 : 0xF8F8F8;
+        normal_fg = dark ? 0xEEEEEC : 0x2E3436;
 
-        disable_fg = 0x8B8E8F;
+        disable_fg = dark ? 0x6E7476 : 0x8B8E8F;
 
-        hover_bg = 0x2E3436;
-        hover_fg = 0xF8F8F8;
+        hover_bg = dark ? 0x555753 : 0x2E3436;
+        hover_fg = dark ? 0xFFFFFF : 0xF8F8F8;
     }
 }; // ButtonStyle
 
@@ -41,10 +42,12 @@ class HeaderStyle : public tiny::Style {
     void colorize(Variant variant) override
     {
         Style::colorize(variant);
-        normal_bg = 0xF8F8F8;
-        normal_fg = 0x0E1416;
+        const bool dark = variant == Variant::Dark;
+        normal_bg = dark ? 0x303436 : 0xF8F8F8;
+        normal_fg = dark ? 0xEEEEEC : 0x0E1416;
+        normal_br = dark ? 0x1A1D1F : 0xD8D6D4;
 
-        disable_fg = 0x6E7476;
+        disable_fg = dark ? 0x888A85 : 0x6E7476;
     }
 
 }; // HeaderStyle

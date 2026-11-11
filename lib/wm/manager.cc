@@ -349,6 +349,17 @@ void Manager::set_variant(Variant variant)
     } else if (wallpaper_follows_theme) {
         run_wallpaper();
     }
+    restyle_widgets();
+}
+
+void Manager::set_looks(Look panel_look, Look dock_look)
+{
+    shell_theme.set_looks(panel_look, dock_look);
+    restyle_widgets();
+}
+
+void Manager::restyle_widgets()
+{
     wm_panel.restyle();
     wm_panel.menu_main.restyle();
     wm_dock.restyle();

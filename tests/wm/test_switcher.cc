@@ -64,6 +64,7 @@ class SwitcherTest : public ::testing::Test {
     std::vector<std::string> names;
     std::vector<int> sizes;
     WidgetFont font;
+    const ShellFonts shell_fonts;
     Switcher switcher;
 };
 

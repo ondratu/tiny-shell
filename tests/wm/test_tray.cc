@@ -64,6 +64,8 @@ class TrayTest : public ::testing::Test {
     }
 
     WidgetFont font;
+
+    const ShellFonts shell_fonts;
     tiny::wm::Panel panel;
     Tray tray{panel, root_window(), 0};
 };

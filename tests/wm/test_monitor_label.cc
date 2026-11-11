@@ -12,6 +12,7 @@ class MonitorLabelTest : public ::testing::Test {
   protected:
     HeaderFont header_font;
     WidgetFont widget_font;
+    const ShellFonts shell_fonts;
 };
 
 } // namespace

@@ -5,6 +5,7 @@
 class UnresponsiveDialogTest : public ::testing::Test {
   protected:
     WidgetFont font;
+    const ShellFonts shell_fonts;
 
     // Children of the dialog: two lines and the buttons wait and quit
     static ::Window child(const tiny::wm::UnresponsiveDialog& dialog,

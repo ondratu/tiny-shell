@@ -113,6 +113,8 @@ class LauncherTest : public ::testing::Test {
     }
 
     WidgetFont font;
+
+    const ShellFonts shell_fonts;
     fs::path root;
     std::optional<EnvVar> data_home;
     EnvVar data_dirs{"XDG_DATA_DIRS", "/nonexistent"};

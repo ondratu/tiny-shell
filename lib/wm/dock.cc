@@ -506,6 +506,9 @@ Dock::Dock():
     mark(shell_theme.dock_mark, shell_theme.dock_marker, shell_theme.icon)
 {
     name = "wm_dock";
+    set_style_override(&shell_theme.dock_widgets);
+    menu.set_style_override(&shell_theme.dock_widgets);
+    windows_menu.set_style_override(&shell_theme.dock_widgets);
     menu.on_item = [this](size_t index) { choose(index); };
     menu.on_hide = [this] {
         windows_menu.unmap();

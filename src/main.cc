@@ -132,6 +132,10 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     if (old != nullptr && old->style != config.style) {
         manager.set_variant(config.style);
     }
+    if (old != nullptr && (old->panel_style != config.panel_style ||
+                           old->dock_style != config.dock_style)) {
+        manager.set_looks(config.panel_style, config.dock_style);
+    }
     manager.set_power_commands(config.reboot_command, config.poweroff_command);
     manager.set_terminal(config.terminal);
     manager.set_lock_command(config.lock_command);
@@ -306,6 +310,7 @@ int main(int argc, char** argv)
         theme.set_font(config.font);
         theme.set_font_style(config.font_style);
         theme.set_variant(config.style);
+        theme.set_looks(config.panel_style, config.dock_style);
         theme.init();
         // the fonts are closed while the display is open, also when it fails
         struct ReleaseFonts {

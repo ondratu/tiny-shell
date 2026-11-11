@@ -28,6 +28,7 @@ static bool appears(const std::filesystem::path& path)
 class RunDialogTest : public ::testing::Test {
   protected:
     WidgetFont font;
+    const ShellFonts shell_fonts;
 };
 
 TEST_F(RunDialogTest, realize_centers_the_dialog_on_the_root_window)

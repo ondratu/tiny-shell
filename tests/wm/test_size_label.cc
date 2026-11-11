@@ -5,6 +5,7 @@
 class SizeLabelTest : public ::testing::Test {
   protected:
     const WidgetFont font;
+    const ShellFonts shell_fonts;
     tiny::wm::SizeLabel label{1, 1};
 
     void SetUp() override

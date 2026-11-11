@@ -66,6 +66,8 @@ class SwitcherPanelTest : public ::testing::Test {
     int cell_y() { return border() + 2; }
 
     WidgetFont font;
+
+    const ShellFonts shell_fonts;
     SwitcherPanel panel{icon, cell};
 };
 

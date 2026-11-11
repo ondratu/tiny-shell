@@ -126,6 +126,7 @@ class HeaderTest : public ::testing::Test {
     {
         original = tiny::wm::shell_theme.header;
         with_font = original;
+        with_font.colorize(tiny::Variant::Light); // dark text on light
         with_font.init();
         tiny::wm::shell_theme.header = with_font;
     }
@@ -249,6 +250,26 @@ TEST_F(HeaderTest, long_title_starts_at_the_left_padding)
     for (int y = 0; y < 24; ++y) {
         EXPECT_EQ(img.at(0, y), bg()) << "row " << y; // not cut on the left
     }
+}
+
+TEST_F(HeaderTest, the_dark_variant_has_a_dark_title_bar_with_light_text)
+{
+    tiny::wm::shell_theme.header.colorize(tiny::Variant::Dark);
+    tiny::wm::Header h(300, 25);
+    h.realize(root_window(), 0, 0);
+    h.map_all();
+    h.set_title("Window title");
+
+    const Image img = image_of(h);
+    EXPECT_EQ(img.at(0, 0), 0x303436u);
+    // some of the pixels of the text are light
+    unsigned int lightest = 0;
+    for (int y = 0; y < img.height - 1; ++y) {
+        for (int x = 0; x < img.width; ++x) {
+            lightest = std::max(lightest, (img.at(x, y) >> 16) & 0xFFu);
+        }
+    }
+    EXPECT_GT(lightest, 0xC0u);
 }
 
 TEST_F(HeaderTest, set_disable_makes_the_text_lighter)
