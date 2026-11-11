@@ -141,9 +141,9 @@ class SettingsApp : public tiny::XftWindow {
                         ? ""
                         : tiny::wm::placement_name(config.monitor_placement),
                 blank_value(config.lock_blank_minutes),
-                config.lock_idle_minutes == 0
+                config.lock_delay_minutes < 0
                         ? ""
-                        : std::to_string(config.lock_idle_minutes),
+                        : std::to_string(config.lock_delay_minutes),
                 display_off_value(config.display_off_minutes)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
@@ -357,11 +357,11 @@ class SettingsApp : public tiny::XftWindow {
                         {"lock", "blank_after",
                          v.blank_screen.empty() ? "1" : v.blank_screen});
             }
-            if (v.idle_lock != initial.idle_lock) {
+            if (v.lock_delay != initial.lock_delay) {
                 // the first choice, "", is never
                 changed.push_back(
-                        {"lock", "idle_after",
-                         v.idle_lock.empty() ? "never" : v.idle_lock});
+                        {"lock", "delay",
+                         v.lock_delay.empty() ? "never" : v.lock_delay});
             }
             if (v.display_off != initial.display_off) {
                 // the first choice, "", leaves the X server as it is
@@ -645,7 +645,7 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
                     {SettingsForm::Field::MonitorPlacement, "Position"},
                     {SettingsForm::Field::BlankScreen, "Blank after"},
-                    {SettingsForm::Field::IdleLock, "Lock after"},
+                    {SettingsForm::Field::LockDelay, "Lock after"},
                     {SettingsForm::Field::DisplayOff, "Display off"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {

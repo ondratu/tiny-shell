@@ -82,7 +82,7 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::SecondaryMonitor,
                                           SettingsForm::Field::MonitorPlacement,
                                           SettingsForm::Field::BlankScreen,
-                                          SettingsForm::Field::IdleLock,
+                                          SettingsForm::Field::LockDelay,
                                           SettingsForm::Field::DisplayOff};
 
 } // namespace
@@ -121,7 +121,7 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.secondary_monitor),
             TextField(initial.monitor_placement),
             TextField(initial.blank_screen),
-            TextField(initial.idle_lock),
+            TextField(initial.lock_delay),
             TextField(initial.display_off)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
@@ -175,7 +175,7 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::SecondaryMonitor),
             text(Field::MonitorPlacement),
             text(Field::BlankScreen),
-            text(Field::IdleLock),
+            text(Field::LockDelay),
             text(Field::DisplayOff)};
 }
 
@@ -213,7 +213,7 @@ SettingsForm::section_fields(Section section)
                                                 Field::SecondaryMonitor,
                                                 Field::MonitorPlacement};
     static const std::vector<Field> power = {
-            Field::BlankScreen, Field::IdleLock, Field::DisplayOff};
+            Field::BlankScreen, Field::LockDelay, Field::DisplayOff};
     static const std::vector<Field> applications = {Field::Terminal};
     switch (section) {
         case Section::Appearance:
@@ -274,8 +274,8 @@ const char* SettingsForm::hint(Field field)
                    "one (runs xrandr).";
         case Field::BlankScreen:
             return "The lock screen goes black after this time.";
-        case Field::IdleLock:
-            return "The screen is locked after this time without input.";
+        case Field::LockDelay:
+            return "The screen is locked this long after the display goes off.";
         case Field::DisplayOff:
             return "The display goes off after this time without input.";
         case Field::Terminal:
@@ -295,7 +295,7 @@ bool SettingsForm::is_choice(Field field)
            field == Field::Dock || field == Field::PrimaryMonitor ||
            field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::BlankScreen ||
-           field == Field::IdleLock || field == Field::DisplayOff;
+           field == Field::LockDelay || field == Field::DisplayOff;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -347,8 +347,8 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     if (field == Field::BlankScreen) {
         return wm::blank_choices();
     }
-    if (field == Field::IdleLock) {
-        return wm::idle_choices();
+    if (field == Field::LockDelay) {
+        return wm::lock_delay_choices();
     }
     if (field == Field::DisplayOff) {
         return wm::display_off_choices();
@@ -433,8 +433,8 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_blank_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
-        case Field::IdleLock:
-            return wm::valid_idle_choice(value)
+        case Field::LockDelay:
+            return wm::valid_lock_delay_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
         case Field::DisplayOff:
@@ -498,7 +498,7 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.secondary_monitor),
             clean(v.monitor_placement),
             clean(v.blank_screen),
-            clean(v.idle_lock),
+            clean(v.lock_delay),
             clean(v.display_off)};
 }
 
@@ -892,7 +892,7 @@ bool SettingsForm::act(size_t target, int x)
         case SecondaryMonitorField:
         case MonitorPlacementField:
         case BlankScreenField:
-        case IdleLockField:
+        case LockDelayField:
         case DisplayOffField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {

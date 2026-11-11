@@ -1710,7 +1710,7 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
 TEST(SettingsFormPowerTest, the_power_section_has_the_blank_screen)
 {
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
-              (std::vector<Field>{Field::BlankScreen, Field::IdleLock,
+              (std::vector<Field>{Field::BlankScreen, Field::LockDelay,
                                   Field::DisplayOff}));
     EXPECT_EQ(SettingsForm::section_of(Field::BlankScreen),
               SettingsForm::Section::Power);
@@ -1788,55 +1788,55 @@ TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
 
 // The lock when idle
 
-TEST(SettingsFormPowerTest, the_idle_lock_is_a_choice_of_the_power_section)
+TEST(SettingsFormPowerTest, the_lock_delay_is_a_choice_of_the_power_section)
 {
-    EXPECT_EQ(SettingsForm::section_of(Field::IdleLock),
+    EXPECT_EQ(SettingsForm::section_of(Field::LockDelay),
               SettingsForm::Section::Power);
-    EXPECT_TRUE(SettingsForm::is_choice(Field::IdleLock));
-    EXPECT_NE(std::string(SettingsForm::hint(Field::IdleLock)), "");
+    EXPECT_TRUE(SettingsForm::is_choice(Field::LockDelay));
+    EXPECT_NE(std::string(SettingsForm::hint(Field::LockDelay)), "");
 }
 
 TEST(SettingsFormPowerTest, never_is_the_first_choice_and_the_default)
 {
     SettingsForm form = make();
 
-    EXPECT_EQ(form.text(Field::IdleLock), "");
-    EXPECT_EQ(form.choice_label(Field::IdleLock), "Never");
-    EXPECT_EQ(form.problem(Field::IdleLock), "");
+    EXPECT_EQ(form.text(Field::LockDelay), "");
+    EXPECT_EQ(form.choice_label(Field::LockDelay), "Never");
+    EXPECT_EQ(form.problem(Field::LockDelay), "");
 }
 
-TEST(SettingsFormPowerTest, the_arrows_go_through_the_times_of_the_idle_lock)
+TEST(SettingsFormPowerTest, the_arrows_go_through_the_times_of_the_lock_delay)
 {
     SettingsForm form = make();
-    focus_on(form, Field::IdleLock);
+    focus_on(form, Field::LockDelay);
 
-    for (const char* label :
-         {"5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour"}) {
+    for (const char* label : {"Immediately", "1 minute", "2 minutes",
+                              "5 minutes", "10 minutes", "30 minutes"}) {
         form.key(Key::Right);
-        EXPECT_EQ(form.choice_label(Field::IdleLock), label);
+        EXPECT_EQ(form.choice_label(Field::LockDelay), label);
     }
     form.key(Key::Right);
-    EXPECT_EQ(form.choice_label(Field::IdleLock), "Never"); // round
+    EXPECT_EQ(form.choice_label(Field::LockDelay), "Never"); // round
 }
 
-TEST(SettingsFormPowerTest, an_idle_time_that_is_not_a_choice_is_a_problem)
+TEST(SettingsFormPowerTest, a_delay_that_is_not_a_choice_is_a_problem)
 {
     SettingsForm::Values values = V("Gamma", "xterm -e", "1");
-    values.idle_lock = "1"; // one minute is a choice of the black screen only
+    values.lock_delay = "3";
     const SettingsForm form = make(values);
 
-    EXPECT_NE(form.problem(Field::IdleLock), "");
+    EXPECT_NE(form.problem(Field::LockDelay), "");
     EXPECT_NE(form.problem(), "");
 }
 
-TEST(SettingsFormPowerTest, the_idle_time_is_kept_in_the_values_of_the_form)
+TEST(SettingsFormPowerTest, the_lock_delay_is_kept_in_the_values_of_the_form)
 {
     SettingsForm::Values values = V("Gamma", "xterm -e", "1");
-    values.idle_lock = "30";
+    values.lock_delay = "30";
     const SettingsForm form = make(values);
 
-    EXPECT_EQ(form.values().idle_lock, "30");
-    EXPECT_EQ(form.clean_values().idle_lock, "30");
+    EXPECT_EQ(form.values().lock_delay, "30");
+    EXPECT_EQ(form.clean_values().lock_delay, "30");
 }
 
 // The power saving of the display

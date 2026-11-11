@@ -71,8 +71,8 @@ class SettingsForm {
         SecondaryMonitor, //!< the same
         MonitorPlacement, //!< a choice: keep, right, left, above or below
         BlankScreen,      //!< a choice: the minutes to a black lock screen
-        IdleLock,         //!< a choice: the minutes to the lock, or never
-        DisplayOff        //!< a choice: the minutes to switch the display off
+        LockDelay, //!< a choice: the minutes from the display off to the lock
+        DisplayOff //!< a choice: the minutes to switch the display off
     };
 
     //! What has the keyboard in the list of fonts
@@ -127,9 +127,9 @@ class SettingsForm {
         //! The minutes without input to a black lock screen ("" is 1, then
         //! 5, 10, 15 and "never")
         std::string blank_screen{};
-        //! The minutes without input to lock the screen ("" is never, then
-        //! 5, 10, 15, 30 and 60)
-        std::string idle_lock{};
+        //! The minutes from the display off to the lock ("" is never, then
+        //! 0, 1, 2, 5, 10 and 30)
+        std::string lock_delay{};
         //! The minutes without input to switch the display off ("" leaves
         //! the X server as it is, then "never", 5, 10, 15, 30 and 60)
         std::string display_off{};
@@ -374,7 +374,7 @@ class SettingsForm {
         SecondaryMonitorField,
         MonitorPlacementField,
         BlankScreenField,
-        IdleLockField,
+        LockDelayField,
         DisplayOffField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,

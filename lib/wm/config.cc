@@ -219,25 +219,37 @@ bool parse_blank_after(const std::string& text, int& minutes)
     return parse_allowed_minutes(trim(text), {1, 5, 10, 15}, minutes);
 }
 
-XftChoices idle_choices()
+XftChoices lock_delay_choices()
 {
     static constexpr XftChoice times[] = {
-            {"", "Never"},        {"5", "5 minutes"},   {"10", "10 minutes"},
-            {"15", "15 minutes"}, {"30", "30 minutes"}, {"60", "1 hour"}};
+            {"", "Never"},       {"0", "Immediately"}, {"1", "1 minute"},
+            {"2", "2 minutes"},  {"5", "5 minutes"},   {"10", "10 minutes"},
+            {"30", "30 minutes"}};
     return {std::begin(times), std::end(times)};
 }
 
-bool valid_idle_choice(const std::string& text)
+bool valid_lock_delay_choice(const std::string& text)
 {
-    const XftChoices choices = idle_choices();
+    const XftChoices choices = lock_delay_choices();
     return text == "never" ||
            std::any_of(choices.begin(), choices.end(),
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
-bool parse_idle_after(const std::string& text, int& minutes)
+bool parse_lock_delay(const std::string& text, int& minutes)
 {
-    return parse_allowed_minutes(trim(text), {5, 10, 15, 30, 60}, minutes);
+    const std::string_view value = trim(text);
+    if (value == "never") {
+        minutes = -1;
+        return true;
+    }
+    for (const int allowed : {0, 1, 2, 5, 10, 30}) {
+        if (value == std::to_string(allowed)) {
+            minutes = allowed;
+            return true;
+        }
+    }
+    return false;
 }
 
 XftChoices display_off_choices()
@@ -473,9 +485,9 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[lock] blank_after must be 1, 5, 10, 15 or never");
         }
     }
-    if (const auto value = ini.get("lock", "idle_after")) {
-        if (!parse_idle_after(*value, config.lock_idle_minutes)) {
-            problem("[lock] idle_after must be 5, 10, 15, 30, 60 or never");
+    if (const auto value = ini.get("lock", "delay")) {
+        if (!parse_lock_delay(*value, config.lock_delay_minutes)) {
+            problem("[lock] delay must be 0, 1, 2, 5, 10, 30 or never");
         }
     }
     if (const auto value = ini.get("display", "off_after")) {

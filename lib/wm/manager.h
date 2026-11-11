@@ -94,11 +94,15 @@ class Manager : public tiny::Object {
     }
 
     /**
-     * Lock the screen after this long without input (`[lock] idle_after`);
-     * zero is never. Without the counter of the idle time in the X server
-     * nothing is locked and a message says so, once.
+     * Lock the screen this long after the display is switched off
+     * (`[lock] delay`); zero is at once, less than zero is never. The display
+     * goes off after `[display] off_after` (see `set_display_off()`, or the
+     * time the X server has when that is not set); when it never goes off the
+     * delay counts from the last input, and zero then locks nothing. Without
+     * the counter of the idle time in the X server nothing is locked and a
+     * message says so, once.
      */
-    void set_lock_idle(std::chrono::minutes after);
+    void set_lock_delay(std::chrono::minutes delay);
 
     /**
      * Switch the display off after this long without input
@@ -415,6 +419,9 @@ class Manager : public tiny::Object {
     void lock_screen();
     //! Look at the idle time and set the timer for the next look
     void check_idle_lock();
+    void update_idle_lock();
+    void apply_display_power(std::chrono::minutes after);
+    tiny::DisplayPower& power();
 
     void connect_window(Window* window);
 
@@ -687,6 +694,8 @@ class Manager : public tiny::Object {
     std::unique_ptr<IdleTime> idle_time; //!< made with the first limit
     std::unique_ptr<IdleLock> idle_lock;
     tiny::Timers::Id idle_timer = 0;
+    std::chrono::minutes lock_delay{-1};  //!< [lock] delay, less than 0 never
+    std::chrono::minutes display_off{-1}; //!< [display] off_after
     std::unique_ptr<tiny::DisplayPower> display_power; //!< made when needed
     //! What the X server had before the shell changed it (the time, empty
     //! for DPMS off); "Unchanged" puts it back
