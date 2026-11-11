@@ -1017,3 +1017,51 @@ TEST(ConfigTest, the_form_offers_the_times_of_the_display_power_saving)
     EXPECT_FALSE(tiny::wm::valid_display_off_choice("1"));
     EXPECT_FALSE(tiny::wm::valid_display_off_choice("0"));
 }
+
+TEST(ConfigTest, the_panel_and_the_dock_follow_the_theme_by_default)
+{
+    EXPECT_EQ(Config().panel_style, tiny::Look::Auto);
+    EXPECT_EQ(Config().dock_style, tiny::Look::Auto);
+    EXPECT_EQ(parse_config({}).panel_style, tiny::Look::Auto);
+    EXPECT_EQ(parse_config({}).dock_style, tiny::Look::Auto);
+}
+
+TEST(ConfigTest, reads_the_style_of_the_panel_and_of_the_dock)
+{
+    const Config c = parse_config(
+            {{"a", "[panel]\nstyle = Light\n[dock]\nstyle = dark\n"}});
+
+    EXPECT_EQ(c.panel_style, tiny::Look::Light);
+    EXPECT_EQ(c.dock_style, tiny::Look::Dark);
+    EXPECT_EQ(c.style, tiny::Variant::Dark) << "the theme is not changed";
+}
+
+TEST(ConfigTest, a_wrong_style_of_the_panel_or_the_dock_is_a_problem)
+{
+    std::vector<std::string> problems;
+    const Config c = parse_config(
+            {{"a", "[panel]\nstyle = blue\n[dock]\nstyle = \n"}}, &problems);
+
+    EXPECT_EQ(c.panel_style, tiny::Look::Auto);
+    EXPECT_EQ(c.dock_style, tiny::Look::Auto);
+    ASSERT_EQ(problems.size(), 2u);
+    EXPECT_NE(problems[0].find("[panel] style must be auto, light or dark"),
+              std::string::npos);
+    EXPECT_NE(problems[1].find("[dock] style must be auto, light or dark"),
+              std::string::npos);
+}
+
+TEST(ConfigTest, the_choices_of_the_styles_have_the_values_of_the_file)
+{
+    using tiny::wm::look_choices;
+    using tiny::wm::style_choices;
+    EXPECT_EQ(look_choices().size(), 3u);
+    EXPECT_TRUE(tiny::wm::valid_look_choice(""));
+    EXPECT_TRUE(tiny::wm::valid_look_choice("light"));
+    EXPECT_TRUE(tiny::wm::valid_look_choice("dark"));
+    EXPECT_FALSE(tiny::wm::valid_look_choice("auto"));
+    EXPECT_EQ(style_choices().size(), 2u);
+    EXPECT_TRUE(tiny::wm::valid_style_choice(""));
+    EXPECT_TRUE(tiny::wm::valid_style_choice("light"));
+    EXPECT_FALSE(tiny::wm::valid_style_choice("dark"));
+}

@@ -150,6 +150,33 @@ bool valid_dock_choice(const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
+XftChoices look_choices()
+{
+    static constexpr XftChoice looks[] = {
+            {"", "Follow the theme"}, {"light", "Light"}, {"dark", "Dark"}};
+    return {std::begin(looks), std::end(looks)};
+}
+
+bool valid_look_choice(const std::string& text)
+{
+    const XftChoices choices = look_choices();
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+XftChoices style_choices()
+{
+    static constexpr XftChoice styles[] = {{"", "Dark"}, {"light", "Light"}};
+    return {std::begin(styles), std::end(styles)};
+}
+
+bool valid_style_choice(const std::string& text)
+{
+    const XftChoices choices = style_choices();
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
 XftChoices placement_choices()
 {
     static constexpr XftChoice where[] = {{"", "Keep"},
@@ -410,6 +437,17 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     if (const auto value = ini.get("theme", "style")) {
         if (!variant_from_name(*value, config.style)) {
             problem("[theme] style must be dark or light");
+        }
+    }
+    const std::pair<const char*, Look*> looks[] = {
+            {"panel", &config.panel_style}, {"dock", &config.dock_style}};
+    for (const auto& [section, target] : looks) {
+        if (const auto value = ini.get(section, "style")) {
+            if (!look_from_name(std::string(trim(*value)), *target)) {
+                problem((std::string("[") + section +
+                         "] style must be auto, light or dark")
+                                .c_str());
+            }
         }
     }
     if (const auto value = ini.get("wallpaper", "file")) {

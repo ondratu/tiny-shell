@@ -92,6 +92,10 @@ struct Config {
     std::string xft_hinting;       //!< [xft] hinting, "" is not set
     std::string xft_rgba;          //!< [xft] rgba, "" is not set
     Variant style = Variant::Dark; //!< [theme] style, dark or light
+    //! [panel] style: auto (follows the theme), light or dark
+    Look panel_style = Look::Auto;
+    //! [dock] style: auto (follows the theme), light or dark
+    Look dock_style = Look::Auto;
     //! [theme] xsettings: tell GTK and Qt the look (yes or no)
     bool xsettings = true;
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
@@ -152,6 +156,24 @@ const char* xft_key(XftOption option);
 
 //! Whether the text is one of `xft_choices(option)`
 bool valid_xft(XftOption option, const std::string& text);
+
+/**
+ * @short The values that `[panel] style` and `[dock] style` can have: "" (auto,
+ * follows the theme), "light" and "dark", with the names a form shows.
+ */
+XftChoices look_choices();
+
+//! Whether the text is one of the values of `look_choices()`
+bool valid_look_choice(const std::string& text);
+
+/**
+ * @short The values that `[theme] style` can have: "" (dark, the default) and
+ * "light", with the names a form shows.
+ */
+XftChoices style_choices();
+
+//! Whether the text is one of the values of `style_choices()`
+bool valid_style_choice(const std::string& text);
 
 /**
  * @short The values that `[dock] mode` can have: "" (autohide, the default),
