@@ -71,12 +71,13 @@ class SettingsForm {
         PrimaryMonitor,   //!< auto (empty), a number or the name of an output
         SecondaryMonitor, //!< the same
         MonitorPlacement, //!< a choice: keep, right, left, above or below
-        LockDelay,  //!< a choice: the minutes from the display off to the lock
-        DisplayOff, //!< a choice: the minutes to switch the display off
-        Theme,      //!< a choice: the style of the theme, dark or light
-        PanelStyle, //!< a choice: the panel follows the theme, light or dark
-        DockStyle,  //!< a choice: the same for the dock
-        LockStyle,  //!< a choice: the same for the lock screen
+        LockDelay,   //!< a choice: the minutes from the display off to the lock
+        DisplayOff,  //!< a choice: the minutes to switch the display off
+        DisplayDpms, //!< a choice: yes or no, DPMS switches the display off
+        Theme,       //!< a choice: the style of the theme, dark or light
+        PanelStyle,  //!< a choice: the panel follows the theme, light or dark
+        DockStyle,   //!< a choice: the same for the dock
+        LockStyle,   //!< a choice: the same for the lock screen
         LauncherStyle //!< a choice: the same for the launcher
     };
 
@@ -135,6 +136,7 @@ class SettingsForm {
         //! The minutes without input to switch the display off ("" leaves
         //! the X server as it is, then "never", 5, 10, 15, 30 and 60)
         std::string display_off{};
+        std::string display_dpms = "yes"; //!< the default
         //! The style of the theme ("" is dark, then "light") and the looks of
         //! the panel and the dock ("" follows the theme, then "light" and
         //! "dark")
@@ -393,6 +395,7 @@ class SettingsForm {
         MonitorPlacementField,
         LockDelayField,
         DisplayOffField,
+        DisplayDpmsField,
         ThemeField,
         PanelStyleField,
         DockStyleField,
@@ -442,7 +445,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 22> fields_;
+    std::array<TextField, 23> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

@@ -83,6 +83,7 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::MonitorPlacement,
                                           SettingsForm::Field::LockDelay,
                                           SettingsForm::Field::DisplayOff,
+                                          SettingsForm::Field::DisplayDpms,
                                           SettingsForm::Field::Theme,
                                           SettingsForm::Field::PanelStyle,
                                           SettingsForm::Field::DockStyle,
@@ -127,6 +128,7 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.monitor_placement),
             TextField(initial.lock_delay),
             TextField(initial.display_off),
+            TextField(initial.display_dpms),
             TextField(initial.theme),
             TextField(initial.panel_style),
             TextField(initial.dock_style),
@@ -191,6 +193,7 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::MonitorPlacement),
             text(Field::LockDelay),
             text(Field::DisplayOff),
+            text(Field::DisplayDpms),
             text(Field::Theme),
             text(Field::PanelStyle),
             text(Field::DockStyle),
@@ -237,7 +240,8 @@ SettingsForm::section_fields(Section section)
                                                 Field::MonitorPlacement};
     // TODO: the battery (what happens on low charge, power saver) goes here
     // when the shell can read it; Power is the place for it
-    static const std::vector<Field> power = {Field::DisplayOff};
+    static const std::vector<Field> power = {Field::DisplayOff,
+                                             Field::DisplayDpms};
     static const std::vector<Field> security = {Field::LockDelay,
                                                 Field::LockStyle};
     static const std::vector<Field> applications = {Field::Terminal};
@@ -323,6 +327,10 @@ const char* SettingsForm::note(Field field)
         case Field::DisplayOff:
             return "Turns the display off after this time without input. "
                    "Unchanged keeps the setting of the X server.";
+        case Field::DisplayDpms:
+            return "Lets the X server switch the display off with DPMS. The "
+                   "screen is covered by software in either case; choose No "
+                   "when DPMS does nothing or the computer hangs with it.";
         case Field::LockDelay:
             return "Locks the screen this long after the display turns off "
                    "(see Power). Immediately locks it as the display goes off.";
@@ -348,7 +356,7 @@ bool SettingsForm::is_choice(Field field)
            field == Field::LockStyle || field == Field::LauncherStyle ||
            field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
-           field == Field::DisplayOff;
+           field == Field::DisplayOff || field == Field::DisplayDpms;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -409,6 +417,9 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     }
     if (field == Field::DisplayOff) {
         return wm::display_off_choices();
+    }
+    if (field == Field::DisplayDpms) {
+        return wm::dpms_choices();
     }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
                                          : wm::xft_choices(xft_option(field));
@@ -505,6 +516,10 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_display_off_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::DisplayDpms:
+            return wm::valid_dpms_choice(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::MonitorPlacement:
             return wm::valid_placement_choice(value)
                            ? ""
@@ -563,6 +578,7 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.monitor_placement),
             clean(v.lock_delay),
             clean(v.display_off),
+            clean(v.display_dpms),
             clean(v.theme),
             clean(v.panel_style),
             clean(v.dock_style),
@@ -973,6 +989,7 @@ bool SettingsForm::act(size_t target, int x)
         case MonitorPlacementField:
         case LockDelayField:
         case DisplayOffField:
+        case DisplayDpmsField:
         case ThemeField:
         case PanelStyleField:
         case DockStyleField:

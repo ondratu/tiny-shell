@@ -2367,10 +2367,16 @@ tiny::DisplayPower& Manager::power()
     return *display_power;
 }
 
+void Manager::set_dpms(bool use)
+{
+    use_dpms = use;
+}
+
 void Manager::set_display_off(std::chrono::minutes after)
 {
     display_off = after;
-    apply_display_power(after);
+    // without DPMS the server keeps what it has
+    apply_display_power(use_dpms ? after : std::chrono::minutes(-1));
     update_screen_blank();
     update_idle_lock(); // the lock follows the display
 }

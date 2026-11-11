@@ -1018,6 +1018,29 @@ TEST(ConfigTest, the_form_offers_the_times_of_the_display_power_saving)
     EXPECT_FALSE(tiny::wm::valid_display_off_choice("0"));
 }
 
+TEST(ConfigTest, dpms_is_used_by_default_and_can_be_switched_off)
+{
+    EXPECT_TRUE(parse_config({}).display_dpms);
+    EXPECT_FALSE(parse_config({{"a", "[display]\ndpms = no\n"}}).display_dpms);
+    EXPECT_TRUE(parse_config({{"a", "[display]\ndpms = yes\n"}}).display_dpms);
+
+    Strings problems;
+    const Config c =
+            parse_config({{"a", "[display]\ndpms = maybe\n"}}, &problems);
+    EXPECT_TRUE(c.display_dpms);
+    EXPECT_EQ(problems.size(), 1u);
+}
+
+TEST(ConfigTest, the_form_offers_yes_and_no_for_dpms)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::dpms_choices();
+    ASSERT_EQ(choices.size(), 2u);
+    EXPECT_STREQ(choices[0].value, "yes");
+    EXPECT_STREQ(choices[1].value, "no");
+    EXPECT_TRUE(tiny::wm::valid_dpms_choice("no"));
+    EXPECT_FALSE(tiny::wm::valid_dpms_choice(""));
+}
+
 TEST(ConfigTest, the_panel_and_the_dock_follow_the_theme_by_default)
 {
     EXPECT_EQ(Config().panel_style, tiny::Look::Auto);
