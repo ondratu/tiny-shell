@@ -2,8 +2,8 @@
 // of text of tiny-shell.
 //
 // The form has a panel at the left with the sections, in the order of the
-// settings of GNOME: Appearance (the scale, the wallpaper and how it covers the
-// screen), Fonts (the font, its size and style, and the antialiasing, hinting
+// settings of GNOME: Appearance (the style of the theme, the looks of the panel
+// and the dock, the scale, the wallpaper and how it covers the screen), Fonts (the font, its size and style, and the antialiasing, hinting
 // and subpixel order of the text of the programs), Desktop (the mode of the
 // dock and the format of the clock), Displays (the primary and the secondary
 // monitor, where the secondary one is, and the numbers on the monitors), Power
@@ -101,6 +101,12 @@ const std::string& xft_value(const SettingsForm::Values& v,
     return v.rgba;
 }
 
+//! The value of a form for the look of the panel or the dock ("" is auto)
+std::string look_value(tiny::Look look)
+{
+    return look == tiny::Look::Auto ? "" : tiny::look_name(look);
+}
+
 class SettingsApp : public tiny::XftWindow {
   public:
     SettingsApp(tiny::Display& display_arg, const tiny::wm::Config& config,
@@ -136,7 +142,10 @@ class SettingsApp : public tiny::XftWindow {
                 config.lock_delay_minutes < 0
                         ? ""
                         : std::to_string(config.lock_delay_minutes),
-                display_off_value(config.display_off_minutes)},
+                display_off_value(config.display_off_minutes),
+                config.style == tiny::Variant::Light ? "light" : "",
+                look_value(config.panel_style),
+                look_value(config.dock_style)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         background(alloc_color(0xf8, 0xf8, 0xf8)),
@@ -342,6 +351,20 @@ class SettingsApp : public tiny::XftWindow {
                 // the first choice, "", is auto-hide
                 changed.push_back(
                         {"dock", "mode", v.dock.empty() ? "autohide" : v.dock});
+            }
+            if (v.theme != initial.theme) {
+                changed.push_back(
+                        {"theme", "style", v.theme.empty() ? "dark" : v.theme});
+            }
+            if (v.panel_style != initial.panel_style) {
+                changed.push_back(
+                        {"panel", "style",
+                         v.panel_style.empty() ? "auto" : v.panel_style});
+            }
+            if (v.dock_style != initial.dock_style) {
+                changed.push_back(
+                        {"dock", "style",
+                         v.dock_style.empty() ? "auto" : v.dock_style});
             }
             if (v.lock_delay != initial.lock_delay) {
                 // the first choice, "", is never
@@ -631,7 +654,10 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
                     {SettingsForm::Field::MonitorPlacement, "Position"},
                     {SettingsForm::Field::LockDelay, "Lock after"},
-                    {SettingsForm::Field::DisplayOff, "Display off"}};
+                    {SettingsForm::Field::DisplayOff, "Display off"},
+                    {SettingsForm::Field::Theme, "Style"},
+                    {SettingsForm::Field::PanelStyle, "Panel"},
+                    {SettingsForm::Field::DockStyle, "Dock"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

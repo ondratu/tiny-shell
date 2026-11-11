@@ -71,8 +71,11 @@ class SettingsForm {
         PrimaryMonitor,   //!< auto (empty), a number or the name of an output
         SecondaryMonitor, //!< the same
         MonitorPlacement, //!< a choice: keep, right, left, above or below
-        LockDelay, //!< a choice: the minutes from the display off to the lock
-        DisplayOff //!< a choice: the minutes to switch the display off
+        LockDelay,  //!< a choice: the minutes from the display off to the lock
+        DisplayOff, //!< a choice: the minutes to switch the display off
+        Theme,      //!< a choice: the style of the theme, dark or light
+        PanelStyle, //!< a choice: the panel follows the theme, light or dark
+        DockStyle   //!< a choice: the same for the dock
     };
 
     //! What has the keyboard in the list of fonts
@@ -130,6 +133,12 @@ class SettingsForm {
         //! The minutes without input to switch the display off ("" leaves
         //! the X server as it is, then "never", 5, 10, 15, 30 and 60)
         std::string display_off{};
+        //! The style of the theme ("" is dark, then "light") and the looks of
+        //! the panel and the dock ("" follows the theme, then "light" and
+        //! "dark")
+        std::string theme{};
+        std::string panel_style{};
+        std::string dock_style{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -379,7 +388,10 @@ class SettingsForm {
         SecondaryMonitorField,
         MonitorPlacementField,
         LockDelayField,
-        DisplayOffField, //!< the fields are in the order of `Field`
+        DisplayOffField,
+        ThemeField,
+        PanelStyleField,
+        DockStyleField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -424,7 +436,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 17> fields_;
+    std::array<TextField, 20> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
@@ -441,7 +453,7 @@ class SettingsForm {
     Metrics metrics_;
     View view_ = View::Form;
     Result result_ = Result::Editing;
-    Field focus_ = Field::Scale;
+    Field focus_ = Field::Theme;
     Section section_ = Section::Appearance;
     Pane pane_ = Pane::Search;
     int width_ = 1;
