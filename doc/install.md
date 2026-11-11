@@ -71,8 +71,9 @@ The files:
 - `share/applications`: the desktop files of `tiny-settings`, `tiny-fonts` and
   `tiny-about`, so that the launcher lists the first two and the dock finds the
   icons of their windows (`StartupWMClass`).
-- `share/backgrounds/tiny-shell`: the wallpapers (a landscape, a landscape with
-  a fox, dusk and night, each in 1920x1080 and 3840x2160).
+- `share/backgrounds/tiny-shell`: the wallpapers, the fox by day and the fox
+  by night (JPEG, 1920x1080), which are the defaults of the light and the dark
+  style.
 
 The files are searched in `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` and
 `/usr/local/share`. To try the shell from the build directory with the data from
