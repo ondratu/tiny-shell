@@ -7,11 +7,11 @@ it in full size.
 
 The panel with the main menu and the clock, a window and the dock with the
 icons of the running applications. The light style, which is the style of the
-day:
+day, with the fox by day as the wallpaper:
 
 ![The desktop of tiny-shell, the light style](static/screenshots/desktop-day.png)
 
-The dark style, which is the default, with the night wallpaper:
+The dark style, which is the default, with the fox by night as the wallpaper:
 
 ![The desktop of tiny-shell, the dark style](static/screenshots/desktop-night.png)
 

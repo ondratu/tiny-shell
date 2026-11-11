@@ -303,9 +303,9 @@ next steps:
     org.freedesktop.portal.Settings Read ss org.freedesktop.appearance
     color-scheme`, `xprop -root RESOURCE_MANAGER`,
     `xprop -root -notype _XSETTINGS_SETTINGS`.
-- Default wallpaper: choose the 3840x2160 picture for a screen that is wider
-  than 1920 px (`default_wallpaper()` takes the 1920x1080 one now), and offer
-  the installed wallpapers in `tiny-settings` as a list.
+- Default wallpaper: offer the installed wallpapers in `tiny-settings` as a
+  list, and add a 3840x2160 picture for a screen that is wider than 1920 px
+  (`default_wallpaper()` takes the 1920x1080 one).
 - Wallpaper (the first version is `tiny-wallpaper`, see doc/configuration.md): what is
   left is to remove a wallpaper at once (now the plain color of the theme is
   back at the next login; `tiny-wallpaper` would need the theme color, or
