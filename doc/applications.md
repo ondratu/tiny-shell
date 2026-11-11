@@ -27,15 +27,15 @@ settings of GNOME:
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
 - **Desktop:** the mode of the dock (Auto-hide, On, Off) and the format of the
   clock.
-- **Power:** Blank after, the time without input after which the
-  [lock screen](lock.md) goes black: 1, 5, 10 or 15 minutes, or Never (`[lock]
-  blank_after`; it is read the next time the screen is locked), and Lock after,
-  the time without input after which the screen is locked: 5, 10, 15, 30 or 60
-  minutes, or Never (`[lock] idle_after`; tiny-shell reads it after
-  `tiny-shell --reload`), and Display off, the time without input after which
-  the display is switched off: Unchanged (the X server keeps its setting), Never,
-  5, 10, 15, 30 or 60 minutes (`[display] off_after`; read after
-  `tiny-shell --reload`).
+- **Power:** Display off, the time without input after which the display is
+  switched off: Unchanged (the X server keeps its setting), Never, 5, 10, 15, 30
+  or 60 minutes (`[display] off_after`; read after `tiny-shell --reload`). A short
+  note under the field says what it does. Other things about power (the battery)
+  will come here.
+- **Security:** Lock after, the time from the moment the display is switched off
+  to the lock of the screen: Never, Immediately, 1, 2, 5, 10 or 30 minutes
+  (`[lock] delay`; read after `tiny-shell --reload`), like Automatic Screen Lock
+  of GNOME.
 - **Applications:** the terminal.
 - **Displays:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary

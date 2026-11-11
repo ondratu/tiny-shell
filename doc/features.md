@@ -70,21 +70,21 @@ comparison with other window managers is in the [comparison](comparison.md).
   put on one side of the primary one, and the number of every monitor can be
   shown in its corner (see [Configuration](configuration.md#multiple-monitors)).
 - **Settings:** `tiny-settings`, a small form with the sections Appearance,
-  Fonts, Desktop, Displays, Power and Applications that changes the font, the
+  Fonts, Desktop, Displays, Power, Security and Applications that changes the font, the
   rendering of text (antialiasing, hinting, subpixel order), the scale, the
   wallpaper, the mode of the dock, the format of the clock, the monitors, the
-  times of the lock screen (to black, and to the lock when idle), the time to
-  switch the display off and the terminal in the configuration file of the user (see [Applications](applications.md#settings)).
+  time to switch the display off, the time to lock the screen after that and the
+  terminal in the configuration file of the user (see [Applications](applications.md#settings)).
 - **Power saving of the display:** `[display] off_after` switches the display
   off after a time without input (DPMS, so the X server counts the time), it is
-  Display off in `tiny-settings`, and the black screen of the lock switches the
-  monitor off too (see [Configuration](configuration.md#the-power-saving-of-the-display)).
-- **Screen lock:** `tiny-lock` (Super + L, the main menu, or after
-  `[lock] idle_after` minutes without input) asks for the password of the
+  Display off in `tiny-settings`; where the server has no DPMS the lock screen
+  goes black instead (see [Configuration](configuration.md#the-power-saving-of-the-display)).
+- **Screen lock:** `tiny-lock` (Super + L, the main menu, or `[lock] delay`
+  minutes after the display goes off) asks for the password of the
   system through PAM, a checker such as `unix_chkpwd`, or the small
   `tiny-lock-pwcheck`; only the last one has any privileges. It covers every
-  monitor, follows a change of the monitors, goes black when nobody is there and
-  is started again if it dies (see [Screen lock](lock.md)).
+  monitor, follows a change of the monitors, goes black on an X server without DPMS
+  and is started again if it dies (see [Screen lock](lock.md)).
 - **Wallpaper:** `tiny-wallpaper` draws a PNG or JPEG as the background of the
   root window (fill, center or tile) and publishes it in `_XROOTPMAP_ID`, so a
   transparent terminal can show it; tiny-shell runs it at the start and when the

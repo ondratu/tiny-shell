@@ -35,9 +35,13 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    (`LockScreen::State`): `Idle` (the time, the date and a hint), `Dialog` (the
    entry; **`tiny-lock-auth` is started only here and stopped when the dialog
    closes**, so biometrics run when somebody is there) and `Black` (no window
-   mapped; after `[lock] blank_after` in `Idle`, woken by any input, which is
-   not used for anything else; the monitor is switched off with `DisplayPower` while it is
-   black, on again when it is left, and in the destructor). `handle_input()` decides it for every key and
+   mapped; woken by any input, which is not used for anything else). `Black` is
+   the fallback of an X server **without DPMS**: `tiny-lock` asks for it only
+   when `[display] off_after` is set and `DisplayPower::enabled()` is false, and
+   counts the time from the last input in any program (`LockOptions::
+   from_last_input`, the counter of `IdleTime`), so a screen that comes after
+   the time has passed is black at once. With DPMS the server switches the display
+   off and the lock never goes black. `handle_input()` decides it for every key and
    pointer event. It rises when something covers it. A change of the monitors
    (RandR, `select_monitor_events()` as in the shell) makes `screen_changed()`
    fit the window and the dialog to the new screen. If a grab fails (another client
@@ -52,17 +56,28 @@ tiny-shell ──spawn──► tiny-lock ──pipe──► tiny-lock-auth ─
    for good (and verifies it), switches off core dumps, and wipes the password
    and the hash. A wrong password waits two seconds.
 
-### The idle lock
+### The lock after the display goes off
 
-`[lock] idle_after` is the one part of the lock that lives in the shell:
-`IdleLock` (`lib/wm/idle_lock.*`) decides, `IdleTime` (`lib/wm/idle_time.*`)
-reads the counter `IDLETIME` of the SYNC extension (libXext, already linked; the
+`[lock] delay` is the one part of the lock that lives in the shell: it counts
+from the moment the display goes off, so the lock never comes before the
+display (an open desktop behind a dark screen). `Manager::update_idle_lock()`
+adds the delay to the time of the display (`[display] off_after`, or the
+timeout that the X server has when that is not set, read by
+`DisplayPower::timeout()`) and gives the sum to `IdleLock`
+(`lib/wm/idle_lock.*`), which decides; `IdleTime` (`lib/wm/idle_time.*`) reads
+the counter `IDLETIME` of the SYNC extension (libXext, already linked; the
 extension MIT-SCREEN-SAVER would need another library for the same number) and
-`Manager::set_lock_idle()` sets one timer. `IdleLock::check()` returns when to
-look next: the time that is left to the limit, at least a second, so a computer
-that nobody uses is woken once in the limit. A lock that runs (`LockGuard`) is
-not started again. Without the counter the feature is off and one message says
-so.
+one timer wakes it. `IdleLock::check()` returns when to look next: the time
+that is left to the limit, at least a second, so a computer that nobody uses is
+woken once in the limit. A lock that runs (`LockGuard`) is not started again.
+Without the counter the feature is off and one message says so. The shell
+changes the time of the display and the lock together, because one depends on
+the other (`set_display_off()` and `set_lock_delay()` both end in
+`update_idle_lock()`).
+
+`DisplayPower` (`lib/display_power.*`) is the small wrapper of DPMS. The shell
+remembers what the server had before it set `off_after`, and puts it back when
+the setting is taken out.
 
 ## The protocol of tiny-lock and tiny-lock-auth
 
