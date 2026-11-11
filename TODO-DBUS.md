@@ -70,7 +70,7 @@ GLib, sdbus-c++ pulls in sd-bus; none of them fits.
 - `org.freedesktop.ScreenSaver` and `org.gnome.SessionManager.Inhibit`: video
   players and browsers ask not to blank the screen. Without the service it does
   not work: the shell would have to keep the display on (`DisplayPower`, set from
-  `[display] off_after`) and not lock (`[lock] idle_after`) while an inhibitor is held.
+  `[display] off_after`) and not lock (`[lock] delay`) while an inhibitor is held.
 - Register the session (`XDG_SESSION_ID`), end it properly.
 
 ### Notifications (`org.freedesktop.Notifications`)

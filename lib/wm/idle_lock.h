@@ -7,7 +7,7 @@
 namespace tiny::wm {
 
 /**
- * @short Locks the screen after a time without input (`[lock] idle_after`).
+ * @short Locks the screen after a time without input (`[display] off_after` plus `[lock] delay`).
  *
  * The class only decides. How long the user has been away and how to lock come
  * from hooks, so the logic runs in the tests without a display. `check()` tells

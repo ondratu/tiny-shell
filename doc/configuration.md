@@ -62,11 +62,9 @@ terminal = xterm -e
 lock = tiny-lock
 
 [lock]
-# Minutes without input to a black screen: 1 (the default), 5, 10, 15 or never
-blank_after = 1
-# Minutes without input that lock the screen: 5, 10, 15, 30, 60 or never (the
-# default)
-idle_after = never
+# Minutes from the moment the display goes off ([display] off_after) to the lock:
+# 0 (at once), 1, 2, 5, 10, 30 or never (the default)
+delay = never
 # How tiny-lock-auth checks the password: auto (the default), pam, checker or
 # pwcheck
 auth = auto
@@ -133,16 +131,15 @@ here.
 
 | Key | Value | What it says |
 | --- | ----- | ------------ |
-| `blank_after` | `1`, `5`, `10`, `15`, `never` | minutes without input in the screen with the time to a black screen with no text; 1 is the default |
-| `idle_after` | `5`, `10`, `15`, `30`, `60`, `never` | minutes without input (in any program) after which tiny-shell locks the screen; `never` is the default |
+| `delay` | `0`, `1`, `2`, `5`, `10`, `30`, `never` | minutes from the moment the display is switched off (`[display] off_after`) to the lock; `0` locks at once, `never` is the default (see [the order of the display and the lock](lock.md#when-the-screen-goes-off-and-is-locked)) |
 | `auth` | `auto`, `pam`, `checker`, `pwcheck` | how the password is checked; `auto` takes PAM where it can work, then `unix_chkpwd`, then `tiny-lock-pwcheck` |
 | `pam_service` | a name | the PAM service, `tiny-lock` by default; no file is needed for it |
 | `checker` | a path | the program like `unix_chkpwd`, when it is not where the system keeps it |
 | `pwcheck` | a path | `tiny-lock-pwcheck`, when it is not next to `tiny-lock` |
 
 A wrong value is reported on stderr and the default is kept. A change is read
-the next time the screen is locked; `idle_after` is read by tiny-shell itself, so
-it needs a restart or `tiny-shell --reload`.
+the next time the screen is locked; `delay` is read by tiny-shell itself, so it
+needs a restart or `tiny-shell --reload`.
 
 ## The power saving of the display
 
@@ -154,7 +151,8 @@ chosen in `tiny-settings`) and the settings are read again, the shell puts back
 what the X server had before it changed it.
 
 The X server counts the time, so nothing runs in tiny-shell for it; the same
-setting is Display off in the section Power of `tiny-settings`. The shell sets it
+setting is Display off in the section Power of `tiny-settings`, and the lock
+after it is Lock after in the section Security. The shell sets it
 when it starts and when it is told to read the settings again
 (`tiny-shell --reload`). Any key or move of the pointer switches the display on.
 The extension is DPMS (libXext, which is linked anyway); an X server without it
@@ -165,8 +163,10 @@ A program that plays a video and asks the X server not to save the power
 keeps the display on; one that asks through D-Bus only (`org.freedesktop.ScreenSaver`)
 does not, because the shell has no D-Bus yet.
 
-The black screen of [the lock](lock.md) also switches the monitor off while it is
-black, if DPMS is on.
+On an X server without DPMS the lock screen goes black after the same time, as
+the nearest thing to a switched off display (see [the lock](lock.md)). The lock
+itself follows the display: `[lock] delay` counts from the moment the display
+goes off.
 
 ## The clock
 

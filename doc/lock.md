@@ -8,8 +8,8 @@ set and to forget.
 
 - **Super + L** or the item **Lock Screen** of the [main menu](usage.md#the-main-menu).
 - `tiny-lock` from a terminal, a script or a launcher.
-- **After some time without input**, when `[lock] idle_after` is set (see
-  [the section below](#lock-when-idle)).
+- **After the display is switched off**, when `[lock] delay` is set (see
+  [the section on the order of the display and the lock](#when-the-screen-goes-off-and-is-locked)).
 - `[commands] lock` in the [configuration](configuration.md#the-lock) says
   another program (`slock`, `i3lock`, `xsecurelock`), and then the key and the
   menu start that one.
@@ -31,14 +31,14 @@ the middle of the primary monitor. The sizes follow `[theme] scale` and the font
    sends the answer. A wrong password says so and asks again. Escape closes the
    dialog, stops the check and forgets what was typed: back to the time. While the
    dialog is open the screen does not go black.
-3. **Black.** After `[lock] blank_after` without input (1, 5, 10 or 15 minutes, or
-   `never`; the default is 1; it is Blank after in the section Power of
-   `tiny-settings`) the first state turns to an entirely black screen with no text
-   at all. Any input (a key, a click, a move of the pointer) shows the time
-   again; a key or a click that wakes the screen is not used for anything else.
-   The time starts again after Escape. If the X server has DPMS and it is on,
-   the monitor is switched off as well while the screen is black (any input
-   switches it on again), so the black screen saves power too; see
+3. **Black.** Only on an X server **without DPMS**, where the display can't be
+   switched off: after `[display] off_after` without input the first state turns
+   to an entirely black screen with no text at all, which is the nearest thing
+   to a switched off display. Any input (a key, a click, a move of the pointer)
+   shows the time again; a key or a click that wakes the screen is not used for
+   anything else. The time starts again after Escape. On an X server with DPMS
+   (every Xorg on real hardware) the lock does not go black: the server
+   switches the display off by itself, see
    [the power saving of the display](configuration.md#the-power-saving-of-the-display).
 
 The screen opens only when the check says the password is right, never because
@@ -48,15 +48,28 @@ If the lock dies (a crash, a kill), tiny-shell starts it again, up to five times
 in a row. A restart of tiny-shell itself does not unlock the screen, because the
 lock is a program of its own.
 
-## Lock when idle
+## When the screen goes off and is locked
 
-`[lock] idle_after = 10` makes tiny-shell lock the screen after 10 minutes
-without a key or a move of the pointer (5, 10, 15, 30 and 60 minutes, or
-`never`, which is the default). It is the section Power of `tiny-settings`,
-Lock after. The time is the idle time of the X server (the counter `IDLETIME`
-of the SYNC extension, which every Xorg has), so it counts all input, in any
-program, and a video that runs full screen without input is locked too: there
-is no way to tell it to the shell yet. A change is read when tiny-shell starts and when it
+Two settings say it, and both count from the last key or move of the pointer
+in any program (the idle time of the X server, the counter `IDLETIME`):
+
+| Setting | In `tiny-settings` | What it does |
+| ------- | ------------------ | ------------ |
+| `[display] off_after` | Power, Display off | switches the display off after this time without input |
+| `[lock] delay` | Security, Lock after | locks the screen this long **after the display goes off**: `0` at the same moment, or 1, 2, 5, 10, 30 minutes; `never` is the default |
+
+The lock waits for the display, so the order is always the same: the display
+goes off, and the lock follows it. A display that went off is never left with
+an open desktop behind it, as it would be if the lock were set to a longer time
+than the display. For example, `off_after = 5` and `delay = 5` switch the
+display off after 5 minutes of nobody being there, and lock the screen after 10.
+`delay = 0` locks it as the display goes off.
+
+Without `off_after` the time of the display is the one that the X server has
+(`xset q`); when the display never goes off, the delay counts from the last
+input and `0` locks nothing. The time is the idle time of the whole X server, so
+a video that runs full screen without any input is locked too: there is no way
+to tell it to the shell yet. A change is read when tiny-shell starts and when it
 is told to read the settings again (`tiny-shell --reload`). If the X server has
 no such counter, the shell says so and does not lock.
 
@@ -131,7 +144,7 @@ open for an empty password.
 ## Configuration
 
 See [The lock](configuration.md#the-lock): `[commands] lock` and the section
-`[lock]` (`blank_after`, `idle_after`, `auth`, `pam_service`, `checker`, `pwcheck`).
+`[lock]` (`delay`, `auth`, `pam_service`, `checker`, `pwcheck`) and `[display]` (`off_after`).
 
 PAM is asked for the service `tiny-lock`. No file is needed for it: a service
 without a file uses `other`, and on Debian and Alpine that is the login
