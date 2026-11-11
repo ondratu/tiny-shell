@@ -11,9 +11,9 @@
 
 #include "app/lock_session.h"
 #include "container.h"
-#include "display_power.h"
 #include "entry.h"
 #include "label.h"
+#include "wm/idle_time.h"
 
 namespace tiny::app {
 
@@ -21,8 +21,14 @@ namespace tiny::app {
 struct LockOptions {
     //! `strftime()` format of the date under the time, "" is no date
     std::string date_format = "%a %e %B";
-    //! After this time without input the screen is black; zero is never
-    std::chrono::milliseconds blank_after = std::chrono::minutes(1);
+    //! After this time without input the screen is black; zero is never. The
+    //! lock does it when the X server can't switch the display off (no
+    //! DPMS), with the time of `[display] off_after`.
+    std::chrono::milliseconds blank_after{0};
+    //! Count `blank_after` from the last input in any program (the idle time
+    //! of the X server), not from the moment the screen was shown: a screen
+    //! that comes after the time has passed is black at once
+    bool from_last_input = false;
 };
 
 /**
@@ -61,8 +67,8 @@ class LockScreen {
      * only then the check of the password starts, so a fingerprint or a face
      * is looked for when somebody is there); Escape goes back to `Idle`. After
      * `LockOptions::blank_after` without input in `Idle` the screen is `Black`,
-     * and the next input wakes it to `Idle`. A black screen also switches the monitor
-     * off, when the X server has DPMS and it is on (`DisplayPower`).
+     * and the next input wakes it to `Idle`. The black screen is for an X server
+     * that has no DPMS; with DPMS the server switches the display off.
      */
     enum class State { Idle, Dialog, Black };
 
@@ -163,10 +169,11 @@ class LockScreen {
     void unlock();
     void on_visibility(const XEvent& event);
     void set_state(State state);
-    void touch(); //!< input: the time to the black screen starts again
+    //! The time to the black screen starts again; `counts_idle` (the screen
+    //! has just come, no input) takes the idle time of the X server off it
+    void touch(bool counts_idle = false);
 
     Display& display;
-    DisplayPower power; //!< the monitor is switched off with the black screen
     AuthSession session;
     std::string user;
     ::Window cover = None;
@@ -179,6 +186,8 @@ class LockScreen {
     State state_ = State::Idle;
     //! When the screen goes black; the epoch means it does not
     Clock::time_point blank_at;
+    //! the idle time of the X server, when `from_last_input` is asked for
+    std::unique_ptr<wm::IdleTime> idle_time;
     Clock::time_point next_clock; //!< when the time is shown again
     std::string status_text;
     bool asking = false; //!< a question waits for the answer

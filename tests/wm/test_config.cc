@@ -906,49 +906,11 @@ TEST(ConfigTest, a_program_path_is_a_text_without_control_characters)
     EXPECT_FALSE(tiny::wm::valid_program_path("a\nb"));
 }
 
-TEST(ConfigTest, the_screen_goes_black_after_a_minute_by_default)
+TEST(ConfigTest, the_old_blank_after_is_not_read)
 {
-    EXPECT_EQ(parse_config({}).lock_blank_minutes, 1);
-}
-
-TEST(ConfigTest, blank_after_is_one_of_the_choices_or_never)
-{
-    for (const int minutes : {1, 5, 10, 15}) {
-        const Config c = parse_config(
-                {{"a",
-                  "[lock]\nblank_after = " + std::to_string(minutes) + "\n"}});
-        EXPECT_EQ(c.lock_blank_minutes, minutes);
-    }
-    EXPECT_EQ(parse_config({{"a", "[lock]\nblank_after = never\n"}})
-                      .lock_blank_minutes,
-              0);
-}
-
-TEST(ConfigTest, another_blank_after_is_a_problem_and_keeps_the_default)
-{
-    for (const char* value : {"2", "0", "-1", "soon", ""}) {
-        Strings problems;
-        const Config c = parse_config(
-                {{"a", std::string("[lock]\nblank_after = ") + value + "\n"}},
-                &problems);
-        EXPECT_EQ(c.lock_blank_minutes, 1) << value;
-        EXPECT_EQ(problems.size(), 1u) << value;
-    }
-}
-
-TEST(ConfigTest, the_form_offers_the_times_of_the_black_screen)
-{
-    const tiny::wm::XftChoices choices = tiny::wm::blank_choices();
-
-    ASSERT_EQ(choices.size(), 5u);
-    EXPECT_STREQ(choices[0].value, ""); // one minute, the default
-    EXPECT_STREQ(choices[4].value, "never");
-    for (const auto& choice : choices) {
-        EXPECT_TRUE(tiny::wm::valid_blank_choice(choice.value));
-    }
-    EXPECT_TRUE(tiny::wm::valid_blank_choice("1"));
-    EXPECT_FALSE(tiny::wm::valid_blank_choice("2"));
-    EXPECT_FALSE(tiny::wm::valid_blank_choice("0"));
+    Strings problems;
+    parse_config({{"a", "[lock]\nblank_after = 5\n"}}, &problems);
+    EXPECT_TRUE(problems.empty());
 }
 
 TEST(ConfigTest, the_screen_is_not_locked_by_default)

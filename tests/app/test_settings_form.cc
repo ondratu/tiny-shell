@@ -1339,7 +1339,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 18u);
+    EXPECT_EQ(count, 17u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1705,72 +1705,15 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
     EXPECT_LT(last.y + last.height, form.message_rect().y);
 }
 
-// The black screen of the lock
+// The choices of the power
 
-TEST(SettingsFormPowerTest, the_power_section_has_the_blank_screen)
+TEST(SettingsFormPowerTest, the_power_section_has_the_display_and_the_lock)
 {
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
-              (std::vector<Field>{Field::BlankScreen, Field::LockDelay,
-                                  Field::DisplayOff}));
-    EXPECT_EQ(SettingsForm::section_of(Field::BlankScreen),
-              SettingsForm::Section::Power);
-    EXPECT_TRUE(SettingsForm::is_choice(Field::BlankScreen));
-    EXPECT_NE(std::string(SettingsForm::hint(Field::BlankScreen)), "");
+              (std::vector<Field>{Field::DisplayOff, Field::LockDelay}));
 }
 
-TEST(SettingsFormPowerTest, one_minute_is_the_first_choice_and_the_default)
-{
-    SettingsForm form = make();
-
-    EXPECT_EQ(form.text(Field::BlankScreen), "");
-    EXPECT_EQ(form.choice_label(Field::BlankScreen), "1 minute");
-    EXPECT_EQ(form.problem(Field::BlankScreen), "");
-}
-
-TEST(SettingsFormPowerTest, the_arrows_go_through_the_times_and_never)
-{
-    SettingsForm form = make();
-    focus_on(form, Field::BlankScreen);
-
-    for (const char* label :
-         {"5 minutes", "10 minutes", "15 minutes", "Never"}) {
-        form.key(Key::Right);
-        EXPECT_EQ(form.choice_label(Field::BlankScreen), label);
-    }
-    form.key(Key::Right);
-    EXPECT_EQ(form.choice_label(Field::BlankScreen), "1 minute"); // round
-    form.key(Key::Left);
-    EXPECT_EQ(form.choice_label(Field::BlankScreen), "Never");
-}
-
-TEST(SettingsFormPowerTest, a_value_that_is_not_a_choice_is_a_problem)
-{
-    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
-    values.blank_screen = "7";
-    const SettingsForm form = make(values);
-
-    EXPECT_NE(form.problem(Field::BlankScreen), "");
-    EXPECT_NE(form.problem(), "");
-}
-
-TEST(SettingsFormPowerTest, the_value_is_kept_in_the_values_of_the_form)
-{
-    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
-    values.blank_screen = "never";
-    const SettingsForm form = make(values);
-
-    EXPECT_EQ(form.values().blank_screen, "never");
-    EXPECT_EQ(form.clean_values().blank_screen, "never");
-}
-
-TEST(SettingsFormPowerTest, one_written_as_a_number_is_right_too)
-{
-    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
-    values.blank_screen = "1";
-    const SettingsForm form = make(values);
-
-    EXPECT_EQ(form.problem(Field::BlankScreen), "");
-}
+// Clicks on the choices
 
 TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
 {
@@ -1778,15 +1721,15 @@ TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
     form.resize(500, form.form_height());
     form.set_section(SettingsForm::Section::Power);
 
-    const Rect r = form.field_rect(Field::BlankScreen);
+    const Rect r = form.field_rect(Field::DisplayOff);
     EXPECT_TRUE(click(form, {r.x + r.width - 2, r.y + 2, 1, 1}));
 
     EXPECT_EQ(form.view(), View::Form); // not the list of fonts
-    EXPECT_EQ(form.focus(), Field::BlankScreen);
-    EXPECT_EQ(form.choice_label(Field::BlankScreen), "5 minutes");
+    EXPECT_EQ(form.focus(), Field::DisplayOff);
+    EXPECT_EQ(form.choice_label(Field::DisplayOff), "Never");
 }
 
-// The lock when idle
+// The lock after the display
 
 TEST(SettingsFormPowerTest, the_lock_delay_is_a_choice_of_the_power_section)
 {
