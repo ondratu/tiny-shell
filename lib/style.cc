@@ -107,6 +107,47 @@ const char* variant_name(Variant variant)
     return variant == Variant::Light ? "light" : "dark";
 }
 
+bool look_from_name(const std::string& name, Look& look)
+{
+    const std::string lowered = lower(name);
+    if (lowered == "auto") {
+        look = Look::Auto;
+    } else if (lowered == "light") {
+        look = Look::Light;
+    } else if (lowered == "dark") {
+        look = Look::Dark;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+const char* look_name(Look look)
+{
+    switch (look) {
+        case Look::Light:
+            return "light";
+        case Look::Dark:
+            return "dark";
+        case Look::Auto:
+            break;
+    }
+    return "auto";
+}
+
+Variant look_variant(Look look, Variant theme)
+{
+    switch (look) {
+        case Look::Light:
+            return Variant::Light;
+        case Look::Dark:
+            return Variant::Dark;
+        case Look::Auto:
+            break;
+    }
+    return theme;
+}
+
 Style::~Style()
 {
     release();

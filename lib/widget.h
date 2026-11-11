@@ -33,7 +33,19 @@ class Widget : public Object {
 
     Window get_parent_window() const { return parent; }
 
-    virtual const Style& get_style() const { return theme.widget; }
+    virtual const Style& get_style() const
+    {
+        return style_override != nullptr ? *style_override : theme.widget;
+    }
+
+    //! Draw with this style instead of the one of the theme (the panel and
+    //! the dock have colors of their own); a container gives it to what it
+    //! holds, now and later. Null is the style of the theme. The style must
+    //! live longer than the widget.
+    virtual void set_style_override(const Style* style)
+    {
+        style_override = style;
+    }
 
     virtual int get_border() const { return get_style().border_width; }
 
@@ -91,6 +103,8 @@ class Widget : public Object {
     bool is_focus = false;    //!< is keyboard cursor in / on
     bool is_pressed = false;  //!< is pressed (buttons)
     bool is_dragged = false;  //!< is dragged
+
+    const Style* style_override = nullptr; //!< see `set_style_override()`
 
   private:
     //! Give the window the background and the border color of the style

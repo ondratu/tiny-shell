@@ -86,3 +86,45 @@ TEST(RestyleTest, an_input_only_widget_has_no_colors_to_change)
     XSync(tiny::get_display(), False);
     SUCCEED();
 }
+
+// A part of the shell (the panel, the dock) draws what it holds with a style
+// of its own.
+TEST(StyleOverrideTest, a_widget_draws_with_the_style_of_the_theme_by_default)
+{
+    const tiny::Widget w(10, 10);
+
+    EXPECT_EQ(&w.get_style(), &tiny::theme.widget);
+}
+
+TEST(StyleOverrideTest, a_widget_draws_with_the_style_that_is_set)
+{
+    tiny::Style style;
+    style.normal_bg = 0x123456;
+    tiny::Widget w(40, 40);
+    w.set_style_override(&style);
+    w.realize(root_window(), 0, 0);
+    w.map();
+
+    EXPECT_EQ(&w.get_style(), &style);
+    EXPECT_EQ(pixel_of(w), 0x123456u);
+
+    w.set_style_override(nullptr);
+    EXPECT_EQ(&w.get_style(), &tiny::theme.widget);
+}
+
+TEST(StyleOverrideTest, a_container_gives_it_to_what_it_holds_now_and_later)
+{
+    tiny::Style style;
+    tiny::Box box(tiny::Box::Type::Horizontal, 100, 20);
+    tiny::Widget before(10, 10);
+    tiny::Widget after(10, 10);
+    box.realize(root_window(), 0, 0);
+    box.push_start(&before);
+
+    box.set_style_override(&style);
+    box.push_start(&after);
+
+    EXPECT_EQ(&box.get_style(), &style);
+    EXPECT_EQ(&before.get_style(), &style);
+    EXPECT_EQ(&after.get_style(), &style);
+}

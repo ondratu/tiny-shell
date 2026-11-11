@@ -439,3 +439,32 @@ TEST(ThemeFontTest, the_pixel_name_has_the_size_in_pixels)
     EXPECT_EQ(tiny::xft_pixel_name("DejaVu Sans,sans", 14),
               "DejaVu Sans,sans:pixelsize=14");
 }
+
+TEST(ThemeVariantTest, the_looks_are_read_in_any_case)
+{
+    tiny::Look look = tiny::Look::Auto;
+
+    EXPECT_TRUE(tiny::look_from_name("Dark", look));
+    EXPECT_EQ(look, tiny::Look::Dark);
+    EXPECT_TRUE(tiny::look_from_name("LIGHT", look));
+    EXPECT_EQ(look, tiny::Look::Light);
+    EXPECT_TRUE(tiny::look_from_name("auto", look));
+    EXPECT_EQ(look, tiny::Look::Auto);
+    EXPECT_FALSE(tiny::look_from_name("blue", look));
+    EXPECT_FALSE(tiny::look_from_name("", look));
+    EXPECT_EQ(look, tiny::Look::Auto) << "a wrong name leaves it as it was";
+    EXPECT_STREQ(tiny::look_name(tiny::Look::Auto), "auto");
+    EXPECT_STREQ(tiny::look_name(tiny::Look::Light), "light");
+    EXPECT_STREQ(tiny::look_name(tiny::Look::Dark), "dark");
+}
+
+TEST(ThemeVariantTest, a_look_follows_the_theme_or_keeps_its_variant)
+{
+    using tiny::Look;
+    using tiny::Variant;
+
+    EXPECT_EQ(tiny::look_variant(Look::Auto, Variant::Dark), Variant::Dark);
+    EXPECT_EQ(tiny::look_variant(Look::Auto, Variant::Light), Variant::Light);
+    EXPECT_EQ(tiny::look_variant(Look::Light, Variant::Dark), Variant::Light);
+    EXPECT_EQ(tiny::look_variant(Look::Dark, Variant::Light), Variant::Dark);
+}
