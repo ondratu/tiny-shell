@@ -130,9 +130,11 @@ int main(int argc, char** argv)
         tiny::theme.scale(config.scale);
         tiny::theme.set_font(config.font);
         tiny::theme.set_font_style(config.font_style);
-        tiny::theme.set_variant(tiny::app::variant_in_use(
-                tiny::get_display(), XDefaultScreen(tiny::get_display()),
-                config.style));
+        tiny::theme.set_variant(tiny::look_variant(
+                config.lock_style,
+                tiny::app::variant_in_use(tiny::get_display(),
+                                          XDefaultScreen(tiny::get_display()),
+                                          config.style)));
         tiny::theme.init();
         int status = EXIT_SUCCESS;
         {

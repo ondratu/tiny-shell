@@ -15,7 +15,7 @@ set and to forget.
   menu start that one.
 
 The lock puts a window over all the monitors, black in the dark style and light
-in the light one (the style of the shell, see [Configuration](configuration.md#settings-for-gtk-and-qt-xsettings)) and takes the keyboard and
+in the light one (the style of the shell, see [Configuration](configuration.md#settings-for-gtk-and-qt-xsettings); `[lock] style = light` or `dark` keeps it in any theme, also the setting Lock style in `tiny-settings`) and takes the keyboard and
 the pointer. When a monitor is connected or the layout changes while it is
 locked (RandR), the window covers the new screen at once and the dialog moves to
 the middle of the primary monitor. The sizes follow `[theme] scale` and the font. It has three states:
