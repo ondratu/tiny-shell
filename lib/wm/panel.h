@@ -61,6 +61,10 @@ class LogoButton : public tiny::MenuButton {
     //! Is there an icon to draw?
     bool has_logo() const;
 
+    //! Repaints at once, with the colors of the new variant: the icon is drawn
+    //! over the window, so it must not wait for an Expose that may not come
+    void restyle() override;
+
   protected:
     void on_expose(const XEvent& e, void* data) override;
 

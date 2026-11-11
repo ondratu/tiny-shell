@@ -114,7 +114,7 @@ TEST(StyleOverrideTest, a_widget_draws_with_the_style_that_is_set)
 
 TEST(StyleOverrideTest, a_container_gives_it_to_what_it_holds_now_and_later)
 {
-    tiny::Style style;
+    const tiny::Style style;
     tiny::Box box(tiny::Box::Type::Horizontal, 100, 20);
     tiny::Widget before(10, 10);
     tiny::Widget after(10, 10);
