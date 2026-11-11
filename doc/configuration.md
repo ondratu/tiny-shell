@@ -240,9 +240,9 @@ that way when a file is set, and again each time the size of the screen changes
 (RandR, a new monitor): the window manager only watches the size of the root
 window, it does not link the decoders. When the configuration has no
 `[wallpaper] file` (an empty one means no wallpaper), the wallpaper is the one
-that `make install` puts in `share/backgrounds/tiny-shell`: the fox by day
-(`tiny-shell-fox-day-1920x1080.jpg`) for the light style and the fox by night
-(`tiny-shell-fox-night-1920x1080.jpg`) for the dark one. It changes with the
+that `make install` puts in `share/backgrounds/tiny-shell`: the hazel by day
+(`tiny-shell-hazel-day-1920x1080.jpg`) for the light style and the hazel by night
+(`tiny-shell-hazel-night-1920x1080.jpg`) for the dark one. It changes with the
 style (also with the actions `theme-dark`, `theme-light` and `theme-toggle`: the
 shell starts the program again with `-s`); a wallpaper that is set in the file
 does not. The modes:

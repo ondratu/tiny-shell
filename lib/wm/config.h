@@ -219,10 +219,10 @@ XftChoices wallpaper_choices();
 bool valid_wallpaper_mode(const std::string& text);
 
 /**
- * @short The wallpaper that the shell installs for a style: the fox
- * by day for the light one, the fox by night for the dark one.
+ * @short The wallpaper that the shell installs for a style: the hazel
+ * by day for the light one, the hazel by night for the dark one.
  *
- * It is `backgrounds/tiny-shell/tiny-shell-fox-<day|night>-1920x1080.jpg` in
+ * It is `backgrounds/tiny-shell/tiny-shell-hazel-<day|night>-1920x1080.jpg` in
  * the first of the data directories that has it; empty when none has (it is not
  * installed).
  */

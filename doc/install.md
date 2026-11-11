@@ -71,7 +71,7 @@ The files:
 - `share/applications`: the desktop files of `tiny-settings`, `tiny-fonts` and
   `tiny-about`, so that the launcher lists the first two and the dock finds the
   icons of their windows (`StartupWMClass`).
-- `share/backgrounds/tiny-shell`: the wallpapers, the fox by day and the fox
+- `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark
   style.
 
