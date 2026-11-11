@@ -91,6 +91,7 @@ class ClientTest : public ::testing::Test {
 
     HeaderFont header_font;
     WidgetFont widget_font;
+    const ShellFonts shell_fonts;
     FakeClient client; // 10,20 200x100
     std::unique_ptr<Probe> win;
 };

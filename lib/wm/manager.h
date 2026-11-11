@@ -208,6 +208,9 @@ class Manager : public tiny::Object {
     //! Change the colors of the shell and repaint what is shown
     void set_variant(Variant variant);
 
+    //! The look of the panel and of the dock (`Auto` follows the variant)
+    void set_looks(Look panel_look, Look dock_look);
+
     /**
      * @short Which monitors the shell uses, see `[monitors]` of the
      * configuration.
@@ -398,6 +401,9 @@ class Manager : public tiny::Object {
 
     //! Start the program of the wallpaper (nothing when there is none)
     void run_wallpaper();
+
+    //! Repaint everything that is shown with the colors of the theme
+    void restyle_widgets();
 
     //! Give the dock the favorites that are installed
     void update_favorites();

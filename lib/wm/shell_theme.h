@@ -44,8 +44,20 @@ class ShellTheme {
     //! Scale all metrics and fonts (relative to the default theme)
     void scale(double factor);
 
-    //! Change the colors of all the styles (and the toolkit ones)
+    //! Change the colors of all the styles (and the toolkit ones); the panel
+    //! and the dock follow it unless their look says otherwise
     void set_variant(Variant variant);
+    Variant get_variant() const { return variant; }
+
+    //! How the panel and the dock take their colors: `Auto` follows the
+    //! variant, `Light` and `Dark` keep theirs whatever the variant is
+    void set_looks(Look panel_look, Look dock_look);
+    Look get_panel_look() const { return panel_look; }
+    Look get_dock_look() const { return dock_look; }
+
+    //! The variant that the panel and the dock have now
+    Variant panel_variant() const { return look_variant(panel_look, variant); }
+    Variant dock_variant() const { return look_variant(dock_look, variant); }
 
     uint32_t root_background = 0x729FCF;
     int win_header = 25;
@@ -87,10 +99,23 @@ class ShellTheme {
     ButtonStyle button;
     HeaderStyle header;
     DockStyle dock;
+    //! What is in the panel (and its menu) and in the dock (and its menus) is
+    //! drawn with these: the colors of the look of the part, the metrics of
+    //! the widgets of the toolkit
+    Style panel_widgets;
+    Style dock_widgets;
+    PlainStyle panel_separator{0x555753, 0xC0BFBC};
     PlainStyle dock_separator{0x555753, 0xC0BFBC};
     PlainStyle dock_mark{0x729FCF, 0x3584E4};
 
   private:
+    //! Give the panel and the dock the colors of their variants
+    void apply_looks();
+
+    Variant variant = Variant::Dark;
+    Look panel_look = Look::Auto;
+    Look dock_look = Look::Auto;
+
     //! The metrics and styles of the shell only
     void scale_own(double factor);
 }; // ShellTheme

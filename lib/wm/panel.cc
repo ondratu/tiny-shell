@@ -31,6 +31,7 @@ MainMenu::MainMenu():
     logout(shell_theme.menu_width, shell_theme.popup_item_height, "Logout")
 {
     name = "wm_mainmenu";
+    set_style_override(&shell_theme.panel_widgets);
 }
 
 MainMenu::~MainMenu() = default;
@@ -51,7 +52,7 @@ void MainMenu::realize(::Window parent_arg, int x, int y)
     for (const auto& group : groups) {
         if (top > 0) { // the line is in the middle of the space between
             lines.push_back(std::make_unique<DockLine>(
-                    shell_theme.dock_separator, shell_theme.menu_width,
+                    shell_theme.panel_separator, shell_theme.menu_width,
                     shell_theme.dock_line));
             add(lines.back().get(), 0,
                 top + (separator - shell_theme.dock_line) / 2);
@@ -111,6 +112,7 @@ Panel::Panel():
     logo(shell_theme.panel_app_width, shell_theme.panel, "Main Menu")
 {
     name = "wm_panel";
+    set_style_override(&shell_theme.panel_widgets);
 }
 
 Panel::~Panel() = default;

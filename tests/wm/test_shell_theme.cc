@@ -43,7 +43,7 @@ TEST_F(ShellThemeTest, default_window_metrics)
 TEST_F(ShellThemeTest, the_styles_of_the_shell_override_the_widget_defaults)
 {
     EXPECT_EQ(t.button.border_width, 0);
-    EXPECT_EQ(t.button.normal_bg, 0xF8F8F8u);
+    EXPECT_EQ(t.button.normal_bg, 0x303436u); // the dark variant by default
     EXPECT_EQ(t.header.padding_width, 2);
     EXPECT_EQ(t.dock.padding_width, 5);
 }
@@ -131,4 +131,61 @@ TEST_F(ShellThemeTest, the_variant_is_set_to_the_toolkit_too)
     EXPECT_EQ(toolkit.widget.normal_bg, Style::BLACK);
     EXPECT_EQ(t.dock_separator.normal_bg, 0x555753u);
     EXPECT_EQ(t.dock_mark.normal_bg, 0x729FCFu);
+}
+
+TEST_F(ShellThemeTest, the_title_bar_and_the_buttons_follow_the_variant)
+{
+    t.set_variant(tiny::Variant::Light);
+    EXPECT_EQ(t.header.normal_bg, 0xF8F8F8u);
+    EXPECT_EQ(t.button.normal_bg, 0xF8F8F8u);
+
+    t.set_variant(tiny::Variant::Dark);
+    EXPECT_EQ(t.header.normal_bg, 0x303436u);
+    EXPECT_EQ(t.button.normal_bg, 0x303436u);
+}
+
+TEST_F(ShellThemeTest, the_panel_and_the_dock_follow_the_theme_by_default)
+{
+    t.set_variant(tiny::Variant::Light);
+    EXPECT_EQ(t.panel_variant(), tiny::Variant::Light);
+    EXPECT_EQ(t.dock_variant(), tiny::Variant::Light);
+    EXPECT_EQ(t.panel_widgets.normal_bg, 0xF6F5F4u);
+
+    t.set_variant(tiny::Variant::Dark);
+    EXPECT_EQ(t.panel_variant(), tiny::Variant::Dark);
+    EXPECT_EQ(t.panel_widgets.normal_bg, 0x000000u);
+    EXPECT_EQ(t.dock.normal_bg, 0x000000u);
+}
+
+TEST_F(ShellThemeTest, the_panel_and_the_dock_can_keep_a_look_of_their_own)
+{
+    t.set_variant(tiny::Variant::Dark);
+    t.set_looks(tiny::Look::Light, tiny::Look::Auto);
+    EXPECT_EQ(t.panel_widgets.normal_bg, 0xF6F5F4u); // light in a dark theme
+    EXPECT_EQ(t.panel_separator.normal_bg, 0xC0BFBCu);
+    EXPECT_EQ(t.dock_widgets.normal_bg, 0x000000u); // the dock follows
+
+    t.set_variant(tiny::Variant::Light);
+    t.set_looks(tiny::Look::Auto, tiny::Look::Dark);
+    EXPECT_EQ(t.panel_widgets.normal_bg, 0xF6F5F4u);
+    EXPECT_EQ(t.dock.normal_bg, 0x000000u); // dark in a light theme
+    EXPECT_EQ(t.dock_widgets.normal_bg, 0x000000u);
+    EXPECT_EQ(t.dock_separator.normal_bg, 0x555753u);
+}
+
+TEST_F(ShellThemeTest, a_change_of_the_variant_keeps_the_looks)
+{
+    t.set_looks(tiny::Look::Dark, tiny::Look::Light);
+    t.set_variant(tiny::Variant::Light);
+    t.set_variant(tiny::Variant::Dark);
+    EXPECT_EQ(t.get_panel_look(), tiny::Look::Dark);
+    EXPECT_EQ(t.get_dock_look(), tiny::Look::Light);
+    EXPECT_EQ(t.dock_variant(), tiny::Variant::Light);
+}
+
+TEST_F(ShellThemeTest, a_change_of_a_look_makes_hidden_widgets_take_the_colors)
+{
+    const unsigned before = toolkit.generation;
+    t.set_looks(tiny::Look::Light, tiny::Look::Light);
+    EXPECT_GT(toolkit.generation, before);
 }

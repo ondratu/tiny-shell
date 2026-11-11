@@ -40,6 +40,8 @@ class ClockLabelTest : public ::testing::Test {
 
     const WidgetFont font;
 
+    const ShellFonts shell_fonts;
+
   private:
     bool had_tz = false;
     std::string old_tz;

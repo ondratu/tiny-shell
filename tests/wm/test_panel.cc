@@ -82,6 +82,7 @@ TEST(MainMenuTest, buttons_have_labels)
 TEST(MainMenuTest, a_click_on_an_item_is_signalled)
 {
     const WidgetFont font;
+    const ShellFonts shell_fonts;
     tiny::wm::MainMenu menu;
     Recorder recorder;
     menu.logout.on_click.connect(recorder.slot());
@@ -142,6 +143,7 @@ TEST(PanelTest, the_menu_stays_hidden_until_the_button_is_used)
 TEST(PanelTest, main_menu_button_click_opens_the_main_menu)
 {
     const WidgetFont font;
+    const ShellFonts shell_fonts;
     tiny::wm::Panel panel;
     panel.realize(root_window(), 0, 0);
     panel.map_all();
@@ -187,6 +189,7 @@ TEST(PanelAppletTest, the_next_applet_is_beside_the_first_one)
 TEST(PanelAppletTest, an_applet_at_the_left_is_after_the_main_menu_button)
 {
     const WidgetFont font;
+    const ShellFonts shell_fonts;
     tiny::wm::Panel panel;
     panel.realize(root_window(), 0, 0);
     tiny::Label label(60, 20);
@@ -307,6 +310,7 @@ TEST(PanelTest, the_menu_of_the_logo_starts_at_the_left_edge_of_the_screen)
     tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
                                   {files.dir()});
     const WidgetFont font;
+    const ShellFonts shell_fonts;
     tiny::wm::Panel panel;
     panel.set_icons(&icons);
     panel.realize(root_window(), 0, 0);

@@ -164,6 +164,7 @@ class ManagerTest : public ::testing::Test {
 
     HeaderFont header_font;
     WidgetFont widget_font;
+    const ShellFonts shell_fonts;
     std::vector<std::unique_ptr<FakeClient>> clients;
     std::unique_ptr<tiny::wm::Manager> manager;
 };
