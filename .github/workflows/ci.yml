@@ -226,10 +226,10 @@ jobs:
         # EWMH policies, shading, the layers, the command line with the WM_Sn selection and the question
         # about applications that do not respond, the window switcher, the timers and the
         # functions of the event handlers, the screen lock: its menu item, its key and the watching
-        # of the lock) with a reserve; change it on
+        # of the lock, the idle lock and the black cover of the display) with a reserve; change it on
         # purpose.
         run: |
-          max=620000
+          max=625000
           make CXX=clang++-19 AR=llvm-ar-19 \
               CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell

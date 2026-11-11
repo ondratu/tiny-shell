@@ -2305,7 +2305,8 @@ void Manager::check_screen_blank()
         }
     }
     if (!screen_blank->shown()) {
-        const auto wait = blank_lock->check();
+        const auto wait = blank_lock->check(); // it may cover the screen
+        // cppcheck-suppress identicalInnerCondition
         if (!screen_blank->shown()) {
             // no idle time to read: try again later, not never
             blank_timer = timers.after(
