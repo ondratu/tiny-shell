@@ -1333,7 +1333,8 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
     size_t count = 0;
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Applications}) {
+          Section::Displays, Section::Power, Section::Security,
+          Section::Applications}) {
         for (const Field f : SettingsForm::section_fields(section)) {
             EXPECT_EQ(SettingsForm::section_of(f), section);
             ++count;
@@ -1353,6 +1354,7 @@ TEST(SettingsFormSectionTest, the_sections_have_names)
     EXPECT_STREQ(SettingsForm::section_title(Section::Desktop), "Desktop");
     EXPECT_STREQ(SettingsForm::section_title(Section::Displays), "Displays");
     EXPECT_STREQ(SettingsForm::section_title(Section::Power), "Power");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Security), "Security");
 }
 
 TEST(SettingsFormSectionTest, a_click_on_an_item_of_the_panel_shows_its_section)
@@ -1388,7 +1390,8 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     ASSERT_EQ(form.section(), Section::Fonts); // where `make()` starts
     for (const Section next :
          {Section::Desktop, Section::Displays, Section::Power,
-          Section::Applications, Section::Appearance, Section::Fonts}) {
+          Section::Security, Section::Applications, Section::Appearance,
+          Section::Fonts}) {
         EXPECT_TRUE(form.key(Key::NextSection));
         EXPECT_EQ(form.section(), next);
     }
@@ -1707,10 +1710,38 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
 
 // The choices of the power
 
-TEST(SettingsFormPowerTest, the_power_section_has_the_display_and_the_lock)
+TEST(SettingsFormPowerTest, power_has_the_display_and_security_has_the_lock)
 {
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
-              (std::vector<Field>{Field::DisplayOff, Field::LockDelay}));
+              (std::vector<Field>{Field::DisplayOff}));
+    EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Security),
+              (std::vector<Field>{Field::LockDelay}));
+}
+
+TEST(SettingsFormPowerTest, the_fields_of_power_and_security_have_a_note)
+{
+    for (const Field f : {Field::DisplayOff, Field::LockDelay}) {
+        EXPECT_NE(std::string(SettingsForm::note(f)), "");
+    }
+    EXPECT_STREQ(SettingsForm::note(Field::Font), "");
+    EXPECT_TRUE(SettingsForm::section_has_notes(SettingsForm::Section::Power));
+    EXPECT_TRUE(
+            SettingsForm::section_has_notes(SettingsForm::Section::Security));
+    EXPECT_FALSE(SettingsForm::section_has_notes(SettingsForm::Section::Fonts));
+}
+
+TEST(SettingsFormPowerTest, the_note_is_under_its_field_and_in_the_form)
+{
+    SettingsForm form = make();
+    form.resize(500, form.form_height());
+
+    for (const Field f : {Field::DisplayOff, Field::LockDelay}) {
+        const Rect field = form.field_rect(f);
+        const Rect note = form.note_rect(f);
+        EXPECT_GE(note.y, field.y + field.height);
+        EXPECT_EQ(note.x, field.x);
+        EXPECT_LE(note.y + note.height, form.message_rect().y);
+    }
 }
 
 // Clicks on the choices
@@ -1731,12 +1762,12 @@ TEST(SettingsFormPowerTest, a_click_on_the_choice_changes_it_and_opens_nothing)
 
 // The lock after the display
 
-TEST(SettingsFormPowerTest, the_lock_delay_is_a_choice_of_the_power_section)
+TEST(SettingsFormPowerTest, the_lock_delay_is_a_choice_of_the_security_section)
 {
     EXPECT_EQ(SettingsForm::section_of(Field::LockDelay),
-              SettingsForm::Section::Power);
+              SettingsForm::Section::Security);
     EXPECT_TRUE(SettingsForm::is_choice(Field::LockDelay));
-    EXPECT_NE(std::string(SettingsForm::hint(Field::LockDelay)), "");
+    EXPECT_NE(std::string(SettingsForm::note(Field::LockDelay)), "");
 }
 
 TEST(SettingsFormPowerTest, never_is_the_first_choice_and_the_default)
@@ -1789,7 +1820,7 @@ TEST(SettingsFormPowerTest, the_display_off_is_a_choice_of_the_power_section)
     EXPECT_EQ(SettingsForm::section_of(Field::DisplayOff),
               SettingsForm::Section::Power);
     EXPECT_TRUE(SettingsForm::is_choice(Field::DisplayOff));
-    EXPECT_NE(std::string(SettingsForm::hint(Field::DisplayOff)), "");
+    EXPECT_NE(std::string(SettingsForm::note(Field::DisplayOff)), "");
 }
 
 TEST(SettingsFormPowerTest, unchanged_is_the_first_choice_and_the_default)
@@ -1844,7 +1875,8 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
     form.resize(500, form.form_height());
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Applications}) {
+          Section::Displays, Section::Power, Section::Security,
+          Section::Applications}) {
         form.set_section(section);
         for (const Field f : SettingsForm::section_fields(section)) {
             const Rect r = form.field_rect(f);

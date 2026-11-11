@@ -7,7 +7,9 @@
 // and subpixel order of the text of the programs), Desktop (the mode of the
 // dock and the format of the clock), Displays (the primary and the secondary
 // monitor, where the secondary one is, and the numbers on the monitors), Power
-// (when the lock screen goes black) and Applications (the terminal). The choices
+// (when the display is switched off), Security (when the screen is locked) and
+// Applications (the terminal). A field of Power and Security has a note under it
+// in small letters that says what it does. The choices
 // go through their values with the arrows, Space and a click; a field has a
 // cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
 // Down and Ctrl+Page Up go through the sections. The button next to the font opens a list of the fonts of
@@ -644,6 +646,7 @@ class SettingsApp : public tiny::XftWindow {
             paint_field(r, form.field(row.id), form.focus() == row.id,
                         !form.problem(row.id).empty());
         }
+        paint_notes();
         if (form.section() == SettingsForm::Section::Fonts) {
             paint_button(form.choose_rect(), "Choose…", true);
         }
@@ -657,6 +660,31 @@ class SettingsApp : public tiny::XftWindow {
 
         paint_button(form.cancel_rect(), "Cancel", true);
         paint_button(form.save_rect(), "Save", form.problem().empty());
+    }
+
+    //! What a field does, in small letters under it (see `note()`)
+    void paint_notes()
+    {
+        XftFont* small = font(ui_family, metrics.text_size * 4 / 5);
+        if (small == nullptr) {
+            small = ui_font;
+        }
+        for (const SettingsForm::Field f :
+             SettingsForm::section_fields(form.section())) {
+            const char* note = SettingsForm::note(f);
+            if (*note == '\0') {
+                continue;
+            }
+            const tiny::Rect r = form.note_rect(f);
+            const auto lines = wrap(small, note, r.width);
+            const int line_height = r.height / 3;
+            for (size_t i = 0; i < lines.size() && i < 3; ++i) {
+                text_in(small, dim,
+                        {r.x, r.y + static_cast<int>(i) * line_height, r.width,
+                         line_height},
+                        0, lines[i]);
+            }
+        }
     }
 
     void paint_preview()

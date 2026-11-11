@@ -51,6 +51,7 @@ class SettingsForm {
         Desktop,
         Displays,
         Power,
+        Security,
         Applications
     };
 
@@ -140,6 +141,7 @@ class SettingsForm {
         int label_width = 90;    //!< the labels left of the fields
         int row_height = 34;     //!< a field, a button, a row of the list
         int row_gap = 14;        //!< between the fields
+        int note_height = 52;    //!< the three small lines under a field
         int button_width = 100;  //!< Save and Cancel
         int choose_width = 120;  //!< the button that opens the list of fonts
         int text_size = 15;      //!< the font of the text, in pixels
@@ -187,7 +189,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 6;
+    static constexpr size_t section_count = 7;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -210,6 +212,11 @@ class SettingsForm {
 
     /// A short help for a field; empty when it has none.
     static const char* hint(Field field);
+
+    /// What a field does, in small lines under it (three at most); empty when it has no
+    /// note. A section where a field has one has taller rows.
+    static const char* note(Field field);
+    static bool section_has_notes(Section section);
 
     /// The texts of the fields.
     Values values() const;
@@ -257,6 +264,8 @@ class SettingsForm {
 
     Rect label_rect(Field field) const;
     Rect field_rect(Field field) const;
+    //! The place of the note under a field (see `note()`)
+    Rect note_rect(Field field) const;
     Rect choose_rect() const;
     //! Cancel; in the list of fonts it goes back
     Rect cancel_rect() const;
@@ -382,6 +391,7 @@ class SettingsForm {
         SectionDesktop,
         SectionDisplays,
         SectionPower,
+        SectionSecurity,
         SectionApplications,
         FirstRow //!< and the rows of the list from here
     };
@@ -411,6 +421,7 @@ class SettingsForm {
     void reveal();
     size_t max_first() const;
     int rows_top() const;
+    int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
     std::array<TextField, 17> fields_;

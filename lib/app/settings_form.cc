@@ -95,6 +95,7 @@ SettingsForm::Metrics SettingsForm::Metrics::scaled(double factor)
     m.label_width = tiny::scaled(m.label_width, factor);
     m.row_height = tiny::scaled(m.row_height, factor);
     m.row_gap = tiny::scaled(m.row_gap, factor);
+    m.note_height = tiny::scaled(m.note_height, factor);
     m.button_width = tiny::scaled(m.button_width, factor);
     m.choose_width = tiny::scaled(m.choose_width, factor);
     m.text_size = tiny::scaled(m.text_size, factor);
@@ -141,18 +142,24 @@ void SettingsForm::resize(int width, int height)
 int SettingsForm::form_height() const
 {
     // the rows of the longest section, the message of two rows and the buttons
-    size_t longest = 0;
+    int longest = 0;
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Applications}) {
-        longest = std::max(
-                longest,
+          Section::Displays, Section::Power, Section::Security,
+          Section::Applications}) {
+        const auto rows = static_cast<int>(
                 section_fields(section).size() +
-                        (section == Section::Appearance ? thumbnail_rows : 0));
+                (section == Section::Appearance ? thumbnail_rows : 0));
+        longest = std::max(longest, rows * row_pitch(section));
     }
-    const auto rows = static_cast<int>(longest) + 2 + 1;
-    return 2 * metrics_.margin + rows * metrics_.row_height +
-           static_cast<int>(longest + 1) * metrics_.row_gap;
+    return 2 * metrics_.margin + longest + 3 * metrics_.row_height +
+           metrics_.row_gap;
+}
+
+int SettingsForm::row_pitch(Section section) const
+{
+    return metrics_.row_height + metrics_.row_gap +
+           (section_has_notes(section) ? metrics_.note_height : 0);
 }
 
 SettingsForm::Values SettingsForm::values() const
@@ -191,6 +198,8 @@ const char* SettingsForm::section_title(Section section)
             return "Displays";
         case Section::Power:
             return "Power";
+        case Section::Security:
+            return "Security";
         case Section::Applications:
             break;
     }
@@ -209,8 +218,10 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> displays = {Field::PrimaryMonitor,
                                                 Field::SecondaryMonitor,
                                                 Field::MonitorPlacement};
-    static const std::vector<Field> power = {Field::DisplayOff,
-                                             Field::LockDelay};
+    // TODO: the battery (what happens on low charge, power saver) goes here
+    // when the shell can read it; Power is the place for it
+    static const std::vector<Field> power = {Field::DisplayOff};
+    static const std::vector<Field> security = {Field::LockDelay};
     static const std::vector<Field> applications = {Field::Terminal};
     switch (section) {
         case Section::Appearance:
@@ -223,6 +234,8 @@ SettingsForm::section_fields(Section section)
             return displays;
         case Section::Power:
             return power;
+        case Section::Security:
+            return security;
         case Section::Applications:
             break;
     }
@@ -233,7 +246,7 @@ SettingsForm::Section SettingsForm::section_of(Field field)
 {
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power}) {
+          Section::Displays, Section::Power, Section::Security}) {
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;
@@ -269,10 +282,6 @@ const char* SettingsForm::hint(Field field)
         case Field::MonitorPlacement:
             return "Where the secondary monitor is, seen from the primary "
                    "one (runs xrandr).";
-        case Field::LockDelay:
-            return "The screen is locked this long after the display goes off.";
-        case Field::DisplayOff:
-            return "The display goes off after this time without input.";
         case Field::Terminal:
             return "The program and its arguments, e.g. xterm -e.";
         case Field::Wallpaper:
@@ -281,6 +290,28 @@ const char* SettingsForm::hint(Field field)
             break;
     }
     return "";
+}
+
+const char* SettingsForm::note(Field field)
+{
+    switch (field) {
+        case Field::DisplayOff:
+            return "Turns the display off after this time without input. "
+                   "Unchanged keeps the setting of the X server.";
+        case Field::LockDelay:
+            return "Locks the screen this long after the display turns off "
+                   "(see Power). Immediately locks it as the display goes off.";
+        default:
+            break;
+    }
+    return "";
+}
+
+bool SettingsForm::section_has_notes(Section section)
+{
+    const std::vector<Field>& list = section_fields(section);
+    return std::any_of(list.begin(), list.end(),
+                       [](Field f) { return *note(f) != '\0'; });
 }
 
 bool SettingsForm::is_choice(Field field)
@@ -534,8 +565,8 @@ Rect SettingsForm::section_rect(Section section) const
 
 Rect SettingsForm::label_rect(Field field) const
 {
-    const int y = metrics_.margin +
-                  row_of(field) * (metrics_.row_height + metrics_.row_gap);
+    const int y =
+            metrics_.margin + row_of(field) * row_pitch(section_of(field));
     return {metrics_.sidebar_width + metrics_.margin, y, metrics_.label_width,
             metrics_.row_height};
 }
@@ -549,6 +580,13 @@ Rect SettingsForm::field_rect(Field field) const
             field == Field::Font ? metrics_.choose_width + metrics_.row_gap : 0;
     return {x, label.y, std::max(1, width_ - x - metrics_.margin - reserved),
             metrics_.row_height};
+}
+
+Rect SettingsForm::note_rect(Field field) const
+{
+    const Rect r = field_rect(field);
+    return {r.x, r.y + r.height + metrics_.row_gap / 4, r.width,
+            metrics_.note_height - metrics_.row_gap / 4};
 }
 
 Rect SettingsForm::choose_rect() const
@@ -898,6 +936,7 @@ bool SettingsForm::act(size_t target, int x)
         case SectionDesktop:
         case SectionDisplays:
         case SectionPower:
+        case SectionSecurity:
         case SectionApplications:
             set_section(static_cast<Section>(target - SectionAppearance));
             return true;
