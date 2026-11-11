@@ -70,7 +70,6 @@ class SettingsForm {
         PrimaryMonitor,   //!< auto (empty), a number or the name of an output
         SecondaryMonitor, //!< the same
         MonitorPlacement, //!< a choice: keep, right, left, above or below
-        BlankScreen,      //!< a choice: the minutes to a black lock screen
         LockDelay, //!< a choice: the minutes from the display off to the lock
         DisplayOff //!< a choice: the minutes to switch the display off
     };
@@ -124,9 +123,6 @@ class SettingsForm {
         std::string primary_monitor{};
         std::string secondary_monitor{};
         std::string monitor_placement{};
-        //! The minutes without input to a black lock screen ("" is 1, then
-        //! 5, 10, 15 and "never")
-        std::string blank_screen{};
         //! The minutes from the display off to the lock ("" is never, then
         //! 0, 1, 2, 5, 10 and 30)
         std::string lock_delay{};
@@ -373,7 +369,6 @@ class SettingsForm {
         PrimaryMonitorField,
         SecondaryMonitorField,
         MonitorPlacementField,
-        BlankScreenField,
         LockDelayField,
         DisplayOffField, //!< the fields are in the order of `Field`
         ChooseButton,
@@ -418,7 +413,7 @@ class SettingsForm {
     int rows_top() const;
     int controls_top() const;
 
-    std::array<TextField, 18> fields_;
+    std::array<TextField, 17> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

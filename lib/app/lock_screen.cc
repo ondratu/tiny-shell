@@ -181,7 +181,6 @@ LockScreen::LockScreen(tiny::Display& display_arg,
                        std::vector<std::string> command, std::string user_arg,
                        LockOptions options_arg):
     display(display_arg),
-    power(display_arg),
     session(std::move(command)),
     user(std::move(user_arg)),
     options(std::move(options_arg))
@@ -247,8 +246,6 @@ LockScreen::LockScreen(tiny::Display& display_arg,
 LockScreen::~LockScreen()
 {
     tiny::handlers.unset_handler(VisibilityNotify, cover);
-    // the monitor must not stay dark after the lock, whatever put it to sleep
-    power.on();
     if (grabbed) {
         XUngrabKeyboard(display, CurrentTime);
         XUngrabPointer(display, CurrentTime);
@@ -356,7 +353,7 @@ bool LockScreen::lock(std::chrono::milliseconds patience)
                     CurrentTime);
             if (pointer == GrabSuccess) {
                 grabbed = true;
-                touch();
+                touch(true);
                 return true;
             }
             XUngrabKeyboard(display, CurrentTime);
@@ -580,11 +577,24 @@ bool LockScreen::step(int timeout_ms)
     return !done;
 }
 
-void LockScreen::touch()
+void LockScreen::touch(bool counts_idle)
 {
-    blank_at = options.blank_after > std::chrono::milliseconds(0)
-                       ? Clock::now() + options.blank_after
-                       : Clock::time_point();
+    if (options.blank_after <= std::chrono::milliseconds(0)) {
+        blank_at = Clock::time_point();
+        return;
+    }
+    // a screen that comes after the user has been away for a while: the time
+    // that has passed counts (not after input, which has just ended it)
+    std::chrono::milliseconds passed{0};
+    if (counts_idle && options.from_last_input) {
+        if (!idle_time) {
+            idle_time = std::make_unique<wm::IdleTime>(display);
+        }
+        if (const auto idle = idle_time->idle()) {
+            passed = std::min(*idle, options.blank_after);
+        }
+    }
+    blank_at = Clock::now() + options.blank_after - passed;
 }
 
 void LockScreen::set_state(State state)
@@ -599,11 +609,6 @@ void LockScreen::set_state(State state)
         set_status("");
         dialog->question.set_text("");
         prompt_text.clear();
-    }
-    if (state == State::Black && before != State::Black) {
-        power.off(); // nothing to see, so the monitor can rest
-    } else if (before == State::Black && state != State::Black) {
-        power.on();
     }
     // what is seen in the state
     const bool seen = state != State::Black;
@@ -622,7 +627,7 @@ void LockScreen::set_state(State state)
         give_focus();
     }
     if (state == State::Idle) {
-        touch(); // the time to the black screen counts from here
+        touch(before == State::Idle); // only the first time is not after input
     } else {
         blank_at = Clock::time_point(); // a dialog or a black screen stays
     }

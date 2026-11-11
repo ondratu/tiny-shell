@@ -150,24 +150,6 @@ bool valid_dock_choice(const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
-XftChoices blank_choices()
-{
-    static constexpr XftChoice times[] = {{"", "1 minute"},
-                                          {"5", "5 minutes"},
-                                          {"10", "10 minutes"},
-                                          {"15", "15 minutes"},
-                                          {"never", "Never"}};
-    return {std::begin(times), std::end(times)};
-}
-
-bool valid_blank_choice(const std::string& text)
-{
-    const XftChoices choices = blank_choices();
-    return text == "1" ||
-           std::any_of(choices.begin(), choices.end(),
-                       [&](const XftChoice& c) { return text == c.value; });
-}
-
 XftChoices placement_choices()
 {
     static constexpr XftChoice where[] = {{"", "Keep"},
@@ -213,11 +195,6 @@ bool parse_allowed_minutes(std::string_view value,
 }
 
 } // namespace
-
-bool parse_blank_after(const std::string& text, int& minutes)
-{
-    return parse_allowed_minutes(trim(text), {1, 5, 10, 15}, minutes);
-}
 
 XftChoices lock_delay_choices()
 {
@@ -478,11 +455,6 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.lock_auth = *value;
         } else {
             problem("[lock] auth must be auto, pam, checker or pwcheck");
-        }
-    }
-    if (const auto value = ini.get("lock", "blank_after")) {
-        if (!parse_blank_after(*value, config.lock_blank_minutes)) {
-            problem("[lock] blank_after must be 1, 5, 10, 15 or never");
         }
     }
     if (const auto value = ini.get("lock", "delay")) {

@@ -43,7 +43,6 @@ namespace tiny::wm {
  * [lock]
  * auth = auto
  * pam_service = tiny-lock
- * blank_after = 1
  * delay = 5
  *
  * [display]
@@ -71,9 +70,6 @@ struct Config {
     std::string lock_auth =
             "auto"; //!< [lock] auth: auto, pam, checker, pwcheck
     std::string lock_pam_service = "tiny-lock"; //!< [lock] pam_service
-    //! [lock] blank_after: minutes without input to a black screen (1, 5, 10
-    //! or 15); 0 is `never`
-    int lock_blank_minutes = 1;
     //! [lock] delay: minutes from the moment the display is switched off to
     //! the lock (0, 1, 2, 5, 10 or 30); 0 is at once, -1 is `never`, the
     //! default
@@ -182,17 +178,6 @@ bool valid_placement_choice(const std::string& text);
  * line break would break the file).
  */
 bool valid_clock_format(const std::string& text);
-
-//! The choices of `[lock] blank_after` that a form offers: "" is the default,
-//! 1 minute, then 5, 10 and 15 minutes and `never`
-XftChoices blank_choices();
-
-//! Whether the text is one of the values of `blank_choices()`, or "1" (the
-//! same as "")
-bool valid_blank_choice(const std::string& text);
-
-//! The values of `[lock] blank_after` in minutes; 0 is never
-bool parse_blank_after(const std::string& text, int& minutes);
 
 //! The choices of `[lock] delay` that a form offers: "" is `never` (the
 //! default), then at once (0), 1, 2, 5, 10 and 30 minutes

@@ -56,15 +56,6 @@
 
 namespace {
 
-//! What the form has for `[lock] blank_after`: "" is the default minute
-std::string blank_value(int minutes)
-{
-    if (minutes == 1) {
-        return "";
-    }
-    return minutes == 0 ? "never" : std::to_string(minutes);
-}
-
 //! What the form has for `[display] off_after`: "" leaves the X server as it
 //! is
 std::string display_off_value(int minutes)
@@ -140,7 +131,6 @@ class SettingsApp : public tiny::XftWindow {
                 config.monitor_placement == tiny::wm::Placement::Keep
                         ? ""
                         : tiny::wm::placement_name(config.monitor_placement),
-                blank_value(config.lock_blank_minutes),
                 config.lock_delay_minutes < 0
                         ? ""
                         : std::to_string(config.lock_delay_minutes),
@@ -350,12 +340,6 @@ class SettingsApp : public tiny::XftWindow {
                 // the first choice, "", is auto-hide
                 changed.push_back(
                         {"dock", "mode", v.dock.empty() ? "autohide" : v.dock});
-            }
-            if (v.blank_screen != initial.blank_screen) {
-                // the first choice, "", is one minute
-                changed.push_back(
-                        {"lock", "blank_after",
-                         v.blank_screen.empty() ? "1" : v.blank_screen});
             }
             if (v.lock_delay != initial.lock_delay) {
                 // the first choice, "", is never
@@ -644,7 +628,6 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::PrimaryMonitor, "Primary"},
                     {SettingsForm::Field::SecondaryMonitor, "Secondary"},
                     {SettingsForm::Field::MonitorPlacement, "Position"},
-                    {SettingsForm::Field::BlankScreen, "Blank after"},
                     {SettingsForm::Field::LockDelay, "Lock after"},
                     {SettingsForm::Field::DisplayOff, "Display off"}};
         for (const auto& row : rows) {

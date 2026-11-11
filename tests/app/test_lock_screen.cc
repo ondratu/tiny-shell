@@ -2,16 +2,15 @@
 
 #include <sys/stat.h>
 
-#include <X11/extensions/dpms.h>
-
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <thread>
 
 #include "app/lock_screen.h"
-#include "display_power.h"
+#include "wm/idle_time.h"
 
 using namespace tiny::app;
 
@@ -560,35 +559,41 @@ TEST_F(LockScreenTest, the_screen_goes_black_after_the_time)
     }
 }
 
-TEST_F(LockScreenTest, a_black_screen_switches_the_display_off_and_input_on)
+TEST_F(LockScreenTest, the_time_that_has_passed_without_input_counts_if_asked)
 {
-    tiny::DisplayPower power(tiny::get_display());
-    if (!power.available()) {
-        GTEST_SKIP() << "the X server has no DPMS";
+    const tiny::wm::IdleTime probe(tiny::get_display());
+    if (!probe.available()) {
+        GTEST_SKIP() << "the X server has no IDLETIME counter";
     }
-    const bool was_enabled = power.enabled();
-    const auto was = power.timeout();
-    power.set_timeout(std::chrono::seconds(600));
-    const auto level = [] {
-        CARD16 current = DPMSModeOn;
-        BOOL state = False;
-        DPMSInfo(tiny::get_display(), &current, &state);
-        return current;
-    };
-    {
-        LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna");
-        screen.blank();
-        XSync(tiny::get_display(), False);
-        EXPECT_EQ(level(), DPMSModeOff);
-        screen.wake();
-        XSync(tiny::get_display(), False);
-        EXPECT_EQ(level(), DPMSModeOn);
+    std::this_thread::sleep_for(std::chrono::milliseconds(700));
+    const auto idle = probe.idle();
+    if (!idle || *idle < std::chrono::milliseconds(700)) {
+        GTEST_SKIP() << "there was input meanwhile";
     }
-    if (was_enabled && was) {
-        power.set_timeout(*was);
-    } else {
-        power.set_timeout(std::chrono::seconds(0));
-    }
+    LockOptions options;
+    options.blank_after = std::chrono::milliseconds(1500);
+    options.from_last_input = true;
+    const auto start = std::chrono::steady_clock::now();
+    LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna", options);
+    ASSERT_TRUE(screen.lock());
+
+    ASSERT_TRUE(wait_for(screen, [&] {
+        return screen.state() == LockScreen::State::Black;
+    }));
+    // the 700 ms (at least) that have passed are not waited for again
+    EXPECT_LT(std::chrono::steady_clock::now() - start,
+              std::chrono::milliseconds(1300));
+}
+
+TEST_F(LockScreenTest, the_screen_is_not_black_early_when_the_time_is_not_asked)
+{
+    LockOptions options;
+    options.blank_after = std::chrono::hours(1);
+    LockScreen screen(tiny::get_display(), shell("sleep 5"), "Anna", options);
+    ASSERT_TRUE(screen.lock());
+
+    screen.step(100);
+    EXPECT_EQ(screen.state(), LockScreen::State::Idle);
 }
 
 TEST_F(LockScreenTest, input_wakes_a_black_screen_and_is_not_used_otherwise)
