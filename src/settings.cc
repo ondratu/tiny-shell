@@ -145,6 +145,7 @@ class SettingsApp : public tiny::XftWindow {
                         ? ""
                         : std::to_string(config.lock_delay_minutes),
                 display_off_value(config.display_off_minutes),
+                config.display_dpms ? "yes" : "no",
                 config.style == tiny::Variant::Light ? "light" : "",
                 look_value(config.panel_style),
                 look_value(config.dock_style),
@@ -391,6 +392,9 @@ class SettingsApp : public tiny::XftWindow {
             if (v.display_off != initial.display_off) {
                 // the first choice, "", leaves the X server as it is
                 changed.push_back({"display", "off_after", v.display_off});
+            }
+            if (v.display_dpms != initial.display_dpms) {
+                changed.push_back({"display", "dpms", v.display_dpms});
             }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
@@ -671,6 +675,7 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::MonitorPlacement, "Position"},
                     {SettingsForm::Field::LockDelay, "Lock after"},
                     {SettingsForm::Field::DisplayOff, "Display off"},
+                    {SettingsForm::Field::DisplayDpms, "DPMS"},
                     {SettingsForm::Field::Theme, "Style"},
                     {SettingsForm::Field::PanelStyle, "Panel"},
                     {SettingsForm::Field::DockStyle, "Dock"},

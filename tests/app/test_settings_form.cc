@@ -1340,7 +1340,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 22u);
+    EXPECT_EQ(count, 23u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1713,7 +1713,7 @@ TEST(SettingsFormScreensTest, the_form_is_high_enough_for_the_fields)
 TEST(SettingsFormPowerTest, power_has_the_display_and_security_has_the_lock)
 {
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Power),
-              (std::vector<Field>{Field::DisplayOff}));
+              (std::vector<Field>{Field::DisplayOff, Field::DisplayDpms}));
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Security),
               (std::vector<Field>{Field::LockDelay, Field::LockStyle}));
 }
@@ -1821,6 +1821,26 @@ TEST(SettingsFormPowerTest, the_display_off_is_a_choice_of_the_power_section)
               SettingsForm::Section::Power);
     EXPECT_TRUE(SettingsForm::is_choice(Field::DisplayOff));
     EXPECT_NE(std::string(SettingsForm::note(Field::DisplayOff)), "");
+}
+
+TEST(SettingsFormPowerTest, dpms_is_a_choice_that_is_yes_by_default)
+{
+    EXPECT_EQ(SettingsForm::section_of(Field::DisplayDpms),
+              SettingsForm::Section::Power);
+    EXPECT_TRUE(SettingsForm::is_choice(Field::DisplayDpms));
+    EXPECT_NE(std::string(SettingsForm::note(Field::DisplayDpms)), "");
+
+    SettingsForm form = make();
+    EXPECT_EQ(form.text(Field::DisplayDpms), "yes");
+    EXPECT_EQ(form.choice_label(Field::DisplayDpms), "Yes");
+    EXPECT_EQ(form.problem(Field::DisplayDpms), "");
+
+    SettingsForm::Values values;
+    values.display_dpms = "maybe";
+    SettingsForm other = make(values);
+    EXPECT_NE(other.problem(Field::DisplayDpms), "");
+    values.display_dpms = "no";
+    EXPECT_EQ(make(values).clean_values().display_dpms, "no");
 }
 
 TEST(SettingsFormPowerTest, unchanged_is_the_first_choice_and_the_default)

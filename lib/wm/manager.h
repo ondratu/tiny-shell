@@ -116,6 +116,15 @@ class Manager : public tiny::Object {
      */
     void set_display_off(std::chrono::minutes after);
 
+    /**
+     * Whether the shell sets the time of DPMS in the X server (`[display]
+     * dpms`, yes by default). With no, DPMS is left as it is (and put back if
+     * the shell has changed it), and only the black window of the shell turns
+     * the display off: for the drivers where DPMS does nothing or hangs the
+     * machine. Call it before `set_display_off()`.
+     */
+    void set_dpms(bool use);
+
     //! The program of the Settings item of the main menu (`tiny-settings`
     //! is searched in PATH by default)
     void set_settings_command(std::string command)
@@ -711,6 +720,7 @@ class Manager : public tiny::Object {
     tiny::Timers::Id blank_timer = 0;
     std::chrono::minutes lock_delay{-1};  //!< [lock] delay, less than 0 never
     std::chrono::minutes display_off{-1}; //!< [display] off_after
+    bool use_dpms = true;                 //!< [display] dpms
     std::unique_ptr<tiny::DisplayPower> display_power; //!< made when needed
     //! What the X server had before the shell changed it (the time, empty
     //! for DPMS off); "Unchanged" puts it back

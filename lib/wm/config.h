@@ -78,6 +78,9 @@ struct Config {
     //! (5, 10, 15, 30 or 60); 0 is `never` (the power saving is switched off),
     //! -1 leaves the X server as it is, the default
     int display_off_minutes = -1;
+    //! [display] dpms: whether the shell sets the time of DPMS in the X server
+    //! (the screen is covered by software whatever it says)
+    bool display_dpms = true;
     std::string
             lock_checker; //!< [lock] checker: path of unix_chkpwd, "" is searched
     std::string
@@ -215,6 +218,12 @@ bool valid_lock_delay_choice(const std::string& text);
 
 //! The values of `[lock] delay` in minutes; -1 is never
 bool parse_lock_delay(const std::string& text, int& minutes);
+
+//! The choices of `[display] dpms` that a form offers: yes (the default) or no
+XftChoices dpms_choices();
+
+//! Whether the text is one of the values of `dpms_choices()`
+bool valid_dpms_choice(const std::string& text);
 
 //! The choices of `[display] off_after` that a form offers: "" leaves the
 //! server as it is (the default), then `never`, 5, 10, 15, 30 and 60 minutes

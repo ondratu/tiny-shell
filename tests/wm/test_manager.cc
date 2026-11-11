@@ -524,6 +524,18 @@ TEST_F(ManagerTest, the_cover_is_taken_away_when_the_display_never_goes_off)
     EXPECT_FALSE(manager->screen_blank->shown());
 }
 
+TEST_F(ManagerTest, without_dpms_the_server_is_left_alone_and_the_cover_stays)
+{
+    start();
+    manager->set_dpms(false);
+    manager->set_display_off(std::chrono::minutes(15));
+    EXPECT_EQ(manager->display_power, nullptr); // DPMS was not asked for
+    if (manager->blank_lock == nullptr) {
+        GTEST_SKIP() << "the X server has no IDLETIME counter";
+    }
+    EXPECT_EQ(manager->blank_lock->get_limit(), std::chrono::minutes(15));
+}
+
 TEST_F(ManagerTest, the_display_power_is_set_only_when_the_time_is_given)
 {
     start();

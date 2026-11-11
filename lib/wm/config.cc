@@ -261,6 +261,17 @@ bool parse_lock_delay(const std::string& text, int& minutes)
     return false;
 }
 
+XftChoices dpms_choices()
+{
+    static constexpr XftChoice yes_no[] = {{"yes", "Yes"}, {"no", "No"}};
+    return {std::begin(yes_no), std::end(yes_no)};
+}
+
+bool valid_dpms_choice(const std::string& text)
+{
+    return text == "yes" || text == "no";
+}
+
 XftChoices display_off_choices()
 {
     static constexpr XftChoice times[] = {
@@ -511,6 +522,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     if (const auto value = ini.get("display", "off_after")) {
         if (!parse_display_off(*value, config.display_off_minutes)) {
             problem("[display] off_after must be 5, 10, 15, 30, 60 or never");
+        }
+    }
+    if (const auto value = ini.get("display", "dpms")) {
+        if (valid_dpms_choice(*value)) {
+            config.display_dpms = *value == "yes";
+        } else {
+            problem("[display] dpms must be yes or no");
         }
     }
     if (const auto value = ini.get("lock", "pam_service")) {
