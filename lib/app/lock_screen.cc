@@ -627,7 +627,7 @@ void LockScreen::set_state(State state)
         give_focus();
     }
     if (state == State::Idle) {
-        touch(before == State::Idle); // only the first time is not after input
+        touch(before == State::Idle); // a wake-up from Black or Dialog is input
     } else {
         blank_at = Clock::time_point(); // a dialog or a black screen stays
     }

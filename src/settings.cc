@@ -676,9 +676,19 @@ class SettingsApp : public tiny::XftWindow {
                 continue;
             }
             const tiny::Rect r = form.note_rect(f);
-            const auto lines = wrap(small, note, r.width);
-            const int line_height = r.height / 3;
-            for (size_t i = 0; i < lines.size() && i < 3; ++i) {
+            auto lines = wrap(small, note, r.width);
+            constexpr size_t most = 3;
+            if (lines.size() > most) {
+                // a narrow window: the rest is cut with "…", not dropped
+                std::string rest;
+                for (size_t i = most - 1; i < lines.size(); ++i) {
+                    rest += (rest.empty() ? "" : " ") + lines[i];
+                }
+                lines.resize(most);
+                lines[most - 1] = fit(small, rest, r.width);
+            }
+            const int line_height = r.height / static_cast<int>(most);
+            for (size_t i = 0; i < lines.size(); ++i) {
                 text_in(small, dim,
                         {r.x, r.y + static_cast<int>(i) * line_height, r.width,
                          line_height},

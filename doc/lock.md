@@ -66,7 +66,8 @@ display off after 5 minutes of nobody being there, and lock the screen after 10.
 `delay = 0` locks it as the display goes off.
 
 Without `off_after` the time of the display is the one that the X server has
-(`xset q`); when the display never goes off, the delay counts from the last
+(`xset q`, read when the shell starts or reads the settings again, so a later
+`xset dpms` is not followed until then); when the display never goes off, the delay counts from the last
 input and `0` locks nothing. The time is the idle time of the whole X server, so
 a video that runs full screen without any input is locked too: there is no way
 to tell it to the shell yet. A change is read when tiny-shell starts and when it
