@@ -87,6 +87,11 @@ class XftWindow {
 
     //! A color for `XftDraw`, freed with the window
     XftColor& alloc_color(unsigned red, unsigned green, unsigned blue);
+    //! The same from 0xRRGGBB
+    XftColor& alloc_rgb(uint32_t rgb)
+    {
+        return alloc_color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+    }
     XftColor& alloc_gray(unsigned gray)
     {
         return alloc_color(gray, gray, gray);

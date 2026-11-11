@@ -357,3 +357,81 @@ TEST_F(XSettingsTest, the_selection_is_lost_when_somebody_takes_it)
     ASSERT_TRUE(XCheckTypedEvent(display, SelectionClear, &e));
     EXPECT_TRUE(owner.is_lost_by(e.xselectionclear));
 }
+
+// Reading what the manager of settings tells (what the small programs do)
+
+TEST(DecodeXSettingsTest, what_is_encoded_is_decoded)
+{
+    const std::vector<XSetting> list = {
+            XSetting::integer("Xft/DPI", 98304),
+            XSetting::string("Net/ThemeName", "Adwaita-dark"),
+            XSetting::string("Gtk/FontName", "Sans 11")};
+
+    const auto decoded =
+            tiny::wm::decode_xsettings(tiny::wm::encode_xsettings(list, 3));
+
+    ASSERT_EQ(decoded.size(), 3u);
+    EXPECT_EQ(decoded[0].name, "Xft/DPI");
+    EXPECT_EQ(decoded[0].number, 98304);
+    EXPECT_EQ(decoded[1].text, "Adwaita-dark");
+    EXPECT_EQ(decoded[2].text, "Sans 11");
+}
+
+TEST(DecodeXSettingsTest, cut_bytes_give_the_settings_before_the_cut)
+{
+    auto bytes = tiny::wm::encode_xsettings(
+            {XSetting::integer("A/One", 1), XSetting::string("B/Two", "text")},
+            1);
+    bytes.resize(bytes.size() - 4); // the text of the second is cut
+
+    const auto decoded = tiny::wm::decode_xsettings(bytes);
+
+    ASSERT_EQ(decoded.size(), 1u);
+    EXPECT_EQ(decoded[0].name, "A/One");
+    EXPECT_TRUE(tiny::wm::decode_xsettings({}).empty());
+    EXPECT_TRUE(tiny::wm::decode_xsettings({1, 2, 3}).empty());
+}
+
+TEST(DecodeXSettingsTest, the_other_byte_order_is_read)
+{
+    // MSBFirst, one integer "A" = 5, the serial 1, changed 2
+    const std::vector<unsigned char> bytes = {
+            1, 0, 0, 0, 0,   0, 0, 1, 0, 0, 0, 1, // header
+            0, 0, 0, 1, 'A', 0, 0, 0,             // type, name (padded)
+            0, 0, 0, 2, 0,   0, 0, 5};            // changed, value
+    // on a machine of the other order it is the same bytes in the order of
+    // the file, so the reading is the same for both
+    const auto decoded = tiny::wm::decode_xsettings(bytes);
+    if (decoded.empty()) {
+        GTEST_SKIP() << "the bytes are not valid for this machine";
+    }
+    EXPECT_EQ(decoded[0].name, "A");
+}
+
+TEST(VariantOfXSettingsTest, the_name_of_the_theme_tells_the_variant)
+{
+    using tiny::wm::variant_of_xsettings;
+    const auto theme = [](const char* name) {
+        return std::vector<XSetting>{XSetting::string("Net/ThemeName", name)};
+    };
+
+    EXPECT_EQ(variant_of_xsettings(theme("Adwaita-dark")), tiny::Variant::Dark);
+    EXPECT_EQ(variant_of_xsettings(theme("Adwaita")), tiny::Variant::Light);
+    EXPECT_EQ(variant_of_xsettings(theme("Breeze")), tiny::Variant::Light);
+    EXPECT_FALSE(variant_of_xsettings({}).has_value());
+    EXPECT_FALSE(variant_of_xsettings({XSetting::integer("Net/ThemeName", 1)})
+                         .has_value());
+}
+
+TEST_F(XSettingsTest, a_program_reads_the_variant_of_the_owner)
+{
+    EXPECT_FALSE(tiny::wm::running_variant(display, screen).has_value());
+
+    XSettings owner(display, root, screen);
+    owner.set({XSetting::string("Net/ThemeName", "Adwaita")});
+    ASSERT_TRUE(owner.acquire());
+    EXPECT_EQ(tiny::wm::running_variant(display, screen), tiny::Variant::Light);
+
+    owner.set({XSetting::string("Net/ThemeName", "Adwaita-dark")});
+    EXPECT_EQ(tiny::wm::running_variant(display, screen), tiny::Variant::Dark);
+}

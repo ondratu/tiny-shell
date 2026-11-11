@@ -24,6 +24,7 @@
 #include "display.h"
 #include "image/image.h"
 #include "image/pixmap.h"
+#include "app/app_colors.h"
 #include "wm/config.h"
 #include "wm/options.h"
 #include "wm/system_info.h"
@@ -49,16 +50,17 @@ constexpr int window_width = 380;
 
 class AboutApp : public tiny::XftWindow {
   public:
-    AboutApp(tiny::Display& display_arg, double scale):
+    AboutApp(tiny::Display& display_arg, double scale, tiny::Variant variant):
         XftWindow(display_arg),
         factor(scale),
         lines(tiny::app::about_lines(tiny::wm::version_number(),
                                      tiny::wm::system_info())),
-        black(alloc_gray(0)),
-        white(alloc_gray(255)),
-        rule(alloc_gray(0xc8)),
-        selected(alloc_gray(0xe8)),
-        dim(alloc_gray(0x6e))
+        colors(tiny::app::app_colors(variant)),
+        black(alloc_rgb(colors.text)),
+        white(alloc_rgb(colors.field)),
+        rule(alloc_rgb(colors.rule)),
+        selected(alloc_rgb(colors.selected)),
+        dim(alloc_rgb(colors.dim))
     {
         const int lines_height =
                 static_cast<int>(lines.size()) * (px(line_size) + px(line_gap));
@@ -213,6 +215,7 @@ class AboutApp : public tiny::XftWindow {
     Picture logo = None;
     int logo_width = 0;
     int logo_height = 0;
+    tiny::app::AppColors colors;
     XftColor& black;
     XftColor& white;
     XftColor& rule;
@@ -245,7 +248,9 @@ int main(int argc, char** argv)
 
     try {
         tiny::Display::init();
-        AboutApp app(tiny::get_display(), config.scale);
+        AboutApp app(tiny::get_display(), config.scale,
+                     tiny::app::variant_in_use(tiny::get_display(), 0,
+                                               config.style));
         app.run();
     } catch (const std::exception& e) {
         fprintf(stderr, "%s: %s\n", argv[0], e.what());

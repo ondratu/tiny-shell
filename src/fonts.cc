@@ -30,6 +30,7 @@
 #include "display.h"
 #include "app/font_browser.h"
 #include "style.h"
+#include "app/app_colors.h"
 #include "wm/config.h"
 #include "x_util.h"
 #include "xdg/font_info.h"
@@ -52,15 +53,16 @@ constexpr int start_rows = 3;
 class FontsApp : public tiny::XftWindow {
   public:
     FontsApp(tiny::Display& display_arg, std::vector<std::string> families,
-             double scale):
+             double scale, tiny::Variant variant):
         XftWindow(display_arg),
         metrics(FontBrowser::Metrics::scaled(scale)),
         browser(std::move(families), metrics),
-        black(alloc_gray(0)),
-        white(alloc_gray(255)),
-        selected(alloc_gray(0xe8)),
-        rule(alloc_gray(0xc8)),
-        dim(alloc_gray(0x6e))
+        colors(tiny::app::app_colors(variant)),
+        black(alloc_rgb(colors.text)),
+        white(alloc_rgb(colors.field)),
+        selected(alloc_rgb(colors.selected)),
+        rule(alloc_rgb(colors.rule)),
+        dim(alloc_rgb(colors.dim))
     {
         // not in the cache of fonts: that is emptied while scrolling
         ui_font = XftFontOpen(display, screen, FC_FAMILY, XftTypeString, "sans",
@@ -442,6 +444,7 @@ class FontsApp : public tiny::XftWindow {
     FontBrowser::Metrics metrics;
     FontBrowser browser;
     XftFont* ui_font = nullptr;
+    tiny::app::AppColors colors;
     XftColor& black;
     XftColor& white;
     XftColor& selected;
@@ -490,7 +493,9 @@ int main(int argc, char** argv)
     try {
         tiny::Display::init();
         FontsApp app(tiny::get_display(), tiny::xdg::font_families(),
-                     config.scale);
+                     config.scale,
+                     tiny::app::variant_in_use(tiny::get_display(), 0,
+                                               config.style));
         app.run();
     } catch (const std::exception& e) {
         fprintf(stderr, "%s: %s\n", argv[0], e.what());
