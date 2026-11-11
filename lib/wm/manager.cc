@@ -2296,24 +2296,30 @@ void Manager::check_screen_blank()
     }
     if (screen_blank->shown()) {
         // the window takes no input: the first key or move of the pointer is
-        // seen in the idle time
+        // seen in the idle time. A lock that runs covers it with its own
+        // window, so the cover stays until the input (the lock may not be
+        // mapped yet).
         const auto idle = idle_time->idle();
-        if (lock_guard->running() || !idle || *idle < blank_lock->get_limit()) {
+        if (!idle || *idle < blank_lock->get_limit()) {
             screen_blank->hide();
         }
     }
     if (!screen_blank->shown()) {
         const auto wait = blank_lock->check();
-        if (!wait) {
-            return;
-        }
         if (!screen_blank->shown()) {
-            blank_timer = timers.after(*wait, [this] { check_screen_blank(); });
+            // no idle time to read: try again later, not never
+            blank_timer = timers.after(
+                    wait.value_or(IdleLock::Duration(std::chrono::seconds(30))),
+                    [this] { check_screen_blank(); });
             return;
         }
     }
-    // shown: look often, so the input ends it at once
-    blank_timer = timers.after(std::chrono::milliseconds(200),
+    // shown: look often, so the input ends it at once, and keep it on top
+    // of what came up since and the size of the screen
+    if (!lock_guard->running()) { // the window of the lock is above it
+        screen_blank->show();
+    }
+    blank_timer = timers.after(std::chrono::milliseconds(500),
                                [this] { check_screen_blank(); });
 }
 
@@ -2336,7 +2342,8 @@ void Manager::update_idle_lock()
     std::chrono::seconds off{0};
     if (display_off > std::chrono::minutes::zero()) {
         off = display_off;
-    } else if (display_off < std::chrono::minutes::zero()) {
+    } else if (display_off < std::chrono::minutes::zero() && use_dpms) {
+        // with `dpms = no` the shell does not even ask the server
         off = power().timeout().value_or(std::chrono::seconds::zero());
     }
     const auto limit = off + lock_delay;
