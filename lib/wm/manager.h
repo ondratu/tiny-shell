@@ -18,6 +18,7 @@
 #include "wm/clock_label.h"
 #include "wm/idle_lock.h"
 #include "wm/idle_time.h"
+#include "wm/screen_blank.h"
 #include "wm/lock_guard.h"
 #include "wm/panel.h"
 #include "wm/action_registry.h"
@@ -108,8 +109,10 @@ class Manager : public tiny::Object {
      * Switch the display off after this long without input
      * (`[display] off_after`); zero keeps it on, less than zero leaves the
      * X server as it is (and puts back what it had if the shell has changed
-     * it). The X server counts the time, nothing runs here. Without DPMS in
-     * the server a message says so, once.
+     * it). The X server counts the time for DPMS; the shell covers the screen
+     * with a black window at the same time, for the servers where DPMS does
+     * nothing (see `set_dpms()`). Without DPMS in the server a message says so,
+     * once.
      */
     void set_display_off(std::chrono::minutes after);
 
@@ -426,6 +429,9 @@ class Manager : public tiny::Object {
     //! Look at the idle time and set the timer for the next look
     void check_idle_lock();
     void update_idle_lock();
+    void check_screen_blank();
+    void update_screen_blank();
+    bool idle_counter(); //!< makes `idle_time`; false without the counter
     void apply_display_power(std::chrono::minutes after);
     tiny::DisplayPower& power();
 
@@ -700,6 +706,9 @@ class Manager : public tiny::Object {
     std::unique_ptr<IdleTime> idle_time; //!< made with the first limit
     std::unique_ptr<IdleLock> idle_lock;
     tiny::Timers::Id idle_timer = 0;
+    std::unique_ptr<ScreenBlank> screen_blank; //!< made when needed
+    std::unique_ptr<IdleLock> blank_lock;      //!< when to cover the screen
+    tiny::Timers::Id blank_timer = 0;
     std::chrono::minutes lock_delay{-1};  //!< [lock] delay, less than 0 never
     std::chrono::minutes display_off{-1}; //!< [display] off_after
     std::unique_ptr<tiny::DisplayPower> display_power; //!< made when needed

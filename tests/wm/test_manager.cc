@@ -483,6 +483,47 @@ TEST_F(ManagerTest, an_immediate_lock_of_a_display_that_never_goes_off_is_never)
     EXPECT_EQ(manager->idle_timer, 0u);
 }
 
+TEST_F(ManagerTest, the_screen_is_covered_by_software_when_the_display_goes_off)
+{
+    start();
+    manager->set_display_off(std::chrono::minutes(60));
+    if (manager->blank_timer == 0) {
+        GTEST_SKIP() << "the X server has no IDLETIME counter";
+    }
+    ASSERT_NE(manager->blank_lock, nullptr);
+    EXPECT_EQ(manager->blank_lock->get_limit(), std::chrono::minutes(60));
+    EXPECT_FALSE(manager->screen_blank->shown()); // somebody is here
+
+    // input ends the cover: the idle time is under the limit
+    manager->screen_blank->show();
+    manager->check_screen_blank();
+    EXPECT_FALSE(manager->screen_blank->shown());
+
+    // a lock that is running covers the screen itself
+    manager->screen_blank->show();
+    manager->lock_guard->lock(); // tiny-lock is not there: it can't start
+    manager->screen_blank->show();
+    manager->check_screen_blank();
+    EXPECT_FALSE(manager->screen_blank->shown());
+
+    manager->set_display_off(std::chrono::minutes(0)); // never
+    EXPECT_EQ(manager->blank_lock, nullptr);
+    EXPECT_EQ(manager->blank_timer, 0u);
+}
+
+TEST_F(ManagerTest, the_cover_is_taken_away_when_the_display_never_goes_off)
+{
+    start();
+    manager->set_display_off(std::chrono::minutes(60));
+    if (manager->screen_blank == nullptr) {
+        GTEST_SKIP() << "the X server has no IDLETIME counter";
+    }
+    manager->screen_blank->show();
+
+    manager->set_display_off(std::chrono::minutes(-1)); // as the server is
+    EXPECT_FALSE(manager->screen_blank->shown());
+}
+
 TEST_F(ManagerTest, the_display_power_is_set_only_when_the_time_is_given)
 {
     start();

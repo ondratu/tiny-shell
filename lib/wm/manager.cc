@@ -2248,6 +2248,75 @@ void Manager::lock_screen()
     }
 }
 
+bool Manager::idle_counter()
+{
+    if (!idle_time) {
+        idle_time = std::make_unique<IdleTime>(display);
+        if (!idle_time->available()) {
+            tiny::error("This X server has no IDLETIME counter, the screen is "
+                        "not blanked and not locked when idle");
+        }
+    }
+    return idle_time->available();
+}
+
+void Manager::update_screen_blank()
+{
+    timers.cancel(blank_timer);
+    blank_timer = 0;
+    if (display_off <= std::chrono::minutes::zero() || !idle_counter()) {
+        blank_lock.reset();
+        if (screen_blank) {
+            screen_blank->hide();
+        }
+        return;
+    }
+    if (!screen_blank) {
+        screen_blank = std::make_unique<ScreenBlank>(display);
+    }
+    if (!blank_lock) {
+        blank_lock = std::make_unique<IdleLock>(IdleLock::Hooks{
+                [this] { return idle_time->idle(); },
+                // the lock covers the screen itself
+                [this] {
+                    return screen_blank->shown() || lock_guard->running();
+                },
+                [this] { screen_blank->show(); }});
+    }
+    blank_lock->set_limit(
+            std::chrono::duration_cast<IdleLock::Duration>(display_off));
+    check_screen_blank();
+}
+
+void Manager::check_screen_blank()
+{
+    blank_timer = 0;
+    if (!blank_lock) {
+        return;
+    }
+    if (screen_blank->shown()) {
+        // the window takes no input: the first key or move of the pointer is
+        // seen in the idle time
+        const auto idle = idle_time->idle();
+        if (lock_guard->running() || !idle || *idle < blank_lock->get_limit()) {
+            screen_blank->hide();
+        }
+    }
+    if (!screen_blank->shown()) {
+        const auto wait = blank_lock->check();
+        if (!wait) {
+            return;
+        }
+        if (!screen_blank->shown()) {
+            blank_timer = timers.after(*wait, [this] { check_screen_blank(); });
+            return;
+        }
+    }
+    // shown: look often, so the input ends it at once
+    blank_timer = timers.after(std::chrono::milliseconds(200),
+                               [this] { check_screen_blank(); });
+}
+
 void Manager::set_lock_delay(std::chrono::minutes delay)
 {
     lock_delay = delay;
@@ -2276,14 +2345,7 @@ void Manager::update_idle_lock()
                 .reset(); // the display never goes off, so there is no "at once"
         return;
     }
-    if (!idle_time) {
-        idle_time = std::make_unique<IdleTime>(display);
-        if (!idle_time->available()) {
-            tiny::error("[lock] delay: this X server has no IDLETIME "
-                        "counter, the screen is not locked when idle");
-        }
-    }
-    if (!idle_time->available()) {
+    if (!idle_counter()) {
         idle_lock.reset();
         return;
     }
@@ -2309,6 +2371,7 @@ void Manager::set_display_off(std::chrono::minutes after)
 {
     display_off = after;
     apply_display_power(after);
+    update_screen_blank();
     update_idle_lock(); // the lock follows the display
 }
 
