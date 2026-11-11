@@ -129,6 +129,17 @@ bool valid_xft(XftOption option, const std::string& text)
                        [&](const XftChoice& c) { return text == c.value; });
 }
 
+namespace {
+
+//! Whether the text is the value of one of the choices
+bool has_choice(const XftChoices& choices, const std::string& text)
+{
+    return std::any_of(choices.begin(), choices.end(),
+                       [&](const XftChoice& c) { return text == c.value; });
+}
+
+} // namespace
+
 XftChoices wallpaper_choices()
 {
     static constexpr XftChoice modes[] = {
@@ -145,9 +156,7 @@ XftChoices dock_choices()
 
 bool valid_dock_choice(const std::string& text)
 {
-    const XftChoices choices = dock_choices();
-    return std::any_of(choices.begin(), choices.end(),
-                       [&](const XftChoice& c) { return text == c.value; });
+    return has_choice(dock_choices(), text);
 }
 
 XftChoices look_choices()
@@ -159,9 +168,7 @@ XftChoices look_choices()
 
 bool valid_look_choice(const std::string& text)
 {
-    const XftChoices choices = look_choices();
-    return std::any_of(choices.begin(), choices.end(),
-                       [&](const XftChoice& c) { return text == c.value; });
+    return has_choice(look_choices(), text);
 }
 
 XftChoices style_choices()
@@ -172,9 +179,7 @@ XftChoices style_choices()
 
 bool valid_style_choice(const std::string& text)
 {
-    const XftChoices choices = style_choices();
-    return std::any_of(choices.begin(), choices.end(),
-                       [&](const XftChoice& c) { return text == c.value; });
+    return has_choice(style_choices(), text);
 }
 
 XftChoices placement_choices()
