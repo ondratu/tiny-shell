@@ -737,8 +737,8 @@ TEST_F(LockScreenTest, a_key_that_came_to_the_lock_is_given_to_the_entry)
 
 TEST_F(LockScreenTest, the_date_has_the_format_of_the_clock_without_the_time)
 {
-    EXPECT_EQ(date_format_of("%a %e %B %R"), "%a %e %B");
-    EXPECT_EQ(date_format_of("%R %a %e %B"), "%a %e %B");
+    EXPECT_EQ(date_format_of("%A %e %B %R"), "%A %e %B");
+    EXPECT_EQ(date_format_of("%R %A %e %B"), "%A %e %B");
     EXPECT_EQ(date_format_of("%A, %d. %m. %Y, %H:%M:%S"), "%A, %d. %m. %Y");
     EXPECT_EQ(date_format_of("%d.%m. %-H:%M"), "%d.%m.");
     EXPECT_EQ(date_format_of("%a %e %b %l:%M %p"), "%a %e %b");

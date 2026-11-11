@@ -291,7 +291,7 @@ const char* SettingsForm::hint(Field field)
 {
     switch (field) {
         case Field::ClockFormat:
-            return "A strftime format, e.g. %a %e %B %R; empty hides the "
+            return "A strftime format, e.g. %A %e %B %R; empty hides the "
                    "clock.";
         case Field::Dock:
             return "Auto-hide: hidden under a window, the bottom edge shows "
