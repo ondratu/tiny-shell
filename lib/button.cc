@@ -85,7 +85,7 @@ void LabelButton::set_text(const std::string& text_arg)
 int LabelButton::text_width() const
 {
     XGlyphInfo extents;
-    XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
+    XftTextExtentsUtf8(display, get_style().get_font(),
                        reinterpret_cast<const FcChar8*>(text.c_str()),
                        static_cast<int>(text.size()), &extents);
     return extents.xOff;
@@ -114,11 +114,11 @@ void LabelButton::on_expose(const XEvent&, void*)
 
     const uint8_t state = get_theme_state();
     XftColorAllocName(display, visual, colormap,
-                      tiny::theme.widget.get_xft_fg(state).data(), &color);
+                      get_style().get_xft_fg(state).data(), &color);
 
     draw = XftDrawCreate(display, window, visual, colormap);
 
-    XftTextExtentsUtf8(display, tiny::theme.widget.get_font(),
+    XftTextExtentsUtf8(display, get_style().get_font(),
                        reinterpret_cast<const FcChar8*>(text.c_str()),
                        static_cast<int>(text.size()), &extents);
 
@@ -129,7 +129,7 @@ void LabelButton::on_expose(const XEvent&, void*)
 
     XSetWindowBackground(display, window, get_style().get_bg(state));
     XClearWindow(display, window);
-    XftDrawStringUtf8(draw, &color, tiny::theme.widget.get_font(), x, y,
+    XftDrawStringUtf8(draw, &color, get_style().get_font(), x, y,
                       reinterpret_cast<const FcChar8*>(text.c_str()),
                       static_cast<int>(text.size()));
 

@@ -49,6 +49,18 @@ bool variant_from_name(const std::string& name, Variant& variant);
 
 const char* variant_name(Variant variant);
 
+//! How a part of the shell (the panel, the dock) takes its colors: `Auto`
+//! follows the theme, the other two keep their variant whatever the theme is
+enum class Look : uint8_t { Auto, Light, Dark };
+
+//! "auto", "light" or "dark" (any case) to the look; false for any other name
+bool look_from_name(const std::string& name, Look& look);
+
+const char* look_name(Look look);
+
+//! The variant that a part with the look has when the theme has `theme`
+Variant look_variant(Look look, Variant theme);
+
 class Style {
     /* State heredity
      * Invisible - widget is not visible (out of allowed drawing area)

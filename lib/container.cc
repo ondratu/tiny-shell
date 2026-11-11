@@ -56,6 +56,14 @@ void Container::restyle()
     }
 }
 
+void Container::set_style_override(const Style* style)
+{
+    Widget::set_style_override(style);
+    for (Widget* child : children) {
+        child->set_style_override(style);
+    }
+}
+
 void Container::map_all()
 {
     Widget::map_all();
@@ -70,6 +78,9 @@ void Container::add(Widget* widget, int x, int y, int gravity)
     assert(widget != nullptr);
     if (!is_realized) {
         return error("tiny::Container must be realized");
+    }
+    if (style_override != nullptr) {
+        widget->set_style_override(style_override);
     }
     widget->realize(window, x, y);
     if (gravity != NorthWestGravity) {

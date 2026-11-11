@@ -31,6 +31,9 @@ class Container : public Widget {
     void map_all() override;
     void restyle() override;
 
+    //! Also the style of everything in it
+    void set_style_override(const Style* style) override;
+
     virtual void add(Widget* widget, int x = 0, int y = 0,
                      int gravity = NorthWestGravity);
 
