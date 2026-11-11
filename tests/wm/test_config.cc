@@ -951,49 +951,55 @@ TEST(ConfigTest, the_form_offers_the_times_of_the_black_screen)
     EXPECT_FALSE(tiny::wm::valid_blank_choice("0"));
 }
 
-TEST(ConfigTest, the_screen_is_not_locked_when_idle_by_default)
+TEST(ConfigTest, the_screen_is_not_locked_by_default)
 {
-    EXPECT_EQ(parse_config({}).lock_idle_minutes, 0);
+    EXPECT_EQ(parse_config({}).lock_delay_minutes, -1);
 }
 
-TEST(ConfigTest, idle_after_is_one_of_the_choices_or_never)
+TEST(ConfigTest, delay_is_one_of_the_choices_or_never)
 {
-    for (const int minutes : {5, 10, 15, 30, 60}) {
+    for (const int minutes : {0, 1, 2, 5, 10, 30}) {
         const Config c = parse_config(
-                {{"a",
-                  "[lock]\nidle_after = " + std::to_string(minutes) + "\n"}});
-        EXPECT_EQ(c.lock_idle_minutes, minutes);
+                {{"a", "[lock]\ndelay = " + std::to_string(minutes) + "\n"}});
+        EXPECT_EQ(c.lock_delay_minutes, minutes);
     }
-    EXPECT_EQ(parse_config({{"a", "[lock]\nidle_after = never\n"}})
-                      .lock_idle_minutes,
-              0);
+    EXPECT_EQ(
+            parse_config({{"a", "[lock]\ndelay = never\n"}}).lock_delay_minutes,
+            -1);
 }
 
-TEST(ConfigTest, another_idle_after_is_a_problem_and_keeps_the_default)
+TEST(ConfigTest, another_delay_is_a_problem_and_keeps_the_default)
 {
-    for (const char* value : {"1", "7", "0", "-5", "soon", ""}) {
+    for (const char* value : {"3", "60", "-1", "soon", ""}) {
         Strings problems;
         const Config c = parse_config(
-                {{"a", std::string("[lock]\nidle_after = ") + value + "\n"}},
+                {{"a", std::string("[lock]\ndelay = ") + value + "\n"}},
                 &problems);
-        EXPECT_EQ(c.lock_idle_minutes, 0) << value;
+        EXPECT_EQ(c.lock_delay_minutes, -1) << value;
         EXPECT_EQ(problems.size(), 1u) << value;
     }
 }
 
-TEST(ConfigTest, the_form_offers_the_times_of_the_idle_lock)
+TEST(ConfigTest, the_old_idle_after_is_not_read)
 {
-    const tiny::wm::XftChoices choices = tiny::wm::idle_choices();
+    const Config c = parse_config({{"a", "[lock]\nidle_after = 10\n"}});
+    EXPECT_EQ(c.lock_delay_minutes, -1);
+}
 
-    ASSERT_EQ(choices.size(), 6u);
+TEST(ConfigTest, the_form_offers_the_delays_of_the_lock)
+{
+    const tiny::wm::XftChoices choices = tiny::wm::lock_delay_choices();
+
+    ASSERT_EQ(choices.size(), 7u);
     EXPECT_STREQ(choices[0].value, ""); // never, the default
-    EXPECT_STREQ(choices[5].value, "60");
+    EXPECT_STREQ(choices[1].value, "0");
+    EXPECT_STREQ(choices[6].value, "30");
     for (const auto& choice : choices) {
-        EXPECT_TRUE(tiny::wm::valid_idle_choice(choice.value));
+        EXPECT_TRUE(tiny::wm::valid_lock_delay_choice(choice.value));
     }
-    EXPECT_TRUE(tiny::wm::valid_idle_choice("never"));
-    EXPECT_FALSE(tiny::wm::valid_idle_choice("1"));
-    EXPECT_FALSE(tiny::wm::valid_idle_choice("0"));
+    EXPECT_TRUE(tiny::wm::valid_lock_delay_choice("never"));
+    EXPECT_FALSE(tiny::wm::valid_lock_delay_choice("3"));
+    EXPECT_FALSE(tiny::wm::valid_lock_delay_choice("60"));
 }
 
 TEST(ConfigTest, the_display_is_left_as_it_is_by_default)

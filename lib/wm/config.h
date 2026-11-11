@@ -44,7 +44,7 @@ namespace tiny::wm {
  * auth = auto
  * pam_service = tiny-lock
  * blank_after = 1
- * idle_after = 10
+ * delay = 5
  *
  * [display]
  * off_after = 15
@@ -74,9 +74,10 @@ struct Config {
     //! [lock] blank_after: minutes without input to a black screen (1, 5, 10
     //! or 15); 0 is `never`
     int lock_blank_minutes = 1;
-    //! [lock] idle_after: minutes without input to lock the screen (5, 10,
-    //! 15, 30 or 60); 0 is `never`, the default
-    int lock_idle_minutes = 0;
+    //! [lock] delay: minutes from the moment the display is switched off to
+    //! the lock (0, 1, 2, 5, 10 or 30); 0 is at once, -1 is `never`, the
+    //! default
+    int lock_delay_minutes = -1;
     //! [display] off_after: minutes without input to switch the display off
     //! (5, 10, 15, 30 or 60); 0 is `never` (the power saving is switched off),
     //! -1 leaves the X server as it is, the default
@@ -193,16 +194,16 @@ bool valid_blank_choice(const std::string& text);
 //! The values of `[lock] blank_after` in minutes; 0 is never
 bool parse_blank_after(const std::string& text, int& minutes);
 
-//! The choices of `[lock] idle_after` that a form offers: "" is `never` (the
-//! default), then 5, 10, 15, 30 and 60 minutes
-XftChoices idle_choices();
+//! The choices of `[lock] delay` that a form offers: "" is `never` (the
+//! default), then at once (0), 1, 2, 5, 10 and 30 minutes
+XftChoices lock_delay_choices();
 
-//! Whether the text is one of the values of `idle_choices()`, or "never"
+//! Whether the text is one of the values of `lock_delay_choices()`, or "never"
 //! (the same as "")
-bool valid_idle_choice(const std::string& text);
+bool valid_lock_delay_choice(const std::string& text);
 
-//! The values of `[lock] idle_after` in minutes; 0 is never
-bool parse_idle_after(const std::string& text, int& minutes);
+//! The values of `[lock] delay` in minutes; -1 is never
+bool parse_lock_delay(const std::string& text, int& minutes);
 
 //! The choices of `[display] off_after` that a form offers: "" leaves the
 //! server as it is (the default), then `never`, 5, 10, 15, 30 and 60 minutes

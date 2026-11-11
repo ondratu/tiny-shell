@@ -435,7 +435,8 @@ TEST_F(ManagerTest, lock_screen_of_the_main_menu_starts_the_lock_program)
 TEST_F(ManagerTest, the_idle_lock_sets_one_timer_and_never_removes_it)
 {
     start();
-    manager->set_lock_idle(std::chrono::minutes(5));
+    manager->set_display_off(std::chrono::minutes(0)); // never off
+    manager->set_lock_delay(std::chrono::minutes(5));
     if (manager->idle_timer == 0) {
         GTEST_SKIP() << "the X server has no IDLETIME counter";
     }
@@ -443,15 +444,42 @@ TEST_F(ManagerTest, the_idle_lock_sets_one_timer_and_never_removes_it)
 
     // a new limit (the settings were read again) replaces the timer
     const auto before = manager->get_timers().timeout_ms();
-    manager->set_lock_idle(std::chrono::minutes(30));
+    manager->set_lock_delay(std::chrono::minutes(30));
     EXPECT_NE(manager->idle_timer, 0u);
     EXPECT_EQ(manager->idle_lock->get_limit(), std::chrono::minutes(30));
     EXPECT_GE(manager->get_timers().timeout_ms(), 0);
     EXPECT_GT(before, 0);
 
-    manager->set_lock_idle(std::chrono::minutes(0)); // never
+    manager->set_lock_delay(std::chrono::minutes(-1)); // never
     EXPECT_EQ(manager->idle_timer, 0u);
     EXPECT_EQ(manager->idle_lock, nullptr);
+}
+
+TEST_F(ManagerTest, the_lock_comes_after_the_display_is_off)
+{
+    start();
+    manager->set_display_off(std::chrono::minutes(10));
+    manager->set_lock_delay(std::chrono::minutes(5));
+    if (manager->idle_timer == 0) {
+        GTEST_SKIP() << "the X server has no IDLETIME counter";
+    }
+    EXPECT_EQ(manager->idle_lock->get_limit(), std::chrono::minutes(15));
+
+    manager->set_lock_delay(std::chrono::minutes(0)); // when it goes off
+    EXPECT_EQ(manager->idle_lock->get_limit(), std::chrono::minutes(10));
+
+    // a new time of the display moves the lock with it
+    manager->set_display_off(std::chrono::minutes(30));
+    EXPECT_EQ(manager->idle_lock->get_limit(), std::chrono::minutes(30));
+}
+
+TEST_F(ManagerTest, an_immediate_lock_of_a_display_that_never_goes_off_is_never)
+{
+    start();
+    manager->set_display_off(std::chrono::minutes(0));
+    manager->set_lock_delay(std::chrono::minutes(0));
+    EXPECT_EQ(manager->idle_lock, nullptr);
+    EXPECT_EQ(manager->idle_timer, 0u);
 }
 
 TEST_F(ManagerTest, the_display_power_is_set_only_when_the_time_is_given)
