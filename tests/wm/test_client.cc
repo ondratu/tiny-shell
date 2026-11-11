@@ -477,17 +477,21 @@ TEST_F(ClientTest, the_right_button_on_the_title_bar_asks_for_the_menu)
     EXPECT_EQ(menu.last_event.xbutton.y_root, 60);
 }
 
-TEST_F(ClientTest, create_places_a_window_under_the_panel)
+TEST_F(ClientTest, create_centers_a_window_that_has_no_position_of_its_own)
 {
     XMoveWindow(dsp(), client.window, 10, 0);
     const XWindowAttributes a = client.attrs();
+    const tiny::Rect area = screen_area();
     const std::unique_ptr<tiny::wm::Window> w(tiny::wm::Client::create(
-            root_window(), client.window, a, 0xFFFF, 0xFFFF, screen_area()));
+            root_window(), client.window, a, 0xFFFF, 0xFFFF, area));
 
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
-    EXPECT_EQ(f.x, 10);
-    EXPECT_EQ(f.y, tiny::wm::shell_theme.panel + f.border_width);
+    const int whole_width = f.width + 2 * f.border_width;
+    const int whole_height = f.height + 2 * f.border_width;
+    EXPECT_NEAR(f.x + whole_width / 2, area.x + area.width / 2, 2);
+    EXPECT_NEAR(f.y + whole_height / 2, area.y + area.height / 2, 2);
+    EXPECT_GE(f.y, tiny::wm::shell_theme.panel);
 }
 
 namespace {
@@ -534,7 +538,7 @@ TEST_F(ClientTest, create_places_the_client_itself_with_the_static_gravity)
     EXPECT_EQ(y, 200);
 }
 
-TEST_F(ClientTest, create_ignores_the_gravity_of_a_position_nobody_chose)
+TEST_F(ClientTest, create_centers_a_window_whose_position_nobody_chose)
 {
     XMoveWindow(dsp(), client.window, 300, 200);
     client.set_normal_hints(position_hints(0, SouthEastGravity));
@@ -544,8 +548,10 @@ TEST_F(ClientTest, create_ignores_the_gravity_of_a_position_nobody_chose)
 
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
-    EXPECT_EQ(f.x, 300);
-    EXPECT_EQ(f.y, 200);
+    EXPECT_NE(f.x, 300);
+    EXPECT_NE(f.y, 200);
+    EXPECT_NEAR(f.x + (f.width + 2 * f.border_width) / 2,
+                screen_area().x + screen_area().width / 2, 2);
 }
 
 TEST_F(ClientTest, create_keeps_the_position_of_a_window_that_was_there_already)
