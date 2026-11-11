@@ -122,6 +122,11 @@ class LauncherTest : public ::testing::Test {
     tiny::wm::Launcher launcher;
 };
 
+TEST_F(LauncherTest, draws_with_the_style_of_the_launcher)
+{
+    EXPECT_EQ(&launcher.get_style(), &tiny::wm::shell_theme.launcher_widgets);
+}
+
 TEST_F(LauncherTest, realize_covers_the_whole_screen)
 {
     const XWindowAttributes root_attrs = attributes_of(root_window());

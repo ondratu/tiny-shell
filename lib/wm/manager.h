@@ -209,7 +209,7 @@ class Manager : public tiny::Object {
     void set_variant(Variant variant);
 
     //! The look of the panel and of the dock (`Auto` follows the variant)
-    void set_looks(Look panel_look, Look dock_look);
+    void set_looks(Look panel_look, Look dock_look, Look launcher_look);
 
     /**
      * @short Which monitors the shell uses, see `[monitors]` of the

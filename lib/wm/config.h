@@ -96,6 +96,10 @@ struct Config {
     Look panel_style = Look::Auto;
     //! [dock] style: auto (follows the theme), light or dark
     Look dock_style = Look::Auto;
+    //! [lock] style: auto (follows the theme), light or dark
+    Look lock_style = Look::Auto;
+    //! [launcher] style: auto (follows the theme), light or dark
+    Look launcher_style = Look::Auto;
     //! [theme] xsettings: tell GTK and Qt the look (yes or no)
     bool xsettings = true;
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)

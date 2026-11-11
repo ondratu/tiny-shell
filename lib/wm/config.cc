@@ -445,7 +445,10 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         }
     }
     const std::pair<const char*, Look*> looks[] = {
-            {"panel", &config.panel_style}, {"dock", &config.dock_style}};
+            {"panel", &config.panel_style},
+            {"dock", &config.dock_style},
+            {"lock", &config.lock_style},
+            {"launcher", &config.launcher_style}};
     for (const auto& [section, target] : looks) {
         if (const auto value = ini.get(section, "style")) {
             if (!look_from_name(std::string(trim(*value)), *target)) {

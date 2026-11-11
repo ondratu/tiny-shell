@@ -352,9 +352,9 @@ void Manager::set_variant(Variant variant)
     restyle_widgets();
 }
 
-void Manager::set_looks(Look panel_look, Look dock_look)
+void Manager::set_looks(Look panel_look, Look dock_look, Look launcher_look)
 {
-    shell_theme.set_looks(panel_look, dock_look);
+    shell_theme.set_looks(panel_look, dock_look, launcher_look);
     restyle_widgets();
 }
 
