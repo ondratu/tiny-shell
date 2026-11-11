@@ -378,6 +378,9 @@ class Dock : public tiny::Box {
     std::vector<DockIcon*> icons; //!< from the left, without the menu button
     std::vector<int> icon_x;      //!< their places in the dock
     tiny::Rect on_monitor = {0, 0, 0, 0}; //!< empty: the root window
+    //! the size that was asked for: `width` is the old one until the server tells
+    int wanted_width = 0;
+    int wanted_height = 0;
 };
 
 } // namespace tiny::wm
