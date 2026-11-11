@@ -183,6 +183,8 @@ install: all
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
 	for p in $(INSTALLED_PROGS); do \
 	    install -m 755 $$p $(DESTDIR)$(BINDIR)/ || exit 1; done
+	# the PNG wallpapers of the older versions are replaced by the JPEG ones
+	rm -f $(DESTDIR)$(DATADIR)/backgrounds/tiny-shell/tiny-shell-*.png
 	cp -R data/. $(DESTDIR)$(DATADIR)/
 	-gtk-update-icon-cache -q -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null
 	-update-desktop-database -q $(DESTDIR)$(DATADIR)/applications 2>/dev/null
@@ -202,6 +204,7 @@ uninstall:
 	for p in $(INSTALLED_PROGS); do rm -f $(DESTDIR)$(BINDIR)/$$(basename $$p); done
 	cd data && find . -type f | while read -r f; do \
 	    rm -f "$(DESTDIR)$(DATADIR)/$$f"; done
+	rm -f $(DESTDIR)$(DATADIR)/backgrounds/tiny-shell/tiny-shell-*.png
 
 help:
 	@echo "make            build tiny-shell, its programs (tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper, tiny-lock...)"
