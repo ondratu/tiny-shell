@@ -58,6 +58,7 @@ void ShellTheme::scale_own(double factor)
     panel_widgets.scale(factor);
     dock_widgets.scale(factor);
     launcher_widgets.scale(factor);
+    dock_list.scale(factor);
 }
 
 void ShellTheme::set_font(const std::string& family)
@@ -68,6 +69,7 @@ void ShellTheme::set_font(const std::string& family)
     panel_widgets.set_font_family(family);
     dock_widgets.set_font_family(family);
     launcher_widgets.set_font_family(family);
+    dock_list.set_font_family(family);
 }
 
 void ShellTheme::set_font_size(double size)
@@ -78,6 +80,7 @@ void ShellTheme::set_font_size(double size)
     panel_widgets.set_font_size(size);
     dock_widgets.set_font_size(size);
     launcher_widgets.set_font_size(size);
+    dock_list.set_font_size(size);
 }
 
 void ShellTheme::set_font_style(const std::string& style)
@@ -87,6 +90,7 @@ void ShellTheme::set_font_style(const std::string& style)
     panel_widgets.set_font_style(xft_style(style));
     dock_widgets.set_font_style(xft_style(style));
     launcher_widgets.set_font_style(xft_style(style));
+    dock_list.set_font_style(xft_style(style));
 }
 
 void ShellTheme::set_variant(Variant new_variant)
@@ -117,6 +121,7 @@ void ShellTheme::apply_looks()
     dock_widgets.colorize(dock_colors);
     dock_separator.colorize(dock_colors);
     dock_mark.colorize(dock_colors);
+    dock_list.colorize(dock_colors);
     launcher_widgets.colorize(launcher_variant());
     // a widget that is not shown takes the colors when it is mapped
     ++toolkit.generation;
@@ -130,6 +135,7 @@ void ShellTheme::release()
     panel_widgets.release();
     dock_widgets.release();
     launcher_widgets.release();
+    dock_list.release();
 }
 
 void ShellTheme::init()
@@ -140,6 +146,7 @@ void ShellTheme::init()
     panel_widgets.init();
     dock_widgets.init();
     launcher_widgets.init();
+    dock_list.init();
 }
 
 } // namespace tiny::wm

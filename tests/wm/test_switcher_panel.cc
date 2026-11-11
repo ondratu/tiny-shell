@@ -74,7 +74,7 @@ class SwitcherPanelTest : public ::testing::Test {
 TEST_F(SwitcherPanelTest, is_a_window_without_a_border)
 {
     EXPECT_EQ(attributes_of(panel).border_width, 0);
-    EXPECT_EQ(&panel.get_style(), &tiny::theme.list);
+    EXPECT_EQ(&panel.get_style(), &tiny::wm::shell_theme.dock_list);
 }
 
 TEST_F(SwitcherPanelTest, is_as_wide_as_its_cells_and_the_margin)

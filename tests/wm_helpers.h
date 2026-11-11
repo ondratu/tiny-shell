@@ -46,7 +46,9 @@ class ShellFonts {
         original_dock(tiny::wm::shell_theme.dock_widgets),
         dock_with_font(original_dock),
         original_launcher(tiny::wm::shell_theme.launcher_widgets),
-        launcher_with_font(original_launcher)
+        launcher_with_font(original_launcher),
+        original_list(tiny::wm::shell_theme.dock_list),
+        list_with_font(original_list)
     {
         panel_with_font.init();
         tiny::wm::shell_theme.panel_widgets = panel_with_font;
@@ -54,6 +56,8 @@ class ShellFonts {
         tiny::wm::shell_theme.dock_widgets = dock_with_font;
         launcher_with_font.init();
         tiny::wm::shell_theme.launcher_widgets = launcher_with_font;
+        list_with_font.init();
+        tiny::wm::shell_theme.dock_list = list_with_font;
     }
 
     ~ShellFonts()
@@ -61,6 +65,7 @@ class ShellFonts {
         tiny::wm::shell_theme.panel_widgets = original_panel;
         tiny::wm::shell_theme.dock_widgets = original_dock;
         tiny::wm::shell_theme.launcher_widgets = original_launcher;
+        tiny::wm::shell_theme.dock_list = original_list;
     }
 
   private:
@@ -70,6 +75,8 @@ class ShellFonts {
     tiny::Style dock_with_font;
     tiny::Style original_launcher;
     tiny::Style launcher_with_font;
+    tiny::ListStyle original_list;
+    tiny::ListStyle list_with_font;
 };
 
 // A data directory (the layout of share/) with a full white square as every

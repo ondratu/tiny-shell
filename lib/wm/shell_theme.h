@@ -111,6 +111,8 @@ class ShellTheme {
     Style dock_widgets;
     //! The launcher (and the run dialog) draws with this
     Style launcher_widgets;
+    //! The switcher of applications (Alt + Tab) looks like the dock
+    ListStyle dock_list;
     PlainStyle panel_separator{0x555753, 0xC0BFBC};
     PlainStyle dock_separator{0x555753, 0xC0BFBC};
     PlainStyle dock_mark{0x729FCF, 0x3584E4};
