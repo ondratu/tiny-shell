@@ -719,21 +719,21 @@ TEST(ConfigTest, a_wallpaper_that_is_set_is_told_even_when_it_is_empty)
             parse_config({{"a", "[wallpaper]\nmode = tile\n"}}).wallpaper_set);
 }
 
-TEST(ConfigTest, the_default_wallpaper_is_the_fox_for_light_and_night_for_dark)
+TEST(ConfigTest, the_default_wallpaper_is_the_fox_by_day_or_night)
 {
     const std::filesystem::path root =
             std::filesystem::temp_directory_path() /
             ("tiny-wallpapers-" + std::to_string(getpid()));
     const std::filesystem::path dir = root / "backgrounds/tiny-shell";
     std::filesystem::create_directories(dir);
-    std::ofstream(dir / "tiny-shell-landscape-fox-1920x1080.png") << "x";
-    std::ofstream(dir / "tiny-shell-night-1920x1080.png") << "x";
+    std::ofstream(dir / "tiny-shell-fox-day-1920x1080.jpg") << "x";
+    std::ofstream(dir / "tiny-shell-fox-night-1920x1080.jpg") << "x";
     const Strings dirs = {"/nonexistent", root.string()};
 
     EXPECT_EQ(tiny::wm::default_wallpaper(tiny::Variant::Light, dirs),
-              (dir / "tiny-shell-landscape-fox-1920x1080.png").string());
+              (dir / "tiny-shell-fox-day-1920x1080.jpg").string());
     EXPECT_EQ(tiny::wm::default_wallpaper(tiny::Variant::Dark, dirs),
-              (dir / "tiny-shell-night-1920x1080.png").string());
+              (dir / "tiny-shell-fox-night-1920x1080.jpg").string());
     EXPECT_EQ(
             tiny::wm::default_wallpaper(tiny::Variant::Dark, {"/nonexistent"}),
             "");
@@ -743,7 +743,7 @@ TEST(ConfigTest, the_default_wallpaper_is_the_fox_for_light_and_night_for_dark)
     const Config set = parse_config({{"a", "[wallpaper]\nfile = /a.png\n"}});
     const Config none = parse_config({{"a", "[wallpaper]\nfile =\n"}});
     EXPECT_EQ(tiny::wm::wallpaper_of(unset, tiny::Variant::Dark, dirs),
-              (dir / "tiny-shell-night-1920x1080.png").string());
+              (dir / "tiny-shell-fox-night-1920x1080.jpg").string());
     EXPECT_EQ(tiny::wm::wallpaper_of(set, tiny::Variant::Dark, dirs), "/a.png");
     EXPECT_EQ(tiny::wm::wallpaper_of(none, tiny::Variant::Dark, dirs), "");
     std::filesystem::remove_all(root);
