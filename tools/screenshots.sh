@@ -58,10 +58,12 @@ Xvfb "$DISPLAY" -screen 0 "${SIZE}x24" >/dev/null 2>&1 &
 PIDS="$PIDS $!"
 sleep 1
 
-# session STYLE: start the shell with the style and the terminal window
+# session STYLE [PANEL [DOCK]]: start the shell with the style of the theme
+# and the looks of the panel and the dock (auto, light or dark), and the
+# terminal window
 session() {
-    printf '[theme]\nstyle = %s\n\n[dock]\nmode = on\nfavorites = %s\n' \
-        "$1" "$FAVORITES" >"$XDG_CONFIG_HOME/tiny-shell.ini"
+    printf '[theme]\nstyle = %s\n\n[panel]\nstyle = %s\n\n[dock]\nmode = on\nstyle = %s\nfavorites = %s\n' \
+        "$1" "${2:-auto}" "${3:-auto}" "$FAVORITES" >"$XDG_CONFIG_HOME/tiny-shell.ini"
     build/tiny-shell &
     SHELL_PID=$!
     sleep 2
@@ -103,6 +105,11 @@ xdotool mousemove 18 14 click 1
 sleep 1
 shoot menu
 xdotool key Escape
+finish
+
+# The light theme with a dark panel and a dark dock, as they are set
+session light dark dark
+shoot desktop-mixed
 finish
 
 # The night: the dark style, the default
