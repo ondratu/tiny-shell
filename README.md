@@ -13,7 +13,7 @@ as it can give.
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
 > dialog, an application launcher, a clock, a screen lock and the power saving
-> of the display.
+> of the display. More pictures are in the [screenshots](doc/screenshots.md).
 
 ![The desktop of tiny-shell](doc/static/screenshots/desktop-day.png)
 
@@ -41,7 +41,8 @@ The documentation is in [doc/](doc/) and is published as a web site at
   screen lock.
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
-- Not themable to the last pixel. There is one look, which can be scaled and
+- Not themable to the last pixel. There are two looks, dark and light, each with
+  a wallpaper of its own (a fox by night and by day); they can be scaled and
   configured within reason.
 
 ## Quick start

@@ -121,9 +121,6 @@ keys are ignored by the reader, so keys can be added without a new format.
   (`~/.cache/tiny-shell/recent`, now only in memory), a button for the
   launcher in the panel, `Super` as a modifier of other shortcuts (now a
   shortcut with `Super` is lost).
-- Firefox: the window cannot be moved by its title bar (other clients were not
-  checked). Find out if it is the grab of the buttons in `Header`/`Window`
-  and what Firefox does with the pointer.
 - Search by `Exec` (`lib/xdg/application_search.*`) uses the program name of the first
   word, so `flatpak run org.x.App`, `env VAR=1 app` or `sh -c ...` match by
   the wrapper instead of the application. Skip the known wrappers (`env`
