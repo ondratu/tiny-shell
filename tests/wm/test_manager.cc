@@ -499,13 +499,6 @@ TEST_F(ManagerTest, the_screen_is_covered_by_software_when_the_display_goes_off)
     manager->check_screen_blank();
     EXPECT_FALSE(manager->screen_blank->shown());
 
-    // a lock that is running covers the screen itself
-    manager->screen_blank->show();
-    manager->lock_guard->lock(); // tiny-lock is not there: it can't start
-    manager->screen_blank->show();
-    manager->check_screen_blank();
-    EXPECT_FALSE(manager->screen_blank->shown());
-
     manager->set_display_off(std::chrono::minutes(0)); // never
     EXPECT_EQ(manager->blank_lock, nullptr);
     EXPECT_EQ(manager->blank_timer, 0u);

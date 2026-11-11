@@ -82,9 +82,10 @@ the setting is taken out or `[display] dpms = no`.
 `ScreenBlank` is an `override_redirect` black window over the whole screen with
 no cursor. It takes no input and no grab: `Manager::check_screen_blank()` looks
 at the idle time (an `IdleLock` with the limit `off_after`) and hides it when the
-idle time falls under the limit, every 200 ms while it is shown and once in the
-limit otherwise. It is hidden while `tiny-lock` runs (the lock covers the screen
-itself, black after the same time).
+idle time falls under the limit, every 500 ms while it is shown and once in the
+limit otherwise. While it is shown it is put on top again and fitted to the screen at every look,
+except when `tiny-lock` runs: the window of the lock is above it, black after the
+same time, and the cover goes away with the first input.
 
 ## The protocol of tiny-lock and tiny-lock-auth
 
