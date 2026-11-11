@@ -88,23 +88,28 @@ static tiny::Rect first_place(const XWindowAttributes& attrs,
 {
     const int border = border_for(decorations); // on both sides
     const int header = header_height_for(decorations);
-    int x = attrs.x;
-    int y = attrs.y;
-    // A position that the user or the program chose is the place of the
-    // window as if it had no frame; the gravity tells which point of the frame
-    // goes there. Any other position is not a wish.
-    if (hints.flags & (USPosition | PPosition)) {
-        std::tie(x, y) = frame_position(window_gravity(hints), x, y,
-                                        Client::frame_extents_for(decorations));
-    }
-    // the border is drawn outside of the window, so it is not over the panel
     const tiny::Rect inner = inner_area(area, border);
-    tiny::Rect frame =
-            fit_in_area({x, y, attrs.width, attrs.height + header}, inner);
-    if (fresh && !(hints.flags & (USPosition | PPosition))) {
-        frame.x = inner.x + (inner.width - frame.width) / 2;
-        frame.y = inner.y + (inner.height - frame.height) / 2;
+    const bool wished = (hints.flags & (USPosition | PPosition)) != 0;
+    if (!fresh || wished) {
+        int x = attrs.x;
+        int y = attrs.y;
+        // A position that the user or the program chose is the place of the
+        // window as if it had no frame; the gravity tells which point of the
+        // frame goes there. The position of a window that was there is real.
+        if (wished) {
+            std::tie(x, y) =
+                    frame_position(window_gravity(hints), x, y,
+                                   Client::frame_extents_for(decorations));
+        }
+        // the border is drawn outside of the window, so it is not over the
+        // panel
+        return fit_in_area({x, y, attrs.width, attrs.height + header}, inner);
     }
+    // no position of its own: the middle of the work area
+    tiny::Rect frame =
+            fit_in_area({0, 0, attrs.width, attrs.height + header}, inner);
+    frame.x = inner.x + (inner.width - frame.width) / 2;
+    frame.y = inner.y + (inner.height - frame.height) / 2;
     return frame;
 }
 

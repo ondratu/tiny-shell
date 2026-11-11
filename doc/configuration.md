@@ -332,10 +332,11 @@ monitor.
   there. A dock on every monitor is not done (the dock is one widget with one
   list of windows).
 - **Windows.** A window that asks for a position of its own opens there. One
-  that has none opens in the middle of the work area of the monitor where the
-  pointer is. A window is maximized to the work area of the monitor it is on
-  (the monitor that has most of the frame), and fullscreen covers that monitor
-  only. The panel
+  that has none opens in the middle of the work area of its monitor, which is
+  the monitor where the pointer is when the window comes without any position.
+  A window is maximized to the work area of the monitor it is on (the monitor
+  that has most of the frame), and fullscreen covers that monitor only. The
+  panel
   takes the top of the primary monitor, the struts of other docks reduce the
   monitors they touch: a strut is measured from the edge of the whole screen (as
   `_NET_WM_STRUT` says), so a top strut does not touch a monitor that is below

@@ -548,10 +548,10 @@ TEST_F(ClientTest, create_centers_a_window_whose_position_nobody_chose)
 
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
-    EXPECT_NE(f.x, 300);
-    EXPECT_NE(f.y, 200);
     EXPECT_NEAR(f.x + (f.width + 2 * f.border_width) / 2,
                 screen_area().x + screen_area().width / 2, 2);
+    EXPECT_NEAR(f.y + (f.height + 2 * f.border_width) / 2,
+                screen_area().y + screen_area().height / 2, 2);
 }
 
 TEST_F(ClientTest, create_keeps_the_position_of_a_window_that_was_there_already)
