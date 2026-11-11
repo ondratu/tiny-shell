@@ -46,9 +46,6 @@ class SwitcherPanel : public tiny::Widget {
 
     int get_border() const override { return 0; }
 
-    //! The look of the list of the launcher, which has a font
-    const tiny::Style& get_style() const override { return tiny::theme.list; }
-
     void set_events(long mask = 0) override;
 
     //! The icon of an application without one and of a dot; must live longer
