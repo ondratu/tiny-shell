@@ -20,7 +20,7 @@ int border()
 uint32_t background(bool selected)
 {
     const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
-    return tiny::theme.list.get_bg(
+    return tiny::wm::shell_theme.dock_list.get_bg(
             selected ? static_cast<uint8_t>(
                                normal | static_cast<uint8_t>(
                                                 tiny::Style::State::Selected))
@@ -99,6 +99,21 @@ TEST_F(SwitcherPanelTest, the_cell_with_the_cursor_has_another_background)
     EXPECT_EQ(pixel(cell_x(1), cell_y()), background(true));
     EXPECT_EQ(pixel(cell_x(0), cell_y()), background(false));
     EXPECT_EQ(pixel(cell_x(2), cell_y()), background(false));
+}
+
+TEST_F(SwitcherPanelTest, is_drawn_in_the_look_of_the_dock)
+{
+    auto& t = tiny::wm::shell_theme;
+    const tiny::Look panel_look = t.get_panel_look();
+    const tiny::Look launcher_look = t.get_launcher_look();
+    t.set_looks(panel_look, tiny::Look::Light, launcher_look);
+    panel.set_cells(cells_of(3), 1);
+
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    EXPECT_EQ(pixel(cell_x(0), cell_y()), t.dock_list.get_bg(normal));
+    EXPECT_EQ(t.dock_list.get_bg(normal), 0xF6F5F4u);
+
+    t.set_looks(panel_look, tiny::Look::Auto, launcher_look);
 }
 
 TEST_F(SwitcherPanelTest, the_cursor_moves)
