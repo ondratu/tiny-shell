@@ -94,7 +94,7 @@ dpms = yes
 # The clock at the right end of the panel: a format of strftime(); empty is
 # no clock. The names of the days and the order of the date follow LC_TIME / LANG.
 # It changes at the start of every minute (the default is below)
-clock_format = %a %e %B %R
+clock_format = %A %e %B %R
 
 # The colors of the panel and of its main menu: auto (the default: follow
 # [theme] style), light or dark whatever the theme is
@@ -209,9 +209,9 @@ input (see [the lock](lock.md)).
 The date and the time are at the right end of the panel. The text is made by
 `strftime()` from `[panel] clock_format`, so the names of the days and months
 and the order of the date follow the language of the session (`LC_TIME`, set by
-`LANG` or `LC_ALL`): `%e` is the day, `%B` the name of the month (`čt 5
-listopadu 15:33` in Czech, `Thu 5 November 15:33` in English) and `%R` is
-`HH:MM`. The default is `%a %e %B %R`, without the year. The clock is as wide as
+`LANG` or `LC_ALL`): `%e` is the day, `%B` the name of the month (`čtvrtek 5
+listopadu 15:33` in Czech, `Thursday 5 November 15:33` in English) and `%R` is
+`HH:MM`. The default is `%A %e %B %R`, without the year. The clock is as wide as
 the widest text of the format in a year, so the panel does not move, and it
 changes at the start of every minute, so it does not show seconds. An empty
 format removes the clock.
@@ -331,9 +331,11 @@ monitor.
   that shows it), the launcher, the run dialog and the window switcher are
   there. A dock on every monitor is not done (the dock is one widget with one
   list of windows).
-- **Windows.** A window opens where the pointer is when it has no place of its
-  own, is maximized to the work area of the monitor it is on (the monitor that
-  has most of the frame), and fullscreen covers that monitor only. The panel
+- **Windows.** A window that asks for a position of its own opens there. One
+  that has none opens in the middle of the work area of the monitor where the
+  pointer is. A window is maximized to the work area of the monitor it is on
+  (the monitor that has most of the frame), and fullscreen covers that monitor
+  only. The panel
   takes the top of the primary monitor, the struts of other docks reduce the
   monitors they touch: a strut is measured from the edge of the whole screen (as
   `_NET_WM_STRUT` says), so a top strut does not touch a monitor that is below
