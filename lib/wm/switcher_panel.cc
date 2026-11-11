@@ -12,6 +12,7 @@ SwitcherPanel::SwitcherPanel(int icon_size_arg, int cell_width_arg):
     tiny::Widget(1, 1), icon_size(icon_size_arg), cell_width(cell_width_arg)
 {
     name = "switcher_panel";
+    set_style_override(&shell_theme.dock_list);
     width = width_of(0);
     height = get_cell_height() + 2 * shell_theme.dock_border;
 }
@@ -34,7 +35,8 @@ void SwitcherPanel::set_events(long mask)
 
 int SwitcherPanel::get_cell_height() const
 {
-    const XftFont* font = tiny::theme.list.get_font(); // no virtual call here
+    const XftFont* font =
+            shell_theme.dock_list.get_font(); // no virtual call here
     const int text = font ? font->ascent + font->descent : shell_theme.panel;
     const int gap = shell_theme.dock_border;
     // the icon, the dots, the text and a margin around them

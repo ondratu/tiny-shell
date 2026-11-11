@@ -173,6 +173,15 @@ TEST_F(ShellThemeTest, the_panel_and_the_dock_can_keep_a_look_of_their_own)
     EXPECT_EQ(t.dock_separator.normal_bg, 0x555753u);
 }
 
+TEST_F(ShellThemeTest, the_switcher_list_follows_the_dock)
+{
+    t.set_variant(tiny::Variant::Light);
+    t.set_looks(tiny::Look::Auto, tiny::Look::Dark, tiny::Look::Auto);
+    EXPECT_EQ(t.dock_list.normal_bg, t.dock_widgets.normal_bg);
+    t.set_looks(tiny::Look::Auto, tiny::Look::Auto, tiny::Look::Auto);
+    EXPECT_NE(t.dock_list.normal_bg, 0x000000u);
+}
+
 TEST_F(ShellThemeTest, the_launcher_can_keep_a_look_of_its_own)
 {
     t.set_variant(tiny::Variant::Dark);
