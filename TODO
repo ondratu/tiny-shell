@@ -73,9 +73,11 @@ keys are ignored by the reader, so keys can be added without a new format.
   uses the same registry.
 - Switching the colors (`Manager::set_variant`, the actions `theme-*`; the
   style of the theme, of the panel and of the dock is in `tiny-settings`).
-  Missing: a menu item or a key for `theme-toggle`, `tiny-fonts`,
-  `tiny-settings` and `tiny-about` following the style (their colors are fixed
-  and light now), a switch by time of day.
+  `tiny-settings`, `tiny-fonts`, `tiny-about` and `tiny-lock` read the style
+  from XSETTINGS when they start.
+  Missing: a menu item or a key for `theme-toggle`, a program that runs
+  following a change of the style (it would watch `_XSETTINGS_SETTINGS`), a
+  switch by time of day.
 - Reload without a restart (`reload_config` in `src/main.cc`). What is left:
   the scale and the font of the shell itself still need a restart (the sizes of
   the panel, the dock and the frames are computed once), and a key or a menu
