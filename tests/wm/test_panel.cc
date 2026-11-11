@@ -304,6 +304,33 @@ TEST(PanelTest, the_logo_is_a_square_button_in_the_color_of_the_text)
     EXPECT_EQ(img.at(0, 0), tiny::theme.widget.get_bg(normal));
 }
 
+TEST(PanelTest, the_logo_takes_the_colors_of_a_new_variant_when_restyled)
+{
+    const IconFiles files({"start-here"});
+    tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                  {files.dir()});
+    tiny::wm::Panel panel;
+    panel.set_icons(&icons);
+    panel.realize(root_window(), 0, 0);
+    panel.map_all();
+    const ::Window main = child_at(panel.get_window(), 0, 0);
+    const int side = tiny::wm::shell_theme.panel;
+    const int width = side * 3 / 5 * 2;
+    send(main, make_event(Expose));
+
+    tiny::wm::shell_theme.set_variant(tiny::Variant::Light);
+    panel.restyle();
+    XSync(tiny::get_display(), False);
+    const Image img(main, width, side);
+    const auto normal = static_cast<uint8_t>(tiny::Style::State::Normal);
+    // no Expose was sent: the restyle itself drew the icon in the new color
+    EXPECT_EQ(img.at(width / 2, side / 2),
+              tiny::wm::shell_theme.panel_widgets.get_fg(normal));
+    EXPECT_EQ(img.at(0, 0), tiny::wm::shell_theme.panel_widgets.get_bg(normal));
+
+    tiny::wm::shell_theme.set_variant(tiny::Variant::Dark);
+}
+
 TEST(PanelTest, the_menu_of_the_logo_starts_at_the_left_edge_of_the_screen)
 {
     const IconFiles files({"start-here"});

@@ -95,6 +95,14 @@ bool LogoButton::has_logo() const
            icons->get("start-here", logo_size(height), 0).picture != None;
 }
 
+void LogoButton::restyle()
+{
+    tiny::MenuButton::restyle();
+    if (is_realized && is_maped) {
+        on_expose(XEvent(), nullptr);
+    }
+}
+
 void LogoButton::on_expose(const XEvent& e, void* data)
 {
     if (!has_logo()) {
