@@ -90,7 +90,8 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::LockStyle,
                                           SettingsForm::Field::LauncherStyle,
                                           SettingsForm::Field::SessionAutostart,
-                                          SettingsForm::Field::SessionConfirm};
+                                          SettingsForm::Field::SessionConfirm,
+                                          SettingsForm::Field::SessionPrograms};
 
 } // namespace
 
@@ -137,7 +138,8 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.lock_style),
             TextField(initial.launcher_style),
             TextField(initial.session_autostart),
-            TextField(initial.session_confirm)},
+            TextField(initial.session_confirm),
+            TextField()},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -254,6 +256,7 @@ SettingsForm::section_fields(Section section)
                                                 Field::LockStyle};
     static const std::vector<Field> applications = {Field::Terminal};
     static const std::vector<Field> session = {Field::SessionAutostart,
+                                               Field::SessionPrograms,
                                                Field::SessionConfirm};
     switch (section) {
         case Section::Appearance:
@@ -326,6 +329,8 @@ const char* SettingsForm::hint(Field field)
                    "one (runs xrandr).";
         case Field::Terminal:
             return "The program and its arguments, e.g. xterm -e.";
+        case Field::SessionPrograms:
+            return "Return or Space opens the list of the programs.";
         case Field::Wallpaper:
             return "The full path of a PNG or JPEG file.";
         default:
@@ -346,6 +351,9 @@ const char* SettingsForm::note(Field field)
         case Field::SessionAutostart:
             return "Starts the programs of ~/.config/autostart and "
                    "/etc/xdg/autostart when you log in.";
+        case Field::SessionPrograms:
+            return "System: from /etc/xdg/autostart, switched off by a file "
+                   "of yours. User: your own files in ~/.config/autostart.";
         case Field::SessionConfirm:
             return "A dialog with a countdown before Logout, Restart and "
                    "Shutdown. Programs are asked to close either way.";
@@ -536,6 +544,8 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_display_off_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
+        case Field::SessionPrograms: // not a text
+            return "";
         case Field::DisplayDpms:
         case Field::SessionAutostart:
         case Field::SessionConfirm:
@@ -777,7 +787,9 @@ Rect SettingsForm::style_rect() const
 
 size_t SettingsForm::visible_rows() const
 {
-    const int bottom = preview_rect().y - metrics_.row_gap;
+    const int bottom =
+            (view_ == View::Programs ? message_rect().y : preview_rect().y) -
+            metrics_.row_gap;
     const int rows = (bottom - rows_top()) / metrics_.row_height;
     return static_cast<size_t>(std::max(1, rows));
 }
@@ -792,7 +804,7 @@ Rect SettingsForm::row_rect(size_t index) const
 size_t SettingsForm::max_first() const
 {
     const size_t rows = visible_rows();
-    return shown_.size() > rows ? shown_.size() - rows : 0;
+    return list_size() > rows ? list_size() - rows : 0;
 }
 
 void SettingsForm::reveal()
@@ -851,15 +863,15 @@ void SettingsForm::refresh_styles()
 
 bool SettingsForm::select(size_t index)
 {
-    if (shown_.empty()) {
+    if (list_size() == 0) {
         return false;
     }
-    index = std::min(index, shown_.size() - 1);
+    index = std::min(index, list_size() - 1);
     const size_t old_first = first_;
     const size_t old = selected_;
     selected_ = index;
     reveal();
-    if (selected_ != old) {
+    if (selected_ != old && view_ == View::Picker) {
         refresh_styles();
     }
     return selected_ != old || first_ != old_first;
@@ -923,10 +935,86 @@ void SettingsForm::close_picker()
     pressed_ = NoTarget;
 }
 
+std::string SettingsForm::programs_summary() const
+{
+    if (programs_.empty()) {
+        return "None found";
+    }
+    const auto on = std::count_if(programs_.begin(), programs_.end(),
+                                  [](const Program& p) { return p.enabled; });
+    return std::to_string(on) + " on, " +
+           std::to_string(static_cast<long>(programs_.size()) - on) + " off";
+}
+
+void SettingsForm::open_programs()
+{
+    view_ = View::Programs;
+    programs_before_ = programs_;
+    selected_ = 0;
+    first_ = 0;
+}
+
+void SettingsForm::close_programs(bool keep)
+{
+    if (!keep) {
+        programs_ = programs_before_;
+    }
+    view_ = View::Form;
+    section_ = Section::Session; // the list is opened from there
+    focus_ = Field::SessionPrograms;
+    pressed_ = NoTarget;
+}
+
+size_t SettingsForm::list_size() const
+{
+    return view_ == View::Programs ? programs_.size() : shown_.size();
+}
+
+//! Switch the selected program; false when it can't be switched
+bool SettingsForm::switch_program()
+{
+    if (selected_ >= programs_.size() || !programs_[selected_].reason.empty()) {
+        return false;
+    }
+    programs_[selected_].enabled = !programs_[selected_].enabled;
+    return true;
+}
+
+bool SettingsForm::programs_key(Key pressed)
+{
+    switch (pressed) {
+        case Key::Return:
+            close_programs(true);
+            return true;
+        case Key::Escape:
+            close_programs(false);
+            return true;
+        default:
+            return list_key(pressed);
+    }
+}
+
 // The input
 
 size_t SettingsForm::target_at(int x, int y) const
 {
+    if (view_ == View::Programs) {
+        if (inside(cancel_rect(), x, y)) {
+            return CancelButton;
+        }
+        if (inside(save_rect(), x, y)) {
+            return SaveButton;
+        }
+        const int bottom = message_rect().y - metrics_.row_gap;
+        if (y < rows_top() || y >= bottom) {
+            return NoTarget;
+        }
+        const size_t row = first_ + static_cast<size_t>((y - rows_top()) /
+                                                        metrics_.row_height);
+        return row < programs_.size() && row < first_ + visible_rows()
+                       ? FirstRow + row
+                       : NoTarget;
+    }
     if (view_ == View::Picker) {
         if (inside(search_rect(), x, y)) {
             return SearchBox;
@@ -1031,6 +1119,10 @@ bool SettingsForm::act(size_t target, int x)
             put_cursor(field_ref(focus_), field_rect(focus_), x);
             return true;
         }
+        case SessionProgramsField:
+            focus_ = Field::SessionPrograms;
+            open_programs();
+            return true;
         case ChooseButton:
             open_picker();
             return true;
@@ -1045,13 +1137,19 @@ bool SettingsForm::act(size_t target, int x)
             set_section(static_cast<Section>(target - SectionAppearance));
             return true;
         case CancelButton:
-            if (view_ == View::Picker) {
+            if (view_ == View::Programs) {
+                close_programs(false);
+            } else if (view_ == View::Picker) {
                 close_picker();
             } else {
                 result_ = Result::Cancelled;
             }
             return true;
         case SaveButton:
+            if (view_ == View::Programs) {
+                close_programs(true);
+                return true;
+            }
             return view_ == View::Picker ? choose() : request_save();
         case SearchBox:
             pane_ = Pane::Search;
@@ -1068,6 +1166,11 @@ bool SettingsForm::act(size_t target, int x)
             break;
     }
     // a row of the list
+    if (view_ == View::Programs) {
+        select(target - FirstRow);
+        switch_program();
+        return true;
+    }
     pane_ = Pane::Search;
     select(target - FirstRow);
     return true;
@@ -1092,7 +1195,7 @@ bool SettingsForm::request_save()
 
 bool SettingsForm::wheel(int notches)
 {
-    if (view_ != View::Picker) {
+    if (view_ == View::Form) {
         return false;
     }
     const auto step = static_cast<long>(notches) * metrics_.scroll_step;
@@ -1151,7 +1254,15 @@ void SettingsForm::step_choice(Field field, int direction)
 
 bool SettingsForm::key(Key pressed)
 {
-    return view_ == View::Picker ? picker_key(pressed) : form_key(pressed);
+    switch (view_) {
+        case View::Picker:
+            return picker_key(pressed);
+        case View::Programs:
+            return programs_key(pressed);
+        case View::Form:
+            break;
+    }
+    return form_key(pressed);
 }
 
 bool SettingsForm::form_key(Key pressed)
@@ -1185,6 +1296,10 @@ bool SettingsForm::form_key(Key pressed)
             return true;
         }
         case Key::Return:
+            if (focus_ == Field::SessionPrograms) {
+                open_programs();
+                return true;
+            }
             return request_save();
         case Key::Escape:
             result_ = Result::Cancelled;
@@ -1199,6 +1314,9 @@ bool SettingsForm::form_key(Key pressed)
         case Key::Back:
         case Key::Delete:
             break;
+    }
+    if (focus_ == Field::SessionPrograms) {
+        return false; // there is no text to edit
     }
     if (is_choice(focus_)) {
         switch (pressed) {
@@ -1236,7 +1354,7 @@ bool SettingsForm::list_key(Key pressed)
         case Key::Home:
             return select(0);
         case Key::End:
-            return select(shown_.size());
+            return select(list_size());
         default:
             return false;
     }
@@ -1331,7 +1449,17 @@ bool SettingsForm::type(const std::string& typed)
     if (text.empty()) {
         return false;
     }
+    if (view_ == View::Programs) {
+        return text == " " && switch_program();
+    }
     if (view_ == View::Form) {
+        if (focus_ == Field::SessionPrograms) {
+            if (text != " ") {
+                return false;
+            }
+            open_programs();
+            return true;
+        }
         status_.clear();
         if (is_choice(focus_)) { // Space goes to the next value
             if (text != " ") {

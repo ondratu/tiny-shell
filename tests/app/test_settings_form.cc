@@ -1340,7 +1340,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 25u);
+    EXPECT_EQ(count, 26u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1937,6 +1937,10 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
         for (const Field f : SettingsForm::section_fields(section)) {
             const Rect r = form.field_rect(f);
             EXPECT_TRUE(click(form, {r.x + 2, r.y + 2, 1, 1}));
+            if (f == Field::SessionPrograms) { // it opens its list
+                EXPECT_EQ(form.view(), View::Programs);
+                form.close_programs(true);
+            }
             EXPECT_EQ(form.view(), View::Form);
             EXPECT_EQ(form.focus(), f);
         }
@@ -2029,4 +2033,199 @@ TEST(SettingsFormStyleTest, the_picture_is_between_the_scale_and_the_wallpaper)
     EXPECT_LT(thumb.y + thumb.height, form.field_rect(Field::Wallpaper).y);
     EXPECT_LT(form.field_rect(Field::DockStyle).y,
               form.field_rect(Field::Scale).y);
+}
+
+namespace {
+
+using Program = SettingsForm::Program;
+
+//! A form with the programs of the autostart: a of the system, b of the user
+//! (both on), c of the system turned off, d that can't start
+SettingsForm make_programs()
+{
+    SettingsForm form = make();
+    form.set_programs(
+            {{"a.desktop", "Network", true, true, ""},
+             {"b.desktop", "Clipboard", false, true, ""},
+             {"c.desktop", "Updates", true, false, ""},
+             {"d.desktop", "Reader", true, false, "has a condition"}});
+    return form;
+}
+
+} // namespace
+
+TEST(SettingsFormProgramsTest, the_field_opens_the_list_with_return_or_space)
+{
+    SettingsForm form = make_programs();
+    focus_on(form, Field::SessionPrograms);
+
+    EXPECT_TRUE(form.key(Key::Return));
+
+    EXPECT_EQ(form.view(), View::Programs);
+    EXPECT_EQ(form.result(), Result::Editing);
+
+    form.close_programs(true);
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.focus(), Field::SessionPrograms);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.view(), View::Programs);
+}
+
+TEST(SettingsFormProgramsTest, a_click_on_the_field_opens_the_list)
+{
+    SettingsForm form = make_programs();
+    form.set_section(SettingsForm::Section::Session);
+
+    EXPECT_TRUE(click(form, form.field_rect(Field::SessionPrograms)));
+
+    EXPECT_EQ(form.view(), View::Programs);
+}
+
+TEST(SettingsFormProgramsTest, the_field_has_no_text_to_type_or_edit)
+{
+    SettingsForm form = make_programs();
+    focus_on(form, Field::SessionPrograms);
+
+    EXPECT_FALSE(form.type("x"));
+    EXPECT_FALSE(form.key(Key::Left));
+    EXPECT_FALSE(form.key(Key::Back));
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormProgramsTest, the_summary_counts_the_programs_that_start)
+{
+    EXPECT_EQ(make_programs().programs_summary(), "2 on, 2 off");
+    EXPECT_EQ(make().programs_summary(), "None found");
+}
+
+TEST(SettingsFormProgramsTest, space_switches_the_selected_program)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_FALSE(form.programs()[0].enabled);
+    form.key(Key::Down);
+    form.key(Key::Down);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_TRUE(form.programs()[2].enabled);
+    EXPECT_EQ(form.programs_summary(), "2 on, 2 off");
+}
+
+TEST(SettingsFormProgramsTest, a_program_that_can_not_start_is_not_switched)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+    form.key(Key::End);
+
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_FALSE(form.type(" "));
+    EXPECT_FALSE(form.programs()[3].enabled);
+}
+
+TEST(SettingsFormProgramsTest, other_text_does_not_switch_anything)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+
+    EXPECT_FALSE(form.type("x"));
+    EXPECT_FALSE(form.key(Key::Left));
+    EXPECT_TRUE(form.programs()[0].enabled);
+}
+
+TEST(SettingsFormProgramsTest, a_click_on_a_row_selects_it_and_switches_it)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+
+    EXPECT_TRUE(click(form, form.row_rect(1)));
+
+    EXPECT_EQ(form.selected(), 1u);
+    EXPECT_FALSE(form.programs()[1].enabled);
+    EXPECT_TRUE(click(form, form.row_rect(3))); // it can't start: selected only
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_FALSE(form.programs()[3].enabled);
+}
+
+TEST(SettingsFormProgramsTest, the_space_under_the_last_row_is_no_row)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+    const Rect after = form.row_rect(4);
+
+    form.press(center_x(after), center_y(after));
+
+    EXPECT_FALSE(form.release(center_x(after), center_y(after)));
+}
+
+TEST(SettingsFormProgramsTest, return_and_done_keep_the_switches)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+    form.type(" ");
+    form.key(Key::Return);
+
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_FALSE(form.programs()[0].enabled);
+
+    form.open_programs();
+    form.type(" ");
+    EXPECT_TRUE(click(form, form.save_rect()));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_TRUE(form.programs()[0].enabled);
+    EXPECT_EQ(form.result(), Result::Editing); // the form is not saved yet
+}
+
+TEST(SettingsFormProgramsTest, escape_and_cancel_bring_the_switches_back)
+{
+    SettingsForm form = make_programs();
+    form.open_programs();
+    form.type(" ");
+    form.key(Key::Escape);
+
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_TRUE(form.programs()[0].enabled);
+    EXPECT_EQ(form.result(), Result::Editing);
+
+    form.open_programs();
+    form.type(" ");
+    EXPECT_TRUE(click(form, form.cancel_rect()));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_TRUE(form.programs()[0].enabled);
+    EXPECT_EQ(form.result(), Result::Editing);
+}
+
+TEST(SettingsFormProgramsTest, a_long_list_scrolls_with_the_keys_and_the_wheel)
+{
+    SettingsForm form = make();
+    form.resize(500, 300);
+    std::vector<Program> many;
+    many.reserve(30);
+    for (int i = 0; i < 30; ++i) {
+        many.push_back({"p" + std::to_string(i) + ".desktop",
+                        "Program " + std::to_string(i), false, true, ""});
+    }
+    form.set_programs(many);
+    form.open_programs();
+
+    EXPECT_TRUE(form.key(Key::End));
+    EXPECT_EQ(form.selected(), 29u);
+    EXPECT_GT(form.first(), 0u);
+    EXPECT_LE(form.selected(), form.first() + form.visible_rows() - 1);
+    EXPECT_TRUE(form.key(Key::Home));
+    EXPECT_EQ(form.first(), 0u);
+    EXPECT_TRUE(form.wheel(2));
+    EXPECT_GT(form.first(), 0u);
+}
+
+TEST(SettingsFormProgramsTest, the_list_does_not_take_the_form_values)
+{
+    SettingsForm form = make_programs();
+    const SettingsForm::Values before = form.values();
+    form.open_programs();
+    form.type(" ");
+    form.close_programs(true);
+
+    EXPECT_EQ(form.values().font, before.font);
+    EXPECT_EQ(form.values().session_autostart, before.session_autostart);
 }
