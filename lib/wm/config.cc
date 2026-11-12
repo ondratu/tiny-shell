@@ -591,28 +591,34 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[session] confirm must be yes or no");
         }
     }
-    const auto read_keyboard = [&](const char* key, std::string& target,
-                                   const char* what) {
-        if (const auto value = ini.get("keyboard", key)) {
-            const auto items =
-                    std::count(value->begin(), value->end(), ',') + 1;
-            if (valid_keyboard_list(*value) &&
-                static_cast<size_t>(items) <= max_keyboard_layouts) {
-                target = *value;
+    struct KeyboardKey {
+        const char* key;
+        std::string Config::* target;
+        size_t most; //!< the items of the list, at most
+        const char* what;
+    };
+    static const KeyboardKey keyboard_keys[] = {
+            {"layout", &Config::keyboard_layout, max_keyboard_layouts,
+             "[keyboard] layout must be names of XKB with commas between "
+             "them, four at most"},
+            {"variant", &Config::keyboard_variant, max_keyboard_layouts,
+             "[keyboard] variant must be names of XKB with commas between "
+             "them, four at most"},
+            {"options", &Config::keyboard_options, SIZE_MAX,
+             "[keyboard] options must be names of XKB with commas between "
+             "them"}};
+    for (const KeyboardKey& item : keyboard_keys) {
+        if (const auto value = ini.get("keyboard", item.key)) {
+            const auto items = static_cast<size_t>(std::count(
+                                       value->begin(), value->end(), ',')) +
+                               1;
+            if (valid_keyboard_list(*value) && items <= item.most) {
+                config.*item.target = *value;
             } else {
-                problem(what);
+                problem(item.what);
             }
         }
-    };
-    read_keyboard("layout", config.keyboard_layout,
-                  "[keyboard] layout must be names of XKB with commas "
-                  "between them, four at most");
-    read_keyboard("variant", config.keyboard_variant,
-                  "[keyboard] variant must be names of XKB with commas "
-                  "between them, four at most");
-    read_keyboard("options", config.keyboard_options,
-                  "[keyboard] options must be names of XKB with commas "
-                  "between them, four at most");
+    }
     if (const auto value = ini.get("keyboard", "indicator")) {
         if (*value == "yes" || *value == "no") {
             config.keyboard_indicator = *value == "yes";
