@@ -150,7 +150,7 @@ class SettingsForm {
         std::string launcher_style{}; //!< the same
         //! `[session]`: autostart and the question before the logout (yes, no)
         std::string session_autostart = "yes";
-        std::string session_confirm = "yes";
+        std::string session_confirm = "no";
         // NOLINTEND(readability-redundant-member-init)
     };
 

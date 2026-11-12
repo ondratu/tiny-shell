@@ -438,14 +438,7 @@ class Manager : public tiny::Object {
     //! empty one does nothing. Returns the pid, -1 when nothing was started.
     pid_t run_system_command(const std::string& command);
 
-    /**
-     * Logout, restart and shutdown. The user is asked (a countdown of a
-     * minute, Return and Escape work), then every window is asked to close
-     * (`WM_DELETE_WINDOW`) so that the applications can ask for the unsaved
-     * work, and the shell waits for them. Only then the shell ends, or the
-     * command runs. "... Anyway" does not wait for what is left, Cancel stops
-     * it at any time.
-     */
+    //! Logout, restart and shutdown: see doc/session.md#ending-the-session
     void end_session(SessionKind kind);
     //! The user agreed (or did not answer): ask the windows to close
     void session_proceed();
@@ -674,7 +667,7 @@ class Manager : public tiny::Object {
     UnresponsiveDialog wm_unresponsive;
     SessionDialog wm_session;
     SessionEnd session;
-    bool session_confirm = true;
+    bool session_confirm = false;
     tiny::Timers::Id session_timer = 0;
     //! The watch of the command of the last restart or shutdown; it runs on
     //! when the user starts another end of the session

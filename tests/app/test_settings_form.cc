@@ -1856,15 +1856,16 @@ TEST(SettingsFormSessionTest,
             SettingsForm::section_has_notes(SettingsForm::Section::Session));
 }
 
-TEST(SettingsFormSessionTest, both_are_yes_by_default_and_take_yes_or_no)
+TEST(SettingsFormSessionTest,
+     autostart_is_yes_and_confirm_no_by_default_and_both_take_yes_or_no)
 {
     SettingsForm form = make();
     EXPECT_EQ(form.text(Field::SessionAutostart), "yes");
-    EXPECT_EQ(form.choice_label(Field::SessionConfirm), "Yes");
+    EXPECT_EQ(form.choice_label(Field::SessionConfirm), "No");
 
     SettingsForm::Values values;
-    values.session_confirm = "no";
-    EXPECT_EQ(make(values).clean_values().session_confirm, "no");
+    values.session_confirm = "yes";
+    EXPECT_EQ(make(values).clean_values().session_confirm, "yes");
     EXPECT_EQ(make(values).problem(Field::SessionConfirm), "");
     values.session_autostart = "maybe";
     EXPECT_NE(make(values).problem(Field::SessionAutostart), "");
