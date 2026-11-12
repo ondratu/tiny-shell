@@ -64,3 +64,20 @@ wont.md (what was judged and left out on purpose).
   Xfce and GNOME have it, the plain window managers use `scrot` or `maim`.
 - **Status:** not decided (`?` in `doc/comparison.md`). The scripts of the
   screenshots for the documentation could use it.
+
+## Saving and restoring the session (XSMP)
+
+- **What:** at the logout the programs that speak the X Session Management
+  Protocol are asked to save their state, and the next login starts them again
+  with it (`libSM`, `libICE`), like Openbox, Xfce and KDE do. The window manager
+  also saves where its windows were.
+- **Status:** not decided. It is not ruled out, because it may be useful to
+  someone, but the programs that use it are few (a browser restores its own
+  windows), and it needs two more libraries, so it would be an optional build
+  feature that is off by default. The logout that lets the programs save their
+  work does not need it (see `doc/session.md`).
+- **Notes:** the shell would be the session manager and the window manager in
+  one process, which means an ICE connection in the event loop and a list of the
+  clients in `~/.local/state`. Programs that do not speak XSMP could be started
+  again by their `WM_COMMAND` only, which restores little.
+- **Mentioned in:** `doc/comparison.md` (the symbol `?`) and `doc/roadmap.md`.

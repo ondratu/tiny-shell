@@ -254,11 +254,10 @@ next steps:
 - More in `tiny-settings` (new sections, the model of `lib/app/settings_form.*`):
   the keyboard and the mouse (the layout, the repeat of keys, the speed of the
   pointer, the buttons for the left hand: `XkbSetControls`,
-  `XChangePointerControl`), a dialog of logout, restart and shutdown (`loginctl`
-  or `systemctl`, the commands in `[commands]`), the programs that start with
-  the session (autostart), and the default applications (terminal is there;
-  the browser and the file manager through `xdg-open` and `mimeapps.list`).
-- Session management / saving the layout.
+  `XChangePointerControl`), the programs that start with the session (a list of
+  `~/.config/autostart` with a switch for every file, and `[session]`), and the
+  default applications (terminal is there; the browser and the file manager
+  through `xdg-open` and `mimeapps.list`).
 - Startup notification, what is left (the shell and other launchers start a
   sequence, the pointer is busy until the window comes or 15 seconds pass, see
   doc/usage.md): the dock marks the icon of an application that is starting
