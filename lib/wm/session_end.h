@@ -17,12 +17,9 @@ enum class SessionKind {
  * @short The end of a session, without X: what the dialog says and how long it
  * waits.
  *
- * It goes like in GNOME and macOS. The user is asked first, and when nobody
- * answers the session ends by itself after `confirm_timeout` (`Phase::Confirm`).
- * Then the applications are asked to close, so that they can ask for the
- * unsaved work, and the shell waits for them as long as it takes, because only
- * the user knows whether to wait for an application or to stop it
- * (`Phase::Closing`).
+ * The phases are described in doc/session.md#ending-the-session:
+ * `Phase::Confirm` (ends by itself after `confirm_timeout`) and
+ * `Phase::Closing` (waits as long as it takes, the user decides).
  */
 class SessionEnd {
   public:
