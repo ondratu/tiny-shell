@@ -52,6 +52,11 @@ namespace tiny::wm {
  * autostart = yes
  * confirm = no
  *
+ * [keyboard]
+ * layout = cz,us
+ * variant = ,qwerty
+ * options = grp:caps_toggle
+ *
  * [panel]
  * clock_format = %A %e %B %R
  * system_tray = yes
@@ -124,6 +129,12 @@ struct Config {
     //! [session] confirm: ask before the logout, the restart and the shutdown
     //! (yes or no)
     bool session_confirm = false;
+    //! [keyboard] layout, variant and options, the names of `setxkbmap`
+    //! (`cz,us`, `,qwerty`, `grp:caps_toggle`). With no layout the shell
+    //! leaves the keyboard as the system has it.
+    std::string keyboard_layout;
+    std::string keyboard_variant;
+    std::string keyboard_options;
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
     //! [monitors] primary: the monitor of the panel and the dock, a number

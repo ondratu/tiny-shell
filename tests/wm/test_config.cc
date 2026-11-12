@@ -684,6 +684,39 @@ TEST(ConfigTest, a_wrong_value_of_the_confirmation_is_refused)
               std::string::npos);
 }
 
+TEST(ConfigTest, the_keyboard_is_left_alone_unless_a_layout_is_set)
+{
+    const Config none = parse_config({});
+    EXPECT_EQ(none.keyboard_layout, "");
+    EXPECT_EQ(none.keyboard_variant, "");
+    EXPECT_EQ(none.keyboard_options, "");
+
+    const Config c = parse_config(
+            {{"a", "[keyboard]\nlayout = cz,us\nvariant = ,qwerty\n"
+                   "options = grp:alt_shift_toggle\n"}});
+    EXPECT_EQ(c.keyboard_layout, "cz,us");
+    EXPECT_EQ(c.keyboard_variant, ",qwerty");
+    EXPECT_EQ(c.keyboard_options, "grp:alt_shift_toggle");
+}
+
+TEST(ConfigTest, a_wrong_name_of_the_keyboard_is_refused)
+{
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[keyboard]\nlayout = cz us\nvariant = -print\n"
+                                "options = grp:toggle\n"}},
+                         &problems);
+
+    EXPECT_EQ(c.keyboard_layout, "");
+    EXPECT_EQ(c.keyboard_variant, "");
+    EXPECT_EQ(c.keyboard_options, "grp:toggle");
+    ASSERT_EQ(problems.size(), 2u);
+    EXPECT_NE(problems[0].find("a: [keyboard] layout must be"),
+              std::string::npos);
+    EXPECT_NE(problems[1].find("a: [keyboard] variant must be"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, the_monitors_are_chosen_by_the_shell_unless_they_are_set)
 {
     const Config c = parse_config({});
