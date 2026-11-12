@@ -83,6 +83,7 @@ describe the last releases that had it.
 | Clock | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Wallpaper | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Settings application | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Keyboard layout indicator and menu in the panel | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Keyboard layouts settings | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Mouse settings | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Logout, restart and shutdown dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |

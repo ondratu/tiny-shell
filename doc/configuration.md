@@ -105,6 +105,9 @@ confirm = no
 layout = cz,us
 variant =
 options = grp:caps_toggle
+# Show the layout in use (cz) in the panel, next to the clock: yes or no (the
+# default). A click opens a menu of the layouts when there are more than one.
+indicator = no
 
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
@@ -230,6 +233,7 @@ takes:
 layout = cz,us
 variant = ,intl
 options = grp:caps_toggle
+indicator = yes
 ```
 
 - `layout` is the layouts to switch between, up to four; the first one is used
@@ -243,6 +247,12 @@ options = grp:caps_toggle
   read the settings again (`tiny-shell --reload`), so `setxkbmap` has to be
   installed (every X installation has it, in the package `setxkbmap` or
   `x11-xkb-utils`). The shortcuts of the shell follow the layout.
+- `indicator = yes` shows the layout in use in the panel, to the left of the
+  clock (`cz`, as GNOME and macOS show it in the top bar). With more than one
+  layout a click on it opens a menu of them, with a mark at the one in use, and
+  a choice switches to it like the key that switches the layout. The indicator
+  follows the layout of the X server, so it shows also a change made by a key or
+  by another program, and it needs the XKB extension (every Xorg has it).
 - The names of the layouts and the variants are in
   `/usr/share/X11/xkb/rules/evdev.lst`. A name has letters, digits, `_`, `-` and
   `:` and does not start with `-`.

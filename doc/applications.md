@@ -51,8 +51,10 @@ settings of GNOME:
   like `Czech (QWERTY)`: Space or a click chooses one, the letters that are typed
   find a name, up to four; they are numbered in the order of switching and the
   first one is used at the start), Switch (the keys that switch the layout: Caps
-  Lock, Win+Space, Ctrl+Shift, Alt+Shift and others, or None) and Shortcuts (a
-  list of the keys of the shell, only to look at), see
+  Lock, Win+Space, Ctrl+Shift, Alt+Shift and others, or None), In panel (show
+  the layout in use next to the clock; with more than one layout a click on it
+  opens a menu to switch) and Shortcuts (a list of the keys of the shell, only
+  to look at), see
   [The keyboard](configuration.md#the-keyboard). Save sets the keyboard at
   once; without a layout chosen the keyboard stays as the system has it.
 - **Displays:** the primary and the secondary monitor (a choice of the monitors
