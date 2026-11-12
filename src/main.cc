@@ -329,7 +329,10 @@ int main(int argc, char** argv)
 
     // The files of autostart name the desktops in OnlyShowIn: a session that
     // did not say who it is (a bare ~/.xinitrc) is tiny-shell
-    setenv("XDG_CURRENT_DESKTOP", "tiny-shell", 0);
+    const char* desktop = getenv("XDG_CURRENT_DESKTOP");
+    if (desktop == nullptr || *desktop == '\0') {
+        setenv("XDG_CURRENT_DESKTOP", "tiny-shell", 1);
+    }
 
     try {
         tiny::Display::init();

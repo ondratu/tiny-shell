@@ -43,13 +43,19 @@ fi
 
 # The window manager next to this script (a build directory, a program that is
 # not in PATH), else the one of PATH
-shell="$(dirname "$0")/tiny-shell"
+case "$0" in
+    */*) shell="${0%/*}/tiny-shell" ;;
+    *) shell= ;; # found in PATH: the current directory is not "next to" it
+esac
 [ -x "$shell" ] || shell=tiny-shell
 
 # The programs of the session that want a bus (GTK, notifications) find it in
 # the environment. A system that has none for the session gets one when
-# dbus-run-session is there; without it there is none, and nothing needs it.
-if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && command -v dbus-run-session >/dev/null 2>&1; then
+# dbus-run-session is there; without it there is none, and nothing needs it. A
+# bus of the user that the system already runs (systemd, $XDG_RUNTIME_DIR/bus)
+# is the one to use: a second, private bus would cut the session from it.
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && [ ! -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ] &&
+    command -v dbus-run-session >/dev/null 2>&1; then
     exec dbus-run-session -- "$shell" "$@"
 fi
 exec "$shell" "$@"

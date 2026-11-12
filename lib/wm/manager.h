@@ -469,6 +469,8 @@ class Manager : public tiny::Object {
     //! Watch the command of a restart or a shutdown: a failure is shown
     void session_watch_command();
     void session_release_keyboard();
+    //! Stop the timer of the countdown or of the wait
+    void session_stop_timer();
     //! Start one program of the main menu without a shell and without
     //! splitting; an empty one does nothing, a failure is reported on stderr
     void run_program(const std::vector<std::string>& argv);
@@ -674,6 +676,12 @@ class Manager : public tiny::Object {
     SessionEnd session;
     bool session_confirm = true;
     tiny::Timers::Id session_timer = 0;
+    //! The watch of the command of the last restart or shutdown; it runs on
+    //! when the user starts another end of the session
+    tiny::Timers::Id session_watch_timer = 0;
+    //! Keys are taken from this moment: the Return that picked the item of a
+    //! menu may still repeat, and it must not answer the question
+    SessionEnd::Clock::time_point session_keys_from;
     bool session_keyboard = false; //!< the question has the keyboard
     //! The command of the restart or the shutdown that runs, to see if it fails
     pid_t session_command_pid = -1;

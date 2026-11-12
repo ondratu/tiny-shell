@@ -460,6 +460,7 @@ TEST_F(ManagerTest,
     start();
     manager->get_actions().run("logout");
 
+    manager->session_keys_from = tiny::wm::SessionEnd::Clock::now();
     XKeyEvent escape = key(XK_Escape, 0);
     escape.display = dsp();
     manager->session_key(escape);
@@ -469,6 +470,9 @@ TEST_F(ManagerTest,
     manager->get_actions().run("logout");
     XKeyEvent enter = key(XK_Return, 0);
     enter.display = dsp();
+    manager->session_key(enter); // the Return that opened the question repeats
+    EXPECT_EQ(manager->session.phase(), tiny::wm::SessionEnd::Phase::Confirm);
+    manager->session_keys_from = tiny::wm::SessionEnd::Clock::now();
     manager->session_key(enter);
     EXPECT_FALSE(manager->running);
 }
@@ -477,6 +481,7 @@ TEST_F(ManagerTest, a_release_of_a_key_does_not_answer_the_question)
 {
     start();
     manager->get_actions().run("logout");
+    manager->session_keys_from = tiny::wm::SessionEnd::Clock::now();
     XKeyEvent release = key(XK_Return, 0);
     release.display = dsp();
     release.type = KeyRelease;
@@ -726,6 +731,7 @@ TEST_F(ManagerTest, a_command_of_the_shutdown_that_fails_is_shown)
         manager->session_watch_command();
         return manager->session_command_pid < 0;
     }));
+    EXPECT_EQ(manager->session_watch_timer, 0u);
 
     // the failure says so and only the button that closes is left
     EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
@@ -733,6 +739,20 @@ TEST_F(ManagerTest, a_command_of_the_shutdown_that_fails_is_shown)
                       .map_state,
               IsUnmapped);
     EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, the_watch_of_a_command_goes_on_when_another_end_is_asked)
+{
+    start();
+    manager->set_session_confirm(false);
+    manager->shutdown_command = "sleep 5";
+    manager->get_actions().run("shutdown");
+    const auto watch = manager->session_watch_timer;
+    ASSERT_NE(watch, 0u);
+
+    manager->get_actions().run("logout");
+
+    EXPECT_EQ(manager->session_watch_timer, watch);
 }
 
 TEST_F(ManagerTest, a_command_that_cannot_be_started_is_shown)

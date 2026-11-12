@@ -1959,7 +1959,9 @@ pid_t Manager::run_system_command(const std::string& command)
     }
     const pid_t pid = tiny::spawn_command(command);
     if (pid < 0) {
+        const int spawn_errno = errno; // the caller reads it too
         tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
+        errno = spawn_errno;
     }
     return pid;
 }
@@ -1975,8 +1977,6 @@ void Manager::end_session(SessionKind kind)
     if (!session.begin(kind)) {
         return; // it is ending already
     }
-    timers.cancel(session_timer); // the watch of the last command
-    session_timer = 0;
     close_unresponsive_dialog(); // the question of the session comes first
     if (!session_confirm) {
         session_proceed();
@@ -1987,8 +1987,16 @@ void Manager::end_session(SessionKind kind)
     // is just closing) the buttons still work
     session_keyboard = XGrabKeyboard(display, root, False, GrabModeAsync,
                                      GrabModeAsync, CurrentTime) == GrabSuccess;
+    session_keys_from =
+            SessionEnd::Clock::now() + std::chrono::milliseconds(300);
     session_timer = timers.every(std::chrono::milliseconds(250),
                                  [this] { session_tick(); });
+}
+
+void Manager::session_stop_timer()
+{
+    timers.cancel(session_timer);
+    session_timer = 0;
 }
 
 void Manager::session_release_keyboard()
@@ -2076,13 +2084,12 @@ void Manager::session_tick()
         case SessionEnd::Phase::Idle:
             break;
     }
-    timers.cancel(session_timer);
-    session_timer = 0;
+    session_stop_timer();
 }
 
 void Manager::session_key(const XKeyEvent& e)
 {
-    if (e.type != KeyPress) {
+    if (e.type != KeyPress || SessionEnd::Clock::now() < session_keys_from) {
         return;
     }
     XKeyEvent copy = e;
@@ -2096,8 +2103,7 @@ void Manager::session_key(const XKeyEvent& e)
 
 void Manager::session_cancel()
 {
-    timers.cancel(session_timer);
-    session_timer = 0;
+    session_stop_timer();
     session_release_keyboard();
     session.cancel();
     wm_session.unmap();
@@ -2106,8 +2112,7 @@ void Manager::session_cancel()
 void Manager::session_finish()
 {
     const SessionKind kind = session.kind();
-    timers.cancel(session_timer);
-    session_timer = 0;
+    session_stop_timer();
     session_release_keyboard();
     session.cancel();
     wm_session.unmap();
@@ -2126,8 +2131,9 @@ void Manager::session_finish()
                                         strerror(errno));
         return;
     }
-    session_timer = timers.every(std::chrono::milliseconds(250),
-                                 [this] { session_watch_command(); });
+    timers.cancel(session_watch_timer);
+    session_watch_timer = timers.every(std::chrono::milliseconds(250),
+                                       [this] { session_watch_command(); });
 }
 
 void Manager::session_watch_command()
@@ -2147,8 +2153,8 @@ void Manager::session_watch_command()
                         : std::string("was killed."));
     }
     if (ended || late) { // a command that goes on runs the system down
-        timers.cancel(session_timer);
-        session_timer = 0;
+        timers.cancel(session_watch_timer);
+        session_watch_timer = 0;
         session_command_pid = -1;
     }
 }
