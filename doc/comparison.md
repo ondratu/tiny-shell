@@ -87,7 +87,7 @@ describe the last releases that had it.
 | Logout, restart and shutdown dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Autostart of applications (XDG Autostart) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Saving and restoring the session (XSMP, [more](session.md#saving-the-session)) | ? | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
-| Autostart settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Autostart settings | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Default applications settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Screenshot tool | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | Screen lock | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |

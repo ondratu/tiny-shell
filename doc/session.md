@@ -54,8 +54,9 @@ Name=Clipboard manager
 Exec=clipit
 ```
 
-To turn off a program of the system, copy its file to `~/.config/autostart` and
-add `Hidden=true`. A file is also skipped when:
+### Which programs start
+
+A file is skipped when it has `Hidden=true`, or when:
 
 - it has `X-GNOME-Autostart-enabled=false`,
 - `OnlyShowIn` does not name the desktop `tiny-shell` or `NotShowIn` does (the
@@ -70,6 +71,25 @@ the file names, and a program that starts again in the same session (the shell
 crashed, `tiny-shell --replace`) is not started twice. `[session] autostart = no`
 turns the whole thing off (the setting Autostart in the section Session of
 `tiny-settings`).
+
+### Switching programs on and off
+
+The field Programs of the section Session in `tiny-settings` lists every
+program of both directories. A click or Space switches a program, Done keeps the
+choice and Save writes it. The list marks where a program comes from:
+
+- **System**: a file in `/etc/xdg/autostart`. It is never changed or removed;
+  switching it off makes a file of the same name in `~/.config/autostart` that
+  holds `Hidden=true` and nothing else, and switching it on removes that file.
+- **User**: a file in `~/.config/autostart`. Switching it off adds `Hidden=true`
+  to the file and switching it on takes the line away, so the file stays.
+
+A program that does not start for another reason (see
+[Which programs start](#which-programs-start)) is dimmed with the reason and
+cannot be switched.
+
+Without `tiny-settings` you do the same by hand: copy the file of the system to
+`~/.config/autostart` and add `Hidden=true`, or delete your own file.
 
 ## Ending the session
 
