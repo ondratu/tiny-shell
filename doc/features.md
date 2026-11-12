@@ -70,7 +70,7 @@ comparison with other window managers is in the [comparison](comparison.md).
   put on one side of the primary one, and the number of every monitor can be
   shown in its corner (see [Configuration](configuration.md#multiple-monitors)).
 - **Settings:** `tiny-settings`, a small form with the sections Appearance,
-  Fonts, Desktop, Displays, Power, Security and Applications that changes the font, the
+  Fonts, Desktop, Displays, Power, Security, Applications and Session that changes the font, the
   rendering of text (antialiasing, hinting, subpixel order), the scale, the
   wallpaper, the mode of the dock, the format of the clock, the monitors, the
   time to switch the display off, the time to lock the screen after that and the
@@ -110,7 +110,8 @@ comparison with other window managers is in the [comparison](comparison.md).
   any theme (a dark panel and dock over a light desktop, for example).
 - **Session:** a session file for display managers and the script
   `tiny-shell-session` that prepares the environment, the programs of
-  `~/.config/autostart` (XDG Autostart) start with it, and Logout, Restart and
+  `~/.config/autostart` (XDG Autostart) start with it (`tiny-settings` lists
+  them and switches each on and off), and Logout, Restart and
   Shutdown ask the programs to close first, so that they can ask for the unsaved
   work (see [The session](session.md)).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,

@@ -28,8 +28,7 @@ what was left out on purpose, with the reason, is in
 - Window snapping to the screen edges and half-screen maximize
 - Screen lock: lock before the computer sleeps (needs logind, see
   TODO-DBUS.md), a switch of the user from the lock screen
-- More in the settings: keyboard and mouse, the autostart programs, default
-  applications
+- More in the settings: keyboard and mouse, default applications
 - A simple animation of minimizing, which can be turned off in the settings
 
 ## Not decided
