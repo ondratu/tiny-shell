@@ -66,32 +66,36 @@ constexpr size_t thumbnail_rows = 3;
 
 //! All the fields, in the order of `SettingsForm::Field` (the order of the
 //! texts and of the targets)
-constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
-                                          SettingsForm::Field::Size,
-                                          SettingsForm::Field::Style,
-                                          SettingsForm::Field::Terminal,
-                                          SettingsForm::Field::Scale,
-                                          SettingsForm::Field::Antialias,
-                                          SettingsForm::Field::Hinting,
-                                          SettingsForm::Field::Rgba,
-                                          SettingsForm::Field::Wallpaper,
-                                          SettingsForm::Field::WallpaperMode,
-                                          SettingsForm::Field::ClockFormat,
-                                          SettingsForm::Field::Dock,
-                                          SettingsForm::Field::PrimaryMonitor,
-                                          SettingsForm::Field::SecondaryMonitor,
-                                          SettingsForm::Field::MonitorPlacement,
-                                          SettingsForm::Field::LockDelay,
-                                          SettingsForm::Field::DisplayOff,
-                                          SettingsForm::Field::DisplayDpms,
-                                          SettingsForm::Field::Theme,
-                                          SettingsForm::Field::PanelStyle,
-                                          SettingsForm::Field::DockStyle,
-                                          SettingsForm::Field::LockStyle,
-                                          SettingsForm::Field::LauncherStyle,
-                                          SettingsForm::Field::SessionAutostart,
-                                          SettingsForm::Field::SessionConfirm,
-                                          SettingsForm::Field::SessionPrograms};
+constexpr SettingsForm::Field fields[] = {
+        SettingsForm::Field::Font,
+        SettingsForm::Field::Size,
+        SettingsForm::Field::Style,
+        SettingsForm::Field::Terminal,
+        SettingsForm::Field::Scale,
+        SettingsForm::Field::Antialias,
+        SettingsForm::Field::Hinting,
+        SettingsForm::Field::Rgba,
+        SettingsForm::Field::Wallpaper,
+        SettingsForm::Field::WallpaperMode,
+        SettingsForm::Field::ClockFormat,
+        SettingsForm::Field::Dock,
+        SettingsForm::Field::PrimaryMonitor,
+        SettingsForm::Field::SecondaryMonitor,
+        SettingsForm::Field::MonitorPlacement,
+        SettingsForm::Field::LockDelay,
+        SettingsForm::Field::DisplayOff,
+        SettingsForm::Field::DisplayDpms,
+        SettingsForm::Field::Theme,
+        SettingsForm::Field::PanelStyle,
+        SettingsForm::Field::DockStyle,
+        SettingsForm::Field::LockStyle,
+        SettingsForm::Field::LauncherStyle,
+        SettingsForm::Field::SessionAutostart,
+        SettingsForm::Field::SessionConfirm,
+        SettingsForm::Field::SessionPrograms,
+        SettingsForm::Field::KeyboardLayouts,
+        SettingsForm::Field::KeyboardSwitch,
+        SettingsForm::Field::KeyboardShortcuts};
 
 } // namespace
 
@@ -139,6 +143,9 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.launcher_style),
             TextField(initial.session_autostart),
             TextField(initial.session_confirm),
+            TextField(),
+            TextField(),
+            TextField(initial.keyboard_switch),
             TextField()},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
@@ -164,7 +171,7 @@ int SettingsForm::form_height() const
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications, Section::Session}) {
+          Section::Applications, Section::Session, Section::Keyboard}) {
         const auto rows = static_cast<int>(
                 section_fields(section).size() +
                 (section == Section::Appearance ? thumbnail_rows : 0));
@@ -206,7 +213,8 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::LockStyle),
             text(Field::LauncherStyle),
             text(Field::SessionAutostart),
-            text(Field::SessionConfirm)};
+            text(Field::SessionConfirm),
+            text(Field::KeyboardSwitch)};
 }
 
 // The sections
@@ -228,6 +236,8 @@ const char* SettingsForm::section_title(Section section)
             return "Security";
         case Section::Session:
             return "Session";
+        case Section::Keyboard:
+            return "Keyboard";
         case Section::Applications:
             break;
     }
@@ -258,6 +268,9 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> session = {Field::SessionAutostart,
                                                Field::SessionPrograms,
                                                Field::SessionConfirm};
+    static const std::vector<Field> keyboard = {Field::KeyboardLayouts,
+                                                Field::KeyboardSwitch,
+                                                Field::KeyboardShortcuts};
     switch (section) {
         case Section::Appearance:
             return appearance;
@@ -273,6 +286,8 @@ SettingsForm::section_fields(Section section)
             return security;
         case Section::Session:
             return session;
+        case Section::Keyboard:
+            return keyboard;
         case Section::Applications:
             break;
     }
@@ -284,7 +299,7 @@ SettingsForm::Section SettingsForm::section_of(Field field)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Session}) {
+          Section::Session, Section::Keyboard}) {
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;
@@ -331,6 +346,12 @@ const char* SettingsForm::hint(Field field)
             return "The program and its arguments, e.g. xterm -e.";
         case Field::SessionPrograms:
             return "Return or Space opens the list of the programs.";
+        case Field::KeyboardLayouts:
+            return "Return or Space opens the list of the layouts.";
+        case Field::KeyboardShortcuts:
+            return "Return or Space shows the keys of the shell.";
+        case Field::KeyboardSwitch:
+            return "The keyboard changes as soon as you save.";
         case Field::Wallpaper:
             return "The full path of a PNG or JPEG file.";
         default:
@@ -354,6 +375,14 @@ const char* SettingsForm::note(Field field)
         case Field::SessionPrograms:
             return "Which programs of the autostart start: the ones of the "
                    "system and your own.";
+        case Field::KeyboardLayouts:
+            return "The layouts to switch between, up to four; the first one "
+                   "is used at the start. System default leaves them alone.";
+        case Field::KeyboardSwitch:
+            return "The keys that switch to the next layout; it needs two "
+                   "layouts.";
+        case Field::KeyboardShortcuts:
+            return "The keys of the shell and what they do (not editable).";
         case Field::SessionConfirm:
             return "A dialog with a countdown before Logout, Restart and "
                    "Shutdown. Programs are asked to close either way.";
@@ -383,7 +412,30 @@ bool SettingsForm::is_choice(Field field)
            field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff || field == Field::DisplayDpms ||
-           field == Field::SessionAutostart || field == Field::SessionConfirm;
+           field == Field::SessionAutostart || field == Field::SessionConfirm ||
+           field == Field::KeyboardSwitch;
+}
+
+//! Open the list that the focused field opens
+void SettingsForm::open_field_list()
+{
+    switch (focus_) {
+        case Field::KeyboardLayouts:
+            open_layouts();
+            break;
+        case Field::KeyboardShortcuts:
+            open_shortcuts();
+            break;
+        default:
+            open_programs();
+            break;
+    }
+}
+
+bool SettingsForm::opens_list(Field field)
+{
+    return field == Field::SessionPrograms || field == Field::KeyboardLayouts ||
+           field == Field::KeyboardShortcuts;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -428,6 +480,9 @@ wm::XftChoices SettingsForm::choices_of(Field field)
 {
     if (field == Field::Dock) {
         return wm::dock_choices();
+    }
+    if (field == Field::KeyboardSwitch) {
+        return wm::keyboard_switch_choices();
     }
     if (field == Field::Theme) {
         return wm::style_choices();
@@ -545,7 +600,13 @@ std::string SettingsForm::problem(Field field) const
                            ? ""
                            : "Choose one of the values that are offered.";
         case Field::SessionPrograms: // not a text
+        case Field::KeyboardLayouts:
+        case Field::KeyboardShortcuts:
             return "";
+        case Field::KeyboardSwitch:
+            return wm::valid_keyboard_switch(value)
+                           ? ""
+                           : "Choose one of the values that are offered.";
         case Field::DisplayDpms:
         case Field::SessionAutostart:
         case Field::SessionConfirm:
@@ -617,7 +678,8 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.lock_style),
             clean(v.launcher_style),
             clean(v.session_autostart),
-            clean(v.session_confirm)};
+            clean(v.session_confirm),
+            clean(v.keyboard_switch)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -788,7 +850,7 @@ Rect SettingsForm::style_rect() const
 size_t SettingsForm::visible_rows() const
 {
     const int bottom =
-            (view_ == View::Programs ? message_rect().y : preview_rect().y) -
+            (view_ == View::Picker ? preview_rect().y : message_rect().y) -
             metrics_.row_gap;
     const int rows = (bottom - rows_top()) / metrics_.row_height;
     return static_cast<size_t>(std::max(1, rows));
@@ -954,20 +1016,95 @@ void SettingsForm::open_programs()
     first_ = 0;
 }
 
-void SettingsForm::close_programs(bool keep)
+void SettingsForm::open_layouts()
 {
-    if (!keep) {
-        programs_ = programs_before_;
+    view_ = View::Layouts;
+    layouts_before_ = layouts_;
+    find_.clear();
+    selected_ = 0;
+    // the first chosen layout is the one to start at
+    const auto first =
+            std::find_if(layouts_.begin(), layouts_.end(),
+                         [](const Layout& l) { return l.order == 1; });
+    if (first != layouts_.end()) {
+        selected_ = static_cast<size_t>(first - layouts_.begin());
+    }
+    first_ = 0;
+    reveal();
+}
+
+void SettingsForm::open_shortcuts()
+{
+    view_ = View::Shortcuts;
+    selected_ = 0;
+    first_ = 0;
+}
+
+//! Show the form again, at the field that opened the list
+void SettingsForm::close_list(bool keep)
+{
+    switch (view_) {
+        case View::Programs:
+            if (!keep) {
+                programs_ = programs_before_;
+            }
+            section_ = Section::Session;
+            focus_ = Field::SessionPrograms;
+            break;
+        case View::Layouts:
+            if (!keep) {
+                layouts_ = layouts_before_;
+            }
+            section_ = Section::Keyboard;
+            focus_ = Field::KeyboardLayouts;
+            break;
+        case View::Shortcuts:
+            section_ = Section::Keyboard;
+            focus_ = Field::KeyboardShortcuts;
+            break;
+        case View::Picker:
+        case View::Form:
+            return;
     }
     view_ = View::Form;
-    section_ = Section::Session; // the list is opened from there
-    focus_ = Field::SessionPrograms;
     pressed_ = NoTarget;
+}
+
+void SettingsForm::close_programs(bool keep)
+{
+    if (view_ == View::Programs) {
+        close_list(keep);
+    }
+}
+
+void SettingsForm::close_layouts(bool keep)
+{
+    if (view_ == View::Layouts) {
+        close_list(keep);
+    }
+}
+
+void SettingsForm::close_shortcuts()
+{
+    if (view_ == View::Shortcuts) {
+        close_list(true);
+    }
 }
 
 size_t SettingsForm::list_size() const
 {
-    return view_ == View::Programs ? programs_.size() : shown_.size();
+    switch (view_) {
+        case View::Programs:
+            return programs_.size();
+        case View::Layouts:
+            return layouts_.size();
+        case View::Shortcuts:
+            return shortcuts_.size();
+        case View::Picker:
+        case View::Form:
+            break;
+    }
+    return shown_.size();
 }
 
 //! Switch the selected program; false when it can't be switched
@@ -980,14 +1117,147 @@ bool SettingsForm::switch_program()
     return true;
 }
 
-bool SettingsForm::programs_key(Key pressed)
+//! Choose or drop the selected layout. The chosen ones are numbered in the
+//! order they were chosen; false when it is the fifth one (the keyboard has
+//! four groups).
+bool SettingsForm::switch_layout()
 {
+    if (selected_ >= layouts_.size()) {
+        return false;
+    }
+    Layout& row = layouts_[selected_];
+    if (row.order == 0) {
+        const auto chosen = static_cast<size_t>(
+                std::count_if(layouts_.begin(), layouts_.end(),
+                              [](const Layout& l) { return l.order != 0; }));
+        if (chosen >= wm::max_keyboard_layouts) {
+            return false;
+        }
+        row.order = chosen + 1;
+        return true;
+    }
+    const size_t dropped = row.order;
+    row.order = 0;
+    for (Layout& other : layouts_) {
+        if (other.order > dropped) {
+            --other.order;
+        }
+    }
+    return true;
+}
+
+bool SettingsForm::switch_row()
+{
+    switch (view_) {
+        case View::Programs:
+            return switch_program();
+        case View::Layouts:
+            return switch_layout();
+        default:
+            return false;
+    }
+}
+
+void SettingsForm::set_layouts(std::vector<wm::KeyboardLayout> known,
+                               const std::vector<wm::KeyboardLayout>& chosen)
+{
+    layouts_.clear();
+    const auto same = [](const wm::KeyboardLayout& a,
+                         const wm::KeyboardLayout& b) {
+        return a.id == b.id && a.variant == b.variant;
+    };
+    for (const wm::KeyboardLayout& one : chosen) {
+        if (std::none_of(known.begin(), known.end(),
+                         [&](const auto& k) { return same(k, one); })) {
+            known.push_back(one); // the file has what the system does not
+        }
+    }
+    layouts_.reserve(known.size());
+    for (wm::KeyboardLayout& one : known) {
+        const auto found =
+                std::find_if(chosen.begin(), chosen.end(),
+                             [&](const auto& c) { return same(c, one); });
+        layouts_.push_back(
+                {std::move(one),
+                 found == chosen.end()
+                         ? 0
+                         : static_cast<size_t>(found - chosen.begin()) + 1});
+    }
+}
+
+std::vector<wm::KeyboardLayout> SettingsForm::layouts() const
+{
+    std::vector<wm::KeyboardLayout> chosen(wm::max_keyboard_layouts);
+    size_t count = 0;
+    for (const Layout& row : layouts_) {
+        if (row.order != 0 && row.order <= chosen.size()) {
+            chosen[row.order - 1] = row.layout;
+            count = std::max(count, row.order);
+        }
+    }
+    chosen.resize(count);
+    return chosen;
+}
+
+std::string SettingsForm::layouts_summary() const
+{
+    std::string summary;
+    for (const wm::KeyboardLayout& one : layouts()) {
+        summary += (summary.empty() ? "" : ", ") + one.id +
+                   (one.variant.empty() ? "" : "(" + one.variant + ")");
+    }
+    return summary.empty() ? "System default" : summary;
+}
+
+//! Select the first name that begins with what was typed (letters of any
+//! case); false when there is none
+bool SettingsForm::find_layout()
+{
+    const auto lower = [](std::string text) {
+        for (char& c : text) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return text;
+    };
+    const std::string wanted = lower(find_);
+    for (size_t i = 0; i < layouts_.size(); ++i) {
+        if (lower(layouts_[i].layout.name).rfind(wanted, 0) == 0) {
+            select(i); // it can be selected already: still found
+            return true;
+        }
+    }
+    return false;
+}
+
+//! Return keeps what was done in the list, Escape takes it back (the first
+//! Escape clears what was typed to find a layout)
+bool SettingsForm::list_view_key(Key pressed)
+{
+    if (view_ == View::Layouts) {
+        if (pressed == Key::Back) {
+            if (find_.empty()) {
+                return false;
+            }
+            find_.pop_back();
+            if (!find_.empty()) {
+                find_layout();
+            }
+            return true;
+        }
+        if (pressed == Key::Escape && !find_.empty()) {
+            find_.clear();
+            return true;
+        }
+        if (pressed != Key::Return && pressed != Key::Escape) {
+            find_.clear(); // the arrows start a new search
+        }
+    }
     switch (pressed) {
         case Key::Return:
-            close_programs(true);
+            close_list(true);
             return true;
         case Key::Escape:
-            close_programs(false);
+            close_list(false);
             return true;
         default:
             return list_key(pressed);
@@ -998,7 +1268,7 @@ bool SettingsForm::programs_key(Key pressed)
 
 size_t SettingsForm::target_at(int x, int y) const
 {
-    if (view_ == View::Programs) {
+    if (view_ != View::Form && view_ != View::Picker) {
         if (inside(cancel_rect(), x, y)) {
             return CancelButton;
         }
@@ -1011,7 +1281,7 @@ size_t SettingsForm::target_at(int x, int y) const
         }
         const size_t row = first_ + static_cast<size_t>((y - rows_top()) /
                                                         metrics_.row_height);
-        return row < programs_.size() && row < first_ + visible_rows()
+        return row < list_size() && row < first_ + visible_rows()
                        ? FirstRow + row
                        : NoTarget;
     }
@@ -1108,7 +1378,8 @@ bool SettingsForm::act(size_t target, int x)
         case LockStyleField:
         case LauncherStyleField:
         case SessionAutostartField:
-        case SessionConfirmField: {
+        case SessionConfirmField:
+        case KeyboardSwitchField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
@@ -1123,6 +1394,14 @@ bool SettingsForm::act(size_t target, int x)
             focus_ = Field::SessionPrograms;
             open_programs();
             return true;
+        case KeyboardLayoutsField:
+            focus_ = Field::KeyboardLayouts;
+            open_layouts();
+            return true;
+        case KeyboardShortcutsField:
+            focus_ = Field::KeyboardShortcuts;
+            open_shortcuts();
+            return true;
         case ChooseButton:
             open_picker();
             return true;
@@ -1134,20 +1413,21 @@ bool SettingsForm::act(size_t target, int x)
         case SectionSecurity:
         case SectionApplications:
         case SectionSession:
+        case SectionKeyboard:
             set_section(static_cast<Section>(target - SectionAppearance));
             return true;
         case CancelButton:
-            if (view_ == View::Programs) {
-                close_programs(false);
-            } else if (view_ == View::Picker) {
+            if (view_ == View::Picker) {
                 close_picker();
+            } else if (view_ != View::Form) {
+                close_list(false);
             } else {
                 result_ = Result::Cancelled;
             }
             return true;
         case SaveButton:
-            if (view_ == View::Programs) {
-                close_programs(true);
+            if (view_ != View::Form && view_ != View::Picker) {
+                close_list(true);
                 return true;
             }
             return view_ == View::Picker ? choose() : request_save();
@@ -1166,9 +1446,9 @@ bool SettingsForm::act(size_t target, int x)
             break;
     }
     // a row of the list
-    if (view_ == View::Programs) {
+    if (view_ != View::Picker) {
         select(target - FirstRow);
-        switch_program();
+        switch_row();
         return true;
     }
     pane_ = Pane::Search;
@@ -1258,7 +1538,9 @@ bool SettingsForm::key(Key pressed)
         case View::Picker:
             return picker_key(pressed);
         case View::Programs:
-            return programs_key(pressed);
+        case View::Layouts:
+        case View::Shortcuts:
+            return list_view_key(pressed);
         case View::Form:
             break;
     }
@@ -1296,8 +1578,8 @@ bool SettingsForm::form_key(Key pressed)
             return true;
         }
         case Key::Return:
-            if (focus_ == Field::SessionPrograms) {
-                open_programs();
+            if (opens_list(focus_)) {
+                open_field_list();
                 return true;
             }
             return request_save();
@@ -1315,7 +1597,7 @@ bool SettingsForm::form_key(Key pressed)
         case Key::Delete:
             break;
     }
-    if (focus_ == Field::SessionPrograms) {
+    if (opens_list(focus_)) {
         return false; // there is no text to edit
     }
     if (is_choice(focus_)) {
@@ -1452,12 +1734,25 @@ bool SettingsForm::type(const std::string& typed)
     if (view_ == View::Programs) {
         return text == " " && switch_program();
     }
+    if (view_ == View::Layouts) {
+        if (text == " ") { // the names are found by their first words
+            return switch_layout();
+        }
+        find_ += text;
+        if (!find_layout()) {
+            find_.resize(find_.size() - text.size()); // nothing begins so
+        }
+        return true;
+    }
+    if (view_ == View::Shortcuts) {
+        return false;
+    }
     if (view_ == View::Form) {
-        if (focus_ == Field::SessionPrograms) {
+        if (opens_list(focus_)) {
             if (text != " ") {
                 return false;
             }
-            open_programs();
+            open_field_list();
             return true;
         }
         status_.clear();

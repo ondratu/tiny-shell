@@ -10,13 +10,14 @@
 #include "text_field.h"
 #include "widget.h"
 #include "wm/config.h"
+#include "wm/keyboard.h"
 
 namespace tiny::app {
 
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Security, Applications, Session) and the fields of the chosen section: text fields (the font,
+ * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Security, Applications, Session, Keyboard) and the fields of the chosen section: text fields (the font,
  * its size and style, the scale, the format of the clock, the wallpaper, the
  * terminal), choices (antialiasing, hinting and subpixel order of the text,
  * the placement of the wallpaper, the mode of the dock: the left and right
@@ -38,6 +39,13 @@ namespace tiny::app {
  * form, Cancel (or Escape) brings them back. The owner reads `programs()` when
  * it saves.
  *
+ * The field Layouts of the Keyboard opens a list in the same way: all the
+ * layouts and variants of the system, a click or Space chooses one (the
+ * layouts are numbered in the order they were chosen, the first one is used
+ * at the start and the others are switched to) and the letters that are typed
+ * go to the first name that begins with them. The field Shortcuts opens a list
+ * of the keys of the shell that only shows them.
+ *
  * The owner (`tiny-settings`) tells the size of the window and the input,
  * asks for the rectangles to draw, how wide a text is (`set_measure`, for the
  * pointer) and writes the file when `result()` says Saved. All the numbers
@@ -48,7 +56,7 @@ namespace tiny::app {
  */
 class SettingsForm {
   public:
-    enum class View { Form, Picker, Programs };
+    enum class View { Form, Picker, Programs, Layouts, Shortcuts };
 
     //! The groups of the settings, in the panel at the left
     enum class Section {
@@ -59,7 +67,8 @@ class SettingsForm {
         Power,
         Security,
         Applications,
-        Session
+        Session,
+        Keyboard
     };
 
     enum class Field {
@@ -88,7 +97,10 @@ class SettingsForm {
         LauncherStyle,    //!< a choice: the same for the launcher
         SessionAutostart, //!< a choice: yes or no, the autostart programs start
         SessionConfirm, //!< a choice: yes or no, a dialog asks before the logout
-        SessionPrograms //!< opens the list of the programs of the autostart
+        SessionPrograms,  //!< opens the list of the programs of the autostart
+        KeyboardLayouts,  //!< opens the list of the layouts of the keyboard
+        KeyboardSwitch,   //!< a choice: the keys that switch the layout
+        KeyboardShortcuts //!< opens the list of the keys of the shell
     };
 
     //! What has the keyboard in the list of fonts
@@ -158,6 +170,8 @@ class SettingsForm {
         //! `[session]`: autostart and the question before the logout (yes, no)
         std::string session_autostart = "yes";
         std::string session_confirm = "no";
+        //! The option `grp:...` that switches the layouts ("" is none)
+        std::string keyboard_switch{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -189,6 +203,12 @@ class SettingsForm {
         //! Why it does not start for a cause the list can't change; empty
         //! when the list can switch it
         std::string reason;
+    };
+
+    //! A layout or a variant in the list of the layouts
+    struct Layout {
+        wm::KeyboardLayout layout;
+        size_t order = 0; //!< 1 for the first chosen one, 0 when not chosen
     };
 
     //! The names of the styles of a family
@@ -227,6 +247,29 @@ class SettingsForm {
     /// How many start, for the field that opens the list: "3 on, 1 off".
     std::string programs_summary() const;
 
+    /// The layouts that the list shows and the ones that are chosen (in the
+    /// order of switching); a chosen one that the system does not list is added
+    /// to the list. Call it before the form is used.
+    void set_layouts(std::vector<wm::KeyboardLayout> known,
+                     const std::vector<wm::KeyboardLayout>& chosen);
+
+    /// The chosen layouts, in the order of switching.
+    std::vector<wm::KeyboardLayout> layouts() const;
+
+    /// The rows of the list of the layouts, and of the list of the shortcuts.
+    const std::vector<Layout>& layout_rows() const { return layouts_; }
+    const std::vector<wm::KeyboardShortcut>& shortcut_rows() const
+    {
+        return shortcuts_;
+    }
+
+    /// The chosen layouts for the field that opens the list: "cz, us" or
+    /// "System default" when none is chosen.
+    std::string layouts_summary() const;
+
+    /// What was typed to find a name in the list of the layouts.
+    const std::string& layouts_find() const { return find_; }
+
     /// The size of the window.
     void resize(int width, int height);
 
@@ -241,7 +284,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 8;
+    static constexpr size_t section_count = 9;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -422,6 +465,13 @@ class SettingsForm {
     /// were when the list was opened.
     void close_programs(bool keep);
 
+    /// The list of the layouts (see `set_layouts`) and the list of the
+    /// shortcuts, with the same scrolling.
+    void open_layouts();
+    void close_layouts(bool keep);
+    void open_shortcuts();
+    void close_shortcuts();
+
   private:
     enum Target : size_t {
         NoTarget,
@@ -451,6 +501,9 @@ class SettingsForm {
         SessionAutostartField,
         SessionConfirmField,
         SessionProgramsField, //!< the fields are in the order of `Field`
+        KeyboardLayoutsField,
+        KeyboardSwitchField,
+        KeyboardShortcutsField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -465,6 +518,7 @@ class SettingsForm {
         SectionSecurity,
         SectionApplications,
         SectionSession,
+        SectionKeyboard,
         FirstRow //!< and the rows of the list from here
     };
 
@@ -484,8 +538,14 @@ class SettingsForm {
     bool form_key(Key pressed);
     bool picker_key(Key pressed);
     bool list_key(Key pressed);
-    bool programs_key(Key pressed);
+    bool list_view_key(Key pressed);
     bool switch_program();
+    bool switch_layout();
+    bool switch_row();  //!< the row that is selected in the list that shows
+    bool find_layout(); //!< select the first name that begins with `find_`
+    void close_list(bool keep);
+    static bool opens_list(Field field);
+    void open_field_list();
     size_t list_size() const; //!< the rows of the list that shows
     bool size_step(int direction);
     bool cycle_style(int direction);
@@ -499,7 +559,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 26> fields_;
+    std::array<TextField, 29> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
@@ -514,6 +574,10 @@ class SettingsForm {
     std::vector<std::string> shown_;
     std::vector<Program> programs_;
     std::vector<Program> programs_before_; //!< when the list was opened
+    std::vector<Layout> layouts_;
+    std::vector<Layout> layouts_before_;
+    std::vector<wm::KeyboardShortcut> shortcuts_ = wm::keyboard_shortcuts();
+    std::string find_; //!< typed in the list of the layouts
     std::string status_;
     Metrics metrics_;
     View view_ = View::Form;

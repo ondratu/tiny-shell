@@ -581,6 +581,9 @@ class SettingsApp : public tiny::XftWindow {
             case SettingsForm::View::Programs:
                 paint_programs();
                 break;
+            case SettingsForm::View::Layouts:
+            case SettingsForm::View::Shortcuts:
+                break;
             case SettingsForm::View::Form:
                 paint_form();
                 break;
