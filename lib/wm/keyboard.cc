@@ -7,6 +7,8 @@
 #include <sstream>
 #include <system_error>
 
+#include <X11/Xatom.h>
+
 #include "text.h"
 
 namespace fs = std::filesystem;
@@ -240,6 +242,49 @@ keyboard_chosen(const std::string& layouts, const std::string& variants,
                                                                     ")"});
     }
     return chosen;
+}
+
+KeyboardNames parse_xkb_rules_names(std::string_view value)
+{
+    std::vector<std::string> parts;
+    size_t from = 0;
+    while (parts.size() < 5) {
+        const size_t end = value.find('\0', from);
+        if (end == std::string_view::npos) {
+            break;
+        }
+        parts.emplace_back(value.substr(from, end - from));
+        from = end + 1;
+    }
+    if (parts.size() < 5) {
+        return {};
+    }
+    return {parts[2], parts[3], parts[4]};
+}
+
+KeyboardNames read_keyboard_names(::Display* display)
+{
+    const Atom property = XInternAtom(display, "_XKB_RULES_NAMES", True);
+    if (property == None) {
+        return {};
+    }
+    Atom type = None;
+    int format = 0;
+    unsigned long count = 0;
+    unsigned long after = 0;
+    unsigned char* data = nullptr;
+    KeyboardNames names;
+    if (XGetWindowProperty(display, DefaultRootWindow(display), property, 0,
+                           256, False, XA_STRING, &type, &format, &count,
+                           &after, &data) == Success &&
+        data != nullptr) {
+        if (type == XA_STRING && format == 8) {
+            names = parse_xkb_rules_names(
+                    {reinterpret_cast<const char*>(data), count});
+        }
+        XFree(data);
+    }
+    return names;
 }
 
 std::vector<KeyboardShortcut> keyboard_shortcuts()
