@@ -11,17 +11,25 @@ programs of the autostart.
 
 ### The environment file
 
-`~/.config/tiny-shell/environment` (in `$XDG_CONFIG_HOME` when that is set) does
-not exist until you make it. The session script reads it as a shell script before
-it starts the window manager, so it is the place for what every program of the
-session should see, or for what must run first:
+Variables for everything you run (`EDITOR`, `PATH`) belong to `~/.profile`: GDM
+and SDDM read it before the session starts, and with `startx` you have logged in
+already. Some display managers do not read it (LightDM, depending on the
+version), so check yours.
+
+`~/.config/tiny-shell/environment` (in `$XDG_CONFIG_HOME` when that is set) is for
+what concerns the graphical session only. It does not exist until you make it,
+and the session script reads it as a shell script after the profile and before
+it starts the shell:
 
 ```sh
 export GDK_SCALE=2
-export EDITOR=vim
 setxkbmap cz
 xset r rate 250 40
 ```
+
+Commands for the X server (`setxkbmap`, `xset`) would fail in a login on a
+text console, which is why they do not belong to the profile. Openbox has the
+same file in `~/.config/openbox/environment`.
 
 ## Autostart
 
@@ -61,7 +69,7 @@ are there, so the programs with a tray icon find it; they start in the order of
 the file names, and a program that starts again in the same session (the shell
 crashed, `tiny-shell --replace`) is not started twice. `X-GNOME-Autostart-Delay`
 and `AutostartCondition` are not used. `[session] autostart = no` turns the
-whole thing off.
+whole thing off (the setting Autostart in the section Session of `tiny-settings`).
 
 ## Ending the session
 
@@ -83,8 +91,9 @@ programs; they ask them to close, so a program can ask whether to save:
 Windows that cannot take the request, the bars of other programs and tooltips are
 not waited for. A program without a window ends with the X server.
 
-`[session] confirm = no` leaves out the confirmation, the programs are still asked
-to close. `pkill tiny-shell` ends the shell at once, and the programs lose their
+`[session] confirm = no` (the setting Confirm in the section Session of
+`tiny-settings`) leaves out the dialog with the countdown; the programs are still
+asked to close. `pkill tiny-shell` ends the shell at once, and the programs lose their
 connection to the display.
 
 ## Saving the session
