@@ -33,7 +33,7 @@ what is planned.
 
 ## What it is not
 
-- Not a desktop environment. No file manager, session manager or desktop icons
+- Not a desktop environment. No file manager, full session manager or desktop icons
   (use an external tool such as idesk if you need them).
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.

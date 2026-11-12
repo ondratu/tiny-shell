@@ -99,5 +99,5 @@ lose the connection to the display.
 tiny-shell does not remember which programs run or where their windows were: the
 next login starts with the autostart programs only. A window manager can do it
 with the X Session Management protocol (XSMP), which almost no current program
-supports. The [comparison](comparison.md) says what other window
+supports. The [comparison](comparison.md#session) says what other window
 managers do; it is not planned, but it is not ruled out.
