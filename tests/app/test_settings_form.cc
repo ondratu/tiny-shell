@@ -1340,7 +1340,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 29u);
+    EXPECT_EQ(count, 30u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -2265,6 +2265,7 @@ TEST(SettingsFormKeyboardTest, the_fields_are_in_the_section_keyboard)
                  "Keyboard");
     EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Keyboard),
               (std::vector<Field>{Field::KeyboardLayouts, Field::KeyboardSwitch,
+                                  Field::KeyboardIndicator,
                                   Field::KeyboardShortcuts}));
 }
 
@@ -2522,4 +2523,30 @@ TEST(SettingsFormKeyboardTest, the_shortcuts_are_only_shown)
     EXPECT_TRUE(form.key(Key::Escape));
     EXPECT_EQ(form.view(), View::Form);
     EXPECT_EQ(form.focus(), Field::KeyboardShortcuts);
+}
+
+TEST(SettingsFormKeyboardTest, the_indicator_in_the_panel_is_a_yes_or_no_choice)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::KeyboardIndicator);
+
+    EXPECT_TRUE(SettingsForm::is_choice(Field::KeyboardIndicator));
+    EXPECT_EQ(form.values().keyboard_indicator, "no"); // the default
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.values().keyboard_indicator, "yes");
+    EXPECT_EQ(form.clean_values().keyboard_indicator, "yes");
+    EXPECT_EQ(form.choice_label(Field::KeyboardIndicator), "Yes");
+    EXPECT_TRUE(form.problem().empty());
+    EXPECT_EQ(SettingsForm::section_of(Field::KeyboardIndicator),
+              SettingsForm::Section::Keyboard);
+}
+
+TEST(SettingsFormKeyboardTest, a_wrong_indicator_is_a_problem)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.keyboard_indicator = "maybe";
+    SettingsForm form = make(values);
+    focus_on(form, Field::KeyboardIndicator);
+
+    EXPECT_FALSE(form.problem().empty());
 }

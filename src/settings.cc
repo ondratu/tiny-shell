@@ -173,7 +173,8 @@ class SettingsApp : public tiny::XftWindow {
                 look_value(config.launcher_style),
                 config.session_autostart ? "yes" : "no",
                 config.session_confirm ? "yes" : "no",
-                tiny::wm::keyboard_switch_of(keyboard.options)},
+                tiny::wm::keyboard_switch_of(keyboard.options),
+                config.keyboard_indicator ? "yes" : "no"},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         colors(tiny::app::app_colors(
@@ -491,10 +492,13 @@ class SettingsApp : public tiny::XftWindow {
             std::string layout;
             std::string variant;
             tiny::wm::keyboard_lists(form.layouts(), layout, variant);
-            keyboard_changed = layout != initial_layout ||
-                               variant != initial_variant ||
-                               v.keyboard_switch != initial.keyboard_switch;
-            if (keyboard_changed) {
+            const bool layouts_changed =
+                    layout != initial_layout || variant != initial_variant ||
+                    v.keyboard_switch != initial.keyboard_switch;
+            const bool indicator_changed =
+                    v.keyboard_indicator != initial.keyboard_indicator;
+            keyboard_changed = layouts_changed || indicator_changed;
+            if (layouts_changed) {
                 // the other options of the file stay, the switch is replaced
                 changed.push_back({"keyboard", "layout", layout});
                 changed.push_back({"keyboard", "variant", variant});
@@ -502,6 +506,10 @@ class SettingsApp : public tiny::XftWindow {
                         {"keyboard", "options",
                          tiny::wm::keyboard_options_with_switch(
                                  keyboard.options, v.keyboard_switch)});
+            }
+            if (indicator_changed) {
+                changed.push_back(
+                        {"keyboard", "indicator", v.keyboard_indicator});
             }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
@@ -531,7 +539,7 @@ class SettingsApp : public tiny::XftWindow {
                             wallpaper_program.c_str());
                 }
                 if (keyboard_changed) {
-                    // the shell sets the keyboard when it reads the file
+                    // the shell sets the keyboard and the panel when it reads the file
                     const std::string problem = tiny::wm::request_reload(
                             display, XDefaultRootWindow(display));
                     if (!problem.empty()) {
@@ -952,6 +960,7 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::SessionConfirm, "Confirm"},
                     {SettingsForm::Field::KeyboardLayouts, "Layouts"},
                     {SettingsForm::Field::KeyboardSwitch, "Switch"},
+                    {SettingsForm::Field::KeyboardIndicator, "In panel"},
                     {SettingsForm::Field::KeyboardShortcuts, "Shortcuts"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
@@ -1126,7 +1135,7 @@ class SettingsApp : public tiny::XftWindow {
     //! see whether the user changed them
     std::string initial_layout;
     std::string initial_variant;
-    bool keyboard_changed = false; //!< the keyboard was written to the file
+    bool keyboard_changed = false; //!< the keyboard settings were changed
     SettingsForm form;
     std::string ui_family; //!< the family of `ui_font`
     XftFont* ui_font = nullptr;
