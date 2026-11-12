@@ -18,6 +18,7 @@
 #include <memory>
 #include <vector>
 
+#include "spawn.h"
 #include "wm/dock.h"
 #ifdef TINY_RANDR
 #include <X11/extensions/Xrandr.h>
@@ -50,6 +51,16 @@ namespace {
 int border()
 {
     return tiny::wm::shell_theme.dock_border;
+}
+
+// The button of a dialog by the index of its child (the unresponsive dialog:
+// two lines, wait, force quit; the dialog of the session: three lines, cancel,
+// the button that agrees)
+void click_dialog_button(::Window dialog, size_t index)
+{
+    const ::Window button = children_of(dialog).at(index);
+    send(button, make_event(EnterNotify));
+    send(button, make_event(ButtonRelease));
 }
 
 // Stops the main loop: the loop reaches it after all earlier events.
@@ -199,6 +210,11 @@ TEST_F(ManagerTest, connects_logout_of_the_main_menu)
     auto& logout = manager->wm_panel.menu_main.logout;
     logout.on_click(&logout, make_event(ButtonRelease));
 
+    // the user is asked first
+    EXPECT_TRUE(manager->running);
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
     EXPECT_FALSE(manager->running);
 }
 
@@ -225,7 +241,8 @@ TEST_F(ManagerTest, an_action_can_end_the_manager_and_open_a_dialog)
     EXPECT_TRUE(manager->wm_run.get_maped());
 
     EXPECT_TRUE(manager->get_actions().run("logout"));
-    EXPECT_FALSE(manager->running);
+    EXPECT_TRUE(manager->wm_session.get_maped());
+    EXPECT_TRUE(manager->running);
 }
 
 TEST_F(ManagerTest, the_launcher_action_toggles_and_applications_only_opens)
@@ -340,6 +357,8 @@ TEST_F(ManagerTest, restart_of_the_main_menu_runs_its_command)
 
     auto& restart = manager->wm_panel.menu_main.restart;
     restart.on_click(&restart, make_event(ButtonRelease));
+    EXPECT_FALSE(std::filesystem::exists(marker)); // the user is asked first
+    click_dialog_button(manager->wm_session.get_window(), 4);
 
     EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
     EXPECT_TRUE(manager->running); // only the command is started
@@ -354,6 +373,7 @@ TEST_F(ManagerTest, shutdown_of_the_main_menu_runs_its_command)
 
     auto& shutdown = manager->wm_panel.menu_main.shutdown;
     shutdown.on_click(&shutdown, make_event(ButtonRelease));
+    click_dialog_button(manager->wm_session.get_window(), 4);
 
     EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
     std::filesystem::remove(marker);
@@ -368,6 +388,8 @@ TEST_F(ManagerTest, an_empty_command_of_the_main_menu_does_nothing)
     shutdown.on_click(&shutdown, make_event(ButtonRelease));
 
     EXPECT_TRUE(manager->running);
+    EXPECT_TRUE(manager->session.idle()); // nobody is asked to close windows
+    EXPECT_FALSE(manager->wm_session.get_maped());
 }
 
 TEST_F(ManagerTest, a_missing_command_of_the_main_menu_is_reported)
@@ -378,10 +400,353 @@ TEST_F(ManagerTest, a_missing_command_of_the_main_menu_is_reported)
     ::testing::internal::CaptureStderr();
     auto& restart = manager->wm_panel.menu_main.restart;
     restart.on_click(&restart, make_event(ButtonRelease));
+    click_dialog_button(manager->wm_session.get_window(), 4);
 
     EXPECT_NE(::testing::internal::GetCapturedStderr().find(
                       "tiny-no-such-program"),
               std::string::npos);
+}
+
+namespace {
+
+// What the client was told by the manager: whether WM_DELETE_WINDOW came
+bool was_asked_to_close(FakeClient& c)
+{
+    c.sync(); // the manager sends the message over its own connection
+    XEvent e;
+    while (XCheckTypedEvent(c.display, ClientMessage, &e)) {
+        if (static_cast<Atom>(e.xclient.data.l[0]) == dsp().WM_DELETE_WINDOW) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+TEST_F(ManagerTest, the_question_of_the_logout_waits_for_the_user)
+{
+    start();
+
+    manager->get_actions().run("logout");
+
+    EXPECT_EQ(manager->session.phase(), tiny::wm::SessionEnd::Phase::Confirm);
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
+    EXPECT_TRUE(manager->running);
+    EXPECT_NE(manager->session_timer, 0u);
+}
+
+TEST_F(ManagerTest, cancel_stops_the_logout_and_nothing_is_closed)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(c.display, c.window, NoEventMask);
+    run_loop();
+    manager->get_actions().run("logout");
+
+    click_dialog_button(manager->wm_session.get_window(), 3);
+
+    EXPECT_TRUE(manager->session.idle());
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsUnmapped);
+    EXPECT_EQ(manager->session_timer, 0u);
+    EXPECT_FALSE(was_asked_to_close(c));
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest,
+       escape_cancels_and_return_agrees_while_the_question_is_shown)
+{
+    start();
+    manager->get_actions().run("logout");
+
+    XKeyEvent escape = key(XK_Escape, 0);
+    escape.display = dsp();
+    manager->session_key(escape);
+    EXPECT_TRUE(manager->session.idle());
+    EXPECT_TRUE(manager->running);
+
+    manager->get_actions().run("logout");
+    XKeyEvent enter = key(XK_Return, 0);
+    enter.display = dsp();
+    manager->session_key(enter);
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, a_release_of_a_key_does_not_answer_the_question)
+{
+    start();
+    manager->get_actions().run("logout");
+    XKeyEvent release = key(XK_Return, 0);
+    release.display = dsp();
+    release.type = KeyRelease;
+
+    manager->session_key(release);
+
+    EXPECT_EQ(manager->session.phase(), tiny::wm::SessionEnd::Phase::Confirm);
+}
+
+TEST_F(ManagerTest, the_session_ends_by_itself_when_nobody_answers)
+{
+    start();
+    manager->get_actions().run("logout");
+    manager->session = tiny::wm::SessionEnd();
+    manager->session.begin(tiny::wm::SessionKind::Logout,
+                           tiny::wm::SessionEnd::Clock::now() -
+                                   std::chrono::seconds(61));
+
+    manager->session_tick();
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, the_countdown_is_the_time_that_is_left)
+{
+    start();
+    manager->get_actions().run("logout");
+    manager->session = tiny::wm::SessionEnd();
+    manager->session.begin(tiny::wm::SessionKind::Logout,
+                           tiny::wm::SessionEnd::Clock::now() -
+                                   std::chrono::seconds(50));
+
+    manager->session_tick();
+
+    EXPECT_TRUE(manager->running);
+    EXPECT_EQ(manager->wm_session.get_maped(), true);
+    EXPECT_LE(manager->session.seconds_left(), 10);
+}
+
+TEST_F(ManagerTest, the_windows_are_asked_to_close_before_the_logout)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(c.display, c.window, NoEventMask);
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+    EXPECT_FALSE(was_asked_to_close(c)); // not before the user agrees
+
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
+    EXPECT_TRUE(was_asked_to_close(c));
+    // the application has the time to ask for its unsaved work
+    EXPECT_TRUE(manager->running);
+    EXPECT_EQ(manager->session.phase(), tiny::wm::SessionEnd::Phase::Closing);
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
+}
+
+TEST_F(ManagerTest, the_logout_goes_on_when_the_last_window_is_closed)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+    click_dialog_button(manager->wm_session.get_window(), 4);
+    ASSERT_TRUE(manager->running);
+
+    XDestroyWindow(c.display, c.window); // the application agreed and quit
+    c.sync();
+    run_loop();
+    manager->session_tick();
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest,
+       an_application_that_does_not_close_is_waited_for_until_anyway)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
+    manager->session_tick();
+    manager->session_tick();
+
+    EXPECT_TRUE(manager->running);
+    EXPECT_EQ(manager->session_open_applications().size(), 1u);
+
+    click_dialog_button(manager->wm_session.get_window(), 4); // Log Out Anyway
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, a_window_is_asked_to_close_once_so_its_dialog_is_not)
+{
+    start();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(c.display, c.window, NoEventMask);
+    FakeClient& save = add_client(false);
+    save.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(save.display, save.window, NoEventMask);
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+    click_dialog_button(manager->wm_session.get_window(), 4);
+    EXPECT_TRUE(was_asked_to_close(c));
+
+    // the application asks "Save?": a window that came after the question
+    save.map();
+    run_loop();
+    manager->session_tick();
+    manager->session_tick();
+
+    EXPECT_FALSE(was_asked_to_close(save));
+    EXPECT_FALSE(was_asked_to_close(c));
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, a_window_that_cannot_be_asked_does_not_hold_the_logout)
+{
+    start();
+    add_client(); // no WM_DELETE_WINDOW: it can't save anything
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, a_bar_of_another_program_does_not_hold_the_logout)
+{
+    start();
+    FakeClient& c = add_client(false);
+    set_window_type(c, dsp()._NET_WM_WINDOW_TYPE_DOCK);
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    c.map();
+    run_loop();
+    pump_events();
+    manager->get_actions().run("logout");
+
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, the_names_of_the_open_applications_are_listed_once)
+{
+    start();
+    for (const char* title : {"Notes", "Notes", "Browser"}) {
+        FakeClient& c = add_client(false);
+        c.set_protocols({dsp().WM_DELETE_WINDOW});
+        XClassHint hint = {const_cast<char*>(title), const_cast<char*>(title)};
+        XSetClassHint(c.display, c.window, &hint);
+        c.map();
+    }
+    run_loop();
+    pump_events();
+
+    EXPECT_EQ(manager->session_open_applications(),
+              (std::vector<std::string>{"Browser", "Notes"}));
+}
+
+TEST_F(ManagerTest, without_the_question_the_windows_are_asked_at_once)
+{
+    start();
+    manager->set_session_confirm(false);
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    XSelectInput(c.display, c.window, NoEventMask);
+    run_loop();
+    pump_events();
+
+    manager->get_actions().run("logout");
+
+    EXPECT_TRUE(was_asked_to_close(c));
+    EXPECT_EQ(manager->session.phase(), tiny::wm::SessionEnd::Phase::Closing);
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest,
+       without_the_question_and_without_windows_the_logout_is_at_once)
+{
+    start();
+    manager->set_session_confirm(false);
+
+    manager->get_actions().run("logout");
+
+    EXPECT_FALSE(manager->running);
+}
+
+TEST_F(ManagerTest, a_session_that_is_ending_is_not_started_again)
+{
+    start();
+    manager->get_actions().run("logout");
+    const auto timer = manager->session_timer;
+
+    manager->get_actions().run("shutdown");
+
+    EXPECT_EQ(manager->session.kind(), tiny::wm::SessionKind::Logout);
+    EXPECT_EQ(manager->session_timer, timer);
+}
+
+TEST_F(ManagerTest, the_command_of_the_restart_waits_for_the_windows)
+{
+    start();
+    const auto marker = marker_file("tiny-manager-closing-");
+    manager->restart_command = "touch " + marker.string();
+    FakeClient& c = add_client();
+    c.set_protocols({dsp().WM_DELETE_WINDOW});
+    run_loop();
+    pump_events();
+    manager->get_actions().run("restart");
+    click_dialog_button(manager->wm_session.get_window(), 4);
+
+    manager->session_tick();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    EXPECT_FALSE(std::filesystem::exists(marker));
+
+    XDestroyWindow(c.display, c.window);
+    c.sync();
+    run_loop();
+    manager->session_tick();
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->running);
+    std::filesystem::remove(marker);
+}
+
+TEST_F(ManagerTest, a_command_of_the_shutdown_that_fails_is_shown)
+{
+    start();
+    manager->set_session_confirm(false);
+    manager->shutdown_command = "exit 3";
+
+    manager->get_actions().run("shutdown");
+    EXPECT_TRUE(wait_for([&] {
+        tiny::reap_children();
+        manager->session_watch_command();
+        return manager->session_command_pid < 0;
+    }));
+
+    // the failure says so and only the button that closes is left
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
+    EXPECT_EQ(attributes_of(children_of(manager->wm_session.get_window()).at(4))
+                      .map_state,
+              IsUnmapped);
+    EXPECT_TRUE(manager->running);
+}
+
+TEST_F(ManagerTest, a_command_that_cannot_be_started_is_shown)
+{
+    start();
+    manager->set_session_confirm(false);
+    manager->shutdown_command = "tiny-no-such-program";
+
+    ::testing::internal::CaptureStderr();
+    manager->get_actions().run("shutdown");
+    ::testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(attributes_of(manager->wm_session).map_state, IsViewable);
+    EXPECT_EQ(manager->session_command_pid, -1);
 }
 
 namespace {
@@ -1772,14 +2137,6 @@ WmWindow* make_unresponsive(WmWindow* window)
 WmWindow::Clock::time_point ask_time(const WmWindow& window)
 {
     return window.get_ask_time().value_or(WmWindow::Clock::time_point{});
-}
-
-// The button of the dialog: wait is the third child, force quit the fourth
-void click_dialog_button(::Window dialog, size_t index)
-{
-    const ::Window button = children_of(dialog).at(index);
-    send(button, make_event(EnterNotify));
-    send(button, make_event(ButtonRelease));
 }
 
 } // namespace

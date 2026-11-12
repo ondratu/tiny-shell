@@ -147,6 +147,7 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     manager.set_power_commands(config.reboot_command, config.poweroff_command);
     manager.set_terminal(config.terminal);
     manager.set_lock_command(config.lock_command);
+    manager.set_session_confirm(config.session_confirm);
     if (old == nullptr || old->display_dpms != config.display_dpms ||
         old->display_off_minutes != config.display_off_minutes) {
         manager.set_dpms(config.display_dpms);

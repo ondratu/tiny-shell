@@ -65,9 +65,12 @@ The logo at the left of the panel opens a menu with these items, in groups
 - **Applications** opens the launcher; **Terminal** starts the terminal of
   `[commands] terminal` (without the `-e` at its end).
 - **Force Quit** starts `xkill`: click a window to end its program.
-- **Restart** and **Shutdown** run `[commands] reboot` and `poweroff`.
+- **Restart** and **Shutdown** ask the programs to close and run `[commands]
+  reboot` and `poweroff` (see [The session](session.md#ending-the-session)).
 - **Lock Screen** starts `tiny-lock` (or `[commands] lock`), see [Screen lock](lock.md).
-- **Logout** ends tiny-shell.
+- **Logout** asks the programs to close, so that they can ask for the unsaved
+  work, and then ends tiny-shell and the session; a dialog with a countdown asks
+  first (see [The session](session.md#ending-the-session)).
 
 A click on an item closes the menu. A program that cannot be started is reported
 on stderr.

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/types.h>
+
 #include <functional>
 #include <map>
 #include <memory>
@@ -29,6 +31,8 @@
 #include "wm/startup.h"
 #include "wm/run_dialog.h"
 #include "wm/switcher.h"
+#include "wm/session_dialog.h"
+#include "wm/session_end.h"
 #include "wm/unresponsive_dialog.h"
 #include "wm/symbolic_icons.h"
 #include "wm/dock.h"
@@ -64,6 +68,10 @@ class Manager : public tiny::Object {
     //! the current command
     void set_power_commands(const std::string& restart,
                             const std::string& shutdown);
+
+    //! Ask before the logout, the restart and the shutdown (`[session]
+    //! confirm`); the applications are asked to close either way
+    void set_session_confirm(bool ask) { session_confirm = ask; }
 
     //! The terminal of the applications that need one, e.g. `{"xterm", "-e"}`;
     //! the Terminal item of the main menu starts it without a trailing `-e`
@@ -427,8 +435,40 @@ class Manager : public tiny::Object {
     void move_favorite(const std::string& id, size_t place);
 
     //! Start a command of the main menu (Restart, Shutdown) by the shell; an
-    //! empty one does nothing
-    void run_system_command(const std::string& command);
+    //! empty one does nothing. Returns the pid, -1 when nothing was started.
+    pid_t run_system_command(const std::string& command);
+
+    /**
+     * Logout, restart and shutdown. The user is asked (a countdown of a
+     * minute, Return and Escape work), then every window is asked to close
+     * (`WM_DELETE_WINDOW`) so that the applications can ask for the unsaved
+     * work, and the shell waits for them. Only then the shell ends, or the
+     * command runs. "... Anyway" does not wait for what is left, Cancel stops
+     * it at any time.
+     */
+    void end_session(SessionKind kind);
+    //! The user agreed (or did not answer): ask the windows to close
+    void session_proceed();
+    //! The user changed their mind
+    void session_cancel();
+    //! The windows are closed, or the user does not wait: end the session
+    void session_finish();
+    //! Finish the session when no application is open, else say which are
+    void session_check_windows();
+    //! The timer of the countdown and of the wait for the windows
+    void session_tick();
+    //! "... Anyway" ends the session at once, the other button asks the windows
+    void session_proceed_or_finish();
+    //! Whether the end of the session waits for the window: an application
+    //! that can be asked to close, not a bar, the desktop or a tooltip
+    static bool session_counts(const Window& window);
+    //! The names of the applications that are still open, once each
+    std::vector<std::string> session_open_applications();
+    //! Return agrees and Escape cancels, while the question is shown
+    void session_key(const XKeyEvent& e);
+    //! Watch the command of a restart or a shutdown: a failure is shown
+    void session_watch_command();
+    void session_release_keyboard();
     //! Start one program of the main menu without a shell and without
     //! splitting; an empty one does nothing, a failure is reported on stderr
     void run_program(const std::vector<std::string>& argv);
@@ -630,6 +670,19 @@ class Manager : public tiny::Object {
     std::unique_ptr<Tray> wm_tray; //!< null: no tray
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
+    SessionDialog wm_session;
+    SessionEnd session;
+    bool session_confirm = true;
+    tiny::Timers::Id session_timer = 0;
+    bool session_keyboard = false; //!< the question has the keyboard
+    //! The command of the restart or the shutdown that runs, to see if it fails
+    pid_t session_command_pid = -1;
+    std::string session_command_line;
+    SessionKind session_command_kind = SessionKind::Restart;
+    //! How long a failure of the command is watched for: it ends the session
+    //! of the user, or it fails at once (no right, no such program)
+    static constexpr std::chrono::seconds session_command_wait{10};
+    SessionEnd::Clock::time_point session_command_at;
     Window* asked = nullptr; //!< the window of the unresponsive dialog
     Launcher wm_launcher;
     Switcher wm_switcher;

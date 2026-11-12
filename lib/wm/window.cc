@@ -960,6 +960,11 @@ void Window::return_focus()
     publish_wm_states();
 }
 
+bool Window::can_ask_to_close() const
+{
+    return protocols.count(dsp.WM_DELETE_WINDOW) != 0;
+}
+
 bool Window::ask_to_close()
 {
     if (!protocols.count(dsp.WM_DELETE_WINDOW)) {

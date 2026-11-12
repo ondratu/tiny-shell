@@ -6,14 +6,17 @@
 #include <csignal>
 #include <cstring>
 #include <iterator>
+#include <set>
 #include <vector>
 
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <X11/cursorfont.h>
 #include <X11/Xatom.h>
+#include <X11/keysym.h>
 
 #include "wm/shell_theme.h"
 #include "object.h"
@@ -148,6 +151,11 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
         }
     });
 
+    wm_session.realize(root_arg);
+    wm_session.on_proceed.connect(
+            [this](const XEvent&) { session_proceed_or_finish(); });
+    wm_session.on_cancel.connect([this](const XEvent&) { session_cancel(); });
+
     wm_launcher.set_icons(&wm_icons);
     wm_launcher.realize(root_arg, 0, 0);
     wm_window_menu.realize(root_arg);
@@ -166,6 +174,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     wm_launcher.keep_above(&wm_dock);
 
     wm_run.set_screen(primary);
+    wm_session.set_screen(primary);
     wm_switcher.set_screen(primary);
     wm_launcher.set_screen(primary);
     update_work_area(); // before the first window is placed
@@ -314,10 +323,10 @@ void Manager::register_actions()
     actions.add("settings", [this] { run_program({settings_command}); });
     actions.add("terminal", [this] { run_program(terminal_program); });
     actions.add("force-quit", [this] { run_program({force_quit_program}); });
-    actions.add("restart", [this] { run_system_command(restart_command); });
-    actions.add("shutdown", [this] { run_system_command(shutdown_command); });
+    actions.add("restart", [this] { end_session(SessionKind::Restart); });
+    actions.add("shutdown", [this] { end_session(SessionKind::Shutdown); });
     actions.add("lock", [this] { lock_screen(); });
-    actions.add("logout", [this] { running = false; });
+    actions.add("logout", [this] { end_session(SessionKind::Logout); });
     actions.add("applications", [this] {
         if (!wm_launcher.is_open()) { // the item opens it, never closes it
             wm_launcher.popup();
@@ -369,6 +378,7 @@ void Manager::restyle_widgets()
     wm_launcher.restyle();
     wm_run.restyle();
     wm_unresponsive.restyle();
+    wm_session.restyle();
     for (const auto& entry : wm_windows) {
         entry.second->restyle_frame();
     }
@@ -1034,6 +1044,9 @@ void Manager::check_pings()
 
 void Manager::ask_next()
 {
+    if (!session.idle()) {
+        return; // the session ends: that dialog is the one that matters
+    }
     if (asked) {
         return; // one question at a time, the others wait their turn
     }
@@ -1149,6 +1162,12 @@ void Manager::main_loop()
         const ::Window window = tiny::window_of_event(event);
 
         if (event.type == ClientMessage && on_root_message(event.xclient)) {
+            continue;
+        }
+
+        if (session_keyboard &&
+            (event.type == KeyPress || event.type == KeyRelease)) {
+            session_key(event.xkey); // the question has the keyboard
             continue;
         }
 
@@ -1933,13 +1952,204 @@ void Manager::on_window_minimize(Window* window)
     }
 }
 
-void Manager::run_system_command(const std::string& command)
+pid_t Manager::run_system_command(const std::string& command)
 {
     if (command.empty()) {
+        return -1;
+    }
+    const pid_t pid = tiny::spawn_command(command);
+    if (pid < 0) {
+        tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
+    }
+    return pid;
+}
+
+void Manager::end_session(SessionKind kind)
+{
+    // without the command nothing would end the session, and the windows
+    // would be closed for nothing
+    if ((kind == SessionKind::Restart && restart_command.empty()) ||
+        (kind == SessionKind::Shutdown && shutdown_command.empty())) {
         return;
     }
-    if (tiny::spawn_command(command) < 0) {
-        tiny::error("Can't run '%s': %s", command.c_str(), strerror(errno));
+    if (!session.begin(kind)) {
+        return; // it is ending already
+    }
+    timers.cancel(session_timer); // the watch of the last command
+    session_timer = 0;
+    close_unresponsive_dialog(); // the question of the session comes first
+    if (!session_confirm) {
+        session_proceed();
+        return;
+    }
+    wm_session.show_question(kind, session.seconds_left());
+    // Return and Escape; when something else holds the keyboard (a menu that
+    // is just closing) the buttons still work
+    session_keyboard = XGrabKeyboard(display, root, False, GrabModeAsync,
+                                     GrabModeAsync, CurrentTime) == GrabSuccess;
+    session_timer = timers.every(std::chrono::milliseconds(250),
+                                 [this] { session_tick(); });
+}
+
+void Manager::session_release_keyboard()
+{
+    if (session_keyboard) {
+        XUngrabKeyboard(display, CurrentTime);
+        session_keyboard = false;
+    }
+}
+
+void Manager::session_proceed_or_finish()
+{
+    if (session.phase() == SessionEnd::Phase::Closing) {
+        session_finish(); // "... Anyway": what is left is not waited for
+    } else {
+        session_proceed();
+    }
+}
+
+void Manager::session_proceed()
+{
+    session_release_keyboard();
+    session.proceed();
+    for (const auto& it : wm_windows) {
+        Window* window = it.second;
+        if (session_counts(*window)) {
+            window->ask_to_close(); // asked once: a dialog it opens is the user's
+        }
+    }
+    if (session_timer == 0) {
+        session_timer = timers.every(std::chrono::milliseconds(250),
+                                     [this] { session_tick(); });
+    }
+    session_check_windows();
+}
+
+bool Manager::session_counts(const Window& window)
+{
+    switch (window.get_wm_type()) {
+        case Window::WMType::DOCK:
+        case Window::WMType::DESKTOP:
+        case Window::WMType::POPUP:
+            return false; // a bar, the desktop, a tooltip: not the work of the user
+        default:
+            return window.can_ask_to_close();
+    }
+}
+
+std::vector<std::string> Manager::session_open_applications()
+{
+    std::set<std::string> names;
+    for (const auto& it : wm_windows) {
+        if (session_counts(*it.second)) {
+            names.insert(switcher_name(*it.second));
+        }
+    }
+    return {names.begin(), names.end()};
+}
+
+void Manager::session_check_windows()
+{
+    const std::vector<std::string> open = session_open_applications();
+    if (open.empty()) {
+        session_finish();
+    } else {
+        wm_session.show_waiting(session.kind(), open);
+    }
+}
+
+void Manager::session_tick()
+{
+    const auto now = SessionEnd::Clock::now();
+    switch (session.phase()) {
+        case SessionEnd::Phase::Confirm:
+            if (session.timed_out(now)) {
+                session_proceed();
+            } else {
+                wm_session.show_question(session.kind(),
+                                         session.seconds_left(now));
+            }
+            return;
+        case SessionEnd::Phase::Closing:
+            session_check_windows();
+            return;
+        case SessionEnd::Phase::Idle:
+            break;
+    }
+    timers.cancel(session_timer);
+    session_timer = 0;
+}
+
+void Manager::session_key(const XKeyEvent& e)
+{
+    if (e.type != KeyPress) {
+        return;
+    }
+    XKeyEvent copy = e;
+    const KeySym key = XLookupKeysym(&copy, 0);
+    if (key == XK_Escape) {
+        session_cancel();
+    } else if (key == XK_Return || key == XK_KP_Enter) {
+        session_proceed();
+    }
+}
+
+void Manager::session_cancel()
+{
+    timers.cancel(session_timer);
+    session_timer = 0;
+    session_release_keyboard();
+    session.cancel();
+    wm_session.unmap();
+}
+
+void Manager::session_finish()
+{
+    const SessionKind kind = session.kind();
+    timers.cancel(session_timer);
+    session_timer = 0;
+    session_release_keyboard();
+    session.cancel();
+    wm_session.unmap();
+    if (kind == SessionKind::Logout) {
+        running = false;
+        return;
+    }
+    session_command_line =
+            kind == SessionKind::Restart ? restart_command : shutdown_command;
+    session_command_kind = kind;
+    session_command_pid = run_system_command(session_command_line);
+    session_command_at = SessionEnd::Clock::now();
+    if (session_command_pid < 0) {
+        wm_session.show_failure(kind, session_command_line,
+                                std::string("can't be started: ") +
+                                        strerror(errno));
+        return;
+    }
+    session_timer = timers.every(std::chrono::milliseconds(250),
+                                 [this] { session_watch_command(); });
+}
+
+void Manager::session_watch_command()
+{
+    int status = 0;
+    const bool ended = tiny::child_ended(session_command_pid, &status);
+    const bool succeeded = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+    const bool failed = ended && !succeeded;
+    const bool late = SessionEnd::Clock::now() - session_command_at >
+                      session_command_wait;
+    if (failed) {
+        wm_session.show_failure(
+                session_command_kind, session_command_line,
+                WIFEXITED(status)
+                        ? "failed (exit status " +
+                                  std::to_string(WEXITSTATUS(status)) + ")."
+                        : std::string("was killed."));
+    }
+    if (ended || late) { // a command that goes on runs the system down
+        timers.cancel(session_timer);
+        session_timer = 0;
+        session_command_pid = -1;
     }
 }
 
@@ -2202,6 +2412,7 @@ void Manager::arrange_shell()
                           x_dim(primary.width), x_dim(shell_theme.dock_reveal));
     }
     wm_run.set_screen(primary);
+    wm_session.set_screen(primary);
     wm_switcher.set_screen(primary);
     wm_launcher.set_screen(primary);
     publish_panel_strut();

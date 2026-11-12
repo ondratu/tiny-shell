@@ -583,6 +583,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[session] autostart must be yes or no");
         }
     }
+    if (const auto value = ini.get("session", "confirm")) {
+        if (*value == "yes" || *value == "no") {
+            config.session_confirm = *value == "yes";
+        } else {
+            problem("[session] confirm must be yes or no");
+        }
+    }
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";

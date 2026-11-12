@@ -50,6 +50,7 @@ namespace tiny::wm {
  *
  * [session]
  * autostart = yes
+ * confirm = yes
  *
  * [panel]
  * clock_format = %A %e %B %R
@@ -120,6 +121,9 @@ struct Config {
     //! [session] autostart: start the applications of the autostart
     //! directories with the session (yes or no)
     bool session_autostart = true;
+    //! [session] confirm: ask before the logout, the restart and the shutdown
+    //! (yes or no)
+    bool session_confirm = true;
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
     //! [monitors] primary: the monitor of the panel and the dock, a number

@@ -108,6 +108,11 @@ comparison with other window managers is in the [comparison](comparison.md).
   own, `[panel] style`, `[dock] style`, `[launcher] style` and `[lock] style`:
   `auto` follows the theme, `light` and `dark` keep that look in
   any theme (a dark panel and dock over a light desktop, for example).
+- **Session:** a session file for display managers and the script
+  `tiny-shell-session` that prepares the environment, the programs of
+  `~/.config/autostart` (XDG Autostart) start with it, and Logout, Restart and
+  Shutdown ask the programs to close first, so that they can ask for the unsaved
+  work (see [The session](session.md)).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,
   `run-dialog`, `launcher`, `next-window`, `show-desktop`, `window-menu`,
   `exec:<command>`...),

@@ -477,6 +477,10 @@ class Window {
     //! Send `WM_DELETE_WINDOW`; false (nothing sent) without that protocol
     bool ask_to_close();
 
+    //! Whether the client takes `WM_DELETE_WINDOW`, so it can ask the user to
+    //! save the work before it closes
+    bool can_ask_to_close() const;
+
     using Clock = std::chrono::steady_clock;
 
     //! How long a client may take to answer `_NET_WM_PING`
