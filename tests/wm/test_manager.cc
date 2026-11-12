@@ -103,6 +103,10 @@ class ManagerTest : public ::testing::Test {
     {
         ::Display* display = tiny::get_display();
         manager = std::make_unique<tiny::wm::Manager>(display, root_window());
+        // A test must never reboot or power off the machine it runs on.
+        manager->restart_command = "true";
+        manager->shutdown_command = "true";
+        manager->set_session_confirm(true);
         XSync(display, False); // the server is grabbed until the ungrab
     }
 
@@ -6290,6 +6294,16 @@ TEST_F(ManagerTest, the_main_loop_runs_the_timers)
     EXPECT_TRUE(manager->get_timers().empty());
 }
 
+TEST_F(ManagerTest,
+       the_session_ends_without_asking_and_with_the_system_commands_by_default)
+{
+    // not start(): it replaces the defaults to keep the tests harmless
+    tiny::wm::Manager fresh(tiny::get_display(), root_window());
+    EXPECT_FALSE(fresh.session_confirm);
+    EXPECT_EQ(fresh.restart_command, "systemctl reboot");
+    EXPECT_EQ(fresh.shutdown_command, "systemctl poweroff");
+}
+
 TEST_F(ManagerTest, the_terminal_goes_to_the_launcher)
 {
     start();
@@ -6301,7 +6315,7 @@ TEST_F(ManagerTest, the_commands_of_the_main_menu_can_be_set)
     start();
     manager->set_power_commands("my-restart", "");
     EXPECT_EQ(manager->restart_command, "my-restart");
-    EXPECT_EQ(manager->shutdown_command, "systemctl poweroff");
+    EXPECT_EQ(manager->shutdown_command, "true"); // kept, as start() set it
 
     manager->set_power_commands("", "my-shutdown");
     EXPECT_EQ(manager->restart_command, "my-restart");
