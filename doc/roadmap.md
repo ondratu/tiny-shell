@@ -38,6 +38,6 @@ These may come one day, or may not. They are marked with `?` in the
 [comparison](comparison.md).
 
 - Focus follows mouse
-- Saving and restoring the session (XSMP), see the [comparison](comparison.md#session)
+- Saving and restoring the session (XSMP), see [The session](session.md#saving-the-session)
 - Accessibility
 - A very small file manager, a screenshot tool

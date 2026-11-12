@@ -1,30 +1,42 @@
 # The session
 
-What happens between the login and the logout: how a session starts, which
-programs start with it, and how it ends so that nobody loses their work.
+How a session starts, which programs start with it, and how it ends.
 
-## How a session starts
+## Starting
 
 A display manager or `startx` runs the script `tiny-shell-session`, which
-prepares the environment and starts the window manager; see
-[how to start it](install.md#starting-a-session). The window manager then
-starts the programs of the autostart directories.
+prepares the environment and starts the shell, see
+[Starting a session](install.md#starting-a-session). Then the shell starts the
+programs of the autostart.
+
+### The environment file
+
+`~/.config/tiny-shell/environment` (in `$XDG_CONFIG_HOME` when that is set) does
+not exist until you make it. The session script reads it as a shell script before
+it starts the window manager, so it is the place for what every program of the
+session should see, or for what must run first:
+
+```sh
+export GDK_SCALE=2
+export EDITOR=vim
+setxkbmap cz
+xset r rate 250 40
+```
 
 ## Autostart
 
-The programs that start with the session are the files `*.desktop` in the
+The programs that start with the session are the `.desktop` files in the
 directories `autostart` of the configuration, as the
 [XDG Autostart specification](https://specifications.freedesktop.org/autostart-spec/latest/)
-says. The same files are used by GNOME, KDE and Xfce, so what a package puts in
-`/etc/xdg/autostart` (a network applet, a volume control, a clipboard manager)
-starts here too.
+says. GNOME, KDE and Xfce use the same files, so what a package puts in
+`/etc/xdg/autostart` (a network applet, a volume control) starts here too.
 
 | Directory | What it is |
 | --------- | ---------- |
-| `~/.config/autostart` (`$XDG_CONFIG_HOME/autostart`) | the programs of the user; wins over the same file name of the system |
-| `/etc/xdg/autostart` (`$XDG_CONFIG_DIRS`) | the programs that the packages of the system start with every session |
+| `~/.config/autostart` | your programs; a file here wins over the same name in the system directory |
+| `/etc/xdg/autostart` | the programs that the packages start with every session |
 
-To start a program with the session, make a file there, for example
+To start a program, make a file there, for example
 `~/.config/autostart/clipboard.desktop`:
 
 ```ini
@@ -34,70 +46,53 @@ Name=Clipboard manager
 Exec=clipit
 ```
 
-To turn off what the system starts, copy its file into `~/.config/autostart`
-and add `Hidden=true` to it (the file of the user hides the one of the system).
-`X-GNOME-Autostart-enabled=false` does the same, as the settings of GNOME do it.
+To turn off a program of the system, copy its file to `~/.config/autostart` and
+add `Hidden=true`. A file is also skipped when:
 
-The shell starts the programs once the panel and its
-[system tray](configuration.md#the-system-tray) are there, so the programs that put
-an icon in the tray find it. Not every file is started:
+- it has `X-GNOME-Autostart-enabled=false` (how the settings of GNOME switch a
+  program off),
+- `OnlyShowIn` does not name the desktop `tiny-shell` or `NotShowIn` does (the
+  session script sets the desktop in `XDG_CURRENT_DESKTOP`; a display manager
+  sets it from its session file),
+- the program named by `TryExec` is not installed.
 
-- `Hidden=true` and `X-GNOME-Autostart-enabled=false` turn it off,
-- `OnlyShowIn` and `NotShowIn` name the desktops (`XDG_CURRENT_DESKTOP`) that run
-  it; the desktop of the session is `tiny-shell`, so a file for `GNOME` only is
-  not started, and a file for `tiny-shell` is (a display manager sets the value
-  from the file of the session, and the shell sets it when nobody did),
-- `TryExec` names a program that must be installed,
-- `Terminal=true` runs it in the terminal of `[commands] terminal`.
-
-The files are started in the order of their names, without waiting for each other.
-`X-GNOME-Autostart-Delay` and `AutostartCondition` are not used.
-
-A session starts them once: a window manager that starts again in the same
-session (it crashed, or you run `tiny-shell --replace`) does not start them a
-second time. Logging out and in is a new session. `[session] autostart = no` in
-the [configuration file](configuration.md) switches the whole thing off.
+The programs start once the panel and its [tray](configuration.md#the-system-tray)
+are there, so the programs with a tray icon find it; they start in the order of
+the file names, and a program that starts again in the same session (the shell
+crashed, `tiny-shell --replace`) is not started twice. `X-GNOME-Autostart-Delay`
+and `AutostartCondition` are not used. `[session] autostart = no` turns the
+whole thing off.
 
 ## Ending the session
 
-**Logout**, **Restart** and **Shutdown** of the main menu (and the actions
-`logout`, `restart` and `shutdown`) end the session the way GNOME and macOS do.
-They do not kill the programs; they ask them to close, so that a program can ask
-whether to save its work:
+**Logout**, **Restart** and **Shutdown** of the main menu do not kill the
+programs; they ask them to close, so a program can ask whether to save:
 
-1. **A question.** A dialog says "You will be logged out automatically in 60
-   seconds." Return (or the button) goes on, Escape (or Cancel) stops, and when
-   nobody answers the session goes on by itself after a minute. This is the
-   countdown of GNOME and macOS.
-2. **The windows are asked to close.** Every window gets `WM_DELETE_WINDOW`, the
-   same request as the close button of its title bar, so a text editor asks
-   "Save changes?". The dialog now says which applications are still open
-   ("Waiting for Text Editor to close.") and the shell waits for them without a
-   time limit, because only you know if the editor is just slow or waits for
-   your answer. A question of the program is an ordinary window: answer it, and
-   the program closes. Cancel in the dialog stops the logout (what was closed stays
-   closed). **Log Out Anyway** does not wait for what is left.
-3. **The end.** When no application is left, a logout ends the shell, and with it
-   the session (the display manager shows the login screen, `startx` returns to
-   the terminal). Restart and Shutdown run `[commands] reboot` and `poweroff`.
-   When the command fails (a missing program, no right to run it), the dialog
-   says so, because all the programs are closed by then.
+1. A dialog asks you to confirm. Return or the button goes on, Escape or Cancel
+   stops it, and when you do not answer the session goes on by itself after 60
+   seconds.
+2. Every window gets the same request as the close button of its title bar. The
+   dialog shows which applications are still open ("Waiting for Text Editor to
+   close") and waits for them, as long as it takes: answer the question of the
+   program and it closes. **Cancel** stops the logout (what is closed stays
+   closed), **Log Out Anyway** does not wait for what is left.
+3. When nothing is left, a logout ends the shell and with it the session; Restart
+   and Shutdown run `[commands] reboot` and `poweroff`. If the command fails, the
+   dialog says so.
 
-Only the windows that can take the request count: a window without
-`WM_DELETE_WINDOW` is closed with the session, and the bars of other programs
-(`_NET_WM_WINDOW_TYPE_DOCK`), a desktop and tooltips are not waited for. A
-program that keeps running without a window (a background service) is ended by
-the end of the X server.
+Windows that cannot take the request, the bars of other programs and tooltips are
+not waited for. A program without a window ends with the X server.
 
-`[session] confirm = no` leaves out the question, and the programs are asked
-to close at once (the shell still waits for them). To skip the whole thing, send
-`SIGTERM` to `tiny-shell` (`pkill tiny-shell`): it ends at once and the programs
-lose the connection to the display.
+`[session] confirm = no` leaves out the confirmation, the programs are still asked
+to close. `pkill tiny-shell` ends the shell at once, and the programs lose their
+connection to the display.
 
-### What a session does not save
+## Saving the session
 
-tiny-shell does not remember which programs run or where their windows were: the
-next login starts with the autostart programs only. A window manager can do it
-with the X Session Management protocol (XSMP), which almost no current program
-supports. The [comparison](comparison.md#session) says what other window
-managers do; it is not planned, but it is not ruled out.
+tiny-shell does not remember which programs ran or where their windows were: the
+next login starts the autostart programs only. The X Session Management protocol
+(XSMP) does that for the programs that support it. Openbox, Xfce and KDE have it,
+GNOME removed it in version 49, and macOS has its own "Reopen windows when
+logging back in". Many current programs ignore XSMP (a browser restores its
+windows itself), so it would restore only a part of the session. It is not
+planned, but not ruled out either (`?` in the [comparison](comparison.md)).

@@ -86,7 +86,7 @@ describe the last releases that had it.
 | Keyboard and mouse settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Logout, restart and shutdown dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Autostart of applications (XDG Autostart) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| Saving and restoring the session (XSMP) | ? | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
+| Saving and restoring the session (XSMP, [more](session.md#saving-the-session)) | ? | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |
 | Autostart settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Default applications settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Screenshot tool | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
@@ -95,41 +95,13 @@ describe the last releases that had it.
 | Accessibility settings (sticky keys, high contrast) | ? | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
 | File manager | ? | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 
-## Session
-
-The **autostart** row is the XDG Autostart specification: the `.desktop` files in
-`~/.config/autostart` and `/etc/xdg/autostart` start with the session. Openbox does
-it with its `openbox-session` script; Blackbox and Fluxbox leave it to a
-`startup` script of the user. See [The session](session.md).
-
-The **XSMP** row is the X Session Management Protocol (a layer over ICE, from
-the X Consortium): a session manager asks the programs to save their state when the
-user logs out and starts them again, with that state, at the next login. A window
-manager takes part by saving what it knows about its windows. Openbox
-(a client of the manager, `--sm-disable` turns it off) and Xfce (`xfce4-session`
-with `xfwm4`) do; KDE does with `ksmserver`; Window Maker has a session
-saving of its own; Blackbox and Fluxbox keep their settings only. GNOME had it
-and removed XSMP and the restoring of the session in GNOME 49. macOS restores
-the windows with the setting "Reopen windows when logging back in", not with
-XSMP.
-
-The reason for the **?** of tiny-shell is how much the protocol is used today.
-Many current programs do not use it (a browser restores its windows by itself),
-so the shell would restore only a part of the session. It may be useful to someone
-(and it is a small extra with the library `libSM`, optional like the other
-libraries), so it is not ruled out, but there is no plan either. Logout does not
-need it: it asks the programs to close, so that they ask for the unsaved work (see
-[Ending the session](session.md#ending-the-session)).
-
 ## Other libraries
 
 **tiny-shell supports other libraries, but it does not require them.** It
-builds and runs with libX11 and a few light X libraries; the rest is switched on
-where it is installed. A tick means that the project has the support, whether
-the library is optional or required there is not compared. For the window
-managers the usual companions count too (Openbox: `obconf`, which is GTK;
-Fluxbox: `fbsetbg`; Blackbox: `bsetroot`), but not the panels and lockers that
-people add by their own choice.
+builds and runs with libX11 and a few light X libraries; the rest is used where
+it is installed. A tick means that the project has the support, not that the
+library is optional there. For the window managers the usual companions count
+too (Openbox: `obconf`; Fluxbox: `fbsetbg`; Blackbox: `bsetroot`).
 
 | Library | tiny-shell | Openbox | Blackbox | Fluxbox | LXDE | Xfce | GNOME |
 | ------- | :--: | :--: | :--: | :--: | :--: | :--: | :--: |
