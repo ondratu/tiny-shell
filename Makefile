@@ -178,11 +178,15 @@ BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
 INSTALLED_PROGS = $(TARGET) $(FONTS) $(SETTINGS) $(ABOUT) $(WALLPAPER) $(LOCK) \
     $(LOCK_AUTH) $(LOCK_PWCHECK)
+# the script that starts a session (a display manager runs it, see
+# data/xsessions/tiny-shell.desktop)
+SESSION_SCRIPT = src/tiny-shell-session
 
 install: all
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
 	for p in $(INSTALLED_PROGS); do \
 	    install -m 755 $$p $(DESTDIR)$(BINDIR)/ || exit 1; done
+	install -m 755 $(SESSION_SCRIPT) $(DESTDIR)$(BINDIR)/
 	# the PNG wallpapers of the older versions are replaced by the JPEG ones
 	rm -f $(DESTDIR)$(DATADIR)/backgrounds/tiny-shell/tiny-shell-*.png
 	cp -R data/. $(DESTDIR)$(DATADIR)/
@@ -201,7 +205,8 @@ install-setuid: install
 	chmod $(PWCHECK_MODE) $(DESTDIR)$(BINDIR)/tiny-lock-pwcheck
 
 uninstall:
-	for p in $(INSTALLED_PROGS); do rm -f $(DESTDIR)$(BINDIR)/$$(basename $$p); done
+	for p in $(INSTALLED_PROGS) $(SESSION_SCRIPT); do \
+	    rm -f $(DESTDIR)$(BINDIR)/$$(basename $$p); done
 	cd data && find . -type f | while read -r f; do \
 	    rm -f "$(DESTDIR)$(DATADIR)/$$f"; done
 	rm -f $(DESTDIR)$(DATADIR)/backgrounds/tiny-shell/tiny-shell-*.png

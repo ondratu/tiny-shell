@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Tiny Shell
+Comment=A small window manager and desktop shell
+Exec=tiny-shell-session
+TryExec=tiny-shell-session
+DesktopNames=tiny-shell
