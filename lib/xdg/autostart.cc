@@ -4,8 +4,13 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <sstream>
 #include <system_error>
+
+#include <unistd.h>
+
+#include "text.h"
 
 namespace fs = std::filesystem;
 
@@ -37,10 +42,7 @@ const char* skip_reason(const DesktopEntry& entry, std::string_view desktops,
 
 std::string trimmed(const std::string& line)
 {
-    const size_t begin = line.find_first_not_of(" \t\r");
-    const size_t end = line.find_last_not_of(" \t\r");
-    return begin == std::string::npos ? ""
-                                      : line.substr(begin, end - begin + 1);
+    return std::string(trim(line));
 }
 
 bool is_hidden_key(const std::string& line)
@@ -73,20 +75,38 @@ bool write_lines(const fs::path& file, const std::vector<std::string>& lines)
     for (const std::string& line : lines) {
         text << line << '\n';
     }
-    const fs::path temp = file.string() + ".tmp";
+    // a symbolic link is followed, so the file it points to is the one that
+    // changes, and a file keeps its permissions
+    std::error_code error;
+    fs::path target = file;
+    std::optional<fs::perms> mode;
+    if (fs::exists(file, error)) {
+        target = fs::canonical(file, error);
+        if (error) {
+            return false;
+        }
+        mode = fs::status(target, error).permissions();
+    }
+    const fs::path temp =
+            target.string() + "." + std::to_string(getpid()) + ".tmp";
+    bool written = false;
     {
         std::ofstream out(temp, std::ios::trunc);
         out << text.str();
-        if (!out.flush()) {
-            return false;
-        }
+        written = static_cast<bool>(out.flush());
     }
-    std::error_code error;
-    fs::rename(temp, file, error);
-    if (error) {
+    if (written && mode) {
+        fs::permissions(temp, *mode, error);
+        written = !error;
+    }
+    if (written) {
+        fs::rename(temp, target, error);
+        written = !error;
+    }
+    if (!written) {
         fs::remove(temp, error);
     }
-    return !error;
+    return written;
 }
 
 } // namespace
@@ -140,9 +160,16 @@ autostart_items(const std::vector<std::string>& config_dirs,
             AutostartItem item;
             item.name = entry->name;
             item.system = index > 0;
-            if (entry->hidden) {
-                item.state = index == 0 ? AutostartItem::State::Off
-                                        : AutostartItem::State::Skipped;
+            // a stub that only turns off a program of the system has no
+            // command: what else is wrong shows only in a file with one
+            const char* other = entry->exec.empty()
+                                        ? ""
+                                        : skip_reason(*entry, desktops, path);
+            if (entry->hidden && index == 0 && *other == '\0') {
+                item.state = AutostartItem::State::Off;
+                item.reason = "turned off";
+            } else if (entry->hidden && index > 0) {
+                item.state = AutostartItem::State::Skipped;
                 item.reason = "turned off";
             } else if (const char* why = skip_reason(*entry, desktops, path);
                        *why != '\0') {
