@@ -506,3 +506,13 @@ TEST(DesktopEntryTest, not_show_in_needs_none_of_the_desktops_of_the_session)
     EXPECT_FALSE(e.shown_in("KDE"));
     EXPECT_FALSE(e.shown_in("GNOME:KDE"));
 }
+
+TEST(DesktopEntryTest, the_condition_of_the_autostart_is_read)
+{
+    EXPECT_EQ(parse_desktop_entry("[Desktop Entry]\nAutostartCondition=GNOME "
+                                  "/apps/x/enabled\n")
+                      .autostart_condition,
+              "GNOME /apps/x/enabled");
+    EXPECT_TRUE(parse_desktop_entry("[Desktop Entry]\n")
+                        .autostart_condition.empty());
+}

@@ -26,5 +26,10 @@ XDG_DATA_DIRS="$PWD/data:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 PATH="$PWD/build:$PATH"
 export XDG_DATA_DIRS PATH
 
+# The nested session is a tiny-shell one, not the GNOME of the terminal that
+# started it: the autostart files with OnlyShowIn=GNOME must not start in it
+XDG_CURRENT_DESKTOP=tiny-shell
+export XDG_CURRENT_DESKTOP
+
 xinit ./local/xinitrc -- "$(command -v Xephyr)" "$XEPHYR_DISPLAY" \
     -screen "$XEPHYR_SCREEN" -host-cursor -terminate

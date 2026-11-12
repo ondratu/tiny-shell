@@ -62,13 +62,16 @@ add `Hidden=true`. A file is also skipped when:
 - `OnlyShowIn` does not name the desktop `tiny-shell` or `NotShowIn` does (the
   session script sets the desktop in `XDG_CURRENT_DESKTOP`; a display manager
   sets it from its session file),
+- it has an `AutostartCondition` (GNOME starts the screen reader Orca with it
+  only when you switch it on in its settings; tiny-shell cannot check such a
+  condition, so it does not start the file),
 - the program named by `TryExec` is not installed.
 
 The programs start once the panel and its [tray](configuration.md#the-system-tray)
 are there, so the programs with a tray icon find it; they start in the order of
 the file names, and a program that starts again in the same session (the shell
 crashed, `tiny-shell --replace`) is not started twice. `X-GNOME-Autostart-Delay`
-and `AutostartCondition` are not used. `[session] autostart = no` turns the
+is not used. `[session] autostart = no` turns the
 whole thing off (the setting Autostart in the section Session of `tiny-settings`).
 
 ## Ending the session
