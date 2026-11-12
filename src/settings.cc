@@ -9,8 +9,10 @@
 // dock and the format of the clock), Displays (the primary and the secondary
 // monitor, where the secondary one is, and the numbers on the monitors), Power
 // (when the display is switched off), Security (when the screen is locked),
-// Applications (the terminal) and Session (the autostart programs and the
-// question before the logout). A field of Power, Security and Session has a note under it
+// Applications (the terminal), Session (the autostart programs and the
+// question before the logout) and Keyboard (the layouts and the key that
+// switches them, and a list of the shortcuts). A field of Power, Security,
+// Session and Keyboard has a note under it
 // in small letters that says what it does. The choices
 // go through their values with the arrows, Space and a click; a field has a
 // cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
@@ -53,6 +55,8 @@
 #include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
+#include "wm/keyboard.h"
+#include "wm/reload.h"
 #include "wm/xresources.h"
 #include "x_util.h"
 #include "xdg/application_index.h"
@@ -112,6 +116,18 @@ std::string look_value(tiny::Look look)
     return look == tiny::Look::Auto ? "" : tiny::look_name(look);
 }
 
+//! The keyboard that the form starts from: the one of the settings or, when
+//! they have none, the one that the X server has now
+tiny::wm::KeyboardNames start_keyboard(::Display* display,
+                                       const tiny::wm::Config& config)
+{
+    if (!config.keyboard_layout.empty()) {
+        return {config.keyboard_layout, config.keyboard_variant,
+                config.keyboard_options};
+    }
+    return tiny::wm::read_keyboard_names(display);
+}
+
 class SettingsApp : public tiny::XftWindow {
   public:
     SettingsApp(tiny::Display& display_arg, const tiny::wm::Config& config,
@@ -124,6 +140,7 @@ class SettingsApp : public tiny::XftWindow {
         metrics(SettingsForm::Metrics::scaled(config.scale)),
         monitors(tiny::wm::read_monitors(display_arg,
                                          XDefaultRootWindow(display_arg))),
+        keyboard(start_keyboard(display_arg, config)),
         initial{config.font,
                 config.terminal_line,
                 tiny::number_text(config.scale),
@@ -155,7 +172,8 @@ class SettingsApp : public tiny::XftWindow {
                 look_value(config.lock_style),
                 look_value(config.launcher_style),
                 config.session_autostart ? "yes" : "no",
-                config.session_confirm ? "yes" : "no"},
+                config.session_confirm ? "yes" : "no",
+                tiny::wm::keyboard_switch_of(keyboard.options)},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         colors(tiny::app::app_colors(
@@ -171,6 +189,7 @@ class SettingsApp : public tiny::XftWindow {
         error(alloc_rgb(colors.error))
     {
         load_programs();
+        load_keyboard();
         // the font of the shell, when it can be opened, else any sans
         ui_font = text_font(ui_family);
         if (ui_font == nullptr) {
@@ -318,6 +337,18 @@ class SettingsApp : public tiny::XftWindow {
         form.set_programs(std::move(programs));
     }
 
+    //! The layouts of the keyboard: the list of the form, with the ones that
+    //! are chosen now
+    void load_keyboard()
+    {
+        const auto known =
+                tiny::wm::read_keyboard_layouts(getenv("XKB_CONFIG_ROOT"));
+        const auto chosen = tiny::wm::keyboard_chosen(keyboard.layout,
+                                                      keyboard.variant, known);
+        tiny::wm::keyboard_lists(chosen, initial_layout, initial_variant);
+        form.set_layouts(known, chosen);
+    }
+
     //! Turn on or off the programs that the user switched; false (and `why`)
     //! when a file can't be written
     bool save_programs(std::string& why)
@@ -457,6 +488,21 @@ class SettingsApp : public tiny::XftWindow {
             if (v.session_confirm != initial.session_confirm) {
                 changed.push_back({"session", "confirm", v.session_confirm});
             }
+            std::string layout;
+            std::string variant;
+            tiny::wm::keyboard_lists(form.layouts(), layout, variant);
+            keyboard_changed = layout != initial_layout ||
+                               variant != initial_variant ||
+                               v.keyboard_switch != initial.keyboard_switch;
+            if (keyboard_changed) {
+                // the other options of the file stay, the switch is replaced
+                changed.push_back({"keyboard", "layout", layout});
+                changed.push_back({"keyboard", "variant", variant});
+                changed.push_back(
+                        {"keyboard", "options",
+                         tiny::wm::keyboard_options_with_switch(
+                                 keyboard.options, v.keyboard_switch)});
+            }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
                                    v.primary_monitor.empty()
@@ -483,6 +529,14 @@ class SettingsApp : public tiny::XftWindow {
                     tiny::spawn({wallpaper_program}) < 0) {
                     fprintf(stderr, "%s: can't run %s\n", "tiny-settings",
                             wallpaper_program.c_str());
+                }
+                if (keyboard_changed) {
+                    // the shell sets the keyboard when it reads the file
+                    const std::string problem = tiny::wm::request_reload(
+                            display, XDefaultRootWindow(display));
+                    if (!problem.empty()) {
+                        fprintf(stderr, "tiny-settings: %s\n", problem.c_str());
+                    }
                 }
                 return true;
             }
@@ -582,7 +636,10 @@ class SettingsApp : public tiny::XftWindow {
                 paint_programs();
                 break;
             case SettingsForm::View::Layouts:
+                paint_layouts();
+                break;
             case SettingsForm::View::Shortcuts:
+                paint_shortcuts();
                 break;
             case SettingsForm::View::Form:
                 paint_form();
@@ -643,6 +700,92 @@ class SettingsApp : public tiny::XftWindow {
                 next);
     }
 
+    //! The box of a row of a list: filled when the row is chosen
+    void paint_check(const tiny::Rect& row, bool on, bool fixed)
+    {
+        const int box = metrics.row_height / 2;
+        const tiny::Rect check = {metrics.margin,
+                                  row.y + (row.height - box) / 2, box, box};
+        frame(fixed ? rule : accent, check);
+        if (on) {
+            fill(accent,
+                 {check.x + 3, check.y + 3, std::max(1, check.width - 6),
+                  std::max(1, check.height - 6)});
+        }
+    }
+
+    //! The list of the layouts of the keyboard: a box that is filled for a
+    //! chosen one, its name, and on the right the place in the order of
+    //! switching and the name of the layout for XKB
+    void paint_layouts()
+    {
+        const std::string find = form.layouts_find();
+        text_in(ui_font, text_color, form.search_rect(), 0,
+                find.empty() ? "Layouts of the keyboard" : "Find: " + find);
+        const auto& rows = form.layout_rows();
+        if (rows.empty()) {
+            text_in(ui_font, dim, form.row_rect(0), metrics.margin,
+                    "The system has no list of layouts");
+        }
+        const size_t end =
+                std::min(rows.size(), form.first() + form.visible_rows());
+        const int box = metrics.row_height / 2;
+        for (size_t i = form.first(); i < end; ++i) {
+            const tiny::Rect row = form.row_rect(i);
+            const SettingsForm::Layout& item = rows[i];
+            if (i == form.selected()) {
+                fill(selected, row);
+            }
+            paint_check(row, item.order != 0, false);
+            const std::string id = item.layout.id +
+                                   (item.layout.variant.empty()
+                                            ? ""
+                                            : "(" + item.layout.variant + ")");
+            const std::string where =
+                    item.order == 0 ? id
+                                    : std::to_string(item.order) + "  " + id;
+            const int where_width = text_width(ui_font, where);
+            const int name_x = metrics.margin + box + metrics.padding;
+            text_in(ui_font, text_color, row, name_x,
+                    fit(ui_font, item.layout.name,
+                        std::max(1, width - name_x - where_width -
+                                            2 * metrics.margin)));
+            text_in(ui_font, item.order == 0 ? dim : accent, row,
+                    width - metrics.margin - where_width, where);
+        }
+        paint_message("", "Type to find; Space chooses; four at most.");
+        paint_button(form.cancel_rect(), "Cancel", true);
+        paint_button(form.save_rect(), "Done", true);
+    }
+
+    //! The list of the shortcuts of the shell: the keys and what they do
+    void paint_shortcuts()
+    {
+        text_in(ui_font, text_color, form.search_rect(), 0,
+                "Keys of the shell");
+        const auto& rows = form.shortcut_rows();
+        int keys_width = 0;
+        for (const auto& shortcut : rows) {
+            keys_width =
+                    std::max(keys_width, text_width(ui_font, shortcut.keys));
+        }
+        const int action_x = metrics.margin + keys_width + 2 * metrics.padding;
+        const size_t end =
+                std::min(rows.size(), form.first() + form.visible_rows());
+        for (size_t i = form.first(); i < end; ++i) {
+            const tiny::Rect row = form.row_rect(i);
+            if (i == form.selected()) {
+                fill(selected, row);
+            }
+            text_in(ui_font, accent, row, metrics.margin, rows[i].keys);
+            text_in(ui_font, text_color, row, action_x,
+                    fit(ui_font, rows[i].action,
+                        std::max(1, width - action_x - metrics.margin)));
+        }
+        paint_message("", "The shortcuts follow the layout of the keyboard.");
+        paint_button(form.save_rect(), "Close", true);
+    }
+
     //! The list of the programs of the autostart: a box that is filled when
     //! the program starts, its name, and on the right where it comes from
     void paint_programs()
@@ -664,14 +807,7 @@ class SettingsApp : public tiny::XftWindow {
                 fill(selected, row);
             }
             const bool fixed = !program.reason.empty();
-            const tiny::Rect check = {metrics.margin,
-                                      row.y + (row.height - box) / 2, box, box};
-            frame(fixed ? rule : accent, check);
-            if (program.enabled) {
-                fill(accent,
-                     {check.x + 3, check.y + 3, std::max(1, check.width - 6),
-                      std::max(1, check.height - 6)});
-            }
+            paint_check(row, program.enabled, fixed);
             const std::string origin = program.system ? "System" : "User";
             const std::string where =
                     fixed ? origin + ", " + program.reason : origin;
@@ -813,7 +949,10 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::LockStyle, "Lock style"},
                     {SettingsForm::Field::SessionAutostart, "Autostart"},
                     {SettingsForm::Field::SessionPrograms, "Programs"},
-                    {SettingsForm::Field::SessionConfirm, "Confirm"}};
+                    {SettingsForm::Field::SessionConfirm, "Confirm"},
+                    {SettingsForm::Field::KeyboardLayouts, "Layouts"},
+                    {SettingsForm::Field::KeyboardSwitch, "Switch"},
+                    {SettingsForm::Field::KeyboardShortcuts, "Shortcuts"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;
@@ -822,6 +961,15 @@ class SettingsApp : public tiny::XftWindow {
             const tiny::Rect r = form.field_rect(row.id);
             if (row.id == SettingsForm::Field::SessionPrograms) {
                 paint_list_field(r, form.programs_summary(),
+                                 form.focus() == row.id);
+                continue;
+            }
+            if (row.id == SettingsForm::Field::KeyboardLayouts ||
+                row.id == SettingsForm::Field::KeyboardShortcuts) {
+                paint_list_field(r,
+                                 row.id == SettingsForm::Field::KeyboardLayouts
+                                         ? form.layouts_summary()
+                                         : "Show",
                                  form.focus() == row.id);
                 continue;
             }
@@ -971,7 +1119,14 @@ class SettingsApp : public tiny::XftWindow {
     SettingsForm::Metrics metrics;
     tiny::wm::Monitors monitors; //!< the monitors the form offers
     bool numbers_shown = false;
+    //! The keyboard that the form started with: the files or else the server
+    tiny::wm::KeyboardNames keyboard;
     SettingsForm::Values initial; //!< what the files say now
+    //! The layouts and the variants of `keyboard` as the form makes them, to
+    //! see whether the user changed them
+    std::string initial_layout;
+    std::string initial_variant;
+    bool keyboard_changed = false; //!< the keyboard was written to the file
     SettingsForm form;
     std::string ui_family; //!< the family of `ui_font`
     XftFont* ui_font = nullptr;
