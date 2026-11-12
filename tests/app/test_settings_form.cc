@@ -1334,13 +1334,13 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications, Section::Session}) {
+          Section::Applications, Section::Session, Section::Keyboard}) {
         for (const Field f : SettingsForm::section_fields(section)) {
             EXPECT_EQ(SettingsForm::section_of(f), section);
             ++count;
         }
     }
-    EXPECT_EQ(count, 26u);
+    EXPECT_EQ(count, 29u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1392,14 +1392,14 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     for (const Section next :
          {Section::Desktop, Section::Displays, Section::Power,
           Section::Security, Section::Applications, Section::Session,
-          Section::Appearance, Section::Fonts}) {
+          Section::Keyboard, Section::Appearance, Section::Fonts}) {
         EXPECT_TRUE(form.key(Key::NextSection));
         EXPECT_EQ(form.section(), next);
     }
     EXPECT_TRUE(form.key(Key::PrevSection));
     EXPECT_EQ(form.section(), Section::Appearance); // round
     EXPECT_TRUE(form.key(Key::PrevSection));
-    EXPECT_EQ(form.section(), Section::Session);
+    EXPECT_EQ(form.section(), Section::Keyboard);
 }
 
 TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
@@ -1932,7 +1932,7 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications, Section::Session}) {
+          Section::Applications, Section::Session, Section::Keyboard}) {
         form.set_section(section);
         for (const Field f : SettingsForm::section_fields(section)) {
             const Rect r = form.field_rect(f);
@@ -1940,6 +1940,14 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
             if (f == Field::SessionPrograms) { // it opens its list
                 EXPECT_EQ(form.view(), View::Programs);
                 form.close_programs(true);
+            }
+            if (f == Field::KeyboardLayouts) {
+                EXPECT_EQ(form.view(), View::Layouts);
+                form.close_layouts(true);
+            }
+            if (f == Field::KeyboardShortcuts) {
+                EXPECT_EQ(form.view(), View::Shortcuts);
+                form.close_shortcuts();
             }
             EXPECT_EQ(form.view(), View::Form);
             EXPECT_EQ(form.focus(), f);
@@ -2228,4 +2236,290 @@ TEST(SettingsFormProgramsTest, the_list_does_not_take_the_form_values)
 
     EXPECT_EQ(form.values().font, before.font);
     EXPECT_EQ(form.values().session_autostart, before.session_autostart);
+}
+
+// The keyboard: the layouts, the key that switches them and the shortcuts
+
+namespace {
+
+//! A form with a few layouts, the Czech one and the US one chosen (in this
+//! order); the list is sorted by the name as the system gives it
+SettingsForm make_layouts()
+{
+    SettingsForm form = make();
+    form.resize(500, 400);
+    form.set_layouts({{"cz", "", "Czech"},
+                      {"cz", "qwerty", "Czech (QWERTY)"},
+                      {"de", "", "German"},
+                      {"us", "", "English (US)"},
+                      {"fr", "", "French"}},
+                     {{"cz", "", "Czech"}, {"us", "", "English (US)"}});
+    return form;
+}
+
+} // namespace
+
+TEST(SettingsFormKeyboardTest, the_fields_are_in_the_section_keyboard)
+{
+    EXPECT_STREQ(SettingsForm::section_title(SettingsForm::Section::Keyboard),
+                 "Keyboard");
+    EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Keyboard),
+              (std::vector<Field>{Field::KeyboardLayouts, Field::KeyboardSwitch,
+                                  Field::KeyboardShortcuts}));
+}
+
+TEST(SettingsFormKeyboardTest, the_switch_is_a_choice_of_the_keys)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::KeyboardSwitch);
+
+    EXPECT_TRUE(SettingsForm::is_choice(Field::KeyboardSwitch));
+    EXPECT_EQ(form.choice_label(Field::KeyboardSwitch), "None");
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.values().keyboard_switch, "grp:caps_toggle");
+    EXPECT_EQ(form.choice_label(Field::KeyboardSwitch), "Caps Lock");
+    EXPECT_TRUE(form.key(Key::Back)); // back to none
+    EXPECT_EQ(form.values().keyboard_switch, "");
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormKeyboardTest, the_clean_values_have_the_switch)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::KeyboardSwitch);
+    form.type(" ");
+
+    EXPECT_EQ(form.clean_values().keyboard_switch, "grp:caps_toggle");
+}
+
+TEST(SettingsFormKeyboardTest, a_switch_of_the_file_that_is_not_offered_is_kept)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.keyboard_switch = "grp:shift_caps_toggle";
+    SettingsForm form = make(values);
+    focus_on(form, Field::KeyboardSwitch);
+
+    EXPECT_TRUE(form.problem().empty());
+    EXPECT_EQ(form.choice_label(Field::KeyboardSwitch),
+              "grp:shift_caps_toggle");
+    EXPECT_EQ(form.values().keyboard_switch, "grp:shift_caps_toggle");
+}
+
+TEST(SettingsFormKeyboardTest, a_wrong_switch_is_a_problem)
+{
+    SettingsForm::Values values = V("Gamma", "xterm -e", "1");
+    values.keyboard_switch = "-print";
+    SettingsForm form = make(values);
+    focus_on(form, Field::KeyboardSwitch);
+
+    EXPECT_FALSE(form.problem().empty());
+}
+
+TEST(SettingsFormKeyboardTest,
+     the_fields_that_open_a_list_open_it_and_have_no_text)
+{
+    SettingsForm form = make_layouts();
+    for (const Field f : {Field::KeyboardLayouts, Field::KeyboardShortcuts}) {
+        focus_on(form, f);
+        EXPECT_FALSE(form.type("x"));
+        EXPECT_FALSE(form.key(Key::Left));
+        EXPECT_FALSE(form.key(Key::Back));
+        EXPECT_TRUE(form.problem().empty());
+    }
+    focus_on(form, Field::KeyboardLayouts);
+    EXPECT_TRUE(form.key(Key::Return));
+    EXPECT_EQ(form.view(), View::Layouts);
+    form.close_layouts(true);
+    EXPECT_EQ(form.focus(), Field::KeyboardLayouts);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.view(), View::Layouts);
+    form.close_layouts(true);
+
+    focus_on(form, Field::KeyboardShortcuts);
+    EXPECT_TRUE(form.key(Key::Return));
+    EXPECT_EQ(form.view(), View::Shortcuts);
+    form.close_shortcuts();
+    EXPECT_EQ(form.focus(), Field::KeyboardShortcuts);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.view(), View::Shortcuts);
+}
+
+TEST(SettingsFormKeyboardTest, the_summary_lists_the_chosen_layouts_in_order)
+{
+    EXPECT_EQ(make().layouts_summary(), "System default");
+    EXPECT_EQ(make_layouts().layouts_summary(), "cz, us");
+    SettingsForm form = make();
+    form.set_layouts({{"us", "intl", "English (intl.)"}},
+                     {{"us", "intl", "English (intl.)"}});
+    EXPECT_EQ(form.layouts_summary(), "us(intl)");
+}
+
+TEST(SettingsFormKeyboardTest, a_chosen_layout_the_system_lacks_is_in_the_list)
+{
+    SettingsForm form = make();
+    form.set_layouts({{"cz", "", "Czech"}}, {{"xx", "", "xx"}});
+
+    ASSERT_EQ(form.layout_rows().size(), 2u);
+    EXPECT_EQ(form.layouts().size(), 1u);
+    EXPECT_EQ(form.layouts()[0].id, "xx");
+}
+
+TEST(SettingsFormKeyboardTest, space_chooses_and_drops_the_selected_layout)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    // the list opens at the first chosen layout, Czech
+    EXPECT_EQ(form.selected(), 0u);
+
+    EXPECT_TRUE(form.type(" ")); // drops it, English becomes the first
+    EXPECT_EQ(form.layouts_summary(), "us");
+    form.key(Key::Down);
+    form.key(Key::Down); // German
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.layouts_summary(), "us, de");
+    EXPECT_EQ(form.layout_rows()[2].order, 2u);
+}
+
+TEST(SettingsFormKeyboardTest, only_four_layouts_can_be_chosen)
+{
+    SettingsForm form = make();
+    form.resize(500, 400);
+    form.set_layouts({{"a", "", "A"},
+                      {"b", "", "B"},
+                      {"c", "", "C"},
+                      {"d", "", "D"},
+                      {"e", "", "E"}},
+                     {});
+    form.open_layouts();
+    for (int i = 0; i < 4; ++i) {
+        EXPECT_TRUE(form.type(" "));
+        form.key(Key::Down);
+    }
+    EXPECT_FALSE(form.type(" ")); // the fifth
+    EXPECT_EQ(form.layouts().size(), 4u);
+}
+
+TEST(SettingsFormKeyboardTest, the_letters_go_to_the_first_name_that_begins_so)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+
+    EXPECT_TRUE(form.type("g"));
+    EXPECT_EQ(form.layouts_find(), "g");
+    EXPECT_EQ(form.selected(), 2u); // German
+    EXPECT_TRUE(form.type("x"));    // nothing begins with "gx": it is not typed
+    EXPECT_EQ(form.layouts_find(), "g");
+    EXPECT_TRUE(form.key(Key::Back));
+    EXPECT_EQ(form.layouts_find(), "");
+    EXPECT_TRUE(form.type("F"));
+    EXPECT_EQ(form.selected(), 4u); // French, in any case
+}
+
+TEST(SettingsFormKeyboardTest, a_longer_search_stays_at_the_name_that_is_found)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+
+    form.type("g");
+    form.type("e"); // German is selected already
+    form.type("r");
+    EXPECT_EQ(form.layouts_find(), "ger");
+    EXPECT_EQ(form.selected(), 2u);
+}
+
+TEST(SettingsFormKeyboardTest, space_chooses_the_found_layout)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    form.type("f"); // French
+    EXPECT_EQ(form.selected(), 4u);
+
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.layouts_summary(), "cz, us, fr");
+    EXPECT_EQ(form.layouts_find(), "f"); // a space is not a part of a name
+}
+
+TEST(SettingsFormKeyboardTest,
+     escape_clears_the_search_then_takes_the_choice_back)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    form.type(" "); // drops Czech
+    form.type("e");
+
+    EXPECT_TRUE(form.key(Key::Escape)); // the search
+    EXPECT_EQ(form.view(), View::Layouts);
+    EXPECT_EQ(form.layouts_find(), "");
+    EXPECT_TRUE(form.key(Key::Escape));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.layouts_summary(), "cz, us");
+    EXPECT_EQ(form.focus(), Field::KeyboardLayouts);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Keyboard);
+}
+
+TEST(SettingsFormKeyboardTest, return_and_done_keep_the_choice)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    form.type(" ");
+    EXPECT_TRUE(form.key(Key::Return));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.layouts_summary(), "us");
+
+    form.open_layouts();
+    form.type(" ");
+    const Rect done = form.save_rect();
+    EXPECT_TRUE(click(form, done));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_NE(form.layouts_summary(), "us");
+}
+
+TEST(SettingsFormKeyboardTest, cancel_takes_the_choice_back)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    form.type(" ");
+    EXPECT_TRUE(click(form, form.cancel_rect()));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.layouts_summary(), "cz, us");
+}
+
+TEST(SettingsFormKeyboardTest, a_click_on_a_row_chooses_the_layout)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+
+    EXPECT_TRUE(click(form, form.row_rect(2))); // German
+    EXPECT_EQ(form.selected(), 2u);
+    EXPECT_EQ(form.layouts_summary(), "cz, us, de");
+}
+
+TEST(SettingsFormKeyboardTest, the_arrows_start_a_new_search)
+{
+    SettingsForm form = make_layouts();
+    form.open_layouts();
+    form.type("g");
+    form.key(Key::Down);
+
+    EXPECT_EQ(form.layouts_find(), "");
+}
+
+TEST(SettingsFormKeyboardTest, the_shortcuts_are_only_shown)
+{
+    SettingsForm form = make();
+    form.resize(500, 400);
+    form.open_shortcuts();
+
+    EXPECT_FALSE(form.shortcut_rows().empty());
+    EXPECT_FALSE(form.type(" "));
+    EXPECT_FALSE(form.type("x"));
+    EXPECT_TRUE(form.key(Key::Down));
+    EXPECT_EQ(form.selected(), 1u);
+    // a click on a row only selects it
+    EXPECT_TRUE(click(form, form.row_rect(2)));
+    EXPECT_EQ(form.selected(), 2u);
+    EXPECT_EQ(form.view(), View::Shortcuts);
+    EXPECT_TRUE(form.key(Key::Escape));
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.focus(), Field::KeyboardShortcuts);
 }
