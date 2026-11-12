@@ -352,8 +352,8 @@ const char* SettingsForm::note(Field field)
             return "Starts the programs of ~/.config/autostart and "
                    "/etc/xdg/autostart when you log in.";
         case Field::SessionPrograms:
-            return "System: from /etc/xdg/autostart, switched off by a file "
-                   "of yours. User: your own files in ~/.config/autostart.";
+            return "Which programs of the autostart start: the ones of the "
+                   "system and your own.";
         case Field::SessionConfirm:
             return "A dialog with a countdown before Logout, Restart and "
                    "Shutdown. Programs are asked to close either way.";

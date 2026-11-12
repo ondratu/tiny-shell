@@ -56,6 +56,8 @@
 #include "wm/xresources.h"
 #include "x_util.h"
 #include "xdg/application_index.h"
+#include "xdg/autostart.h"
+#include "xdg/dirs.h"
 #include "xdg/font_list.h"
 #include "xft_window.h"
 
@@ -168,6 +170,7 @@ class SettingsApp : public tiny::XftWindow {
         selected(alloc_rgb(colors.selected)),
         error(alloc_rgb(colors.error))
     {
+        load_programs();
         // the font of the shell, when it can be opened, else any sans
         ui_font = text_font(ui_family);
         if (ui_font == nullptr) {
@@ -291,6 +294,50 @@ class SettingsApp : public tiny::XftWindow {
                 time);
     }
 
+    //! The programs of the autostart: the list of the form and what writes it
+    void load_programs()
+    {
+        const char* desktops = getenv("XDG_CURRENT_DESKTOP");
+        const char* path = getenv("PATH");
+        config_dirs = tiny::xdg::config_dir_list(getenv("XDG_CONFIG_HOME"),
+                                                 getenv("XDG_CONFIG_DIRS"),
+                                                 getenv("HOME"));
+        autostart = tiny::xdg::autostart_items(
+                config_dirs, desktops == nullptr ? "" : desktops,
+                path == nullptr ? "" : path);
+        std::vector<SettingsForm::Program> programs;
+        for (const tiny::xdg::AutostartItem& item : autostart) {
+            const bool skipped =
+                    item.state == tiny::xdg::AutostartItem::State::Skipped;
+            programs.push_back(
+                    {item.app.id, item.name.empty() ? item.app.id : item.name,
+                     item.system,
+                     item.state == tiny::xdg::AutostartItem::State::On,
+                     skipped ? item.reason : ""});
+        }
+        form.set_programs(std::move(programs));
+    }
+
+    //! Turn on or off the programs that the user switched; false (and `why`)
+    //! when a file can't be written
+    bool save_programs(std::string& why)
+    {
+        const auto& programs = form.programs();
+        for (size_t i = 0; i < programs.size() && i < autostart.size(); ++i) {
+            const bool was =
+                    autostart[i].state == tiny::xdg::AutostartItem::State::On;
+            if (programs[i].enabled != was &&
+                !tiny::xdg::set_autostart_enabled(config_dirs.front(),
+                                                  autostart[i],
+                                                  programs[i].enabled)) {
+                why = "can't write " + programs[i].id + " in " +
+                      config_dirs.front() + "/autostart.";
+                return false;
+            }
+        }
+        return true;
+    }
+
     //! Paint after something changed, and act on what the user asked for
     void act()
     {
@@ -323,6 +370,10 @@ class SettingsApp : public tiny::XftWindow {
             // only what the user changed: the values that come from the global
             // file stay there, so a later change of that file is still seen
             const SettingsForm::Values v = form.clean_values();
+            if (!config_dirs.empty() && !save_programs(why)) {
+                form.reject("Not saved: " + why);
+                return false;
+            }
             std::vector<tiny::wm::IniValue> changed;
             if (v.font != initial.font) {
                 changed.push_back({"theme", "font", v.font});
@@ -523,10 +574,16 @@ class SettingsApp : public tiny::XftWindow {
         show_numbers(form.view() == SettingsForm::View::Form &&
                      form.section() == SettingsForm::Section::Displays);
         fill(background, {0, 0, width, height});
-        if (form.view() == SettingsForm::View::Picker) {
-            paint_picker();
-        } else {
-            paint_form();
+        switch (form.view()) {
+            case SettingsForm::View::Picker:
+                paint_picker();
+                break;
+            case SettingsForm::View::Programs:
+                paint_programs();
+                break;
+            case SettingsForm::View::Form:
+                paint_form();
+                break;
         }
     }
 
@@ -567,6 +624,66 @@ class SettingsApp : public tiny::XftWindow {
         text_in(ui_font, dim, r,
                 std::max(0, r.width - padding - text_width(ui_font, next)),
                 next);
+    }
+
+    //! A field that opens a list: what it holds, an arrow at the end
+    void paint_list_field(const tiny::Rect& r, const std::string& label,
+                          bool focused)
+    {
+        fill(field, r);
+        frame(focused ? accent : rule, r);
+        const std::string next = "\xE2\x80\xBA";
+        text_in(ui_font, text_color, r, metrics.padding, label);
+        text_in(ui_font, dim, r,
+                std::max(0,
+                         r.width - metrics.padding - text_width(ui_font, next)),
+                next);
+    }
+
+    //! The list of the programs of the autostart: a box that is filled when
+    //! the program starts, its name, and on the right where it comes from
+    void paint_programs()
+    {
+        text_in(ui_font, text_color, form.search_rect(), 0,
+                "Programs that start with the session");
+        const auto& programs = form.programs();
+        if (programs.empty()) {
+            text_in(ui_font, dim, form.row_rect(0), metrics.margin,
+                    "No program in the autostart directories");
+        }
+        const size_t end =
+                std::min(programs.size(), form.first() + form.visible_rows());
+        const int box = metrics.row_height / 2;
+        for (size_t i = form.first(); i < end; ++i) {
+            const tiny::Rect row = form.row_rect(i);
+            const SettingsForm::Program& program = programs[i];
+            if (i == form.selected()) {
+                fill(selected, row);
+            }
+            const bool fixed = !program.reason.empty();
+            const tiny::Rect check = {metrics.margin,
+                                      row.y + (row.height - box) / 2, box, box};
+            frame(fixed ? rule : accent, check);
+            if (program.enabled) {
+                fill(accent,
+                     {check.x + 3, check.y + 3, std::max(1, check.width - 6),
+                      std::max(1, check.height - 6)});
+            }
+            const std::string origin = program.system ? "System" : "User";
+            const std::string where =
+                    fixed ? origin + ", " + program.reason : origin;
+            const int where_width = text_width(ui_font, where);
+            const int name_x = metrics.margin + box + metrics.padding;
+            text_in(ui_font, fixed ? dim : text_color, row, name_x,
+                    fit(ui_font, program.name,
+                        std::max(1, width - name_x - where_width -
+                                            2 * metrics.margin)));
+            text_in(ui_font, dim, row, width - metrics.margin - where_width,
+                    where);
+        }
+        paint_message("", "Space or a click switches a program on or off.");
+        paint_button(form.cancel_rect(), "Cancel", true);
+        paint_button(form.save_rect(), "Done", true);
     }
 
     //! The panel with the sections, the one that shows is marked
@@ -692,6 +809,7 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::LauncherStyle, "Launcher"},
                     {SettingsForm::Field::LockStyle, "Lock style"},
                     {SettingsForm::Field::SessionAutostart, "Autostart"},
+                    {SettingsForm::Field::SessionPrograms, "Programs"},
                     {SettingsForm::Field::SessionConfirm, "Confirm"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
@@ -699,6 +817,11 @@ class SettingsApp : public tiny::XftWindow {
             }
             text_in(ui_font, text_color, form.label_rect(row.id), 0, row.label);
             const tiny::Rect r = form.field_rect(row.id);
+            if (row.id == SettingsForm::Field::SessionPrograms) {
+                paint_list_field(r, form.programs_summary(),
+                                 form.focus() == row.id);
+                continue;
+            }
             if (SettingsForm::is_choice(row.id)) {
                 paint_choice(r, form.choice_label(row.id),
                              form.focus() == row.id);
@@ -839,6 +962,8 @@ class SettingsApp : public tiny::XftWindow {
     std::optional<tiny::image::Image> thumb;
     std::string file; //!< of the user, empty when its place is not known
     std::string wallpaper_program; //!< draws the wallpaper after it is saved
+    std::vector<std::string> config_dirs; //!< the first one is the user's
+    std::vector<tiny::xdg::AutostartItem> autostart; //!< as the files say now
     double scale;
     SettingsForm::Metrics metrics;
     tiny::wm::Monitors monitors; //!< the monitors the form offers
