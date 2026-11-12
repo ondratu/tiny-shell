@@ -8,8 +8,9 @@
 // order of the text of the programs), Desktop (the mode of the
 // dock and the format of the clock), Displays (the primary and the secondary
 // monitor, where the secondary one is, and the numbers on the monitors), Power
-// (when the display is switched off), Security (when the screen is locked) and
-// Applications (the terminal). A field of Power and Security has a note under it
+// (when the display is switched off), Security (when the screen is locked),
+// Applications (the terminal) and Session (the autostart programs and the
+// question before the logout). A field of Power, Security and Session has a note under it
 // in small letters that says what it does. The choices
 // go through their values with the arrows, Space and a click; a field has a
 // cursor (the arrows, Home, End, Delete and the pointer move it). Ctrl+Page
@@ -150,7 +151,9 @@ class SettingsApp : public tiny::XftWindow {
                 look_value(config.panel_style),
                 look_value(config.dock_style),
                 look_value(config.lock_style),
-                look_value(config.launcher_style)},
+                look_value(config.launcher_style),
+                config.session_autostart ? "yes" : "no",
+                config.session_confirm ? "yes" : "no"},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         colors(tiny::app::app_colors(
@@ -395,6 +398,13 @@ class SettingsApp : public tiny::XftWindow {
             }
             if (v.display_dpms != initial.display_dpms) {
                 changed.push_back({"display", "dpms", v.display_dpms});
+            }
+            if (v.session_autostart != initial.session_autostart) {
+                changed.push_back(
+                        {"session", "autostart", v.session_autostart});
+            }
+            if (v.session_confirm != initial.session_confirm) {
+                changed.push_back({"session", "confirm", v.session_confirm});
             }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
@@ -680,7 +690,9 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::PanelStyle, "Panel"},
                     {SettingsForm::Field::DockStyle, "Dock"},
                     {SettingsForm::Field::LauncherStyle, "Launcher"},
-                    {SettingsForm::Field::LockStyle, "Lock style"}};
+                    {SettingsForm::Field::LockStyle, "Lock style"},
+                    {SettingsForm::Field::SessionAutostart, "Autostart"},
+                    {SettingsForm::Field::SessionConfirm, "Confirm"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

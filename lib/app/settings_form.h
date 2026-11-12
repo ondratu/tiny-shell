@@ -16,7 +16,7 @@ namespace tiny::app {
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Applications) and the fields of the chosen section: text fields (the font,
+ * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Security, Applications, Session) and the fields of the chosen section: text fields (the font,
  * its size and style, the scale, the format of the clock, the wallpaper, the
  * terminal), choices (antialiasing, hinting and subpixel order of the text,
  * the placement of the wallpaper, the mode of the dock: the left and right
@@ -52,7 +52,8 @@ class SettingsForm {
         Displays,
         Power,
         Security,
-        Applications
+        Applications,
+        Session
     };
 
     enum class Field {
@@ -78,7 +79,9 @@ class SettingsForm {
         PanelStyle,  //!< a choice: the panel follows the theme, light or dark
         DockStyle,   //!< a choice: the same for the dock
         LockStyle,   //!< a choice: the same for the lock screen
-        LauncherStyle //!< a choice: the same for the launcher
+        LauncherStyle,    //!< a choice: the same for the launcher
+        SessionAutostart, //!< a choice: yes or no, the autostart programs start
+        SessionConfirm //!< a choice: yes or no, a dialog asks before the logout
     };
 
     //! What has the keyboard in the list of fonts
@@ -145,6 +148,9 @@ class SettingsForm {
         std::string dock_style{};
         std::string lock_style{};     //!< like the panel: "", light, dark
         std::string launcher_style{}; //!< the same
+        //! `[session]`: autostart and the question before the logout (yes, no)
+        std::string session_autostart = "yes";
+        std::string session_confirm = "yes";
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -204,7 +210,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 7;
+    static constexpr size_t section_count = 8;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -400,7 +406,9 @@ class SettingsForm {
         PanelStyleField,
         DockStyleField,
         LockStyleField,
-        LauncherStyleField, //!< the fields are in the order of `Field`
+        LauncherStyleField,
+        SessionAutostartField,
+        SessionConfirmField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -414,6 +422,7 @@ class SettingsForm {
         SectionPower,
         SectionSecurity,
         SectionApplications,
+        SectionSession,
         FirstRow //!< and the rows of the list from here
     };
 
@@ -445,7 +454,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 23> fields_;
+    std::array<TextField, 25> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

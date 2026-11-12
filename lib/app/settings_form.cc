@@ -88,7 +88,9 @@ constexpr SettingsForm::Field fields[] = {SettingsForm::Field::Font,
                                           SettingsForm::Field::PanelStyle,
                                           SettingsForm::Field::DockStyle,
                                           SettingsForm::Field::LockStyle,
-                                          SettingsForm::Field::LauncherStyle};
+                                          SettingsForm::Field::LauncherStyle,
+                                          SettingsForm::Field::SessionAutostart,
+                                          SettingsForm::Field::SessionConfirm};
 
 } // namespace
 
@@ -133,7 +135,9 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.panel_style),
             TextField(initial.dock_style),
             TextField(initial.lock_style),
-            TextField(initial.launcher_style)},
+            TextField(initial.launcher_style),
+            TextField(initial.session_autostart),
+            TextField(initial.session_confirm)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -158,7 +162,7 @@ int SettingsForm::form_height() const
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications}) {
+          Section::Applications, Section::Session}) {
         const auto rows = static_cast<int>(
                 section_fields(section).size() +
                 (section == Section::Appearance ? thumbnail_rows : 0));
@@ -198,7 +202,9 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::PanelStyle),
             text(Field::DockStyle),
             text(Field::LockStyle),
-            text(Field::LauncherStyle)};
+            text(Field::LauncherStyle),
+            text(Field::SessionAutostart),
+            text(Field::SessionConfirm)};
 }
 
 // The sections
@@ -218,6 +224,8 @@ const char* SettingsForm::section_title(Section section)
             return "Power";
         case Section::Security:
             return "Security";
+        case Section::Session:
+            return "Session";
         case Section::Applications:
             break;
     }
@@ -245,6 +253,8 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> security = {Field::LockDelay,
                                                 Field::LockStyle};
     static const std::vector<Field> applications = {Field::Terminal};
+    static const std::vector<Field> session = {Field::SessionAutostart,
+                                               Field::SessionConfirm};
     switch (section) {
         case Section::Appearance:
             return appearance;
@@ -258,6 +268,8 @@ SettingsForm::section_fields(Section section)
             return power;
         case Section::Security:
             return security;
+        case Section::Session:
+            return session;
         case Section::Applications:
             break;
     }
@@ -268,7 +280,8 @@ SettingsForm::Section SettingsForm::section_of(Field field)
 {
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Security}) {
+          Section::Displays, Section::Power, Section::Security,
+          Section::Session}) {
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;
@@ -330,6 +343,12 @@ const char* SettingsForm::note(Field field)
         case Field::DisplayDpms:
             return "The X server switches the display off as well. No leaves "
                    "DPMS alone, for drivers where it does nothing or hangs.";
+        case Field::SessionAutostart:
+            return "Starts the programs of ~/.config/autostart and "
+                   "/etc/xdg/autostart when you log in.";
+        case Field::SessionConfirm:
+            return "A dialog with a countdown before Logout, Restart and "
+                   "Shutdown. Programs are asked to close either way.";
         case Field::LockDelay:
             return "Locks the screen this long after the display turns off "
                    "(see Power). Immediately locks it as the display goes off.";
@@ -355,7 +374,8 @@ bool SettingsForm::is_choice(Field field)
            field == Field::LockStyle || field == Field::LauncherStyle ||
            field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
-           field == Field::DisplayOff || field == Field::DisplayDpms;
+           field == Field::DisplayOff || field == Field::DisplayDpms ||
+           field == Field::SessionAutostart || field == Field::SessionConfirm;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -417,8 +437,9 @@ wm::XftChoices SettingsForm::choices_of(Field field)
     if (field == Field::DisplayOff) {
         return wm::display_off_choices();
     }
-    if (field == Field::DisplayDpms) {
-        return wm::dpms_choices();
+    if (field == Field::DisplayDpms || field == Field::SessionAutostart ||
+        field == Field::SessionConfirm) {
+        return wm::dpms_choices(); // yes or no
     }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
                                          : wm::xft_choices(xft_option(field));
@@ -516,6 +537,8 @@ std::string SettingsForm::problem(Field field) const
                            ? ""
                            : "Choose one of the values that are offered.";
         case Field::DisplayDpms:
+        case Field::SessionAutostart:
+        case Field::SessionConfirm:
             return wm::valid_dpms_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
@@ -582,7 +605,9 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.panel_style),
             clean(v.dock_style),
             clean(v.lock_style),
-            clean(v.launcher_style)};
+            clean(v.launcher_style),
+            clean(v.session_autostart),
+            clean(v.session_confirm)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -993,7 +1018,9 @@ bool SettingsForm::act(size_t target, int x)
         case PanelStyleField:
         case DockStyleField:
         case LockStyleField:
-        case LauncherStyleField: {
+        case LauncherStyleField:
+        case SessionAutostartField:
+        case SessionConfirmField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
@@ -1014,6 +1041,7 @@ bool SettingsForm::act(size_t target, int x)
         case SectionPower:
         case SectionSecurity:
         case SectionApplications:
+        case SectionSession:
             set_section(static_cast<Section>(target - SectionAppearance));
             return true;
         case CancelButton:

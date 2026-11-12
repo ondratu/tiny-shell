@@ -1334,13 +1334,13 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications}) {
+          Section::Applications, Section::Session}) {
         for (const Field f : SettingsForm::section_fields(section)) {
             EXPECT_EQ(SettingsForm::section_of(f), section);
             ++count;
         }
     }
-    EXPECT_EQ(count, 23u);
+    EXPECT_EQ(count, 25u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -1355,6 +1355,7 @@ TEST(SettingsFormSectionTest, the_sections_have_names)
     EXPECT_STREQ(SettingsForm::section_title(Section::Displays), "Displays");
     EXPECT_STREQ(SettingsForm::section_title(Section::Power), "Power");
     EXPECT_STREQ(SettingsForm::section_title(Section::Security), "Security");
+    EXPECT_STREQ(SettingsForm::section_title(Section::Session), "Session");
 }
 
 TEST(SettingsFormSectionTest, a_click_on_an_item_of_the_panel_shows_its_section)
@@ -1390,15 +1391,15 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     ASSERT_EQ(form.section(), Section::Fonts); // where `make()` starts
     for (const Section next :
          {Section::Desktop, Section::Displays, Section::Power,
-          Section::Security, Section::Applications, Section::Appearance,
-          Section::Fonts}) {
+          Section::Security, Section::Applications, Section::Session,
+          Section::Appearance, Section::Fonts}) {
         EXPECT_TRUE(form.key(Key::NextSection));
         EXPECT_EQ(form.section(), next);
     }
     EXPECT_TRUE(form.key(Key::PrevSection));
     EXPECT_EQ(form.section(), Section::Appearance); // round
     EXPECT_TRUE(form.key(Key::PrevSection));
-    EXPECT_EQ(form.section(), Section::Applications);
+    EXPECT_EQ(form.section(), Section::Session);
 }
 
 TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
@@ -1843,6 +1844,40 @@ TEST(SettingsFormPowerTest, dpms_is_a_choice_that_is_yes_by_default)
     EXPECT_EQ(make(values).clean_values().display_dpms, "no");
 }
 
+TEST(SettingsFormSessionTest,
+     autostart_and_the_question_are_choices_with_a_note)
+{
+    for (const Field f : {Field::SessionAutostart, Field::SessionConfirm}) {
+        EXPECT_EQ(SettingsForm::section_of(f), SettingsForm::Section::Session);
+        EXPECT_TRUE(SettingsForm::is_choice(f));
+        EXPECT_NE(std::string(SettingsForm::note(f)), "");
+    }
+    EXPECT_TRUE(
+            SettingsForm::section_has_notes(SettingsForm::Section::Session));
+}
+
+TEST(SettingsFormSessionTest, both_are_yes_by_default_and_take_yes_or_no)
+{
+    SettingsForm form = make();
+    EXPECT_EQ(form.text(Field::SessionAutostart), "yes");
+    EXPECT_EQ(form.choice_label(Field::SessionConfirm), "Yes");
+
+    SettingsForm::Values values;
+    values.session_confirm = "no";
+    EXPECT_EQ(make(values).clean_values().session_confirm, "no");
+    EXPECT_EQ(make(values).problem(Field::SessionConfirm), "");
+    values.session_autostart = "maybe";
+    EXPECT_NE(make(values).problem(Field::SessionAutostart), "");
+}
+
+TEST(SettingsFormSessionTest, the_note_of_the_question_says_what_it_is_not)
+{
+    // the programs are asked to close whatever the answer is
+    EXPECT_NE(std::string(SettingsForm::note(Field::SessionConfirm))
+                      .find("asked to close"),
+              std::string::npos);
+}
+
 TEST(SettingsFormPowerTest, unchanged_is_the_first_choice_and_the_default)
 {
     SettingsForm form = make();
@@ -1896,7 +1931,7 @@ TEST(SettingsFormTest, a_click_on_any_field_goes_to_that_field)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications}) {
+          Section::Applications, Section::Session}) {
         form.set_section(section);
         for (const Field f : SettingsForm::section_fields(section)) {
             const Rect r = form.field_rect(f);
