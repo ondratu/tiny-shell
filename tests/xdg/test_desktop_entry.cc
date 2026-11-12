@@ -465,3 +465,44 @@ TEST(SplitExecTest, unclosed_quote_gives_nothing)
 {
     EXPECT_TRUE(split_exec("a \"b c").empty());
 }
+
+TEST(DesktopEntryTest, the_desktops_that_show_the_entry_are_read)
+{
+    const auto e = parse_desktop_entry(
+            "[Desktop Entry]\nOnlyShowIn=GNOME;KDE;\nNotShowIn=Unity;\n"
+            "X-GNOME-Autostart-enabled=false\n");
+
+    EXPECT_EQ(e.only_show_in, (std::vector<std::string>{"GNOME", "KDE"}));
+    EXPECT_EQ(e.not_show_in, std::vector<std::string>{"Unity"});
+    EXPECT_FALSE(e.autostart_enabled);
+    EXPECT_TRUE(parse_desktop_entry("[Desktop Entry]\n").autostart_enabled);
+}
+
+TEST(DesktopEntryTest, an_entry_without_desktops_is_shown_everywhere)
+{
+    const auto e = parse_desktop_entry("[Desktop Entry]\nName=A\n");
+
+    EXPECT_TRUE(e.shown_in(""));
+    EXPECT_TRUE(e.shown_in("GNOME"));
+}
+
+TEST(DesktopEntryTest, only_show_in_needs_one_of_the_desktops_of_the_session)
+{
+    const auto e = parse_desktop_entry(
+            "[Desktop Entry]\nOnlyShowIn=GNOME;tiny-shell;\n");
+
+    EXPECT_TRUE(e.shown_in("tiny-shell"));
+    EXPECT_TRUE(e.shown_in("ubuntu:GNOME")); // the session lists more desktops
+    EXPECT_FALSE(e.shown_in("KDE"));
+    EXPECT_FALSE(e.shown_in(""));
+}
+
+TEST(DesktopEntryTest, not_show_in_needs_none_of_the_desktops_of_the_session)
+{
+    const auto e = parse_desktop_entry("[Desktop Entry]\nNotShowIn=KDE;\n");
+
+    EXPECT_TRUE(e.shown_in("GNOME"));
+    EXPECT_TRUE(e.shown_in(""));
+    EXPECT_FALSE(e.shown_in("KDE"));
+    EXPECT_FALSE(e.shown_in("GNOME:KDE"));
+}

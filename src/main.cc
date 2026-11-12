@@ -1,7 +1,9 @@
+#include <cerrno>
 #include <chrono>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -19,9 +21,13 @@
 #include "wm/options.h"
 #include "wm/reload.h"
 #include "wm/selection.h"
+#include "wm/session_start.h"
 #include "wm/xsettings.h"
 #include "wm/xresources.h"
 #include "xdg/application_index.h"
+#include "xdg/autostart.h"
+#include "xdg/application_launch.h"
+#include "xdg/dirs.h"
 
 namespace {
 
@@ -207,6 +213,30 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     }
 }
 
+//! Start the programs of the autostart directories, once in a session (a shell
+//! that starts again, `--replace` for one, does not start them again)
+void start_autostart(::Display* display, ::Window root,
+                     const tiny::wm::Config& config, const char* program)
+{
+    if (!config.session_autostart ||
+        !tiny::wm::claim_autostart(display, root)) {
+        return;
+    }
+    const char* path = getenv("PATH");
+    const char* desktops = getenv("XDG_CURRENT_DESKTOP");
+    for (const tiny::xdg::Application& app : tiny::xdg::autostart_applications(
+                 tiny::xdg::config_dir_list(getenv("XDG_CONFIG_HOME"),
+                                            getenv("XDG_CONFIG_DIRS"),
+                                            getenv("HOME")),
+                 desktops == nullptr ? "" : desktops,
+                 path == nullptr ? "" : path)) {
+        if (tiny::xdg::launch(app, {}, config.terminal) < 0) {
+            fprintf(stderr, "%s: can't start %s (%s): %s\n", program,
+                    app.id.c_str(), app.entry.exec.c_str(), strerror(errno));
+        }
+    }
+}
+
 //! SIGHUP and `--reload`: read the files again and apply what changed
 void reload_config(tiny::wm::Manager& manager, tiny::wm::Config& current,
                    const char* program)
@@ -296,6 +326,10 @@ int main(int argc, char** argv)
     // and the clock shows the days and the date the way the user reads them
     setlocale(LC_TIME, "");
 
+    // The files of autostart name the desktops in OnlyShowIn: a session that
+    // did not say who it is (a bare ~/.xinitrc) is tiny-shell
+    setenv("XDG_CURRENT_DESKTOP", "tiny-shell", 0);
+
     try {
         tiny::Display::init();
 
@@ -369,6 +403,9 @@ int main(int argc, char** argv)
             reload_config(manager, config, program);
         });
         selection.announce();
+        // the panel and its tray are there, so the programs that put an icon
+        // into the tray find it
+        start_autostart(display, root, config, argv[0]);
         manager.main_loop();
     } catch (const std::exception& e) {
         fprintf(stderr, "Failed to initialize window manager: %s\n", e.what());

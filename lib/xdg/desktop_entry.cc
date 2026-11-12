@@ -140,6 +140,27 @@ bool DesktopEntry::visible() const
            !no_display && !hidden;
 }
 
+bool DesktopEntry::shown_in(std::string_view desktops) const
+{
+    const auto listed = [&](const std::vector<std::string>& names) {
+        size_t begin = 0;
+        while (begin <= desktops.size()) {
+            const size_t end =
+                    std::min(desktops.find(':', begin), desktops.size());
+            const std::string_view desktop =
+                    desktops.substr(begin, end - begin);
+            if (!desktop.empty() &&
+                std::find(names.begin(), names.end(), desktop) != names.end()) {
+                return true;
+            }
+            begin = end + 1;
+        }
+        return false;
+    };
+    return (only_show_in.empty() || listed(only_show_in)) &&
+           !listed(not_show_in);
+}
+
 DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
 {
     const std::vector<std::string> candidates = locale_candidates(locale);
@@ -237,6 +258,9 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.startup_notify = get("StartupNotify") == "true";
     entry.no_display = get("NoDisplay") == "true";
     entry.hidden = get("Hidden") == "true";
+    entry.only_show_in = split_list(get("OnlyShowIn"));
+    entry.not_show_in = split_list(get("NotShowIn"));
+    entry.autostart_enabled = get("X-GNOME-Autostart-enabled") != "false";
     for (const std::string& id : split_list(get("Actions"))) {
         const auto same = [&id](const DesktopAction& other) {
             return other.id == id;

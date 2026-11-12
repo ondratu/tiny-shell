@@ -48,6 +48,9 @@ namespace tiny::wm {
  * [display]
  * off_after = 15
  *
+ * [session]
+ * autostart = yes
+ *
  * [panel]
  * clock_format = %A %e %B %R
  * system_tray = yes
@@ -114,6 +117,9 @@ struct Config {
     std::string wallpaper_mode;
     //! [panel] clock_format, a `strftime()` format of the clock; "" is no clock
     std::string clock_format = "%A %e %B %R";
+    //! [session] autostart: start the applications of the autostart
+    //! directories with the session (yes or no)
+    bool session_autostart = true;
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
     //! [monitors] primary: the monitor of the panel and the dock, a number

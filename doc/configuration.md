@@ -90,6 +90,11 @@ off_after = 15
 # display off (for drivers where DPMS does nothing or hangs)
 dpms = yes
 
+[session]
+# Start the programs of ~/.config/autostart and /etc/xdg/autostart with the
+# session (see the Session page): yes (the default) or no
+autostart = yes
+
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
 # no clock. The names of the days and the order of the date follow LC_TIME / LANG.
@@ -375,7 +380,8 @@ each of these, the first one wins when an application is in more of them:
 The last step is the only thing added on top of the XDG specification, the same
 way as GNOME does it; you can move `/usr/local/share` to any place by listing it
 in `XDG_DATA_DIRS`. Other prefixes (for example `/usr/pkg/share` on NetBSD)
-belong to the session, so set them in `~/.xinitrc`.
+belong to the session, so set them in `~/.config/tiny-shell/environment` (see
+[how to start a session](install.md#starting-a-session)) or in `~/.xinitrc`.
 
 The launcher starts a program with the `PATH` of tiny-shell, so put
 `~/.local/bin` and the like to `PATH` in the session too.

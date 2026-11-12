@@ -73,7 +73,7 @@ The files:
   icons of their windows (`StartupWMClass`).
 - `bin/tiny-shell-session`, the script that starts a session, and
   `share/xsessions/tiny-shell.desktop`, which puts "Tiny Shell" in the list of
-  sessions of the display managers (see [Starting a session](#starting-a-session)).
+  sessions of the display managers (see the section below).
 - `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark
   style.
@@ -95,7 +95,7 @@ tools/run-xephyr.sh
 ```
 
 To use tiny-shell as your real window manager, see
-[Starting a session](#starting-a-session). Set `scale` (for example `1.5` or `2`) in the
+[the session section below](#starting-a-session). Set `scale` (for example `1.5` or `2`) in the
 configuration file to scale the theme on a high-DPI screen.
 
 ## Starting a session
@@ -119,7 +119,7 @@ Openbox is, and the `gnome-session` of GNOME is more than that). It
 
 - names the desktop (`XDG_CURRENT_DESKTOP=tiny-shell`) unless the display
   manager did, so the programs that start with the session know who is asking
-  (`OnlyShowIn` of their autostart files),
+  (`OnlyShowIn` of their autostart files, see [The session](session.md)),
 - adds `~/.local/bin` to `PATH` and the usual directories to `XDG_DATA_DIRS`
   when it is not set, so the launcher finds the programs and the applications
   that the user installed (`/usr/pkg/share` on NetBSD too),
