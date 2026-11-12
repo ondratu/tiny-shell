@@ -56,6 +56,7 @@ namespace tiny::wm {
  * layout = cz,us
  * variant = ,qwerty
  * options = grp:caps_toggle
+ * indicator = yes
  *
  * [panel]
  * clock_format = %A %e %B %R
@@ -135,6 +136,9 @@ struct Config {
     std::string keyboard_layout;
     std::string keyboard_variant;
     std::string keyboard_options;
+    //! [keyboard] indicator: the layout in use at the right end of the panel
+    //! (yes or no)
+    bool keyboard_indicator = false;
     //! [panel] system_tray: the icons of programs in the panel (yes or no)
     bool system_tray = true;
     //! [monitors] primary: the monitor of the panel and the dock, a number

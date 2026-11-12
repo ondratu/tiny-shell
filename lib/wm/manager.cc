@@ -1270,6 +1270,10 @@ void Manager::main_loop()
                 on_root_configure(event.xconfigure);
                 break;
             default:
+                if (wm_keyboard && xkb && xkb->is_event(event)) {
+                    wm_keyboard->set_groups(xkb->read());
+                    break;
+                }
                 if (randr_base && is_monitor_event(event, *randr_base)) {
                     on_monitors_changed(event);
                     break;
@@ -2259,6 +2263,31 @@ void Manager::set_clock_format(const std::string& format)
     wm_panel.add_applet(wm_clock.get());
     wm_clock->set_events();
     tick_clock();
+}
+
+void Manager::set_keyboard_indicator(bool enable)
+{
+    if (wm_keyboard) { // the panel must not keep a pointer to the deleted widget
+        wm_panel.remove(wm_keyboard.get());
+        wm_keyboard.reset();
+    }
+    if (!enable || !wm_panel.get_realized()) {
+        return;
+    }
+    if (!xkb) {
+        xkb = std::make_unique<XkbGroups>(display);
+    }
+    if (!xkb->available()) {
+        tiny::error("The X server has no XKB, there is no keyboard layout in "
+                    "the panel");
+        return;
+    }
+    xkb->select_events();
+    wm_keyboard = std::make_unique<KeyboardIndicator>();
+    wm_keyboard->on_choose = [this](size_t group) { xkb->lock(group); };
+    wm_keyboard->set_groups(xkb->read());
+    wm_panel.add_applet(wm_keyboard.get());
+    wm_keyboard->set_events();
 }
 
 void Manager::set_system_tray(bool enable)

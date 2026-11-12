@@ -212,7 +212,14 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     if (clock_changed) {
         manager.set_clock_format(config.clock_format);
     }
-    if (clock_changed || old->system_tray != config.system_tray) {
+    // next to the clock, and the tray after it
+    const bool indicator_changed =
+            clock_changed ||
+            old->keyboard_indicator != config.keyboard_indicator;
+    if (indicator_changed) {
+        manager.set_keyboard_indicator(config.keyboard_indicator);
+    }
+    if (indicator_changed || old->system_tray != config.system_tray) {
         // after the clock: it stays at the end
         manager.set_system_tray(config.system_tray);
     }

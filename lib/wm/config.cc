@@ -613,6 +613,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     read_keyboard("options", config.keyboard_options,
                   "[keyboard] options must be names of XKB with commas "
                   "between them, four at most");
+    if (const auto value = ini.get("keyboard", "indicator")) {
+        if (*value == "yes" || *value == "no") {
+            config.keyboard_indicator = *value == "yes";
+        } else {
+            problem("[keyboard] indicator must be yes or no");
+        }
+    }
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";
