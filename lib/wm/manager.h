@@ -18,6 +18,7 @@
 #include "wm/window.h"
 #include "wm/recent_list.h"
 #include "wm/clock_label.h"
+#include "wm/keyboard_indicator.h"
 #include "wm/idle_lock.h"
 #include "wm/idle_time.h"
 #include "wm/screen_blank.h"
@@ -162,6 +163,15 @@ class Manager : public tiny::Object {
      * updated by a timer at the start of every minute.
      */
     void set_clock_format(const std::string& format);
+
+    /**
+     * @short Show the layout of the keyboard in the panel, to the left from
+     * the clock; a click opens the menu of the layouts.
+     *
+     * Call it after `set_clock_format()` and before `set_system_tray()`, so
+     * that it stays next to the clock. Without XKB there is nothing to show.
+     */
+    void set_keyboard_indicator(bool enable);
 
     /**
      * @short Become the system tray: the icons of the programs go to the
@@ -662,7 +672,9 @@ class Manager : public tiny::Object {
     Panel wm_panel;
     std::unique_ptr<ClockLabel> wm_clock; //!< null: no clock
     tiny::Timers::Id clock_timer = 0;
-    std::unique_ptr<Tray> wm_tray; //!< null: no tray
+    std::unique_ptr<XkbGroups> xkb; //!< the layouts of the keyboard
+    std::unique_ptr<KeyboardIndicator> wm_keyboard; //!< null: not shown
+    std::unique_ptr<Tray> wm_tray;                  //!< null: no tray
     RunDialog wm_run;
     UnresponsiveDialog wm_unresponsive;
     SessionDialog wm_session;

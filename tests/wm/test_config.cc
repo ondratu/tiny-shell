@@ -712,6 +712,23 @@ TEST(ConfigTest, more_than_four_layouts_are_refused)
               "a,b,c,d");
 }
 
+TEST(ConfigTest, the_layout_is_in_the_panel_only_when_it_is_turned_on)
+{
+    EXPECT_FALSE(parse_config({}).keyboard_indicator);
+    EXPECT_TRUE(parse_config({{"a", "[keyboard]\nindicator = yes\n"}})
+                        .keyboard_indicator);
+    EXPECT_FALSE(parse_config({{"a", "[keyboard]\nindicator = no\n"}})
+                         .keyboard_indicator);
+
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[keyboard]\nindicator = maybe\n"}}, &problems);
+    EXPECT_FALSE(c.keyboard_indicator);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("a: [keyboard] indicator must be"),
+              std::string::npos);
+}
+
 TEST(ConfigTest, a_wrong_name_of_the_keyboard_is_refused)
 {
     std::vector<std::string> problems;
