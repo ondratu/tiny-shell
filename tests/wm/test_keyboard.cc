@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "helpers.h"
 
 #include <unistd.h>
 
@@ -190,4 +190,25 @@ TEST(KeyboardTest, the_shortcuts_have_keys_and_an_action)
         EXPECT_NE(std::string(shortcut.keys), "");
         EXPECT_NE(std::string(shortcut.action), "");
     }
+}
+
+TEST(KeyboardTest, the_names_of_the_rules_are_the_third_to_the_fifth_string)
+{
+    const std::string value("evdev\0pc105\0cz,us\0,qwerty\0grp:toggle\0", 37);
+    const KeyboardNames names = parse_xkb_rules_names(value);
+    EXPECT_EQ(names.layout, "cz,us");
+    EXPECT_EQ(names.variant, ",qwerty");
+    EXPECT_EQ(names.options, "grp:toggle");
+    // a value that ends early has no names
+    const std::string short_value("evdev\0pc105\0cz\0", 16);
+    EXPECT_EQ(parse_xkb_rules_names(short_value).layout, "");
+    EXPECT_EQ(parse_xkb_rules_names("").layout, "");
+}
+
+TEST(KeyboardTest, the_layouts_of_the_server_are_read_from_its_property)
+{
+    // what the server has depends on the machine: it has a layout, or none
+    const KeyboardNames names = read_keyboard_names(tiny::get_display());
+    EXPECT_TRUE(valid_keyboard_list(names.layout));
+    EXPECT_TRUE(valid_keyboard_list(names.variant));
 }

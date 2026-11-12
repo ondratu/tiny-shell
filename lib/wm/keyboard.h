@@ -4,6 +4,8 @@
 #include <string_view>
 #include <vector>
 
+#include <X11/Xlib.h>
+
 #include "wm/config.h"
 
 namespace tiny::wm {
@@ -92,6 +94,25 @@ void keyboard_lists(const std::vector<KeyboardLayout>& chosen,
 std::vector<KeyboardLayout>
 keyboard_chosen(const std::string& layouts, const std::string& variants,
                 const std::vector<KeyboardLayout>& known);
+
+//! The layouts that the keyboard has, as `setxkbmap -query` tells them
+struct KeyboardNames {
+    std::string layout;
+    std::string variant;
+    std::string options;
+};
+
+/**
+ * @short The names in the value of `_XKB_RULES_NAMES`: the strings rules,
+ * model, layout, variant and options, each ended by a zero byte.
+ *
+ * Nothing (empty names) for a value that is too short.
+ */
+KeyboardNames parse_xkb_rules_names(std::string_view value);
+
+//! The layouts, variants and options that the X server has now (the property
+//! `_XKB_RULES_NAMES` of the root window); empty when it has none
+KeyboardNames read_keyboard_names(::Display* display);
 
 /**
  * @short The keys of the shell and what they do, for the list of shortcuts.
