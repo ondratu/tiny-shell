@@ -97,10 +97,11 @@ class SettingsForm {
         LauncherStyle,    //!< a choice: the same for the launcher
         SessionAutostart, //!< a choice: yes or no, the autostart programs start
         SessionConfirm, //!< a choice: yes or no, a dialog asks before the logout
-        SessionPrograms,  //!< opens the list of the programs of the autostart
-        KeyboardLayouts,  //!< opens the list of the layouts of the keyboard
-        KeyboardSwitch,   //!< a choice: the keys that switch the layout
-        KeyboardShortcuts //!< opens the list of the keys of the shell
+        SessionPrograms,   //!< opens the list of the programs of the autostart
+        KeyboardLayouts,   //!< opens the list of the layouts of the keyboard
+        KeyboardSwitch,    //!< a choice: the keys that switch the layout
+        KeyboardShortcuts, //!< opens the list of the keys of the shell
+        KeyboardIndicator  //!< a choice: yes or no, the layout is in the panel
     };
 
     //! What has the keyboard in the list of fonts
@@ -172,6 +173,8 @@ class SettingsForm {
         std::string session_confirm = "no";
         //! The option `grp:...` that switches the layouts ("" is none)
         std::string keyboard_switch{};
+        //! The layout in use is shown in the panel (yes, no)
+        std::string keyboard_indicator = "no";
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -504,6 +507,7 @@ class SettingsForm {
         KeyboardLayoutsField,
         KeyboardSwitchField,
         KeyboardShortcutsField,
+        KeyboardIndicatorField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -559,7 +563,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 29> fields_;
+    std::array<TextField, 30> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

@@ -95,7 +95,8 @@ constexpr SettingsForm::Field fields[] = {
         SettingsForm::Field::SessionPrograms,
         SettingsForm::Field::KeyboardLayouts,
         SettingsForm::Field::KeyboardSwitch,
-        SettingsForm::Field::KeyboardShortcuts};
+        SettingsForm::Field::KeyboardShortcuts,
+        SettingsForm::Field::KeyboardIndicator};
 
 } // namespace
 
@@ -146,7 +147,8 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(),
             TextField(),
             TextField(initial.keyboard_switch),
-            TextField()},
+            TextField(),
+            TextField(initial.keyboard_indicator)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -214,7 +216,8 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::LauncherStyle),
             text(Field::SessionAutostart),
             text(Field::SessionConfirm),
-            text(Field::KeyboardSwitch)};
+            text(Field::KeyboardSwitch),
+            text(Field::KeyboardIndicator)};
 }
 
 // The sections
@@ -268,9 +271,9 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> session = {Field::SessionAutostart,
                                                Field::SessionPrograms,
                                                Field::SessionConfirm};
-    static const std::vector<Field> keyboard = {Field::KeyboardLayouts,
-                                                Field::KeyboardSwitch,
-                                                Field::KeyboardShortcuts};
+    static const std::vector<Field> keyboard = {
+            Field::KeyboardLayouts, Field::KeyboardSwitch,
+            Field::KeyboardIndicator, Field::KeyboardShortcuts};
     switch (section) {
         case Section::Appearance:
             return appearance;
@@ -381,6 +384,9 @@ const char* SettingsForm::note(Field field)
         case Field::KeyboardSwitch:
             return "The keys that switch to the next layout; it needs two "
                    "layouts.";
+        case Field::KeyboardIndicator:
+            return "The layout in use at the right end of the panel; a click "
+                   "on it opens a menu of the layouts.";
         case Field::KeyboardShortcuts:
             return "The keys of the shell and what they do (not editable).";
         case Field::SessionConfirm:
@@ -413,7 +419,7 @@ bool SettingsForm::is_choice(Field field)
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff || field == Field::DisplayDpms ||
            field == Field::SessionAutostart || field == Field::SessionConfirm ||
-           field == Field::KeyboardSwitch;
+           field == Field::KeyboardSwitch || field == Field::KeyboardIndicator;
 }
 
 //! Open the list that the focused field opens
@@ -501,7 +507,7 @@ wm::XftChoices SettingsForm::choices_of(Field field)
         return wm::display_off_choices();
     }
     if (field == Field::DisplayDpms || field == Field::SessionAutostart ||
-        field == Field::SessionConfirm) {
+        field == Field::SessionConfirm || field == Field::KeyboardIndicator) {
         return wm::dpms_choices(); // yes or no
     }
     return field == Field::WallpaperMode ? wm::wallpaper_choices()
@@ -610,6 +616,7 @@ std::string SettingsForm::problem(Field field) const
         case Field::DisplayDpms:
         case Field::SessionAutostart:
         case Field::SessionConfirm:
+        case Field::KeyboardIndicator:
             return wm::valid_dpms_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
@@ -679,7 +686,8 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.launcher_style),
             clean(v.session_autostart),
             clean(v.session_confirm),
-            clean(v.keyboard_switch)};
+            clean(v.keyboard_switch),
+            clean(v.keyboard_indicator)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -1382,7 +1390,8 @@ bool SettingsForm::act(size_t target, int x)
         case LauncherStyleField:
         case SessionAutostartField:
         case SessionConfirmField:
-        case KeyboardSwitchField: {
+        case KeyboardSwitchField:
+        case KeyboardIndicatorField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on
