@@ -729,6 +729,20 @@ TEST(ConfigTest, the_layout_is_in_the_panel_only_when_it_is_turned_on)
               std::string::npos);
 }
 
+TEST(ConfigTest, the_options_of_the_keyboard_can_be_many)
+{
+    std::vector<std::string> problems;
+    const Config c = parse_config(
+            {{"a", "[keyboard]\noptions = grp:caps_toggle,caps:escape,"
+                   "compose:ralt,ctrl:nocaps,terminate:ctrl_alt_bksp\n"}},
+            &problems);
+
+    EXPECT_TRUE(problems.empty());
+    EXPECT_EQ(c.keyboard_options,
+              "grp:caps_toggle,caps:escape,compose:ralt,ctrl:nocaps,"
+              "terminate:ctrl_alt_bksp");
+}
+
 TEST(ConfigTest, a_wrong_name_of_the_keyboard_is_refused)
 {
     std::vector<std::string> problems;
