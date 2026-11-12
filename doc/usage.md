@@ -7,6 +7,8 @@ What the panel, the dock, the launcher and the windows do, and the keys that go 
 The top panel has the logo at the left, which opens the main menu, the system
 tray and the date and time at the right end (see [The clock](configuration.md#the-clock)
 and [The system tray](configuration.md#the-system-tray)).
+When the layout of the keyboard is shown (see [The keyboard](configuration.md#the-keyboard)),
+its code (`cz`) is left of the clock, and a click on it opens a menu of the layouts.
 
 ## Keyboard shortcuts
 
