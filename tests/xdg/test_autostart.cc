@@ -351,3 +351,11 @@ TEST_F(AutostartItemsTest, a_directory_that_can_not_be_written_is_a_failure)
     EXPECT_FALSE(tiny::xdg::set_autostart_enabled(
             user_dir(), item(items(), "a.desktop"), false));
 }
+
+TEST_F(AutostartItemsTest,
+       a_turned_off_program_that_could_not_start_is_not_switchable)
+{
+    write("user", "a.desktop", "Hidden=true\nTryExec=missing\n");
+
+    EXPECT_EQ(item(items(), "a.desktop").state, AutostartItem::State::Skipped);
+}
