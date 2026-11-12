@@ -2,8 +2,10 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 
 #include "xdg/autostart.h"
@@ -169,4 +171,183 @@ TEST_F(AutostartTest, a_missing_directory_is_no_files)
 {
     EXPECT_TRUE(tiny::xdg::autostart_applications({"/nonexistent"}, "", "")
                         .empty());
+}
+
+namespace {
+
+using tiny::xdg::AutostartItem;
+
+class AutostartItemsTest : public AutostartTest {
+  protected:
+    std::vector<AutostartItem> items() const
+    {
+        return tiny::xdg::autostart_items(dirs(), "tiny-shell",
+                                          (root / "bin").string());
+    }
+
+    const AutostartItem& item(const std::vector<AutostartItem>& all,
+                              const std::string& id) const
+    {
+        const auto found = std::find_if(
+                all.begin(), all.end(),
+                [&](const AutostartItem& i) { return i.app.id == id; });
+        EXPECT_NE(found, all.end()) << id;
+        return *found;
+    }
+
+    std::string read(const char* where, const std::string& name) const
+    {
+        std::ifstream in(root / where / "autostart" / name);
+        return {std::istreambuf_iterator<char>(in), {}};
+    }
+
+    std::string user_dir() const { return (root / "user").string(); }
+};
+
+} // namespace
+
+TEST_F(AutostartItemsTest, a_program_is_of_the_system_or_of_the_user)
+{
+    write("system", "net.desktop");
+    write("user", "mine.desktop");
+    write("system", "both.desktop");
+    write("user", "both.desktop");
+
+    const auto all = items();
+
+    ASSERT_EQ(all.size(), 3u);
+    EXPECT_TRUE(item(all, "net.desktop").system);
+    EXPECT_FALSE(item(all, "mine.desktop").system);
+    // the copy of the user does not make a program of the system its own
+    EXPECT_TRUE(item(all, "both.desktop").system);
+    EXPECT_EQ(item(all, "both.desktop").app.path,
+              (root / "user" / "autostart" / "both.desktop"));
+}
+
+TEST_F(AutostartItemsTest, a_program_the_user_turned_off_is_in_the_list)
+{
+    write("system", "a.desktop");
+    write("user", "a.desktop", "Hidden=true\n");
+    write("user", "b.desktop");
+
+    const auto all = items();
+
+    EXPECT_EQ(item(all, "a.desktop").state, AutostartItem::State::Off);
+    EXPECT_EQ(item(all, "b.desktop").state, AutostartItem::State::On);
+}
+
+TEST_F(AutostartItemsTest, a_program_that_is_turned_off_in_the_system_stays_so)
+{
+    write("system", "a.desktop", "Hidden=true\n");
+
+    EXPECT_EQ(item(items(), "a.desktop").state, AutostartItem::State::Skipped);
+}
+
+TEST_F(AutostartItemsTest, a_program_that_can_not_start_says_why)
+{
+    write("user", "orca.desktop", "AutostartCondition=GSettings x y z\n");
+    write("user", "gnome.desktop", "OnlyShowIn=GNOME;\n");
+    write("user", "gone.desktop", "TryExec=missing\n");
+    write("user", "off.desktop", "X-GNOME-Autostart-enabled=false\n");
+
+    const auto all = items();
+
+    for (const auto& i : all) {
+        EXPECT_EQ(i.state, AutostartItem::State::Skipped) << i.app.id;
+        EXPECT_FALSE(i.reason.empty()) << i.app.id;
+    }
+    EXPECT_EQ(all.size(), 4u);
+}
+
+TEST_F(AutostartItemsTest, the_name_of_a_stub_is_the_one_of_the_system_file)
+{
+    write("system", "a.desktop", "", "Exec=x\n");
+    std::ofstream(root / "user" / "autostart" / "a.desktop")
+            << "[Desktop Entry]\nType=Application\nHidden=true\n";
+
+    EXPECT_EQ(item(items(), "a.desktop").name, "a.desktop");
+}
+
+TEST_F(AutostartItemsTest, what_is_not_an_application_is_not_in_the_list)
+{
+    std::ofstream(root / "user" / "autostart" / "link.desktop")
+            << "[Desktop Entry]\nType=Link\nName=L\nURL=x\n";
+    write("system", "link.desktop");
+
+    EXPECT_TRUE(items().empty());
+}
+
+TEST_F(AutostartItemsTest, a_program_of_the_system_is_turned_off_by_a_stub)
+{
+    write("system", "a.desktop");
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), false));
+
+    EXPECT_TRUE(ids().empty());
+    EXPECT_EQ(read("user", "a.desktop"),
+              "[Desktop Entry]\nType=Application\nHidden=true\n");
+    EXPECT_NE(read("system", "a.desktop").find("Exec=program"),
+              std::string::npos);
+}
+
+TEST_F(AutostartItemsTest, turning_a_program_of_the_system_on_removes_the_stub)
+{
+    write("system", "a.desktop");
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), false));
+
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), true));
+
+    EXPECT_EQ(ids(), std::vector<std::string>{"a.desktop"});
+    EXPECT_FALSE(fs::exists(root / "user" / "autostart" / "a.desktop"));
+}
+
+TEST_F(AutostartItemsTest, the_file_of_the_user_keeps_what_it_has)
+{
+    write("user", "a.desktop", "Icon=x\n[Desktop Action n]\nName=N\n");
+
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), false));
+    EXPECT_TRUE(ids().empty());
+    EXPECT_EQ(read("user", "a.desktop"),
+              "[Desktop Entry]\nHidden=true\nType=Application\nName=a.desktop\n"
+              "Exec=program\nIcon=x\n[Desktop Action n]\nName=N\n");
+
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), true));
+    EXPECT_EQ(ids(), std::vector<std::string>{"a.desktop"});
+    EXPECT_EQ(read("user", "a.desktop").find("Hidden"), std::string::npos);
+}
+
+TEST_F(AutostartItemsTest, a_copy_with_a_command_stays_when_it_is_turned_on)
+{
+    write("system", "a.desktop");
+    write("user", "a.desktop", "Hidden=true\n");
+
+    ASSERT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), true));
+
+    EXPECT_EQ(ids(), std::vector<std::string>{"a.desktop"});
+    EXPECT_TRUE(fs::exists(root / "user" / "autostart" / "a.desktop"));
+}
+
+TEST_F(AutostartItemsTest, the_directory_of_the_user_is_made_when_it_is_missing)
+{
+    write("system", "a.desktop");
+    fs::remove_all(root / "user");
+
+    EXPECT_TRUE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), false));
+    EXPECT_TRUE(ids().empty());
+}
+
+TEST_F(AutostartItemsTest, a_directory_that_can_not_be_written_is_a_failure)
+{
+    write("system", "a.desktop");
+    fs::remove_all(root / "user");
+    std::ofstream(root / "user") << "a file, not a directory\n";
+
+    EXPECT_FALSE(tiny::xdg::set_autostart_enabled(
+            user_dir(), item(items(), "a.desktop"), false));
 }
