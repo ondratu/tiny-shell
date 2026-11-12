@@ -36,8 +36,8 @@ same file in `~/.config/openbox/environment`.
 The programs that start with the session are the `.desktop` files in the
 directories `autostart` of the configuration, as the
 [XDG Autostart specification](https://specifications.freedesktop.org/autostart-spec/latest/)
-says. GNOME, KDE and Xfce use the same files, so what a package puts in
-`/etc/xdg/autostart` (a network applet, a volume control) starts here too.
+says, so what a package puts in `/etc/xdg/autostart` (a network applet, a
+volume control) starts here too.
 
 | Directory | What it is |
 | --------- | ---------- |
@@ -57,31 +57,28 @@ Exec=clipit
 To turn off a program of the system, copy its file to `~/.config/autostart` and
 add `Hidden=true`. A file is also skipped when:
 
-- it has `X-GNOME-Autostart-enabled=false` (how the settings of GNOME switch a
-  program off),
+- it has `X-GNOME-Autostart-enabled=false`,
 - `OnlyShowIn` does not name the desktop `tiny-shell` or `NotShowIn` does (the
   session script sets the desktop in `XDG_CURRENT_DESKTOP`; a display manager
   sets it from its session file),
-- it has an `AutostartCondition` (GNOME starts the screen reader Orca with it
-  only when you switch it on in its settings; tiny-shell cannot check such a
-  condition, so it does not start the file),
+- it has an `AutostartCondition`, which tiny-shell cannot check,
 - the program named by `TryExec` is not installed.
 
 The programs start once the panel and its [tray](configuration.md#the-system-tray)
 are there, so the programs with a tray icon find it; they start in the order of
 the file names, and a program that starts again in the same session (the shell
-crashed, `tiny-shell --replace`) is not started twice. `X-GNOME-Autostart-Delay`
-is not used. `[session] autostart = no` turns the
-whole thing off (the setting Autostart in the section Session of `tiny-settings`).
+crashed, `tiny-shell --replace`) is not started twice. `[session] autostart = no`
+turns the whole thing off (the setting Autostart in the section Session of
+`tiny-settings`).
 
 ## Ending the session
 
 **Logout**, **Restart** and **Shutdown** of the main menu do not kill the
 programs; they ask them to close, so a program can ask whether to save:
 
-1. A dialog asks you to confirm. Return or the button goes on, Escape or Cancel
-   stops it, and when you do not answer the session goes on by itself after 60
-   seconds.
+1. With `[session] confirm = yes` a dialog asks you to confirm first (Return or
+   the button goes on, Escape or Cancel stops it, and when you do not answer the
+   session goes on by itself after 60 seconds). By default there is none.
 2. Every window gets the same request as the close button of its title bar. The
    dialog shows which applications are still open ("Waiting for Text Editor to
    close") and waits for them, as long as it takes: answer the question of the
@@ -94,17 +91,17 @@ programs; they ask them to close, so a program can ask whether to save:
 Windows that cannot take the request, the bars of other programs and tooltips are
 not waited for. A program without a window ends with the X server.
 
-`[session] confirm = no` (the setting Confirm in the section Session of
-`tiny-settings`) leaves out the dialog with the countdown; the programs are still
-asked to close. `pkill tiny-shell` ends the shell at once, and the programs lose their
+`[session] confirm = yes` (the setting Confirm in the section Session of
+`tiny-settings`) turns on the dialog with the countdown; the programs are asked
+to close either way.
+
+`pkill tiny-shell` ends the shell at once, and the programs lose their
 connection to the display.
 
 ## Saving the session
 
 tiny-shell does not remember which programs ran or where their windows were: the
 next login starts the autostart programs only. The X Session Management protocol
-(XSMP) does that for the programs that support it. Openbox, Xfce and KDE have it,
-GNOME removed it in version 49, and macOS has its own "Reopen windows when
-logging back in". Many current programs ignore XSMP (a browser restores its
-windows itself), so it would restore only a part of the session. It is not
-planned, but not ruled out either (`?` in the [comparison](comparison.md)).
+(XSMP) does that for the programs that support it, but many current programs
+ignore it, so it would restore only a part of the session. It is not planned,
+but not ruled out either (`?` in the [comparison](comparison.md)).

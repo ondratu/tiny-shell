@@ -117,8 +117,7 @@ Both ways run the script `tiny-shell-session`, which
 
 - sets `XDG_CURRENT_DESKTOP=tiny-shell` (unless the display manager did),
 - adds `~/.local/bin` to `PATH` and the usual directories to `XDG_DATA_DIRS`, so
-  the launcher finds the programs and applications that you installed
-  (`/usr/pkg/share` on NetBSD too),
+  the launcher finds the programs and applications that you installed,
 - reads [`~/.config/tiny-shell/environment`](session.md#the-environment-file),
 - starts a D-Bus session bus when the system has none and `dbus-run-session` is
   installed, and

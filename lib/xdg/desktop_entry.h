@@ -42,13 +42,8 @@ struct DesktopEntry {
     bool startup_notify = false; //!< tells when it has started (StartupNotify)
     bool no_display = false;
     bool hidden = false;
-    //! `X-GNOME-Autostart-enabled=false`: how the settings of GNOME and others
-    //! switch off an autostart file that they do not own
-    bool autostart_enabled = true;
-    //! `AutostartCondition`: GNOME starts the file only when a setting says so
-    //! (`GSettings org.gnome.desktop.a11y.applications screen-reader-enabled`
-    //! for the screen reader); empty for none
-    std::string autostart_condition;
+    bool autostart_enabled = true;   //!< `X-GNOME-Autostart-enabled`
+    std::string autostart_condition; //!< `AutostartCondition`; empty for none
 
     /**
      * Whether the desktops `desktops` (the colon separated list of

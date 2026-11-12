@@ -95,8 +95,8 @@ dpms = yes
 # session (see the Session page): yes (the default) or no
 autostart = yes
 # Ask before the logout, the restart and the shutdown (a dialog with a countdown
-# of a minute): yes (the default) or no. The programs are asked to close either way.
-confirm = yes
+# of a minute): yes or no (the default). The programs are asked to close either way.
+confirm = no
 
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is

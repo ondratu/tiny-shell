@@ -42,8 +42,8 @@ settings of GNOME:
   of GNOME.
 - **Applications:** the terminal.
 - **Session:** Autostart (start the programs of `~/.config/autostart` with the
-  session) and Confirm (a dialog with a countdown before Logout, Restart and
-  Shutdown; the programs are asked to close either way), see
+  session) and Confirm (off by default: a dialog with a countdown before Logout,
+  Restart and Shutdown; the programs are asked to close either way), see
   [The session](session.md).
 - **Displays:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
