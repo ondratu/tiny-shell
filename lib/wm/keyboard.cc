@@ -31,9 +31,9 @@ bool word_and_rest(std::string_view text, std::string_view& first,
     return !tail.empty();
 }
 
-//! The items of a comma separated list; the empty ones stay, so that a variant
-//! keeps the layout it belongs to
-std::vector<std::string> split_all(const std::string& list)
+} // namespace
+
+std::vector<std::string> split_keeping_empty(const std::string& list)
 {
     std::vector<std::string> items{""};
     for (const char c : list) {
@@ -45,8 +45,6 @@ std::vector<std::string> split_all(const std::string& list)
     }
     return items;
 }
-
-} // namespace
 
 std::vector<KeyboardLayout> parse_keyboard_layouts(std::string_view text)
 {
@@ -191,11 +189,19 @@ std::vector<std::string> keyboard_arguments(const std::string& layouts,
         return {};
     }
     // `-option ""` clears the options of before, the next one sets the new
-    std::vector<std::string> arguments = {"setxkbmap", "-layout", layouts,
-                                          "-variant",  variants,  "-option",
-                                          ""};
+    std::vector<std::string> arguments;
+    arguments.reserve(9);
+    for (const char* word : {"setxkbmap", "-layout"}) {
+        arguments.emplace_back(word);
+    }
+    arguments.push_back(layouts);
+    arguments.emplace_back("-variant");
+    arguments.push_back(variants);
+    arguments.emplace_back("-option");
+    arguments.emplace_back();
     if (!options.empty()) {
-        arguments.insert(arguments.end(), {"-option", options});
+        arguments.emplace_back("-option");
+        arguments.push_back(options);
     }
     return arguments;
 }
@@ -221,8 +227,8 @@ keyboard_chosen(const std::string& layouts, const std::string& variants,
                 const std::vector<KeyboardLayout>& known)
 {
     std::vector<KeyboardLayout> chosen;
-    const std::vector<std::string> ids = split_all(layouts);
-    const std::vector<std::string> variant_list = split_all(variants);
+    const std::vector<std::string> ids = split_keeping_empty(layouts);
+    const std::vector<std::string> variant_list = split_keeping_empty(variants);
     for (size_t i = 0; i < ids.size(); ++i) {
         if (ids[i].empty()) {
             continue;
@@ -250,20 +256,19 @@ keyboard_chosen(const std::string& layouts, const std::string& variants,
 
 KeyboardNames parse_xkb_rules_names(std::string_view value)
 {
-    std::vector<std::string> parts;
+    // rules, model, layout, variant, options: the first two are skipped
+    std::string_view parts[5];
     size_t from = 0;
-    while (parts.size() < 5) {
+    for (std::string_view& part : parts) {
         const size_t end = value.find('\0', from);
         if (end == std::string_view::npos) {
-            break;
+            return {};
         }
-        parts.emplace_back(value.substr(from, end - from));
+        part = value.substr(from, end - from);
         from = end + 1;
     }
-    if (parts.size() < 5) {
-        return {};
-    }
-    return {parts[2], parts[3], parts[4]};
+    return {std::string(parts[2]), std::string(parts[3]),
+            std::string(parts[4])};
 }
 
 KeyboardNames read_keyboard_names(::Display* display)

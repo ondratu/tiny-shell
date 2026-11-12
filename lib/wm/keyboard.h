@@ -20,6 +20,10 @@ struct KeyboardLayout {
     std::string name;    //!< `Czech (QWERTY)`
 };
 
+//! The items of a list with commas; the empty ones stay (`,intl` has two), so
+//! that a variant keeps the layout it belongs to
+std::vector<std::string> split_keeping_empty(const std::string& list);
+
 /**
  * @short The layouts and variants that a rules file of XKB lists
  * (`rules/evdev.lst`: the sections `! layout` and `! variant`).

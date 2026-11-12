@@ -219,3 +219,13 @@ TEST(KeyboardTest, the_layouts_of_the_server_are_read_from_its_property)
     EXPECT_TRUE(valid_keyboard_list(names.layout));
     EXPECT_TRUE(valid_keyboard_list(names.variant));
 }
+
+TEST(KeyboardTest, a_list_is_split_at_the_commas_and_the_empty_items_stay)
+{
+    EXPECT_EQ(split_keeping_empty(""), (std::vector<std::string>{""}));
+    EXPECT_EQ(split_keeping_empty("cz,us"),
+              (std::vector<std::string>{"cz", "us"}));
+    EXPECT_EQ(split_keeping_empty(",intl"),
+              (std::vector<std::string>{"", "intl"}));
+    EXPECT_EQ(split_keeping_empty("a,"), (std::vector<std::string>{"a", ""}));
+}
