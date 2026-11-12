@@ -32,6 +32,12 @@ namespace tiny::app {
  * Return) takes the three into the form, Cancel (or Escape) goes back and
  * leaves them as they were.
  *
+ * The field Programs of the Session opens another list that replaces the form:
+ * the programs of the autostart, a row for each, with the choice of a click or
+ * Space to switch it on and off. Done (or Return) keeps the switches in the
+ * form, Cancel (or Escape) brings them back. The owner reads `programs()` when
+ * it saves.
+ *
  * The owner (`tiny-settings`) tells the size of the window and the input,
  * asks for the rectangles to draw, how wide a text is (`set_measure`, for the
  * pointer) and writes the file when `result()` says Saved. All the numbers
@@ -42,7 +48,7 @@ namespace tiny::app {
  */
 class SettingsForm {
   public:
-    enum class View { Form, Picker };
+    enum class View { Form, Picker, Programs };
 
     //! The groups of the settings, in the panel at the left
     enum class Section {
@@ -81,7 +87,8 @@ class SettingsForm {
         LockStyle,   //!< a choice: the same for the lock screen
         LauncherStyle,    //!< a choice: the same for the launcher
         SessionAutostart, //!< a choice: yes or no, the autostart programs start
-        SessionConfirm //!< a choice: yes or no, a dialog asks before the logout
+        SessionConfirm, //!< a choice: yes or no, a dialog asks before the logout
+        SessionPrograms //!< opens the list of the programs of the autostart
     };
 
     //! What has the keyboard in the list of fonts
@@ -173,6 +180,17 @@ class SettingsForm {
         static Metrics scaled(double factor);
     };
 
+    //! A program of the autostart, as the list of them shows it
+    struct Program {
+        std::string id; //!< the name of its file
+        std::string name;
+        bool system = false; //!< the system has it, otherwise it is the user's
+        bool enabled = true; //!< it starts
+        //! Why it does not start for a cause the list can't change; empty
+        //! when the list can switch it
+        std::string reason;
+    };
+
     //! The names of the styles of a family
     using StylesFn =
             std::function<std::vector<std::string>(const std::string&)>;
@@ -195,6 +213,19 @@ class SettingsForm {
     /// a number or an output): "" is auto, else the name or the number.
     static std::string monitor_value(const wm::Monitors& monitors,
                                      const std::string& spec);
+
+    /// The programs of the autostart that the list shows. Call it before the
+    /// form is used.
+    void set_programs(std::vector<Program> programs)
+    {
+        programs_ = std::move(programs);
+    }
+
+    /// The programs as the user switched them.
+    const std::vector<Program>& programs() const { return programs_; }
+
+    /// How many start, for the field that opens the list: "3 on, 1 off".
+    std::string programs_summary() const;
 
     /// The size of the window.
     void resize(int width, int height);
@@ -381,6 +412,16 @@ class SettingsForm {
     /// Show the form again, the font is as it was.
     void close_picker();
 
+    // The list of the programs of the autostart: a row for each, with the
+    // same scrolling as the list of fonts
+
+    /// Show the list of the programs.
+    void open_programs();
+
+    /// Show the form again: the switches stay (`keep`) or go back to what they
+    /// were when the list was opened.
+    void close_programs(bool keep);
+
   private:
     enum Target : size_t {
         NoTarget,
@@ -408,7 +449,8 @@ class SettingsForm {
         LockStyleField,
         LauncherStyleField,
         SessionAutostartField,
-        SessionConfirmField, //!< the fields are in the order of `Field`
+        SessionConfirmField,
+        SessionProgramsField, //!< the fields are in the order of `Field`
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -442,6 +484,9 @@ class SettingsForm {
     bool form_key(Key pressed);
     bool picker_key(Key pressed);
     bool list_key(Key pressed);
+    bool programs_key(Key pressed);
+    bool switch_program();
+    size_t list_size() const; //!< the rows of the list that shows
     bool size_step(int direction);
     bool cycle_style(int direction);
     bool select(size_t index);
@@ -454,7 +499,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 25> fields_;
+    std::array<TextField, 26> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
@@ -467,6 +512,8 @@ class SettingsForm {
     TextField::Measure measure_;
     std::vector<std::string> all_;
     std::vector<std::string> shown_;
+    std::vector<Program> programs_;
+    std::vector<Program> programs_before_; //!< when the list was opened
     std::string status_;
     Metrics metrics_;
     View view_ = View::Form;
