@@ -17,20 +17,6 @@ namespace {
 //! The codes that the panel shows are cut to this many letters
 constexpr size_t code_letters = 3;
 
-//! The items of a list that is cut at the commas, the empty ones too
-std::vector<std::string> split_commas(const std::string& list)
-{
-    std::vector<std::string> items{""};
-    for (const char c : list) {
-        if (c == ',') {
-            items.emplace_back();
-        } else {
-            items.back() += c;
-        }
-    }
-    return items;
-}
-
 std::string lower_letters(const std::string& name, size_t count)
 {
     std::string code;
@@ -58,10 +44,13 @@ KeyboardGroups make_keyboard_groups(const std::string& layouts,
                                     size_t current)
 {
     KeyboardGroups groups;
-    for (const std::string& layout : split_commas(layouts)) {
-        if (!layout.empty()) {
-            groups.codes.push_back(layout);
+    for (size_t from = 0; from < layouts.size();) {
+        size_t end = layouts.find(',', from);
+        end = end == std::string::npos ? layouts.size() : end;
+        if (end > from) {
+            groups.codes.push_back(layouts.substr(from, end - from));
         }
+        from = end + 1;
     }
     if (groups.codes.empty()) {
         for (const std::string& name : names) {
@@ -72,6 +61,7 @@ KeyboardGroups make_keyboard_groups(const std::string& layouts,
         }
     }
     groups.codes.resize(std::min(groups.codes.size(), max_keyboard_layouts));
+    groups.names.reserve(groups.codes.size());
     for (size_t i = 0; i < groups.codes.size(); ++i) {
         groups.names.push_back(i < names.size() && !names[i].empty()
                                        ? names[i]
@@ -152,6 +142,16 @@ namespace {
 constexpr const char* check_mark = "\xE2\x9C\x93  "; //!< and the same space
 constexpr const char* no_mark = "    ";
 
+//! The width of the text in the font, in pixels
+int text_extent(XftFont* font, const std::string& text)
+{
+    XGlyphInfo extents;
+    XftTextExtentsUtf8(tiny::get_display(), font,
+                       reinterpret_cast<const FcChar8*>(text.c_str()),
+                       static_cast<int>(text.size()), &extents);
+    return extents.xOff;
+}
+
 //! The width of the menu: the usual one, or more for a long name of a layout
 int menu_width_for(const KeyboardGroups& groups)
 {
@@ -162,12 +162,7 @@ int menu_width_for(const KeyboardGroups& groups)
         if (font == nullptr) {
             break; // no font (a test): the usual width
         }
-        const std::string text = std::string(check_mark) + name;
-        XGlyphInfo extents;
-        XftTextExtentsUtf8(display, font,
-                           reinterpret_cast<const FcChar8*>(text.c_str()),
-                           static_cast<int>(text.size()), &extents);
-        widest = std::max(widest, static_cast<int>(extents.xOff));
+        widest = std::max(widest, text_extent(font, check_mark + name));
     }
     const int wanted = widest + 2 * shell_theme.menu_padding;
     return std::min(std::max(shell_theme.menu_width, wanted),
@@ -222,12 +217,8 @@ KeyboardIndicator::KeyboardIndicator():
     set_border(0);
     // as wide as the widest code, so that nothing in the panel moves when the
     // layout changes
-    XGlyphInfo extents;
-    const std::string widest(code_letters, 'm');
-    XftTextExtentsUtf8(display, get_style().get_font(),
-                       reinterpret_cast<const FcChar8*>(widest.c_str()),
-                       static_cast<int>(widest.size()), &extents);
-    resize(static_cast<int>(extents.xOff) + 2 * get_padding(),
+    resize(text_extent(get_style().get_font(), std::string(code_letters, 'm')) +
+                   2 * get_padding(),
            shell_theme.panel);
 }
 
