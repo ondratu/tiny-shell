@@ -489,8 +489,12 @@ TEST_F(ClientTest, create_centers_a_window_that_has_no_position_of_its_own)
             static_cast<tiny::wm::Client*>(w.get())->get_window());
     const int whole_width = f.width + 2 * f.border_width;
     const int whole_height = f.height + 2 * f.border_width;
-    EXPECT_NEAR(f.x + whole_width / 2, area.x + area.width / 2, 2);
-    EXPECT_NEAR(f.y + whole_height / 2, area.y + area.height / 2, 2);
+    const int middle_x = f.x + whole_width / 2;
+    const int middle_y = f.y + whole_height / 2;
+    const int area_x = area.x + area.width / 2;
+    const int area_y = area.y + area.height / 2;
+    EXPECT_NEAR(middle_x, area_x, 2);
+    EXPECT_NEAR(middle_y, area_y, 2);
     EXPECT_GE(f.y, tiny::wm::shell_theme.panel);
 }
 
@@ -548,10 +552,12 @@ TEST_F(ClientTest, create_centers_a_window_whose_position_nobody_chose)
 
     const XWindowAttributes f = attributes_of(
             static_cast<tiny::wm::Client*>(w.get())->get_window());
-    EXPECT_NEAR(f.x + (f.width + 2 * f.border_width) / 2,
-                screen_area().x + screen_area().width / 2, 2);
-    EXPECT_NEAR(f.y + (f.height + 2 * f.border_width) / 2,
-                screen_area().y + screen_area().height / 2, 2);
+    const int middle_x = f.x + (f.width + 2 * f.border_width) / 2;
+    const int middle_y = f.y + (f.height + 2 * f.border_width) / 2;
+    const int area_x = screen_area().x + screen_area().width / 2;
+    const int area_y = screen_area().y + screen_area().height / 2;
+    EXPECT_NEAR(middle_x, area_x, 2);
+    EXPECT_NEAR(middle_y, area_y, 2);
 }
 
 TEST_F(ClientTest, create_keeps_the_position_of_a_window_that_was_there_already)
