@@ -56,7 +56,7 @@ std::vector<KeyboardLayout> parse_keyboard_layouts(std::string_view text)
     std::string line;
     while (std::getline(lines, line)) {
         if (!line.empty() && line[0] == '!') {
-            const std::string_view heading = trim(line.substr(1));
+            const std::string_view heading = trim(std::string_view(line).substr(1));
             part = Part::Other;
             if (heading == "layout") {
                 part = Part::Layouts;
