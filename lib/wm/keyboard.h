@@ -24,7 +24,7 @@ struct KeyboardLayout {
  * @short The layouts and variants that a rules file of XKB lists
  * (`rules/evdev.lst`: the sections `! layout` and `! variant`).
  *
- * Sorted by the name, so a layout is followed by its variants. A line that
+ * Sorted by the name, as a list for the user shows them. A line that
  * does not make sense is skipped.
  */
 std::vector<KeyboardLayout> parse_keyboard_layouts(std::string_view text);
@@ -89,7 +89,8 @@ void keyboard_lists(const std::vector<KeyboardLayout>& chosen,
 /**
  * @short The chosen layouts as the settings name them: the other way round
  * from `keyboard_lists`. An id that is not in `known` is kept (the system may
- * have fewer layouts than the file), with the name of its id.
+ * have fewer layouts than the file), with the name of its id. Only the first
+ * `max_keyboard_layouts` are taken.
  */
 std::vector<KeyboardLayout>
 keyboard_chosen(const std::string& layouts, const std::string& variants,

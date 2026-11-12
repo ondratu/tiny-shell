@@ -699,6 +699,19 @@ TEST(ConfigTest, the_keyboard_is_left_alone_unless_a_layout_is_set)
     EXPECT_EQ(c.keyboard_options, "grp:alt_shift_toggle");
 }
 
+TEST(ConfigTest, more_than_four_layouts_are_refused)
+{
+    std::vector<std::string> problems;
+    const Config c = parse_config({{"a", "[keyboard]\nlayout = a,b,c,d,e\n"}},
+                                  &problems);
+
+    EXPECT_EQ(c.keyboard_layout, "");
+    EXPECT_EQ(problems.size(), 1u);
+    EXPECT_EQ(parse_config({{"a", "[keyboard]\nlayout = a,b,c,d\n"}})
+                      .keyboard_layout,
+              "a,b,c,d");
+}
+
 TEST(ConfigTest, a_wrong_name_of_the_keyboard_is_refused)
 {
     std::vector<std::string> problems;

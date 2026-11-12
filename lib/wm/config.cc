@@ -594,7 +594,10 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     const auto read_keyboard = [&](const char* key, std::string& target,
                                    const char* what) {
         if (const auto value = ini.get("keyboard", key)) {
-            if (valid_keyboard_list(*value)) {
+            const auto items =
+                    std::count(value->begin(), value->end(), ',') + 1;
+            if (valid_keyboard_list(*value) &&
+                static_cast<size_t>(items) <= max_keyboard_layouts) {
                 target = *value;
             } else {
                 problem(what);
@@ -603,13 +606,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     };
     read_keyboard("layout", config.keyboard_layout,
                   "[keyboard] layout must be names of XKB with commas "
-                  "between them");
+                  "between them, four at most");
     read_keyboard("variant", config.keyboard_variant,
                   "[keyboard] variant must be names of XKB with commas "
-                  "between them");
+                  "between them, four at most");
     read_keyboard("options", config.keyboard_options,
                   "[keyboard] options must be names of XKB with commas "
-                  "between them");
+                  "between them, four at most");
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";
