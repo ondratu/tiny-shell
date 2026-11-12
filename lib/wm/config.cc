@@ -591,9 +591,10 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[session] confirm must be yes or no");
         }
     }
+    using Text = std::string Config::*; // a text member of the settings
     struct KeyboardKey {
         const char* key;
-        std::string Config::* target;
+        Text target;
         size_t most; //!< the items of the list, at most
         const char* what;
     };
