@@ -98,6 +98,14 @@ autostart = yes
 # of a minute): yes or no (the default). The programs are asked to close either way.
 confirm = no
 
+[keyboard]
+# The layouts of the keyboard (names of setxkbmap), up to four, with a variant
+# for each (empty for the default one) and the options, e.g. the keys that
+# switch the layout; without layout the keyboard stays as the system has it
+layout = cz,us
+variant =
+options = grp:caps_toggle
+
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is
 # no clock. The names of the days and the order of the date follow LC_TIME / LANG.
@@ -211,6 +219,38 @@ does not, because the shell has no D-Bus yet.
 The lock itself follows the display: `[lock] delay` counts from the moment the
 display goes off, and a lock that comes after it stays dark until the next
 input (see [the lock](lock.md)).
+
+## The keyboard
+
+`[keyboard]` sets the layouts of the keyboard, with the names that `setxkbmap`
+takes:
+
+```ini
+[keyboard]
+layout = cz,us
+variant = ,intl
+options = grp:caps_toggle
+```
+
+- `layout` is the layouts to switch between, up to four; the first one is used
+  at the start. `variant` has one variant for each of them, empty for the
+  default one (above: Czech, and the US layout with dead keys). `options` are
+  the options of XKB, among them the keys that switch the layout (`grp:...`).
+- Without `layout` the shell does not touch the keyboard, so what the X server
+  has (from `/etc/default/keyboard`, `localectl` or the configuration of Xorg)
+  stays.
+- With it, tiny-shell runs `setxkbmap` when it starts and whenever it is told to
+  read the settings again (`tiny-shell --reload`), so `setxkbmap` has to be
+  installed (every X installation has it, in the package `setxkbmap` or
+  `x11-xkb-utils`). The shortcuts of the shell follow the layout.
+- The names of the layouts and the variants are in
+  `/usr/share/X11/xkb/rules/evdev.lst`. A name has letters, digits, `_`, `-` and
+  `:` and does not start with `-`.
+
+The section Keyboard of `tiny-settings` sets all of it (see
+[Applications](applications.md#settings)). Alt+Shift as the key that
+switches the layout also catches the Alt+Shift+Tab of the window switcher, so
+Caps Lock, Win+Space or another key is a better choice.
 
 ## The clock
 
@@ -406,6 +446,6 @@ the same as `kill -HUP` of its process (the process is found through
 `_NET_WM_PID` of the window `_NET_SUPPORTING_WM_CHECK`, so it works on the
 computer where tiny-shell runs). What changes at once: the colors (`[theme]
 style`), the favorites, the commands, the wallpaper, the clock, the system tray,
-the mode of the dock, `[xft]` and what the programs are told by XSETTINGS. The
+the mode of the dock, the keyboard, `[xft]` and what the programs are told by XSETTINGS. The
 scale and the font of the shell itself need a restart (a message says so).
 `SIGTERM` and `SIGINT` end tiny-shell.

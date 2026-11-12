@@ -22,7 +22,10 @@ and [The system tray](configuration.md#the-system-tray)).
 | F11 | fullscreen |
 | Alt + left button, or Super + left button | move a window by any point of it |
 
-The shortcuts of the shell follow a change of the keyboard layout. Alt+; is
+The same list is in `tiny-settings`, in the section Keyboard, where the layouts
+of the keyboard and the keys that switch them are set too (see
+[The keyboard](configuration.md#the-keyboard)). The shortcuts of the shell
+follow a change of the keyboard layout. Alt+; is
 taken only from the keys that type a semicolon without Shift or AltGr (in every
 group of the layout), so Alt with the other keys stays for the applications.
 

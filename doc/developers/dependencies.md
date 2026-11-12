@@ -20,6 +20,11 @@
 - **crypt()** (libcrypt: in the C library of musl and the BSD systems, a library
   of its own with glibc, which comes with its development files). Only
   `tiny-lock-pwcheck` links it, to compare a password with a hash.
+- Programs of the system that are run, not linked: `xrandr` for the position of
+  the secondary monitor and `setxkbmap` for the layouts of the keyboard (the
+  compilation of a keymap is `xkbcomp`'s work and is not worth a library of
+  ours). They are used only when the settings ask for it, and a message says
+  when one is missing.
 - Prefer a small vendored single-file library (public domain or permissive,
   e.g. `stb_image.h`) over a new shared library.
 - Vendored libraries live in `lib/third_party/` unchanged, with their licence

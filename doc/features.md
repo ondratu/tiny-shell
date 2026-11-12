@@ -63,6 +63,10 @@ comparison with other window managers is in the [comparison](comparison.md).
   give `;` with a modifier, stays for the applications. The shortcuts of the
   shell (Alt+Tab, Alt+F2, Alt+F4, Alt+Space, Alt+; and Super) follow a change of the
   keyboard layout.
+- **Keyboard:** `[keyboard]` sets the layouts (up to four, with their variants)
+  and the keys that switch them, the shell applies it with `setxkbmap` at the
+  start and on `--reload`; `tiny-settings` has a list of the layouts of the
+  system and a list of the shortcuts of the shell.
 - **Multiple monitors:** the monitors come from RandR and are numbered from the
   left; the panel, the dock, the launcher and the dialogs are on the primary one
   (chosen in the settings), a window is maximized and made fullscreen on its own
