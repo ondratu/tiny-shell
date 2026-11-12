@@ -1,0 +1,55 @@
+#!/bin/sh
+# The session of tiny-shell: what a session needs before the window manager
+# starts, then the window manager itself. A display manager runs it from
+# share/xsessions/tiny-shell.desktop; with startx or xinit end ~/.xinitrc with
+#
+#     exec tiny-shell-session
+#
+# What the user wants in every session goes to the file
+# ${XDG_CONFIG_HOME:-~/.config}/tiny-shell/environment, which is read as a shell
+# script (export variables there, start what must run before the window
+# manager). The programs that start with the session belong to ~/.config/autostart,
+# tiny-shell starts them.
+
+# The desktop that the autostart files name in OnlyShowIn and NotShowIn. A
+# display manager sets it from DesktopNames of the session file.
+: "${XDG_CURRENT_DESKTOP:=tiny-shell}"
+: "${XDG_SESSION_DESKTOP:=tiny-shell}"
+export XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
+
+# A session is not a login shell, so the profile may not have added the
+# programs that the user installed
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) PATH="$HOME/.local/bin:$PATH" ;;
+esac
+export PATH
+
+# The applications and the icons of the packages. The specification names only
+# /usr/local/share and /usr/share; other systems install elsewhere (pkgsrc
+# uses /usr/pkg/share).
+if [ -z "$XDG_DATA_DIRS" ]; then
+    for dir in /usr/local/share /usr/pkg/share /usr/share; do
+        [ -d "$dir" ] && XDG_DATA_DIRS="${XDG_DATA_DIRS:+$XDG_DATA_DIRS:}$dir"
+    done
+    export XDG_DATA_DIRS
+fi
+
+user_file="${XDG_CONFIG_HOME:-$HOME/.config}/tiny-shell/environment"
+if [ -r "$user_file" ]; then
+    # shellcheck disable=SC1090
+    . "$user_file"
+fi
+
+# The window manager next to this script (a build directory, a program that is
+# not in PATH), else the one of PATH
+shell="$(dirname "$0")/tiny-shell"
+[ -x "$shell" ] || shell=tiny-shell
+
+# The programs of the session that want a bus (GTK, notifications) find it in
+# the environment. A system that has none for the session gets one when
+# dbus-run-session is there; without it there is none, and nothing needs it.
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && command -v dbus-run-session >/dev/null 2>&1; then
+    exec dbus-run-session -- "$shell" "$@"
+fi
+exec "$shell" "$@"

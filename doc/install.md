@@ -71,6 +71,9 @@ The files:
 - `share/applications`: the desktop files of `tiny-settings`, `tiny-fonts` and
   `tiny-about`, so that the launcher lists the first two and the dock finds the
   icons of their windows (`StartupWMClass`).
+- `bin/tiny-shell-session`, the script that starts a session, and
+  `share/xsessions/tiny-shell.desktop`, which puts "Tiny Shell" in the list of
+  sessions of the display managers (see [Starting a session](#starting-a-session)).
 - `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark
   style.
@@ -91,6 +94,43 @@ so you can change it freely; see the script for `local/env.sh`):
 tools/run-xephyr.sh
 ```
 
-To use tiny-shell as your real window manager, run `exec build/tiny-shell` at
-the end of your `~/.xinitrc`. Set `scale` (for example `1.5` or `2`) in the
+To use tiny-shell as your real window manager, see
+[Starting a session](#starting-a-session). Set `scale` (for example `1.5` or `2`) in the
 configuration file to scale the theme on a high-DPI screen.
+
+## Starting a session
+
+**A display manager** (GDM, LightDM, SDDM, XDM...) lists "Tiny Shell" among the
+sessions after `make install` (the file `share/xsessions/tiny-shell.desktop`).
+Choose it on the login screen. Some display managers read the list only when
+they start, so restart one that does not show it. A display manager that does
+not look in `PREFIX/share/xsessions` needs the file in `/usr/share/xsessions`
+(install with `PREFIX=/usr`).
+
+**startx or xinit:** end `~/.xinitrc` with
+
+```sh
+exec tiny-shell-session
+```
+
+Both ways run the script `tiny-shell-session`, which prepares what a session
+needs and starts the window manager (it is what the `openbox-session` script of
+Openbox is, and the `gnome-session` of GNOME is more than that). It
+
+- names the desktop (`XDG_CURRENT_DESKTOP=tiny-shell`) unless the display
+  manager did, so the programs that start with the session know who is asking
+  (`OnlyShowIn` of their autostart files),
+- adds `~/.local/bin` to `PATH` and the usual directories to `XDG_DATA_DIRS`
+  when it is not set, so the launcher finds the programs and the applications
+  that the user installed (`/usr/pkg/share` on NetBSD too),
+- reads `~/.config/tiny-shell/environment` (or in `$XDG_CONFIG_HOME`) as a shell
+  script, where you export variables for the whole session
+  (`export GDK_SCALE=2`, `export EDITOR=vim`) or run what must be before the
+  window manager (`setxkbmap cz`, `xset r rate 250 40`),
+- starts a session bus with `dbus-run-session` when the system gave none and the
+  program is installed (a session that needs no bus works without it), and
+- ends in `exec tiny-shell`, so the session lasts as long as the window manager
+  and ends with its logout.
+
+The arguments are passed to `tiny-shell`. To start another window manager from
+the same login, run `tiny-shell --replace` in a terminal.

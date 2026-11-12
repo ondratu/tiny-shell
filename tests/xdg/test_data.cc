@@ -38,6 +38,21 @@ TEST(DataTest, the_desktop_files_are_applications_with_an_icon_that_is_there)
     EXPECT_EQ(found, 3);
 }
 
+TEST(DataTest, a_display_manager_starts_the_session_script)
+{
+    const auto entry = tiny::xdg::read_desktop_entry(
+            (data / "xsessions/tiny-shell.desktop").string(), "");
+
+    if (!entry) {
+        FAIL() << "the file was not read";
+    }
+    EXPECT_EQ(entry->type, "Application");
+    EXPECT_EQ(entry->name, "Tiny Shell");
+    EXPECT_EQ(entry->exec, "tiny-shell-session");
+    EXPECT_EQ(entry->try_exec, "tiny-shell-session");
+    EXPECT_TRUE(fs::exists("src/tiny-shell-session"));
+}
+
 TEST(DataTest, the_icons_that_the_shell_draws_are_in_both_colors)
 {
     for (const char* name :

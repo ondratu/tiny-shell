@@ -58,8 +58,9 @@ tools/run-xephyr.sh       # try it in a nested X server, the safest way
 sudo make install         # into /usr/local
 ```
 
-To use it as your window manager, run `exec tiny-shell` at the end of your
-`~/.xinitrc`. More is in [Installation](doc/install.md).
+To use it as your window manager, choose "Tiny Shell" on the login screen of a
+display manager, or end your `~/.xinitrc` with `exec tiny-shell-session`. More is
+in [Installation](doc/install.md#starting-a-session).
 
 ## Contributing
 

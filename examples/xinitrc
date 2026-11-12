@@ -1,4 +1,6 @@
-# Example session for tiny-shell, started by tools/run-xephyr.sh.
+# Example session for tiny-shell, started by tools/run-xephyr.sh. A real
+# ~/.xinitrc only needs `exec tiny-shell-session`: that script (and the
+# autostart files of tiny-shell) does what is below, and starts the shell.
 # The script copies this file to local/xinitrc (ignored by git) on its first
 # run; change the copy as you like.
 export GDK_BACKEND=x11
