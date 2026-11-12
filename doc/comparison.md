@@ -83,7 +83,8 @@ describe the last releases that had it.
 | Clock | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Wallpaper | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Settings application | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
-| Keyboard and mouse settings | ◔ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Keyboard layouts settings | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
+| Mouse settings | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Logout, restart and shutdown dialog | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Autostart of applications (XDG Autostart) | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ |
 | Saving and restoring the session (XSMP, [more](session.md#saving-the-session)) | ? | ✓ | ✗ | ✗ | ✓ | ✓ | ✗ |

@@ -47,6 +47,14 @@ settings of GNOME:
   and Confirm (off by default: a dialog with a countdown before Logout,
   Restart and Shutdown; the programs are asked to close either way), see
   [The session](session.md).
+- **Keyboard:** Layouts (a list of all the layouts and variants of the system,
+  like `Czech (QWERTY)`: Space or a click chooses one, the letters that are typed
+  find a name, up to four; they are numbered in the order of switching and the
+  first one is used at the start), Switch (the keys that switch the layout: Caps
+  Lock, Win+Space, Ctrl+Shift, Alt+Shift and others, or None) and Shortcuts (a
+  list of the keys of the shell, only to look at), see
+  [The keyboard](configuration.md#the-keyboard). Save sets the keyboard at
+  once; without a layout chosen the keyboard stays as the system has it.
 - **Displays:** the primary and the secondary monitor (a choice of the monitors
   that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
   one is (Keep, Right, Left, Above or Below the primary one). While this section
@@ -96,11 +104,13 @@ the theme is back after the next login.
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
 `font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`, `[launcher] style`, `[lock] style`,
 `[commands] terminal`, `[xft] antialias`,
-`hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]` ...) to the file of
+`hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]`, `[keyboard]` ...) to the file of
 the user, so the others still come from the global file, in the way that is
 described in [Configuration](configuration.md) (the comments of the file are lost), and closes the program.
 Cancel or Escape closes it and writes nothing. tiny-shell reads the file only
-when it starts, so a change of the rest is seen after you log out and in again.
+when it starts, so a change of the rest is seen after you log out and in again
+(or after `tiny-shell --reload`); only a change of the keyboard makes Save ask
+the shell to read the file, so that the layouts are set at once.
 
 ## Fonts
 

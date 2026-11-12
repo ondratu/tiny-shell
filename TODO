@@ -252,10 +252,14 @@ next steps:
   `SIZE_KEYBOARD` and `MOVE_KEYBOARD`), the menu of a minimized window from its icon in the
   dock.
 - More in `tiny-settings` (new sections, the model of `lib/app/settings_form.*`):
-  the keyboard and the mouse (the layout, the repeat of keys, the speed of the
-  pointer, the buttons for the left hand: `XkbSetControls`,
-  `XChangePointerControl`), and the default applications (terminal is there;
-  the browser and the file manager through `xdg-open` and `mimeapps.list`).
+  the repeat of keys and the mouse (the speed of the pointer, the buttons for
+  the left hand: `XkbSetControls`, `XChangePointerControl`; they go to the
+  section Keyboard and a new one), and the default applications (terminal is
+  there; the browser and the file manager through `xdg-open` and
+  `mimeapps.list`).
+- A keyboard layout indicator in the panel (`cz`, `us`: `XkbStateNotify` and
+  `XkbGetState`), a click switches to the next layout (`XkbLockGroup`); the
+  layouts themselves are set in `tiny-settings`, see `[keyboard]`.
 - Startup notification, what is left (the shell and other launchers start a
   sequence, the pointer is busy until the window comes or 15 seconds pass, see
   doc/usage.md): the dock marks the icon of an application that is starting
