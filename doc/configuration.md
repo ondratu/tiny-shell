@@ -94,6 +94,9 @@ dpms = yes
 # Start the programs of ~/.config/autostart and /etc/xdg/autostart with the
 # session (see the Session page): yes (the default) or no
 autostart = yes
+# Ask before the logout, the restart and the shutdown (a dialog with a countdown
+# of a minute): yes (the default) or no. The programs are asked to close either way.
+confirm = yes
 
 [panel]
 # The clock at the right end of the panel: a format of strftime(); empty is

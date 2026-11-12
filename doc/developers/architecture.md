@@ -17,6 +17,12 @@
   `wm::shell_theme`) and the handler table are global today; new code takes what
   it needs as an argument (like `LauncherLayout::compute()` takes the theme),
   so that it can be tested and the globals can be removed later.
+- **The end of a session is a state, not an exit.** The logout, the restart and
+  the shutdown go through `Manager::end_session()`: the question, the
+  `WM_DELETE_WINDOW` of every window and the wait for them are the phases of
+  `SessionEnd` (without X, with the texts of the dialog) driven by one timer of
+  the loop. Nothing sets `running = false` for a logout before the windows are
+  closed (`SIGTERM` is the way to end at once).
 - **Actions have names.** What a menu item, a key or a script can ask for is
   registered by name in the `ActionRegistry` of the manager ("logout",
   "run-dialog", "theme-toggle"); do not connect a new menu item to a private
