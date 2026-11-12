@@ -37,6 +37,7 @@ NAV = [
         ("usage.md", "Using the shell"),
         ("configuration.md", "Configuration"),
         ("applications.md", "Applications"),
+        ("session.md", "Session"),
         ("lock.md", "Screen lock"),
     ]),
     ("Project", [

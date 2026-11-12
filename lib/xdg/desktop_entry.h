@@ -32,12 +32,26 @@ struct DesktopEntry {
     std::string startup_wm_class; //!< WM_CLASS of the windows (StartupWMClass)
     std::vector<std::string> categories;
     std::vector<std::string> keywords;
+    //! Desktops that show it (OnlyShowIn), empty for every one
+    std::vector<std::string> only_show_in;
+    //! Desktops that do not show it (NotShowIn)
+    std::vector<std::string> not_show_in;
     //! In the order of `Actions`; an action with no Name or Exec is dropped
     std::vector<DesktopAction> actions;
     bool terminal = false;
     bool startup_notify = false; //!< tells when it has started (StartupNotify)
     bool no_display = false;
     bool hidden = false;
+    //! `X-GNOME-Autostart-enabled=false`: how the settings of GNOME and others
+    //! switch off an autostart file that they do not own
+    bool autostart_enabled = true;
+
+    /**
+     * Whether the desktops `desktops` (the colon separated list of
+     * `$XDG_CURRENT_DESKTOP`) show it: `OnlyShowIn` names one of them, or is
+     * not there, and `NotShowIn` names none.
+     */
+    bool shown_in(std::string_view desktops) const;
 
     /// An application that the user wants to see in a menu or a launcher.
     bool visible() const;

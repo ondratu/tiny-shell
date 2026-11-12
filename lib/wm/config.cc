@@ -576,6 +576,13 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[theme] xsettings must be yes or no");
         }
     }
+    if (const auto value = ini.get("session", "autostart")) {
+        if (*value == "yes" || *value == "no") {
+            config.session_autostart = *value == "yes";
+        } else {
+            problem("[session] autostart must be yes or no");
+        }
+    }
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";
