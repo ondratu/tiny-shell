@@ -6298,7 +6298,7 @@ TEST_F(ManagerTest,
        the_session_ends_without_asking_and_with_the_system_commands_by_default)
 {
     // not start(): it replaces the defaults to keep the tests harmless
-    tiny::wm::Manager fresh(tiny::get_display(), root_window());
+    const tiny::wm::Manager fresh(tiny::get_display(), root_window());
     EXPECT_FALSE(fresh.session_confirm);
     EXPECT_EQ(fresh.restart_command, "systemctl reboot");
     EXPECT_EQ(fresh.shutdown_command, "systemctl poweroff");
