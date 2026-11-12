@@ -21,6 +21,10 @@ namespace tiny::xdg {
  * entry that is not an `Application` or has no `Exec`, an entry that the
  * desktops `desktops` (the value of `$XDG_CURRENT_DESKTOP`) do not show
  * (`OnlyShowIn`, `NotShowIn`) and a `TryExec` that is not found in `path`.
+ * An `AutostartCondition` (GNOME asks a setting with it: the screen reader
+ * starts only when it is switched on) keeps the file out too, because the
+ * shell has no way to check the condition and the files that have one are
+ * the optional ones.
  * `NoDisplay` does not matter: most of the files are not in a menu.
  *
  * Sorted by the name of the file, so the order is the same on every system.

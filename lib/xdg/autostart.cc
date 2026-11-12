@@ -41,6 +41,7 @@ autostart_applications(const std::vector<std::string>& config_dirs,
             seen.insert(id);
             if (entry->type != "Application" || entry->exec.empty() ||
                 entry->hidden || !entry->autostart_enabled ||
+                !entry->autostart_condition.empty() ||
                 !entry->shown_in(desktops) ||
                 (!entry->try_exec.empty() &&
                  !executable_exists(entry->try_exec, path))) {

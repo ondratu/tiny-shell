@@ -261,6 +261,7 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
     entry.only_show_in = split_list(get("OnlyShowIn"));
     entry.not_show_in = split_list(get("NotShowIn"));
     entry.autostart_enabled = get("X-GNOME-Autostart-enabled") != "false";
+    entry.autostart_condition = unescape(get("AutostartCondition"));
     for (const std::string& id : split_list(get("Actions"))) {
         const auto same = [&id](const DesktopAction& other) {
             return other.id == id;

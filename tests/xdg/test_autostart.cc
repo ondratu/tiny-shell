@@ -105,6 +105,17 @@ TEST_F(AutostartTest, the_switch_of_gnome_turns_a_file_off)
     EXPECT_EQ(ids(), std::vector<std::string>{"b.desktop"});
 }
 
+TEST_F(AutostartTest, a_file_with_a_condition_is_not_started)
+{
+    // the screen reader of GNOME: a setting says whether it runs
+    write("user", "orca.desktop",
+          "AutostartCondition=GSettings org.gnome.desktop.a11y.applications "
+          "screen-reader-enabled\n");
+    write("user", "plain.desktop");
+
+    EXPECT_EQ(ids(), std::vector<std::string>{"plain.desktop"});
+}
+
 TEST_F(AutostartTest, a_file_that_can_not_be_read_hides_nothing)
 {
     write("system", "a.desktop");
