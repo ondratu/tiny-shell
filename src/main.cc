@@ -19,6 +19,7 @@
 #include "wm/config.h"
 #include "wm/manager.h"
 #include "wm/options.h"
+#include "wm/keyboard.h"
 #include "wm/reload.h"
 #include "wm/selection.h"
 #include "wm/session_start.h"
@@ -130,6 +131,19 @@ void publish_xft(::Display* display, const tiny::wm::Config& config,
     }
 }
 
+//! Set the layouts of the keyboard with `setxkbmap`; nothing when the settings
+//! have none, so the keyboard stays as the system has it
+void apply_keyboard(const tiny::wm::Config& config, const char* program)
+{
+    const auto arguments = tiny::wm::keyboard_arguments(
+            config.keyboard_layout, config.keyboard_variant,
+            config.keyboard_options);
+    if (!arguments.empty() && tiny::spawn(arguments) < 0) {
+        fprintf(stderr, "%s: can't start setxkbmap: %s\n", program,
+                strerror(errno));
+    }
+}
+
 //! Give the manager the settings that can change while it runs. `old` is the
 //! settings that it has now, null for a manager that has none yet.
 void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
@@ -148,6 +162,11 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     manager.set_terminal(config.terminal);
     manager.set_lock_command(config.lock_command);
     manager.set_session_confirm(config.session_confirm);
+    if (old == nullptr || old->keyboard_layout != config.keyboard_layout ||
+        old->keyboard_variant != config.keyboard_variant ||
+        old->keyboard_options != config.keyboard_options) {
+        apply_keyboard(config, program);
+    }
     if (old == nullptr || old->display_dpms != config.display_dpms ||
         old->display_off_minutes != config.display_off_minutes) {
         manager.set_dpms(config.display_dpms);

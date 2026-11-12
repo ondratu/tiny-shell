@@ -17,6 +17,7 @@
 
 #include "ini.h"
 #include "text.h"
+#include "wm/keyboard.h"
 #include "xdg/application_launch.h"
 #include "xdg/dirs.h"
 
@@ -590,6 +591,25 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             problem("[session] confirm must be yes or no");
         }
     }
+    const auto read_keyboard = [&](const char* key, std::string& target,
+                                   const char* what) {
+        if (const auto value = ini.get("keyboard", key)) {
+            if (valid_keyboard_list(*value)) {
+                target = *value;
+            } else {
+                problem(what);
+            }
+        }
+    };
+    read_keyboard("layout", config.keyboard_layout,
+                  "[keyboard] layout must be names of XKB with commas "
+                  "between them");
+    read_keyboard("variant", config.keyboard_variant,
+                  "[keyboard] variant must be names of XKB with commas "
+                  "between them");
+    read_keyboard("options", config.keyboard_options,
+                  "[keyboard] options must be names of XKB with commas "
+                  "between them");
     if (const auto value = ini.get("panel", "system_tray")) {
         if (*value == "yes" || *value == "no") {
             config.system_tray = *value == "yes";
