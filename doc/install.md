@@ -113,24 +113,15 @@ not look in `PREFIX/share/xsessions` needs the file in `/usr/share/xsessions`
 exec tiny-shell-session
 ```
 
-Both ways run the script `tiny-shell-session`, which prepares what a session
-needs and starts the window manager (it is what the `openbox-session` script of
-Openbox is, and the `gnome-session` of GNOME is more than that). It
+Both ways run the script `tiny-shell-session`, which
 
-- names the desktop (`XDG_CURRENT_DESKTOP=tiny-shell`) unless the display
-  manager did, so the programs that start with the session know who is asking
-  (`OnlyShowIn` of their autostart files, see [The session](session.md)),
-- adds `~/.local/bin` to `PATH` and the usual directories to `XDG_DATA_DIRS`
-  when it is not set, so the launcher finds the programs and the applications
-  that the user installed (`/usr/pkg/share` on NetBSD too),
-- reads `~/.config/tiny-shell/environment` (or in `$XDG_CONFIG_HOME`) as a shell
-  script, where you export variables for the whole session
-  (`export GDK_SCALE=2`, `export EDITOR=vim`) or run what must be before the
-  window manager (`setxkbmap cz`, `xset r rate 250 40`),
-- starts a session bus with `dbus-run-session` when the system gave none and the
-  program is installed (a session that needs no bus works without it), and
-- ends in `exec tiny-shell`, so the session lasts as long as the window manager
-  and ends with its logout.
+- sets `XDG_CURRENT_DESKTOP=tiny-shell` (unless the display manager did),
+- adds `~/.local/bin` to `PATH` and the usual directories to `XDG_DATA_DIRS`, so
+  the launcher finds the programs and applications that you installed
+  (`/usr/pkg/share` on NetBSD too),
+- reads [`~/.config/tiny-shell/environment`](session.md#the-environment-file),
+- starts a D-Bus session bus when the system has none and `dbus-run-session` is
+  installed, and
+- starts `tiny-shell`; the session ends when it does.
 
-The arguments are passed to `tiny-shell`. To start another window manager from
-the same login, run `tiny-shell --replace` in a terminal.
+Arguments of the script are passed to `tiny-shell`.
