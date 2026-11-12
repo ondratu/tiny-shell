@@ -1238,7 +1238,10 @@ bool SettingsForm::list_view_key(Key pressed)
             if (find_.empty()) {
                 return false;
             }
-            find_.pop_back();
+            do { // a whole character of UTF-8
+                find_.pop_back();
+            } while (!find_.empty() &&
+                     (static_cast<unsigned char>(find_.back()) & 0xC0) == 0x80);
             if (!find_.empty()) {
                 find_layout();
             }

@@ -226,6 +226,9 @@ keyboard_chosen(const std::string& layouts, const std::string& variants,
         if (ids[i].empty()) {
             continue;
         }
+        if (chosen.size() == max_keyboard_layouts) {
+            break; // XKB has four groups, the form can't show more
+        }
         const std::string& variant =
                 i < variant_list.size() ? variant_list[i] : "";
         const auto found = std::find_if(

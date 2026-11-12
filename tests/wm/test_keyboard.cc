@@ -182,6 +182,13 @@ TEST(KeyboardTest, a_layout_the_system_does_not_list_is_kept)
     EXPECT_TRUE(keyboard_chosen("", "", {}).empty());
 }
 
+TEST(KeyboardTest, no_more_layouts_than_the_keyboard_has_groups_are_chosen)
+{
+    const auto chosen = keyboard_chosen("a,b,c,d,e", "", {});
+    ASSERT_EQ(chosen.size(), max_keyboard_layouts);
+    EXPECT_EQ(chosen.back().id, "d");
+}
+
 TEST(KeyboardTest, the_shortcuts_have_keys_and_an_action)
 {
     const auto shortcuts = keyboard_shortcuts();
