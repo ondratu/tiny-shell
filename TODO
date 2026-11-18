@@ -9,7 +9,7 @@ names a dependency. Every item needs a test (see CONTRIBUTING.md).
 
 ## Must
 
-Window management that other programs can rely on.
+What the rest of the work stands on.
 
 ### Repository and quality tooling (what is left)
 
@@ -17,29 +17,18 @@ Window management that other programs can rely on.
 - Require the CI jobs in the branch protection of `master` (the CI is green,
   the protection is not set).
 
-### ConfigureRequest and geometry
+## Should
 
-- From the code review: the first Tab of the run dialog reads the
-  directories of `$PATH` in the handler (move it off the event loop, like the
-  scan of the launcher); `tiny-shell --reload` trusts `_NET_WM_PID` of the check
-  window (any client of the display can change it); a reload that changes the
-  style and the XSETTINGS together publishes them twice; `sync_allows_resize`
-  asks the server for the counter at every motion.
-
-- `_NET_WM_SYNC_REQUEST` is used by the interactive resize by the edges
-  (`Window::sync_request_resize`, `SyncGate`). Left: the size that waits for
-  the client is applied at the next motion or at the end of the resize (an
-  alarm of the SYNC extension or a timer would show it as soon as the client
-  has drawn), the frame counter of the extended protocol (the second counter
-  of `_NET_WM_SYNC_REQUEST_COUNTER`), and the resize by the keyboard, by
-  `_NET_WM_MOVERESIZE` from the client and by a maximize.
+### Window geometry
 
 - Work area: the start and the end of a partial strut are ignored (the whole
-  edge is reserved); the screen size is read at each change (cache it,
-  refresh by RandR); the minimum size from the hints is not honoured when the
-  area is tiny.
-
-## Should
+  edge is reserved; it shows with several monitors); the screen size is read
+  at each change (cache it, refresh by RandR); the minimum size from the hints
+  is not honoured when the area is tiny.
+- Resize by the keyboard and the maximize do not wait for the client
+  (`_NET_WM_SYNC_REQUEST`): they are a jump, not a stream of sizes. Look at it
+  again when the keyboard resize of the window menu is made (see "Window menu"
+  in Could): it would use `Window::resize_step()`.
 
 ### Panel and shell
 

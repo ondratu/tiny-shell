@@ -14,7 +14,9 @@ comparison with other window managers is in the [comparison](comparison.md).
   - Applications that stop responding are found by `_NET_WM_PING`, and the user
     chooses to wait or to force them to quit.
   - A window that supports `_NET_WM_SYNC_REQUEST` is not given a new size by the
-    edges before it has drawn the last one.
+    edges (or by `_NET_WM_MOVERESIZE`, also windows without a frame) before it
+    has drawn the last one, and the size that waited is shown as soon as it has,
+    not at the next move of the pointer.
 - **Standards:** programs need to know nothing about tiny-shell.
   - ICCCM and EWMH: window states, types and layers; struts and a work area that
     follows docks coming and going; the active window and focus stealing
@@ -45,8 +47,8 @@ comparison with other window managers is in the [comparison](comparison.md).
   the active window and the bottom edge of the screen shows it (or it is always
   shown, or never), its bar can be half height or none, with the icons
   cut to their shape; a run dialog (Alt+F2, Tab completes the name of a program
-  from `PATH`: the first Tab adds what all the matching programs share, the next
-  ones walk through them), a full screen launcher with search (Super). Their
+  from `PATH`, read in the background when the dialog opens: the first Tab adds
+  what all the matching programs share, the next ones walk through them), a full screen launcher with search (Super). Their
   text field has a cursor (the arrows, Home, End, Delete and a click); Ctrl+V,
   Shift+Insert and the middle button paste, Ctrl+C copies the text.
 - **Window switcher:** Alt+Tab shows, while Alt is held, a panel in the middle
