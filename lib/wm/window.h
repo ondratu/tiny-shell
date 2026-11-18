@@ -458,6 +458,7 @@ class Window {
      * `WM_PROTOCOLS`) is asked to draw each size of an interactive resize and
      * is not given the next one before it has. True when there is no counter or
      * the client has answered the last request (or does not answer in time).
+     * The server is asked for the counter only while a request waits.
      */
     bool sync_allows_resize();
 
@@ -467,6 +468,9 @@ class Window {
 
     //! The next resize starts: nothing is waited for
     void sync_reset() { sync_gate.reset(); }
+
+    //! A request is waiting for the client
+    bool sync_waiting() const { return sync_gate.is_waiting(); }
 
     //! The counter of the client, None when it has none or does not use it
     XSyncCounter get_sync_counter() const { return sync_counter; }
