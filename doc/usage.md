@@ -89,6 +89,15 @@ screen (a strip of a few pixels, scaled with `[theme] scale`); it hides again
 when the pointer leaves it, but not while a menu of the dock is open or an icon
 is dragged. **on** always shows it, **off** never does.
 
+The bar under the icons can look different (`[dock] opacity` and `[dock] bar`, or
+Dock opacity and Dock bar in the Appearance of `tiny-settings`). The opacity is
+100 (the default), 75, 50, 25 or 0 percent: the less it is, the more of the
+wallpaper shows through the bar. The shell is not a compositor, so it is the
+wallpaper that is seen (the picture that `tiny-wallpaper` puts in the root
+window), never the windows; without a wallpaper it is the plain color of the
+desktop. The bar **half** is only a half of the dock high, the icons stick out
+above it, and the desktop shows between them. A new wallpaper is taken at once.
+
 The dock has one icon for every application. All the windows of an application
 (it is found by `WM_CLASS`; windows of an unknown application are
 grouped by their class) share the icon, and a small dot under it stands for

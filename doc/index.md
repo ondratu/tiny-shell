@@ -35,7 +35,9 @@ what is planned.
 
 - Not a desktop environment. No file manager, full session manager or desktop icons
   (use an external tool such as idesk if you need them).
-- Not a compositor. No transparency, shadows or animations.
+- Not a compositor. No shadows or animations, and the windows are never
+  transparent. Only the bar of the dock can be see-through: it shows the
+  wallpaper, nothing else.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not a replacement for a full GNOME or KDE session on a desktop computer.
 - Not themable to the last pixel. There is one look, which can be scaled
