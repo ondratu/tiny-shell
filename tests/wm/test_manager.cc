@@ -7450,6 +7450,33 @@ TEST_F(ManagerTest, a_change_of_the_theme_reaches_the_programs_that_run)
     manager->set_variant(tiny::Variant::Dark);
 }
 
+TEST_F(ManagerTest, a_reload_of_the_theme_and_the_fonts_tells_the_programs_once)
+{
+    start();
+    manager->set_variant(tiny::Variant::Dark);
+    manager->set_xsettings(true, theme_settings());
+    const uint32_t serial = manager->get_xsettings()->get_serial();
+
+    // what a reload does: the new settings (here another font) for the new
+    // variant, then the variant itself
+    manager->set_xsettings(
+            true,
+            [](tiny::Variant variant) {
+                return std::vector<tiny::wm::XSetting>{
+                        tiny::wm::XSetting::string(
+                                "Net/ThemeName", variant == tiny::Variant::Dark
+                                                         ? "Adwaita-dark"
+                                                         : "Adwaita"),
+                        tiny::wm::XSetting::string("Gtk/FontName", "Sans 12")};
+            },
+            tiny::Variant::Light);
+    manager->set_variant(tiny::Variant::Light);
+
+    EXPECT_EQ(manager->get_xsettings()->get_serial(), serial + 1);
+    EXPECT_EQ(theme_name_of(*manager->get_xsettings()), "Adwaita");
+    manager->set_variant(tiny::Variant::Dark);
+}
+
 TEST_F(ManagerTest, asking_for_the_settings_again_keeps_the_owner)
 {
     start();
