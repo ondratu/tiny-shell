@@ -5,6 +5,7 @@
 #include <iterator>
 #include <utility>
 
+#include "wm/dock_backdrop.h"
 #include "wm/shell_theme.h"
 #include "x_util.h"
 #include "wm/dock.h"
@@ -13,6 +14,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
+#include <X11/extensions/shape.h>
 
 namespace tiny::wm {
 
@@ -71,12 +73,21 @@ void DockButton::on_button_release(const XEvent& e, void*)
     }
 }
 
+void DockButton::paint_background(uint8_t state)
+{
+    if (see_through && state == static_cast<uint8_t>(Style::State::Normal)) {
+        XSetWindowBackgroundPixmap(display, window, ParentRelative);
+    } else {
+        XSetWindowBackground(display, window, get_style().get_bg(state));
+    }
+    XClearWindow(display, window);
+}
+
 void DockButton::on_expose(const XEvent&, void*)
 {
     const uint8_t state = get_theme_state();
 
-    XSetWindowBackground(display, window, get_style().get_bg(state));
-    XClearWindow(display, window);
+    paint_background(state);
 
     if (symbols != nullptr &&
         symbols->draw(window, "view-app-grid", width * 2 / 3,
@@ -322,9 +333,7 @@ void DockIcon::on_expose(const XEvent&, void*)
 
     const int size = shell_theme.icon; // the dots are under it
     GC gc = XCreateGC(display, window, 0, nullptr);
-    XSetWindowBackground(display, window,
-                         get_style().get_bg(get_theme_state()));
-    XClearWindow(display, window);
+    paint_background(get_theme_state());
 
     const Window* task = get_task();
     const Pixmap icon = task ? task->get_icon() : None;
@@ -531,6 +540,9 @@ Dock::Dock():
 
 Dock::~Dock()
 {
+    if (backdrop != None) {
+        XFreePixmap(display, backdrop);
+    }
     for (const DockIcon* task_icon : icons) {
         delete task_icon;
     }
@@ -674,6 +686,7 @@ void Dock::rebuild()
                 favorite ? new DockIcon(windows, favorite->id, favorite->icon)
                          : new DockIcon(windows);
         task_icon->set_icons(symbols);
+        task_icon->set_see_through(is_see_through());
         task_icon->set_draggable(favorite != nullptr);
         task_icon->on_click.connect([this, task_icon](const XEvent&) {
             if (!task_icon->get_task() && on_launch) {
@@ -689,7 +702,10 @@ void Dock::rebuild()
         task_icon->on_drop = [this](const DockIcon& dragged, int x_root) {
             drop(dragged, x_root);
         };
-        task_icon->on_cancel = [this](const DockIcon&) { mark.unmap(); };
+        task_icon->on_cancel = [this](const DockIcon&) {
+            mark.unmap();
+            update_shape();
+        };
         task_icon->track = [this](int change) { track_handler(change); };
         icons.push_back(task_icon);
         icon_x.push_back(get_start_offset() + border);
@@ -762,11 +778,13 @@ void Dock::drag(const DockIcon& dragged, int x_root)
                 border);
     mark.map();
     XRaiseWindow(display, mark.get_window());
+    update_shape(); // the mark sticks out above the half bar too
 }
 
 void Dock::drop(const DockIcon& dragged, int x_root)
 {
     mark.unmap();
+    update_shape();
     if (!on_move_favorite || !dragged.is_draggable()) {
         return;
     }
@@ -943,12 +961,14 @@ void Dock::realize(::Window parent_arg, int x, int y)
     tiny::Box::realize(parent_arg, x, y);
 
     push_back(&icon, shell_theme.dock_border, shell_theme.dock_border);
+    icon.set_see_through(is_see_through());
     mark.realize(window, 0, shell_theme.dock_border);
     menu.realize(parent_arg);
     windows_menu.realize(parent_arg);
     if (!tasks.empty() || !favorites.empty()) {
         rebuild(); // they came before the dock; it is moved by its size
     }
+    refresh_backdrop(); // when `set_surface` came before the dock
 }
 
 void Dock::set_icons(SymbolicIcons* symbolic)
@@ -982,6 +1002,7 @@ void Dock::set_screen(const tiny::Rect& monitor)
         const tiny::Rect place = area();
         XMoveWindow(display, window, place.x, place.y);
         publish_icon_geometry(place);
+        refresh_backdrop(); // the wallpaper under the dock is another one
     }
 }
 
@@ -996,7 +1017,99 @@ void Dock::resize(int w, int h)
         const tiny::Rect place = place_for(w, h);
         XMoveWindow(display, window, place.x, place.y);
         publish_icon_geometry(place);
+        refresh_backdrop();
     }
+}
+
+void Dock::set_surface(int opacity, DockBar bar)
+{
+    surface_opacity = opacity;
+    surface_bar = bar;
+    if (!is_realized) {
+        return;
+    }
+    icon.set_see_through(is_see_through());
+    for (DockIcon* task_icon : icons) {
+        task_icon->set_see_through(is_see_through());
+    }
+    refresh_backdrop();
+}
+
+void Dock::restyle()
+{
+    tiny::Box::restyle(); // the colors of the style replace the picture
+    refresh_backdrop();
+}
+
+void Dock::refresh_backdrop()
+{
+    if (!is_realized || (!is_see_through() && !surface_applied)) {
+        return; // the dock is as it was made
+    }
+    surface_applied = is_see_through();
+    if (backdrop != None) {
+        XFreePixmap(display, backdrop);
+        backdrop = None;
+    }
+    if (is_see_through()) {
+        const tiny::Rect place =
+                place_for(wanted_width > 0 ? wanted_width : width,
+                          wanted_height > 0 ? wanted_height : height);
+        const int bar_top = surface_bar == DockBar::Half ? place.height / 2 : 0;
+        backdrop = make_backdrop(display, XDefaultRootWindow(display), place,
+                                 bar_top,
+                                 get_style().get_bg(static_cast<uint8_t>(
+                                         tiny::Style::State::Normal)),
+                                 surface_opacity, shell_theme.root_background);
+    }
+    if (backdrop != None) {
+        XSetWindowBackgroundPixmap(display, window, backdrop);
+    } else {
+        XSetWindowBackground(display, window,
+                             get_style().get_bg(static_cast<uint8_t>(
+                                     tiny::Style::State::Normal)));
+    }
+    update_shape();
+    if (is_maped) {
+        XClearArea(display, window, 0, 0, 0, 0, True); // the icons repaint too
+    }
+}
+
+void Dock::update_shape()
+{
+    int event_base;
+    int error_base;
+    if (!XShapeQueryExtension(display, &event_base, &error_base)) {
+        return;
+    }
+    if (surface_bar != DockBar::Half) {
+        XShapeCombineMask(display, window, ShapeBounding, 0, 0, None,
+                          ShapeSet); // all of the window
+        return;
+    }
+    const int w = wanted_width > 0 ? wanted_width : width;
+    const int h = wanted_height > 0 ? wanted_height : height;
+    std::vector<tiny::Rect> parts;
+    const int border = shell_theme.dock_border;
+    for (size_t i = 0; i < icons.size(); ++i) {
+        parts.push_back({icon_x[i], border, icons[i]->get_width(),
+                         icons[i]->get_height()});
+    }
+    // the button is at the end of the dock
+    parts.push_back({w - border - icon.get_width(), border, icon.get_width(),
+                     icon.get_height()});
+    for (const Widget* other : {static_cast<const Widget*>(separator.get()),
+                                static_cast<const Widget*>(&mark)}) {
+        XWindowAttributes attrs;
+        if (other != nullptr && other->get_maped() &&
+            XGetWindowAttributes(display, other->get_window(), &attrs)) {
+            parts.push_back({attrs.x, attrs.y, attrs.width, attrs.height});
+        }
+    }
+    const std::vector<XRectangle> shape = half_bar_shape(w, h, parts);
+    XShapeCombineRectangles(display, window, ShapeBounding, 0, 0,
+                            const_cast<XRectangle*>(shape.data()),
+                            static_cast<int>(shape.size()), ShapeSet, Unsorted);
 }
 
 } // namespace tiny::wm

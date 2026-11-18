@@ -367,6 +367,11 @@ void Manager::set_looks(Look panel_look, Look dock_look, Look launcher_look)
     restyle_widgets();
 }
 
+void Manager::set_dock_surface(int opacity, DockBar bar)
+{
+    wm_dock.set_surface(opacity, bar);
+}
+
 void Manager::restyle_widgets()
 {
     wm_panel.restyle();
@@ -3206,6 +3211,10 @@ void Manager::update_work_area()
 void Manager::on_property_notify(const XPropertyEvent& e)
 {
     const tiny::Display& dsp = tiny::get_display();
+    if (e.window == root && e.atom == dsp._XROOTPMAP_ID) {
+        wm_dock.refresh_backdrop(); // a new wallpaper is under the dock
+        return;
+    }
     const auto dock = wm_docks.find(e.window);
     if (dock == wm_docks.end() ||
         (e.atom != dsp._NET_WM_STRUT && e.atom != dsp._NET_WM_STRUT_PARTIAL)) {
