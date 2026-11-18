@@ -1064,6 +1064,26 @@ TEST_F(WindowTest, a_request_waits_for_the_client_to_draw)
     EXPECT_TRUE(window->sync_allows_resize());
 }
 
+TEST_F(WindowTest, the_server_is_asked_only_while_a_request_waits)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    auto window = manage();
+    EXPECT_FALSE(window->sync_waiting());
+    EXPECT_TRUE(window->sync_allows_resize()); // nothing asked, nothing waits
+
+    window->sync_request_resize();
+    EXPECT_TRUE(window->sync_waiting());
+    EXPECT_FALSE(window->sync_allows_resize()); // the client has not drawn
+    EXPECT_TRUE(window->sync_waiting());
+
+    client.set_counter(counter, 1);
+    EXPECT_TRUE(window->sync_allows_resize());
+    EXPECT_FALSE(window->sync_waiting()); // answered: the next check is free
+    XSyncDestroyCounter(client.display, counter);
+    client.sync();
+    EXPECT_TRUE(window->sync_allows_resize());
+}
+
 TEST_F(WindowTest, the_next_request_has_the_next_number)
 {
     const XSyncCounter counter = client.set_sync_counter();

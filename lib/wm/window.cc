@@ -1388,8 +1388,8 @@ void Window::update_sync_counter()
 
 bool Window::sync_allows_resize()
 {
-    if (sync_counter == None) {
-        return true;
+    if (sync_counter == None || !sync_gate.is_waiting()) {
+        return true; // nothing was asked, so there is nothing to ask the server
     }
     // the client can destroy its counter any time: BadCounter is no fault
     XSync(dsp, False); // older errors belong to the handler of the manager
@@ -1406,7 +1406,11 @@ bool Window::sync_allows_resize()
                                         XSyncValueHigh32(value)))
                                 << 32) |
                                XSyncValueLow32(value);
-    return sync_gate.is_open(now_value, SyncGate::Clock::now());
+    if (!sync_gate.is_open(now_value, SyncGate::Clock::now())) {
+        return false;
+    }
+    sync_gate.reset(); // answered (or not waited for): no more questions
+    return true;
 }
 
 void Window::sync_request_resize()
