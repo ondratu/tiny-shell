@@ -1,6 +1,8 @@
 #include <cerrno>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 #include "spawn.h"
 #include "theme.h"
@@ -69,7 +71,7 @@ void RunDialog::realize(::Window root, int, int)
 
 void RunDialog::popup()
 {
-    programs_known = false;
+    read_programs();
     if (screen.width > 0 && screen.height > 0) {
         XMoveWindow(display, window, screen.x + (screen.width - width) / 2,
                     screen.y + (screen.height - height) / 2);
@@ -85,16 +87,38 @@ void RunDialog::popover(Object*, const XEvent&, void*)
     unmap();
 }
 
+bool RunDialog::programs_ready() const
+{
+    return programs_taken ||
+           (programs.valid() && programs.wait_for(std::chrono::seconds(0)) ==
+                                        std::future_status::ready);
+}
+
+void RunDialog::read_programs()
+{
+    if (programs.valid()) {
+        if (programs.wait_for(std::chrono::seconds(0)) !=
+            std::future_status::ready) {
+            return; // still reading, the list is as fresh as it gets
+        }
+        programs = {}; // it was not used, read it again
+    }
+    programs_taken = false;
+    if (list_programs) {
+        programs = std::async(std::launch::async, list_programs);
+        return;
+    }
+    // the environment is read here, getenv is not for other threads
+    const char* path = getenv("PATH");
+    programs = std::async(std::launch::async, list_commands,
+                          std::string(path ? path : ""));
+}
+
 void RunDialog::complete()
 {
-    if (!programs_known) {
-        if (list_programs) {
-            completer.set_commands(list_programs());
-        } else {
-            const char* path = getenv("PATH");
-            completer.set_commands(list_commands(path ? path : ""));
-        }
-        programs_known = true;
+    if (!programs_taken && programs_ready()) {
+        completer.set_commands(programs.get());
+        programs_taken = true;
     }
     const std::string text = entry.get_text();
     const std::string completed = completer.next(text);
