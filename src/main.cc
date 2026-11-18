@@ -149,6 +149,7 @@ void apply_keyboard(const tiny::wm::Config& config, const char* program)
 void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
                   const tiny::wm::Config* old, const char* program)
 {
+    const bool style_changed = old != nullptr && old->style != config.style;
     // The programs are told the look, the style and the fonts together: this
     // goes before set_variant(), which then finds it published (a reload that
     // changes both would publish twice). A change of the theme or the fonts
@@ -159,8 +160,9 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
             [config](tiny::Variant variant) {
                 return tiny::wm::xsettings_of(config, variant);
             },
-            config.style);
-    if (old != nullptr && old->style != config.style) {
+            style_changed ? std::optional<tiny::Variant>(config.style)
+                          : std::nullopt);
+    if (style_changed) {
         manager.set_variant(config.style);
     }
     if (old != nullptr && (old->panel_style != config.panel_style ||

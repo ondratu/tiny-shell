@@ -301,6 +301,37 @@ TEST_F(RunDialogTest, the_programs_are_read_once_for_every_tab_of_a_showing)
     EXPECT_EQ(d.reads, 1);
 }
 
+TEST_F(RunDialogTest, tab_does_not_offer_the_programs_of_the_last_showing)
+{
+    tiny::wm::RunDialog dialog;
+    std::atomic<bool> slow = false;
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    dialog.list_programs = [&slow, released] {
+        if (slow) {
+            released.wait();
+        }
+        return std::vector<std::string>{"gdb"};
+    };
+    dialog.realize(root_window());
+    dialog.popup();
+    for (int i = 0; i < 2000 && !dialog.programs_ready(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    type_text(entry_of(dialog), "g");
+    type_key(entry_of(dialog), XK_Tab);
+    ASSERT_EQ(dialog.get_text(), "gdb ");
+    type_key(entry_of(dialog), XK_Escape);
+
+    slow = true; // the second showing reads slowly
+    dialog.popup();
+    type_text(entry_of(dialog), "g");
+    type_key(entry_of(dialog), XK_Tab);
+
+    EXPECT_EQ(dialog.get_text(), "g"); // not completed from the old list
+    release.set_value();
+}
+
 TEST_F(RunDialogTest, popup_does_not_wait_for_a_slow_reading)
 {
     tiny::wm::RunDialog dialog;
