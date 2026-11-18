@@ -93,7 +93,6 @@ class SettingsForm {
         Theme,       //!< a choice: the style of the theme, dark or light
         PanelStyle,  //!< a choice: the panel follows the theme, light or dark
         DockStyle,   //!< a choice: the same for the dock
-        DockOpacity, //!< a choice: how much of the bar of the dock is seen
         DockBar,     //!< a choice: the bar of the dock is full or half height
         LockStyle,   //!< a choice: the same for the lock screen
         LauncherStyle,    //!< a choice: the same for the launcher
@@ -168,9 +167,7 @@ class SettingsForm {
         std::string theme{};
         std::string panel_style{};
         std::string dock_style{};
-        //! The bar of the dock: how much of it is seen ("" is all, then 75,
-        //! 50, 25 and 0 percent) and its height ("" is full, then "half")
-        std::string dock_opacity{};
+        //! The height of the bar of the dock ("" is full, then "half")
         std::string dock_bar{};
         std::string lock_style{};     //!< like the panel: "", light, dark
         std::string launcher_style{}; //!< the same
@@ -505,7 +502,6 @@ class SettingsForm {
         ThemeField,
         PanelStyleField,
         DockStyleField,
-        DockOpacityField,
         DockBarField,
         LockStyleField,
         LauncherStyleField,
@@ -571,7 +567,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 32> fields_;
+    std::array<TextField, 31> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};

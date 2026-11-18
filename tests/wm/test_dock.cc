@@ -2227,10 +2227,38 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
               0);
 }
 
-// ---- the see-through bar ----
+// ---- the half bar ----
 
-class DockSurfaceTest : public DockTest {
+class DockBarTest : public DockTest {
   protected:
+    void TearDown() override
+    {
+        if (pixmap != None) {
+            XRenderFreePicture(tiny::get_display(), picture);
+            XFreePixmap(tiny::get_display(), pixmap);
+        }
+    }
+
+    //! An icon of the size of the dock icons, opaque on the left half and
+    //! transparent on the right half
+    WmWindow::AppIcon half_icon()
+    {
+        tiny::image::Image image;
+        image.width = icon_size();
+        image.height = icon_size();
+        const auto side = static_cast<size_t>(icon_size());
+        image.pixels.assign(side * side, 0);
+        for (size_t y = 0; y < side; ++y) {
+            for (size_t x = 0; x < side / 2; ++x) {
+                image.pixels[y * side + x] = 0xFF00FF00U;
+            }
+        }
+        pixmap = tiny::image::create_pixmap(tiny::get_display(), root_window(),
+                                            image);
+        picture = tiny::image::create_argb_picture(tiny::get_display(), pixmap);
+        return {picture, icon_size(), icon_size()};
+    }
+
     //! The rectangles that the server has for the shape of the dock (in
     //! bands, so not the ones that were given)
     std::vector<XRectangle> shape()
@@ -2245,6 +2273,16 @@ class DockSurfaceTest : public DockTest {
         return result;
     }
 
+    bool in_shape(int x, int y)
+    {
+        const auto rectangles = shape();
+        return std::any_of(rectangles.begin(), rectangles.end(),
+                           [&](const XRectangle& r) {
+                               return x >= r.x && x < r.x + r.width &&
+                                      y >= r.y && y < r.y + r.height;
+                           });
+    }
+
     int top_of_shape()
     {
         int top = dock.get_height();
@@ -2253,11 +2291,14 @@ class DockSurfaceTest : public DockTest {
         }
         return top;
     }
+
+    Pixmap pixmap = None;
+    Picture picture = None;
 };
 
-TEST_F(DockSurfaceTest, an_opaque_full_bar_is_the_whole_window)
+TEST_F(DockBarTest, the_full_bar_is_the_whole_window)
 {
-    dock.set_surface(100, tiny::wm::DockBar::Full);
+    dock.set_bar(tiny::wm::DockBar::Full);
     pump_events();
 
     const auto rectangles = shape();
@@ -2266,12 +2307,12 @@ TEST_F(DockSurfaceTest, an_opaque_full_bar_is_the_whole_window)
     EXPECT_EQ(rectangles[0].height, dock.get_height());
 }
 
-TEST_F(DockSurfaceTest, the_half_bar_leaves_the_icons_sticking_out_above_it)
+TEST_F(DockBarTest, the_half_bar_leaves_the_button_sticking_out_above_it)
 {
-    dock.set_surface(100, tiny::wm::DockBar::Half);
+    dock.set_bar(tiny::wm::DockBar::Half);
     pump_events();
 
-    EXPECT_EQ(top_of_shape(), border()) << "the button is above the bar";
+    EXPECT_EQ(top_of_shape(), border());
     const auto rectangles = shape();
     EXPECT_TRUE(std::any_of(rectangles.begin(), rectangles.end(),
                             [&](const XRectangle& r) {
@@ -2281,86 +2322,62 @@ TEST_F(DockSurfaceTest, the_half_bar_leaves_the_icons_sticking_out_above_it)
             << "and the bar is under it, as wide as the dock";
 }
 
-TEST_F(DockSurfaceTest, the_full_bar_gives_the_shape_back)
+TEST_F(DockBarTest, the_full_bar_gives_the_shape_back)
 {
-    dock.set_surface(100, tiny::wm::DockBar::Half);
-    dock.set_surface(100, tiny::wm::DockBar::Full);
+    dock.set_bar(tiny::wm::DockBar::Half);
+    dock.set_bar(tiny::wm::DockBar::Full);
     pump_events();
 
     EXPECT_EQ(shape().size(), 1u);
 }
 
-TEST_F(DockSurfaceTest, a_see_through_bar_keeps_the_whole_window)
+TEST_F(DockBarTest, the_bar_set_before_the_dock_is_realized_counts)
 {
-    FakeClient c;
-    WmWindow* w = manage(c);
-    add(w);
-    dock.set_surface(50, tiny::wm::DockBar::Full);
-    pump_events();
-
-    EXPECT_EQ(shape().size(), 1u);
-    EXPECT_TRUE(dock.contains(w));
-}
-
-TEST_F(DockSurfaceTest, an_icon_that_comes_is_in_the_shape_of_the_half_bar)
-{
-    dock.set_surface(100, tiny::wm::DockBar::Half);
-    pump_events();
-    FakeClient c;
-    WmWindow* w = manage(c);
-    add(w);
-
-    const auto rectangles = shape();
-    EXPECT_TRUE(std::any_of(
-            rectangles.begin(), rectangles.end(), [&](const XRectangle& r) {
-                return r.y == border() && r.x + r.width >= dock.get_width() / 2;
-            }));
-    EXPECT_EQ(top_of_shape(), border());
-}
-
-TEST_F(DockSurfaceTest, the_shape_has_the_button_where_the_server_has_it)
-{
-    FakeClient c;
-    WmWindow* w = manage(c);
-    add(w);
-    dock.set_surface(100, tiny::wm::DockBar::Half);
-    pump_events();
-
-    XWindowAttributes attrs;
-    ASSERT_NE(XGetWindowAttributes(tiny::get_display(),
-                                   dock.get_menu_button().get_window(), &attrs),
-              0);
-    const auto rectangles = shape();
-    EXPECT_TRUE(std::any_of(rectangles.begin(), rectangles.end(),
-                            [&](const XRectangle& r) {
-                                return r.y == attrs.y && r.x == attrs.x &&
-                                       r.width == attrs.width;
-                            }))
-            << "not a pixel to the side";
-}
-
-TEST_F(DockSurfaceTest, refreshing_the_backdrop_of_a_plain_dock_does_nothing)
-{
-    dock.refresh_backdrop();
-    dock.restyle();
-    pump_events();
-
-    EXPECT_EQ(shape().size(), 1u);
-}
-
-TEST(DockSurfaceBeforeTest, the_surface_set_before_the_dock_is_realized_counts)
-{
-    tiny::wm::Dock dock;
-    dock.set_surface(100, tiny::wm::DockBar::Half);
-    dock.realize(root_window(), 0, 0);
+    tiny::wm::Dock other;
+    other.set_bar(tiny::wm::DockBar::Half);
+    other.realize(root_window(), 0, 0);
 
     int count = 0;
     int ordering = 0;
     XRectangle* list =
-            XShapeGetRectangles(tiny::get_display(), dock.get_window(),
+            XShapeGetRectangles(tiny::get_display(), other.get_window(),
                                 ShapeBounding, &count, &ordering);
     XFree(list);
     EXPECT_GE(count, 2);
+}
+
+TEST_F(DockBarTest, an_icon_has_its_glyph_above_the_bar_and_nothing_around_it)
+{
+    dock.set_bar(tiny::wm::DockBar::Half);
+    dock.set_favorites({{"a.desktop", half_icon()}});
+    pump_events();
+
+    const int left = border() + 2;
+    const int right = border() + icon_size() - 3;
+    EXPECT_TRUE(in_shape(left, border() + 2)) << "the opaque half";
+    EXPECT_FALSE(in_shape(right, border() + 2)) << "the transparent half";
+    EXPECT_TRUE(in_shape(right, dock.get_height() - 3)) << "the bar is there";
+}
+
+TEST_F(DockBarTest, an_icon_without_a_known_glyph_is_a_square)
+{
+    dock.set_bar(tiny::wm::DockBar::Half);
+    dock.set_favorites({{"a.desktop", {}}});
+    pump_events();
+
+    EXPECT_TRUE(in_shape(border() + icon_size() - 3, border() + 2));
+}
+
+TEST_F(DockBarTest, a_window_that_comes_is_in_the_shape_of_the_half_bar)
+{
+    dock.set_bar(tiny::wm::DockBar::Half);
+    pump_events();
+    const auto before = shape().size();
+    FakeClient c;
+    add(manage(c));
+
+    EXPECT_NE(shape().size(), before);
+    EXPECT_EQ(top_of_shape(), border());
 }
 
 } // namespace

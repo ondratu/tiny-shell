@@ -88,7 +88,6 @@ constexpr SettingsForm::Field fields[] = {
         SettingsForm::Field::Theme,
         SettingsForm::Field::PanelStyle,
         SettingsForm::Field::DockStyle,
-        SettingsForm::Field::DockOpacity,
         SettingsForm::Field::DockBar,
         SettingsForm::Field::LockStyle,
         SettingsForm::Field::LauncherStyle,
@@ -142,7 +141,6 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.theme),
             TextField(initial.panel_style),
             TextField(initial.dock_style),
-            TextField(initial.dock_opacity),
             TextField(initial.dock_bar),
             TextField(initial.lock_style),
             TextField(initial.launcher_style),
@@ -216,7 +214,6 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::Theme),
             text(Field::PanelStyle),
             text(Field::DockStyle),
-            text(Field::DockOpacity),
             text(Field::DockBar),
             text(Field::LockStyle),
             text(Field::LauncherStyle),
@@ -260,9 +257,9 @@ SettingsForm::section_fields(Section section)
                                              Field::Style,   Field::Antialias,
                                              Field::Hinting, Field::Rgba};
     static const std::vector<Field> appearance = {
-            Field::Theme,       Field::PanelStyle, Field::DockStyle,
-            Field::DockOpacity, Field::DockBar,    Field::LauncherStyle,
-            Field::Scale,       Field::Wallpaper,  Field::WallpaperMode};
+            Field::Theme,     Field::PanelStyle,    Field::DockStyle,
+            Field::DockBar,   Field::LauncherStyle, Field::Scale,
+            Field::Wallpaper, Field::WallpaperMode};
     static const std::vector<Field> desktop = {Field::Dock, Field::ClockFormat};
     static const std::vector<Field> displays = {Field::PrimaryMonitor,
                                                 Field::SecondaryMonitor,
@@ -343,8 +340,6 @@ const char* SettingsForm::hint(Field field)
         case Field::LockStyle:
         case Field::LauncherStyle:
             return "Or stay light or dark in any theme.";
-        case Field::DockOpacity:
-            return "The wallpaper shows through the bar of the dock.";
         case Field::DockBar:
             return "Half height: the icons stick out above the bar.";
         case Field::PrimaryMonitor:
@@ -424,9 +419,9 @@ bool SettingsForm::is_choice(Field field)
            field == Field::Rgba || field == Field::WallpaperMode ||
            field == Field::Dock || field == Field::Theme ||
            field == Field::PanelStyle || field == Field::DockStyle ||
-           field == Field::DockOpacity || field == Field::DockBar ||
-           field == Field::LockStyle || field == Field::LauncherStyle ||
-           field == Field::PrimaryMonitor || field == Field::SecondaryMonitor ||
+           field == Field::DockBar || field == Field::LockStyle ||
+           field == Field::LauncherStyle || field == Field::PrimaryMonitor ||
+           field == Field::SecondaryMonitor ||
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff || field == Field::DisplayDpms ||
            field == Field::SessionAutostart || field == Field::SessionConfirm ||
@@ -497,9 +492,6 @@ wm::XftChoices SettingsForm::choices_of(Field field)
 {
     if (field == Field::Dock) {
         return wm::dock_choices();
-    }
-    if (field == Field::DockOpacity) {
-        return wm::dock_opacity_choices();
     }
     if (field == Field::DockBar) {
         return wm::dock_bar_choices();
@@ -603,10 +595,6 @@ std::string SettingsForm::problem(Field field) const
             return wm::valid_dock_choice(value)
                            ? ""
                            : "Choose one of the values that are offered.";
-        case Field::DockOpacity:
-            return wm::valid_dock_opacity_choice(value)
-                           ? ""
-                           : "Choose one of the values that are offered.";
         case Field::DockBar:
             return wm::valid_dock_bar_choice(value)
                            ? ""
@@ -707,7 +695,6 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.theme),
             clean(v.panel_style),
             clean(v.dock_style),
-            clean(v.dock_opacity),
             clean(v.dock_bar),
             clean(v.lock_style),
             clean(v.launcher_style),
@@ -1413,7 +1400,6 @@ bool SettingsForm::act(size_t target, int x)
         case ThemeField:
         case PanelStyleField:
         case DockStyleField:
-        case DockOpacityField:
         case DockBarField:
         case LockStyleField:
         case LauncherStyleField:

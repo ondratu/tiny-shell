@@ -241,8 +241,8 @@ class Manager : public tiny::Object {
     //! The look of the panel and of the dock (`Auto` follows the variant)
     void set_looks(Look panel_look, Look dock_look, Look launcher_look);
 
-    //! How the bar of the dock looks: see `Dock::set_surface`
-    void set_dock_surface(int opacity, DockBar bar);
+    //! The height of the bar of the dock: see `Dock::set_bar`
+    void set_dock_bar(DockBar bar);
 
     /**
      * @short Which monitors the shell uses, see `[monitors]` of the

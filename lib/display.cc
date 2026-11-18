@@ -148,7 +148,6 @@ Display::Display(::Display* display_arg):
             XInternAtom(display_arg, "_NET_MOVERESIZE_WINDOW", 0)),
     _NET_RESTACK_WINDOW(XInternAtom(display_arg, "_NET_RESTACK_WINDOW", 0)),
     _NET_WM_ICON_GEOMETRY(XInternAtom(display_arg, "_NET_WM_ICON_GEOMETRY", 0)),
-    _XROOTPMAP_ID(XInternAtom(display_arg, "_XROOTPMAP_ID", 0)),
     _NET_STARTUP_ID(XInternAtom(display_arg, "_NET_STARTUP_ID", 0)),
     _NET_STARTUP_INFO(XInternAtom(display_arg, "_NET_STARTUP_INFO", 0)),
     _NET_STARTUP_INFO_BEGIN(

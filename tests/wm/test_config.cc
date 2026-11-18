@@ -947,55 +947,40 @@ TEST(ConfigTest, a_wrong_mode_of_the_dock_is_a_problem_and_keeps_the_default)
     EXPECT_NE(problems[0].find("mode"), std::string::npos);
 }
 
-TEST(ConfigTest, the_bar_of_the_dock_is_opaque_and_full_by_default)
+TEST(ConfigTest, the_bar_of_the_dock_is_full_by_default)
 {
-    EXPECT_EQ(Config().dock_opacity, 100);
     EXPECT_EQ(Config().dock_bar, tiny::wm::DockBar::Full);
-    EXPECT_EQ(parse_config({}).dock_opacity, 100);
     EXPECT_EQ(parse_config({}).dock_bar, tiny::wm::DockBar::Full);
 }
 
-TEST(ConfigTest, reads_the_opacity_and_the_bar_of_the_dock)
+TEST(ConfigTest, reads_the_bar_of_the_dock)
 {
-    const Config c =
-            parse_config({{"a", "[dock]\nopacity = 50\nbar = half\n"}});
-
-    EXPECT_EQ(c.dock_opacity, 50);
-    EXPECT_EQ(c.dock_bar, tiny::wm::DockBar::Half);
-    EXPECT_EQ(parse_config({{"a", "[dock]\nopacity = 0\n"}}).dock_opacity, 0);
-    EXPECT_EQ(parse_config({{"a", "[dock]\nopacity = 50\n"},
-                            {"b", "[dock]\nopacity = 100\nbar = HALF\n"}})
-                      .dock_opacity,
-              100);
+    EXPECT_EQ(parse_config({{"a", "[dock]\nbar = half\n"}}).dock_bar,
+              tiny::wm::DockBar::Half);
+    EXPECT_EQ(parse_config({{"a", "[dock]\nbar = half\n"},
+                            {"b", "[dock]\nbar = HALF\n"},
+                            {"c", "[dock]\nbar = full\n"}})
+                      .dock_bar,
+              tiny::wm::DockBar::Full);
 }
 
-TEST(ConfigTest, a_wrong_opacity_or_bar_of_the_dock_is_a_problem)
+TEST(ConfigTest, a_wrong_bar_of_the_dock_is_a_problem)
 {
     Strings problems;
 
-    const Config c = parse_config({{"a", "[dock]\nopacity = 60\nbar = tall\n"}},
-                                  &problems);
+    const Config c = parse_config({{"a", "[dock]\nbar = tall\n"}}, &problems);
 
-    EXPECT_EQ(c.dock_opacity, 100);
     EXPECT_EQ(c.dock_bar, tiny::wm::DockBar::Full);
-    ASSERT_EQ(problems.size(), 2u);
-    EXPECT_NE(problems[0].find("opacity"), std::string::npos);
-    EXPECT_NE(problems[1].find("bar"), std::string::npos);
+    ASSERT_EQ(problems.size(), 1u);
+    EXPECT_NE(problems[0].find("bar"), std::string::npos);
 
     problems.clear();
-    parse_config({{"a", "[dock]\nopacity =\n"}}, &problems);
+    parse_config({{"a", "[dock]\nbar =\n"}}, &problems);
     EXPECT_EQ(problems.size(), 1u) << "empty is not a value in the file";
 }
 
-TEST(ConfigTest, the_choices_of_the_opacity_and_the_bar_start_with_the_default)
+TEST(ConfigTest, the_choices_of_the_bar_start_with_the_default)
 {
-    const tiny::wm::XftChoices levels = tiny::wm::dock_opacity_choices();
-    ASSERT_EQ(levels.size(), 5u);
-    EXPECT_STREQ(levels[0].value, "");
-    EXPECT_STREQ(levels[4].value, "0");
-    EXPECT_TRUE(tiny::wm::valid_dock_opacity_choice("25"));
-    EXPECT_FALSE(tiny::wm::valid_dock_opacity_choice("30"));
-
     const tiny::wm::XftChoices bars = tiny::wm::dock_bar_choices();
     ASSERT_EQ(bars.size(), 2u);
     EXPECT_STREQ(bars[0].value, "");
