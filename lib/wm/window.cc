@@ -1145,12 +1145,10 @@ void Window::maximize()
 
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp, child, &attrs);
-    state.x = attrs.x;
-    state.y = attrs.y;
-    state.width = attrs.width;
-    state.height = attrs.height;
+    const tiny::Rect frame = {attrs.x, attrs.y, attrs.width, attrs.height};
+    remember_restore_place(frame);
 
-    use_monitor_of({attrs.x, attrs.y, attrs.width, attrs.height});
+    use_monitor_of(frame);
     place_maximized();
     set_maximized(true);
 }
@@ -1317,18 +1315,31 @@ void Window::apply_initial_state()
     }
 }
 
+void Window::remember_restore_place(const tiny::Rect& frame)
+{
+    state = frame;
+}
+
+tiny::Rect Window::restore_place(int x, int y, const tiny::Rect& area)
+{
+    // the window returns inside of the work area, which may have changed; the
+    // pointer (x, y, when given) is in the middle of it
+    const tiny::Rect place =
+            fit_in_area({x ? (x - state.width / 2) : state.x,
+                         y ? (y - state.height / 2) : state.y, state.width,
+                         state.height},
+                        area);
+    state.width = place.width;
+    state.height = place.height;
+    return place;
+}
+
 void Window::restore(int x, int y)
 {
     use_monitor_of(frame_geometry());
     if (get_maximized()) {
-        // the window returns inside of the work area, which may have changed
-        const tiny::Rect place =
-                fit_in_area({x ? (x - state.width / 2) : state.x,
-                             y ? (y - state.height / 2) : state.y, state.width,
-                             state.height},
-                            grow_by(inner_area(work_area, 1), gtk_extents));
-        state.width = place.width;
-        state.height = place.height;
+        const tiny::Rect place = restore_place(
+                x, y, grow_by(inner_area(work_area, 1), gtk_extents));
 
         XMoveResizeWindow(dsp, child, place.x, place.y,
                           tiny::x_uint(place.width),

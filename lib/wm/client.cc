@@ -467,10 +467,7 @@ void Client::maximize()
 
     XWindowAttributes attrs;
     XGetWindowAttributes(dsp, window, &attrs);
-    state.x = attrs.x;
-    state.y = attrs.y;
-    state.width = width;
-    state.height = height;
+    remember_restore_place({attrs.x, attrs.y, width, height});
 
     use_monitor_of({attrs.x, attrs.y, attrs.width, attrs.height});
     place_maximized();
@@ -672,19 +669,10 @@ void Client::restore(int x, int y)
 {
     use_monitor_of(frame_geometry());
     if (get_maximized()) {
-        // the window returns inside of the work area, which may have changed
-        const int border = get_border();
         const tiny::Rect place =
-                fit_in_area({x ? (x - state.width / 2) : state.x,
-                             y ? (y - state.height / 2) : state.y, state.width,
-                             state.height},
-                            {work_area.x + border, work_area.y + border,
-                             std::max(work_area.width - 2 * border, 1),
-                             std::max(work_area.height - 2 * border, 1)});
+                restore_place(x, y, inner_area(work_area, get_border()));
         x = place.x;
         y = place.y;
-        state.width = place.width;
-        state.height = place.height;
 
         if (is_resizable()) {
             shadow.move_resize(x, y, state.width, state.height);
