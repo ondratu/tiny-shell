@@ -77,7 +77,7 @@ Pixmap make_backdrop(::Display* display, ::Window root, const tiny::Rect& place,
         return None;
     }
     const int screen = XDefaultScreen(display);
-    Visual* visual = XDefaultVisual(display, screen);
+    const Visual* visual = XDefaultVisual(display, screen);
     const XRenderPictFormat* format = XRenderFindVisualFormat(display, visual);
     if (format == nullptr) {
         return None;
@@ -99,7 +99,7 @@ Pixmap make_backdrop(::Display* display, ::Window root, const tiny::Rect& place,
 
     const int top = std::clamp(bar_top, 0, place.height);
     if (top < place.height && opacity > 0) {
-        Picture picture =
+        const Picture picture =
                 XRenderCreatePicture(display, pixmap, format, 0, nullptr);
         const XRenderColor color = {
                 premultiplied(bar_color, 16, opacity),
