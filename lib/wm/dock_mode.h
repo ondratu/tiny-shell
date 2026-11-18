@@ -23,6 +23,20 @@ std::optional<DockMode> parse_dock_mode(const std::string& text);
 /// The text a setting has for the mode.
 const char* dock_mode_name(DockMode mode);
 
+/// How high the bar under the icons of the dock is.
+enum class DockBar {
+    Full, //!< the bar is as high as the dock (the default)
+    Half  //!< the bar is as high as a half of the dock, the icons stick out
+          //!< above it
+};
+
+/// The bar from the text of a setting: "full" or "half" (the case is ignored);
+/// nothing for any other text.
+std::optional<DockBar> parse_dock_bar(const std::string& text);
+
+/// The text a setting has for the bar.
+const char* dock_bar_name(DockBar bar);
+
 /// Whether two rectangles have a pixel in common.
 bool overlaps(const Rect& a, const Rect& b);
 

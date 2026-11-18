@@ -160,6 +160,33 @@ bool valid_dock_choice(const std::string& text)
     return has_choice(dock_choices(), text);
 }
 
+XftChoices dock_opacity_choices()
+{
+    static constexpr XftChoice levels[] = {{"", "Opaque"},
+                                           {"75", "Slightly transparent"},
+                                           {"50", "Half transparent"},
+                                           {"25", "Mostly transparent"},
+                                           {"0", "Transparent"}};
+    return {std::begin(levels), std::end(levels)};
+}
+
+bool valid_dock_opacity_choice(const std::string& text)
+{
+    return has_choice(dock_opacity_choices(), text);
+}
+
+XftChoices dock_bar_choices()
+{
+    static constexpr XftChoice bars[] = {{"", "Full height"},
+                                         {"half", "Half height"}};
+    return {std::begin(bars), std::end(bars)};
+}
+
+bool valid_dock_bar_choice(const std::string& text)
+{
+    return has_choice(dock_bar_choices(), text);
+}
+
 XftChoices look_choices()
 {
     static constexpr XftChoice looks[] = {
@@ -664,6 +691,22 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.dock_mode = *mode;
         } else {
             problem("[dock] mode must be autohide, on or off");
+        }
+    }
+    if (const auto value = ini.get("dock", "opacity")) {
+        const std::string level(trim(*value));
+        if (level == "100" ||
+            (!level.empty() && valid_dock_opacity_choice(level))) {
+            config.dock_opacity = std::atoi(level.c_str());
+        } else {
+            problem("[dock] opacity must be 100, 75, 50, 25 or 0");
+        }
+    }
+    if (const auto value = ini.get("dock", "bar")) {
+        if (const auto bar = parse_dock_bar(*value)) {
+            config.dock_bar = *bar;
+        } else {
+            problem("[dock] bar must be full or half");
         }
     }
     if (const auto value = ini.get("dock", "favorites")) {

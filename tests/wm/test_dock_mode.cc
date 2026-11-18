@@ -36,6 +36,17 @@ TEST(DockModeTest, the_modes_have_the_names_the_file_uses)
     }
 }
 
+TEST(DockModeTest, the_names_of_the_bars)
+{
+    EXPECT_EQ(tiny::wm::parse_dock_bar("full"), tiny::wm::DockBar::Full);
+    EXPECT_EQ(tiny::wm::parse_dock_bar(" Half "), tiny::wm::DockBar::Half);
+    EXPECT_FALSE(tiny::wm::parse_dock_bar(""));
+    EXPECT_FALSE(tiny::wm::parse_dock_bar("tall"));
+    for (const auto bar : {tiny::wm::DockBar::Full, tiny::wm::DockBar::Half}) {
+        EXPECT_EQ(tiny::wm::parse_dock_bar(tiny::wm::dock_bar_name(bar)), bar);
+    }
+}
+
 TEST(DockModeTest, rectangles_overlap_when_they_share_a_pixel)
 {
     EXPECT_TRUE(overlaps({0, 0, 10, 10}, {9, 9, 10, 10}));
