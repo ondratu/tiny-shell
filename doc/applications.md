@@ -23,9 +23,8 @@ settings of GNOME:
 
 - **Appearance:** the style of the theme (Dark or Light), the style of the panel,
   of the dock and of the launcher (Follow the theme, Light or Dark: each of them can keep its
-  look in the other theme), the opacity and the height of the bar of the dock
-  (the wallpaper shows through it; the half bar lets the icons stick out above it),
-  the scale, the wallpaper and how it covers the
+  look in the other theme), the height of the bar of the dock
+  (the half bar lets the icons stick out above it), the scale, the wallpaper and how it covers the
   screen (a small picture of the file above the path shows that the path is
   right).
 - **Fonts:** the font (a family or a list of families separated by commas, like
@@ -106,7 +105,7 @@ without a new login. To remove a wallpaper, clear the row: the plain color of
 the theme is back after the next login.
 
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
-`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`, `opacity`, `bar`, `[launcher] style`, `[lock] style`,
+`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`, `bar`, `[launcher] style`, `[lock] style`,
 `[commands] terminal`, `[xft] antialias`,
 `hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]`, `[keyboard]` ...) to the file of
 the user, so the others still come from the global file, in the way that is

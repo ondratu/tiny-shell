@@ -232,9 +232,8 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     if (old == nullptr || old->dock_mode != config.dock_mode) {
         manager.set_dock_mode(config.dock_mode);
     }
-    if (old == nullptr || old->dock_opacity != config.dock_opacity ||
-        old->dock_bar != config.dock_bar) {
-        manager.set_dock_surface(config.dock_opacity, config.dock_bar);
+    if (old == nullptr || old->dock_bar != config.dock_bar) {
+        manager.set_dock_bar(config.dock_bar);
     }
     if (old == nullptr || old->monitor_primary != config.monitor_primary ||
         old->monitor_secondary != config.monitor_secondary ||

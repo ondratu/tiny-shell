@@ -140,12 +140,9 @@ placement = keep
 # The colors of the dock and of its menus, the Alt + Tab switcher too: auto
 # (the default: follow [theme] style), light or dark whatever the theme is
 style = auto
-# How much of the color of the bar of the dock is seen, in percent: 100 (the
-# default), 75, 50, 25 or 0. The rest is the wallpaper under the dock (the
-# picture that tiny-wallpaper publishes in _XROOTPMAP_ID), not the windows
-opacity = 100
 # The height of the bar: full (the default) or half, which is a half of the
-# dock; the icons stick out above it and the desktop shows between them
+# dock; the icons stick out above it and the windows and the desktop show
+# between and around them
 bar = full
 # When the dock is shown: autohide (the default: it is hidden while the active
 # window covers it, and the pointer at the bottom edge of the screen shows it
@@ -463,6 +460,6 @@ the same as `kill -HUP` of its process (the process is found through
 `_NET_WM_PID` of the window `_NET_SUPPORTING_WM_CHECK`, so it works on the
 computer where tiny-shell runs). What changes at once: the colors (`[theme]
 style`), the favorites, the commands, the wallpaper, the clock, the system tray,
-the mode, the opacity and the bar of the dock, the keyboard, `[xft]` and what the programs are told by XSETTINGS. The
+the mode and the bar of the dock, the keyboard, `[xft]` and what the programs are told by XSETTINGS. The
 scale and the font of the shell itself need a restart (a message says so).
 `SIGTERM` and `SIGINT` end tiny-shell.

@@ -151,9 +151,6 @@ struct Config {
     Placement monitor_placement = Placement::Keep;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
-    //! [dock] opacity: how much of the bar of the dock is seen, in percent
-    //! (100, 75, 50, 25 or 0); the rest is the wallpaper under the dock
-    int dock_opacity = 100;
     //! [dock] bar: full (the default) or half, the bar as high as a half of the
     //! dock with the icons sticking out above it
     DockBar dock_bar = DockBar::Full;
@@ -221,15 +218,6 @@ XftChoices dock_choices();
 
 //! Whether the text is one of the values of `dock_choices()`
 bool valid_dock_choice(const std::string& text);
-
-/**
- * @short The values that `[dock] opacity` can have: "" (100, the default), 75,
- * 50, 25 and 0, with the names a form shows.
- */
-XftChoices dock_opacity_choices();
-
-//! Whether the text is one of the values of `dock_opacity_choices()`
-bool valid_dock_opacity_choice(const std::string& text);
 
 /**
  * @short The values that `[dock] bar` can have: "" (full, the default) and

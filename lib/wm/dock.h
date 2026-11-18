@@ -31,21 +31,12 @@ class DockButton : public tiny::Widget {
     //! live longer than the button.
     void set_icons(SymbolicIcons* icons_arg) { symbols = icons_arg; }
 
-    //! The button shows what the parent has behind it (the picture of the
-    //! see-through dock, see `Dock::set_surface`) unless the pointer is on it
-    //! or its window has the focus; else it is drawn with the color of the style
-    void set_see_through(bool value) { see_through = value; }
-
     tiny::Signal on_click;
 
   protected:
     DockButton(int width, int height);
 
-    //! Give the window its background for the state and clear it
-    void paint_background(uint8_t state);
-
     SymbolicIcons* symbols = nullptr;
-    bool see_through = false;
 
     virtual void on_enter_notify(const XEvent& e, void* data);
     virtual void on_leave_notify(const XEvent& e, void* data);
@@ -95,6 +86,15 @@ class DockIcon : public DockButton {
     explicit DockIcon(Window* task, std::string app_id = {},
                       const Window::AppIcon& icon = {});
     ~DockIcon() override;
+
+    /**
+     * Add the places that the glyph of the icon covers to a bitmap of the dock
+     * (a pixel of the bitmap is set where something is drawn): the icon of the
+     * application where it is not transparent, the mask of an old style icon.
+     * `x` and `y` are the place of the icon in the bitmap. Returns false when
+     * the glyph is not known (a symbol), the caller takes the whole square.
+     */
+    bool add_shape(Pixmap bitmap, int x, int y) const;
 
     //! The first window, null when the application does not run
     Window* get_task() const { return windows.empty() ? nullptr : windows[0]; }
@@ -307,19 +307,12 @@ class Dock : public tiny::Box {
     void set_icons(SymbolicIcons* symbolic);
 
     /**
-     * How the bar of the dock looks: `opacity` is the part of its color in
-     * percent (100 is the plain bar), `bar` is its height. A bar that is not
-     * opaque shows the wallpaper through it; the half bar is the lower half of
-     * the dock, the icons stick out above it and the dock has the shape of the
-     * bar and the icons (the Shape extension), the rest is the desktop.
-     * `fallback` is the color under the dock when there is no wallpaper.
+     * The height of the bar under the icons. The half bar is the lower half of
+     * the dock, the icons stick out above it: the dock has the shape of the
+     * bar and the glyphs of the icons (the Shape extension), so the rest is
+     * what is under the dock, the windows too.
      */
-    void set_surface(int opacity, DockBar bar);
-
-    //! The wallpaper has changed: draw the bar over the new one
-    void refresh_backdrop();
-
-    void restyle() override;
+    void set_bar(DockBar value);
 
     const tiny::Style& get_style() const override { return shell_theme.dock; }
 
@@ -379,13 +372,8 @@ class Dock : public tiny::Box {
 
     void resize_to_children();
 
-    //! Whether the bar is drawn over a picture (see `set_surface`)
-    bool is_see_through() const
-    {
-        return surface_opacity < 100 || surface_bar == DockBar::Half;
-    }
-
-    //! The shape of the half bar and its icons, or all of the window
+    //! The shape of the half bar and the glyphs of its icons, or all of the
+    //! window
     void update_shape();
 
     tiny::Rect place_for(int width, int height) const;
@@ -416,10 +404,8 @@ class Dock : public tiny::Box {
     //! the size that was asked for: `width` is the old one until the server tells
     int wanted_width = 0;
     int wanted_height = 0;
-    int surface_opacity = 100;
-    DockBar surface_bar = DockBar::Full;
-    Pixmap backdrop = None;       //!< the background of the see-through dock
-    bool surface_applied = false; //!< the window has a see-through surface
+    DockBar bar = DockBar::Full;
+    bool shaped = false; //!< the window has a shape
 };
 
 } // namespace tiny::wm
