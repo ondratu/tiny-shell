@@ -23,8 +23,8 @@ settings of GNOME:
 
 - **Appearance:** the style of the theme (Dark or Light), the style of the panel,
   of the dock and of the launcher (Follow the theme, Light or Dark: each of them can keep its
-  look in the other theme), the height of the bar of the dock
-  (the half bar lets the icons stick out above it), the scale, the wallpaper and how it covers the
+  look in the other theme), the bar of the dock
+  (full, half height with the icons sticking out above it, or none), the scale, the wallpaper and how it covers the
   screen (a small picture of the file above the path shows that the path is
   right).
 - **Fonts:** the font (a family or a list of families separated by commas, like

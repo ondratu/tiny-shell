@@ -957,6 +957,8 @@ TEST(ConfigTest, reads_the_bar_of_the_dock)
 {
     EXPECT_EQ(parse_config({{"a", "[dock]\nbar = half\n"}}).dock_bar,
               tiny::wm::DockBar::Half);
+    EXPECT_EQ(parse_config({{"a", "[dock]\nbar = none\n"}}).dock_bar,
+              tiny::wm::DockBar::Hidden);
     EXPECT_EQ(parse_config({{"a", "[dock]\nbar = half\n"},
                             {"b", "[dock]\nbar = HALF\n"},
                             {"c", "[dock]\nbar = full\n"}})
@@ -982,9 +984,10 @@ TEST(ConfigTest, a_wrong_bar_of_the_dock_is_a_problem)
 TEST(ConfigTest, the_choices_of_the_bar_start_with_the_default)
 {
     const tiny::wm::XftChoices bars = tiny::wm::dock_bar_choices();
-    ASSERT_EQ(bars.size(), 2u);
+    ASSERT_EQ(bars.size(), 3u);
     EXPECT_STREQ(bars[0].value, "");
     EXPECT_STREQ(bars[1].value, "half");
+    EXPECT_STREQ(bars[2].value, "none");
     EXPECT_TRUE(tiny::wm::valid_dock_bar_choice("half"));
     EXPECT_FALSE(tiny::wm::valid_dock_bar_choice("tall"));
 }

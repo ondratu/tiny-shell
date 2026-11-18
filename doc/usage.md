@@ -91,7 +91,8 @@ is dragged. **on** always shows it, **off** never does.
 
 The bar under the icons can be lower: `[dock] bar = half` (or Dock bar in the
 Appearance of `tiny-settings`) makes it only a half of the dock high, and the
-icons stick out above it. Each icon is cut to its own shape (where its picture is
+icons stick out above it; `none` has no bar at all, only the icons and the dots
+under them. Each icon is cut to its own shape (where its picture is
 not transparent), so around the icons and between them you see what is under the
 dock, the windows too. The button with the dots (the launcher) stays a square.
 

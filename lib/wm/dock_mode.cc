@@ -41,12 +41,23 @@ std::optional<DockBar> parse_dock_bar(const std::string& text)
     if (name == "half") {
         return DockBar::Half;
     }
+    if (name == "none") {
+        return DockBar::Hidden;
+    }
     return std::nullopt;
 }
 
 const char* dock_bar_name(DockBar bar)
 {
-    return bar == DockBar::Half ? "half" : "full";
+    switch (bar) {
+        case DockBar::Full:
+            return "full";
+        case DockBar::Half:
+            return "half";
+        case DockBar::Hidden:
+            break;
+    }
+    return "none";
 }
 
 bool overlaps(const Rect& a, const Rect& b)

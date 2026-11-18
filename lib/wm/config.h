@@ -151,8 +151,8 @@ struct Config {
     Placement monitor_placement = Placement::Keep;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
-    //! [dock] bar: full (the default) or half, the bar as high as a half of the
-    //! dock with the icons sticking out above it
+    //! [dock] bar: full (the default), half (the bar as high as a half of the
+    //! dock with the icons sticking out above it) or none (only the icons)
     DockBar dock_bar = DockBar::Full;
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
@@ -220,8 +220,8 @@ XftChoices dock_choices();
 bool valid_dock_choice(const std::string& text);
 
 /**
- * @short The values that `[dock] bar` can have: "" (full, the default) and
- * half, with the names a form shows.
+ * @short The values that `[dock] bar` can have: "" (full, the default),
+ * half and none, with the names a form shows.
  */
 XftChoices dock_bar_choices();
 

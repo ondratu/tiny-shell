@@ -148,6 +148,17 @@ class DockIcon : public DockButton {
 
     void draw_app_icon(const Window::AppIcon& app_icon, bool small);
 
+    //! Where the dots under the icon are: `count` dots of the diameter `size`,
+    //! the first one at `left`, `top`, every next one `step` to the right
+    struct Dots {
+        int count;
+        int size;
+        int step;
+        int left;
+        int top;
+    };
+    Dots dots() const;
+
     //! A dot for every window under the icon
     void draw_dots(GC gc);
 
@@ -308,9 +319,9 @@ class Dock : public tiny::Box {
 
     /**
      * The height of the bar under the icons. The half bar is the lower half of
-     * the dock, the icons stick out above it: the dock has the shape of the
-     * bar and the glyphs of the icons (the Shape extension), so the rest is
-     * what is under the dock, the windows too.
+     * the dock, the icons stick out above it; without a bar there are only the
+     * icons. The dock has the shape of the bar and the glyphs of the icons (the
+     * Shape extension), so the rest is what is under the dock, the windows too.
      */
     void set_bar(DockBar value);
 

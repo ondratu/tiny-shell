@@ -47,7 +47,7 @@ The documentation is in [doc/](doc/) and is published as a web site at
 - Not themable to the last pixel. There are two looks, dark and light, each with
   a wallpaper of its own (a hazel tree by day and by night), and the panel and
   the dock can keep a look of their own in any theme (the bar of the dock can
-  also be half height, with the icons sticking out above it); they can be scaled and configured within
+  also be half height or missing, the icons are cut to their shape); they can be scaled and configured within
   reason.
 
 ## Quick start

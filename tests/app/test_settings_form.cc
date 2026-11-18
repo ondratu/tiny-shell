@@ -2053,6 +2053,9 @@ TEST(SettingsFormStyleTest, the_arrows_go_through_the_bar)
     EXPECT_EQ(form.text(Field::DockBar), "half");
     EXPECT_EQ(form.clean_values().dock_bar, "half");
     EXPECT_EQ(form.choice_label(Field::DockBar), "Half height");
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::DockBar), "none");
+    EXPECT_EQ(form.choice_label(Field::DockBar), "No bar");
 }
 
 TEST(SettingsFormStyleTest, a_wrong_bar_is_a_problem)

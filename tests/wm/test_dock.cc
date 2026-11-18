@@ -2359,6 +2359,36 @@ TEST_F(DockBarTest, an_icon_has_its_glyph_above_the_bar_and_nothing_around_it)
     EXPECT_TRUE(in_shape(right, dock.get_height() - 3)) << "the bar is there";
 }
 
+TEST_F(DockBarTest, without_a_bar_there_are_only_the_icons)
+{
+    dock.set_bar(tiny::wm::DockBar::Hidden);
+    dock.set_favorites({{"a.desktop", half_icon()}});
+    pump_events();
+
+    EXPECT_TRUE(in_shape(border() + 2, border() + 2)) << "the glyph";
+    EXPECT_FALSE(in_shape(border() + icon_size() - 3, border() + 2))
+            << "not the transparent half of the icon";
+    EXPECT_FALSE(in_shape(border() + icon_size() - 3, dock.get_height() - 3))
+            << "no bar under it";
+    EXPECT_FALSE(in_shape(1, dock.get_height() - 1)) << "nor around it";
+}
+
+TEST_F(DockBarTest, the_dots_of_the_windows_are_in_the_shape_without_a_bar)
+{
+    dock.set_bar(tiny::wm::DockBar::Hidden);
+    FakeClient c;
+    WmWindow* w = manage(c);
+    w->set_app_id("a.desktop");
+    dock.set_favorites({{"a.desktop", half_icon()}});
+    add(w);
+
+    const int dot = tiny::wm::shell_theme.dock_dot;
+    const int x = border() + icon_size() / 2;
+    const int y =
+            border() + icon_size() + std::max(0, border() - dot - 1) + dot / 2;
+    EXPECT_TRUE(in_shape(x, y));
+}
+
 TEST_F(DockBarTest, an_icon_without_a_known_glyph_is_a_square)
 {
     dock.set_bar(tiny::wm::DockBar::Half);
