@@ -169,6 +169,12 @@ class SettingsApp : public tiny::XftWindow {
                 config.style == tiny::Variant::Light ? "light" : "",
                 look_value(config.panel_style),
                 look_value(config.dock_style),
+                config.dock_opacity == 100
+                        ? ""
+                        : std::to_string(config.dock_opacity),
+                config.dock_bar == tiny::wm::DockBar::Full
+                        ? ""
+                        : tiny::wm::dock_bar_name(config.dock_bar),
                 look_value(config.lock_style),
                 look_value(config.launcher_style),
                 config.session_autostart ? "yes" : "no",
@@ -458,6 +464,15 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"dock", "style",
                          v.dock_style.empty() ? "auto" : v.dock_style});
+            }
+            if (v.dock_opacity != initial.dock_opacity) {
+                changed.push_back(
+                        {"dock", "opacity",
+                         v.dock_opacity.empty() ? "100" : v.dock_opacity});
+            }
+            if (v.dock_bar != initial.dock_bar) {
+                changed.push_back({"dock", "bar",
+                                   v.dock_bar.empty() ? "full" : v.dock_bar});
             }
             if (v.launcher_style != initial.launcher_style) {
                 changed.push_back(
@@ -953,6 +968,8 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::Theme, "Style"},
                     {SettingsForm::Field::PanelStyle, "Panel"},
                     {SettingsForm::Field::DockStyle, "Dock"},
+                    {SettingsForm::Field::DockOpacity, "Dock opacity"},
+                    {SettingsForm::Field::DockBar, "Dock bar"},
                     {SettingsForm::Field::LauncherStyle, "Launcher"},
                     {SettingsForm::Field::LockStyle, "Lock style"},
                     {SettingsForm::Field::SessionAutostart, "Autostart"},

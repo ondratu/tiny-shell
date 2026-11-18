@@ -1136,7 +1136,8 @@ SettingsForm::Values with_rendering(const char* antialias, const char* hinting,
 
 TEST(SettingsFormTest, the_rendering_of_text_has_choices_under_the_fields)
 {
-    const SettingsForm form = make(with_rendering("yes", "slight", "rgb"));
+    SettingsForm form = make(with_rendering("yes", "slight", "rgb"));
+    form.resize(500, form.form_height()); // the Appearance has the most rows
 
     EXPECT_TRUE(SettingsForm::is_choice(Field::Antialias));
     EXPECT_TRUE(SettingsForm::is_choice(Field::Hinting));
@@ -1340,7 +1341,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 30u);
+    EXPECT_EQ(count, 32u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_have_names)
@@ -2029,6 +2030,62 @@ TEST(SettingsFormStyleTest, a_wrong_style_is_a_problem)
     v.dock_style = "blue";
     EXPECT_FALSE(make(v).problem(Field::DockStyle).empty());
     v.dock_style = "dark";
+    EXPECT_TRUE(make(v).problem().empty());
+}
+
+TEST(SettingsFormStyleTest, the_bar_of_the_dock_is_set_next_to_its_style)
+{
+    for (const Field f : {Field::DockOpacity, Field::DockBar}) {
+        EXPECT_TRUE(SettingsForm::is_choice(f));
+        EXPECT_EQ(SettingsForm::section_of(f),
+                  SettingsForm::Section::Appearance);
+        EXPECT_NE(std::string(SettingsForm::hint(f)), "");
+    }
+    const SettingsForm form = make();
+    EXPECT_EQ(form.choice_label(Field::DockOpacity), "Opaque");
+    EXPECT_EQ(form.choice_label(Field::DockBar), "Full height");
+    EXPECT_LT(form.field_rect(Field::DockStyle).y,
+              form.field_rect(Field::DockOpacity).y);
+    EXPECT_LT(form.field_rect(Field::DockOpacity).y,
+              form.field_rect(Field::DockBar).y);
+}
+
+TEST(SettingsFormStyleTest, the_arrows_go_through_the_opacity_and_the_bar)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::DockOpacity);
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::DockOpacity), "75");
+    form.key(Key::Left);
+    form.key(Key::Left);
+    EXPECT_EQ(form.text(Field::DockOpacity), "0");
+
+    focus_on(form, Field::DockBar);
+    form.key(Key::Right);
+    EXPECT_EQ(form.text(Field::DockBar), "half");
+    EXPECT_EQ(form.clean_values().dock_bar, "half");
+}
+
+TEST(SettingsFormStyleTest, the_values_of_the_bar_come_from_the_start)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.dock_opacity = "50";
+    v.dock_bar = "half";
+    const SettingsForm form = make(v);
+
+    EXPECT_EQ(form.choice_label(Field::DockOpacity), "Half transparent");
+    EXPECT_EQ(form.choice_label(Field::DockBar), "Half height");
+}
+
+TEST(SettingsFormStyleTest, a_wrong_opacity_or_bar_is_a_problem)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.dock_opacity = "60";
+    EXPECT_FALSE(make(v).problem(Field::DockOpacity).empty());
+    v.dock_opacity = "25";
+    v.dock_bar = "tall";
+    EXPECT_FALSE(make(v).problem(Field::DockBar).empty());
+    v.dock_bar = "half";
     EXPECT_TRUE(make(v).problem().empty());
 }
 
