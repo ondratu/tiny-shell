@@ -1084,6 +1084,52 @@ TEST_F(WindowTest, the_server_is_asked_only_while_a_request_waits)
     EXPECT_TRUE(window->sync_allows_resize());
 }
 
+TEST_F(WindowTest, a_resize_by_the_pointer_without_a_counter_follows_it)
+{
+    auto window = manage();
+    const int width = attributes_of(client.window).width;
+
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+    window->drag_to(180, 100);
+    EXPECT_EQ(attributes_of(client.window).width, width + 80);
+    window->end_drag();
+}
+
+TEST_F(WindowTest, a_resize_by_the_pointer_waits_for_the_client_to_draw)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    auto window = manage();
+    const int width = attributes_of(client.window).width;
+
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100); // the first size goes at once
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+    window->drag_to(180, 100); // the client has not drawn it: the next waits
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+
+    client.set_counter(counter, 1); // drawn
+    window->drag_to(200, 100);
+    EXPECT_EQ(attributes_of(client.window).width, width + 100);
+    window->end_drag();
+}
+
+TEST_F(WindowTest, the_end_of_a_resize_by_the_pointer_shows_the_last_size)
+{
+    client.set_sync_counter();
+    auto window = manage();
+    const int width = attributes_of(client.window).width;
+
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    window->drag_to(180, 100); // waits for the client
+    window->end_drag();
+
+    EXPECT_EQ(attributes_of(client.window).width, width + 80);
+    EXPECT_FALSE(window->sync_waiting());
+}
+
 TEST_F(WindowTest, the_next_request_has_the_next_number)
 {
     const XSyncCounter counter = client.set_sync_counter();
