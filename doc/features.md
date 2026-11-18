@@ -43,8 +43,8 @@ comparison with other window managers is in the [comparison](comparison.md).
   application that is not a favorite) and the favorite applications, which stay
   there when they do not run and can be moved by the mouse; the dock hides under
   the active window and the bottom edge of the screen shows it (or it is always
-  shown, or never), its bar can be half height, with the icons
-  cut to their shape and sticking out above it; a run dialog (Alt+F2, Tab completes the name of a program
+  shown, or never), its bar can be half height or none, with the icons
+  cut to their shape; a run dialog (Alt+F2, Tab completes the name of a program
   from `PATH`: the first Tab adds what all the matching programs share, the next
   ones walk through them), a full screen launcher with search (Super). Their
   text field has a cursor (the arrows, Home, End, Delete and a click); Ctrl+V,

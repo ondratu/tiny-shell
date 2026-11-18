@@ -294,25 +294,32 @@ void DockIcon::draw_app_icon(const Window::AppIcon& app_icon, bool small)
     }
 }
 
+DockIcon::Dots DockIcon::dots() const
+{
+    Dots d;
+    d.size = shell_theme.dock_dot;
+    d.step = 2 * d.size; // a dot and the same gap
+    const size_t room =
+            static_cast<size_t>(std::max(1, (width + d.size) / d.step));
+    d.count = static_cast<int>(std::min(windows.size(), room));
+    d.left = (width - (d.count * d.step - d.size)) / 2;
+    // in the border of the dock under the icon, close to the edge
+    d.top = shell_theme.icon +
+            std::max(0, shell_theme.dock_border - d.size - 1);
+    return d;
+}
+
 void DockIcon::draw_dots(GC gc)
 {
-    const int dot = shell_theme.dock_dot;
-    const int step = 2 * dot; // a dot and the same gap
-    const size_t room = static_cast<size_t>(std::max(1, (width + dot) / step));
-    const int count = static_cast<int>(std::min(windows.size(), room));
-    const int left = (width - (count * step - dot)) / 2;
-    // in the border of the dock under the icon, close to the edge
-    const int top =
-            shell_theme.icon + std::max(0, shell_theme.dock_border - dot - 1);
-
-    for (int i = 0; i < count; ++i) {
+    const Dots d = dots();
+    for (int i = 0; i < d.count; ++i) {
         const auto state = windows[static_cast<size_t>(i)]->is_focused()
                                    ? tiny::Style::State::Hover
                                    : tiny::Style::State::Normal;
         XSetForeground(display, gc,
                        shell_theme.dock.get_fg(static_cast<uint8_t>(state)));
-        XFillArc(display, window, gc, left + i * step, top, tiny::x_uint(dot),
-                 tiny::x_uint(dot), 0, 360 * 64);
+        XFillArc(display, window, gc, d.left + i * d.step, d.top,
+                 tiny::x_uint(d.size), tiny::x_uint(d.size), 0, 360 * 64);
     }
 }
 
@@ -379,6 +386,18 @@ bool DockIcon::add_shape(Pixmap bitmap, int x, int y) const
     const Window::AppIcon& shown = task && task->get_app_icon().picture != None
                                            ? task->get_app_icon()
                                            : favorite_icon;
+    // the dots under the icon (they are in the bar of the other bars)
+    {
+        const Dots d = dots();
+        GC gc = XCreateGC(display, bitmap, 0, nullptr);
+        XSetForeground(display, gc, 1);
+        XSetFunction(display, gc, GXor);
+        for (int i = 0; i < d.count; ++i) {
+            XFillArc(display, bitmap, gc, x + d.left + i * d.step, y + d.top,
+                     tiny::x_uint(d.size), tiny::x_uint(d.size), 0, 360 * 64);
+        }
+        XFreeGC(display, gc);
+    }
     if (shown.picture != None) {
         // the alpha channel of the icon is the shape, where it is half or more
         const XRenderPictFormat* format =
@@ -974,7 +993,7 @@ void Dock::redraw(const Window* window_arg, const XEvent& e)
     for (DockIcon* task_icon : icons) {
         if (task_icon->contains(window_arg)) {
             task_icon->redraw(e);
-            if (bar == DockBar::Half) {
+            if (bar != DockBar::Full) {
                 update_shape(); // the icon may have another glyph
             }
         }
@@ -1057,7 +1076,7 @@ void Dock::update_shape()
     }
     int event_base;
     int error_base;
-    if (bar != DockBar::Half) {
+    if (bar == DockBar::Full) {
         if (shaped) { // all of the window again
             XShapeCombineMask(display, window, ShapeBounding, 0, 0, None,
                               ShapeSet);
@@ -1076,9 +1095,10 @@ void Dock::update_shape()
     XSetForeground(display, gc, 0);
     XFillRectangle(display, mask, gc, 0, 0, tiny::x_dim(w), tiny::x_dim(h));
     XSetForeground(display, gc, 1);
-    // the bar
-    XFillRectangle(display, mask, gc, 0, h / 2, tiny::x_dim(w),
-                   tiny::x_dim(h - h / 2));
+    if (bar == DockBar::Half) {
+        XFillRectangle(display, mask, gc, 0, h / 2, tiny::x_dim(w),
+                       tiny::x_dim(h - h / 2));
+    }
     // what sticks out above the bar: the glyphs of the icons (copied with "or",
     // the bar stays), the squares of the others
     XSetFunction(display, gc, GXor);

@@ -25,12 +25,14 @@ const char* dock_mode_name(DockMode mode);
 
 /// How high the bar under the icons of the dock is.
 enum class DockBar {
-    Full, //!< the bar is as high as the dock (the default)
-    Half  //!< the bar is as high as a half of the dock, the icons stick out
-          //!< above it
+    Full,  //!< the bar is as high as the dock (the default)
+    Half,  //!< the bar is as high as a half of the dock, the icons stick out
+           //!< above it
+    Hidden //!< there is no bar, only the icons
 };
 
-/// The bar from the text of a setting: "full" or "half" (the case is ignored);
+/// The bar from the text of a setting: "full", "half" or "none" (the case is
+/// ignored);
 /// nothing for any other text.
 std::optional<DockBar> parse_dock_bar(const std::string& text);
 

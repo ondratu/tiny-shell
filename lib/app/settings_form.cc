@@ -341,7 +341,7 @@ const char* SettingsForm::hint(Field field)
         case Field::LauncherStyle:
             return "Or stay light or dark in any theme.";
         case Field::DockBar:
-            return "Half height: the icons stick out above the bar.";
+            return "Half height: the icons stick out above the bar; or none.";
         case Field::PrimaryMonitor:
             return "The monitor of the panel and the dock; the numbers are "
                    "on the screens.";

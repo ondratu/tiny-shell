@@ -162,8 +162,8 @@ bool valid_dock_choice(const std::string& text)
 
 XftChoices dock_bar_choices()
 {
-    static constexpr XftChoice bars[] = {{"", "Full height"},
-                                         {"half", "Half height"}};
+    static constexpr XftChoice bars[] = {
+            {"", "Full height"}, {"half", "Half height"}, {"none", "No bar"}};
     return {std::begin(bars), std::end(bars)};
 }
 
@@ -682,7 +682,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         if (const auto bar = parse_dock_bar(*value)) {
             config.dock_bar = *bar;
         } else {
-            problem("[dock] bar must be full or half");
+            problem("[dock] bar must be full, half or none");
         }
     }
     if (const auto value = ini.get("dock", "favorites")) {
