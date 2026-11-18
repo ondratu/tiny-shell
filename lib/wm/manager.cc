@@ -1728,6 +1728,7 @@ void Manager::connect_window(Window* window)
             [this, window](const XEvent&) { on_window_user_time(window); });
     window->on_reframe.connect(
             [this, window](const XEvent&) { on_window_reframe(window); });
+    window->set_timers(&timers);
     window->on_move_resize_request.connect([this, window](const XEvent& e) {
         start_move_resize(window, e.xclient);
     });

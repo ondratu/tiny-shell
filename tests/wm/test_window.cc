@@ -19,6 +19,7 @@
 
 using tiny::wm::MotifWMHints;
 using WmWindow = tiny::wm::Window;
+using tiny::Timers;
 
 namespace {
 
@@ -1128,6 +1129,62 @@ TEST_F(WindowTest, the_end_of_a_resize_by_the_pointer_shows_the_last_size)
 
     EXPECT_EQ(attributes_of(client.window).width, width + 80);
     EXPECT_FALSE(window->sync_waiting());
+}
+
+TEST_F(WindowTest, a_size_that_waited_is_shown_when_the_client_has_drawn)
+{
+    const XSyncCounter counter = client.set_sync_counter();
+    tiny::Timers timers;
+    auto window = manage();
+    window->set_timers(&timers);
+    const int width = attributes_of(client.window).width;
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    window->drag_to(180, 100); // waits for the client
+
+    // the client has not drawn: the timer looks again and nothing changes
+    timers.run_due(Timers::Clock::now() + WmWindow::sync_poll);
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+    EXPECT_FALSE(timers.empty());
+
+    client.set_counter(counter, 1); // drawn, the pointer did not move
+    timers.run_due(Timers::Clock::now() + 2 * WmWindow::sync_poll);
+
+    EXPECT_EQ(attributes_of(client.window).width, width + 80);
+    EXPECT_TRUE(timers.empty()); // nothing is watched any more
+    window->end_drag();
+}
+
+TEST_F(WindowTest, the_end_of_a_resize_stops_watching_the_counter)
+{
+    client.set_sync_counter();
+    tiny::Timers timers;
+    auto window = manage();
+    window->set_timers(&timers);
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    window->drag_to(180, 100);
+    ASSERT_FALSE(timers.empty());
+
+    window->end_drag();
+
+    EXPECT_TRUE(timers.empty());
+}
+
+TEST_F(WindowTest, a_window_that_goes_away_stops_watching_the_counter)
+{
+    client.set_sync_counter();
+    tiny::Timers timers;
+    auto window = manage();
+    window->set_timers(&timers);
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    window->drag_to(180, 100);
+    ASSERT_FALSE(timers.empty());
+
+    window.reset();
+
+    EXPECT_TRUE(timers.empty()); // the timer does not call a dead window
 }
 
 TEST_F(WindowTest, the_next_request_has_the_next_number)

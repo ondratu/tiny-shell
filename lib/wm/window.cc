@@ -420,6 +420,9 @@ Window::Window(::Window child_arg, ::Window root_arg,
 
 Window::~Window()
 {
+    if (sync_timer != 0 && timers != nullptr) {
+        timers->cancel(sync_timer);
+    }
     if (hints) {
         XFree(hints);
     }
@@ -1849,6 +1852,7 @@ void Window::resize_step(const tiny::Rect& frame, uint16_t mask)
     // newest one waits for it and the next step, or the end of the resize
     if (!sync_allows_resize()) {
         deferred_resize = {frame, mask};
+        watch_sync_counter();
         return;
     }
     deferred_resize.reset();
@@ -1856,8 +1860,33 @@ void Window::resize_step(const tiny::Rect& frame, uint16_t mask)
     apply_resize(frame, mask);
 }
 
+void Window::watch_sync_counter()
+{
+    if (timers == nullptr || sync_timer != 0) {
+        return;
+    }
+    // The client has until SyncGate::timeout to answer, so the polling ends by
+    // itself; it runs only during a resize and only while a size waits.
+    sync_timer = timers->after(sync_poll, [this] {
+        sync_timer = 0;
+        if (!deferred_resize) {
+            return;
+        }
+        if (sync_allows_resize()) {
+            const auto [frame, mask] = *deferred_resize;
+            resize_step(frame, mask);
+        } else {
+            watch_sync_counter();
+        }
+    });
+}
+
 void Window::finish_resize()
 {
+    if (sync_timer != 0 && timers != nullptr) {
+        timers->cancel(sync_timer);
+    }
+    sync_timer = 0;
     if (deferred_resize) { // the last size was waiting for the client
         apply_resize(deferred_resize->first, deferred_resize->second);
         deferred_resize.reset();

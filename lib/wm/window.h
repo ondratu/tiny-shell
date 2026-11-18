@@ -18,6 +18,7 @@
 #include "container.h"
 #include "widget.h"
 #include "display.h"
+#include "timers.h"
 #include "wm/sync_gate.h"
 
 namespace tiny::wm {
@@ -654,6 +655,14 @@ class Window {
     //! later
     void finish_resize();
 
+    //! The timers of the event loop, to show the size that waits for the
+    //! client as soon as it has drawn (without them it waits for the next
+    //! motion of the pointer); they must live longer than the window
+    void set_timers(tiny::Timers* loop_timers) { timers = loop_timers; }
+
+    //! How often the counter of the client is looked at while a size waits
+    static constexpr std::chrono::milliseconds sync_poll{8};
+
     virtual void on_window_drag_begin(tiny::Object* o, const XEvent& e,
                                       void* data);
 
@@ -761,6 +770,9 @@ class Window {
     //! edges); a framed window moves and resizes the frame and the client
     virtual void apply_resize(const tiny::Rect& frame, uint16_t mask);
 
+    //! Look at the counter after `sync_poll` (once, while a size waits)
+    void watch_sync_counter();
+
     //! The frame of the window before it is maximized: `restore()` returns to it
     void remember_restore_place(const tiny::Rect& frame);
 
@@ -818,6 +830,8 @@ class Window {
     //! The newest size of a resize that waits for the client to draw the
     //! older one (`_NET_WM_SYNC_REQUEST`), and the edges that move
     std::optional<std::pair<tiny::Rect, uint16_t>> deferred_resize;
+    tiny::Timers* timers = nullptr;
+    tiny::Timers::Id sync_timer = 0; //!< looks at the counter, 0 for none
 
     bool responding = true;
     unsigned expected_unmaps = 0; //!< our unmaps of the client not seen yet
