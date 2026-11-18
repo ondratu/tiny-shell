@@ -116,7 +116,10 @@ void RunDialog::read_programs()
 
 void RunDialog::complete()
 {
-    if (!programs_taken && programs_ready()) {
+    if (!programs_taken) {
+        if (!programs_ready()) {
+            return; // the list of the last showing is not offered
+        }
         completer.set_commands(programs.get());
         programs_taken = true;
     }
