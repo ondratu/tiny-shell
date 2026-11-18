@@ -1,15 +1,9 @@
 #include "wm/reload.h"
 
-#include <climits>
-#include <csignal>
-
-#include <sys/types.h>
-
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 
 #include "display.h"
-#include "wm/process.h"
 
 namespace tiny::wm {
 
@@ -65,17 +59,21 @@ std::string request_reload(::Display* display, ::Window root)
     if (read_text(display, check, dsp._NET_WM_NAME) != "tiny-shell") {
         return "the window manager that runs is not tiny-shell";
     }
-    unsigned long pid = 0;
-    if (!read_long(display, check, dsp._NET_WM_PID, XA_CARDINAL, pid) ||
-        pid <= 1 || pid > static_cast<unsigned long>(INT_MAX)) {
-        return "tiny-shell does not tell its process";
+    // the same message as the one that tiny-settings sends after Save; no
+    // process is signalled, so a client that changed a property of the window
+    // of the check can not make us hurt another process
+    XEvent e = {};
+    e.xclient.type = ClientMessage;
+    e.xclient.window = root;
+    e.xclient.message_type = dsp._TINY_SHELL_MONITORS;
+    e.xclient.format = 32;
+    e.xclient.data.l[0] = 2;
+    if (XSendEvent(display, root, False,
+                   SubstructureRedirectMask | SubstructureNotifyMask,
+                   &e) == 0) {
+        return "can't send the message to tiny-shell";
     }
-    if (read_text(display, check, XA_WM_CLIENT_MACHINE) != local_host_name()) {
-        return "tiny-shell runs on another computer";
-    }
-    if (kill(static_cast<pid_t>(pid), SIGHUP) != 0) {
-        return "can't signal the process of tiny-shell";
-    }
+    XFlush(display);
     return "";
 }
 
