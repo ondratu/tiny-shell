@@ -1324,11 +1324,10 @@ tiny::Rect Window::restore_place(int x, int y, const tiny::Rect& area)
 {
     // the window returns inside of the work area, which may have changed; the
     // pointer (x, y, when given) is in the middle of it
-    const tiny::Rect place =
-            fit_in_area({x ? (x - state.width / 2) : state.x,
-                         y ? (y - state.height / 2) : state.y, state.width,
-                         state.height},
-                        area);
+    const tiny::Rect place = fit_in_area({x ? (x - state.width / 2) : state.x,
+                                          y ? (y - state.height / 2) : state.y,
+                                          state.width, state.height},
+                                         area);
     state.width = place.width;
     state.height = place.height;
     return place;
@@ -1843,6 +1842,34 @@ void Window::drag_to(int x_root, int y_root)
                             drag_edges, dx, dy, 0, 1, 1);
     XMoveResizeWindow(dsp, child, r.x, r.y, tiny::x_dim(r.width),
                       tiny::x_dim(r.height));
+}
+
+void Window::resize_step(const tiny::Rect& frame, uint16_t mask)
+{
+    // the client draws one size, then the next one (_NET_WM_SYNC_REQUEST); the
+    // newest one waits for it and the next step, or the end of the resize
+    if (!sync_allows_resize()) {
+        deferred_resize = {frame, mask};
+        return;
+    }
+    deferred_resize.reset();
+    sync_request_resize();
+    apply_resize(frame, mask);
+}
+
+void Window::finish_resize()
+{
+    if (deferred_resize) { // the last size was waiting for the client
+        apply_resize(deferred_resize->first, deferred_resize->second);
+        deferred_resize.reset();
+    }
+    sync_reset();
+}
+
+void Window::apply_resize(const tiny::Rect& frame, uint16_t)
+{
+    XMoveResizeWindow(dsp, child, frame.x, frame.y, tiny::x_dim(frame.width),
+                      tiny::x_dim(frame.height));
 }
 
 void Window::end_drag()

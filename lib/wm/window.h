@@ -639,6 +639,21 @@ class Window {
 
     virtual void end_drag();
 
+    /**
+     * @short One size of an interactive resize (by the edges, the pointer
+     * moved): `frame` is the new frame, `mask` the edges that are dragged.
+     *
+     * A client that has a sync counter (`_NET_WM_SYNC_REQUEST`) draws one size,
+     * then the next one: while it has not drawn the last, the newest size
+     * only waits and is applied by a later step or by `finish_resize()`.
+     * Otherwise `apply_resize()` puts it on the screen at once.
+     */
+    void resize_step(const tiny::Rect& frame, uint16_t mask);
+
+    //! The resize ends: the size that waited is applied, nothing is waited for
+    //! later
+    void finish_resize();
+
     virtual void on_window_drag_begin(tiny::Object* o, const XEvent& e,
                                       void* data);
 
@@ -742,6 +757,10 @@ class Window {
     //! A dock that came later does not cover a normal window
     virtual void keep_in_work_area();
 
+    //! Put the frame of `resize_step()` on the screen (`mask`: the dragged
+    //! edges); a framed window moves and resizes the frame and the client
+    virtual void apply_resize(const tiny::Rect& frame, uint16_t mask);
+
     //! The frame of the window before it is maximized: `restore()` returns to it
     void remember_restore_place(const tiny::Rect& frame);
 
@@ -796,6 +815,9 @@ class Window {
     std::set<Atom> properties;
 
     unsigned drag_edges = 0; //!< of `begin_drag`, none: the window is moved
+    //! The newest size of a resize that waits for the client to draw the
+    //! older one (`_NET_WM_SYNC_REQUEST`), and the edges that move
+    std::optional<std::pair<tiny::Rect, uint16_t>> deferred_resize;
 
     bool responding = true;
     unsigned expected_unmaps = 0; //!< our unmaps of the client not seen yet
