@@ -742,6 +742,18 @@ class Window {
     //! A dock that came later does not cover a normal window
     virtual void keep_in_work_area();
 
+    //! The frame of the window before it is maximized: `restore()` returns to it
+    void remember_restore_place(const tiny::Rect& frame);
+
+    /**
+     * Where a maximized window returns: the remembered size inside of `area`
+     * (the work area, which may have changed meanwhile). The place is the
+     * remembered one, or when the pointer is given (`x`, `y` not zero, in the
+     * root coordinates) it is in the middle of the window. The remembered size
+     * is cut to the area.
+     */
+    tiny::Rect restore_place(int x, int y, const tiny::Rect& area);
+
     //! The size to restore to of a window that starts maximized; `title` is
     //! the height of the frame above the client
     void init_restore_size(int title);
