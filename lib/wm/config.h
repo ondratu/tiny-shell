@@ -91,6 +91,9 @@ struct Config {
     //! [display] dpms: whether the shell sets the time of DPMS in the X server
     //! (the screen is covered by software whatever it says)
     bool display_dpms = true;
+    //! [dock] bar: full (the default), half (the bar as high as a half of the
+    //! dock with the icons sticking out above it) or none (only the icons)
+    DockBar dock_bar = DockBar::Full;
     std::string
             lock_checker; //!< [lock] checker: path of unix_chkpwd, "" is searched
     std::string
@@ -151,9 +154,6 @@ struct Config {
     Placement monitor_placement = Placement::Keep;
     //! [dock] mode: autohide (the default), on or off
     DockMode dock_mode = DockMode::AutoHide;
-    //! [dock] bar: full (the default), half (the bar as high as a half of the
-    //! dock with the icons sticking out above it) or none (only the icons)
-    DockBar dock_bar = DockBar::Full;
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
 };
