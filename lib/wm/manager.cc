@@ -2314,7 +2314,8 @@ void Manager::set_system_tray(bool enable)
 }
 
 void Manager::set_xsettings(bool enable,
-                            std::function<std::vector<XSetting>(Variant)> make)
+                            std::function<std::vector<XSetting>(Variant)> make,
+                            std::optional<Variant> variant)
 {
     xsettings_source = std::move(make);
     if (!enable || !xsettings_source) {
@@ -2322,7 +2323,7 @@ void Manager::set_xsettings(bool enable,
         return;
     }
     const std::vector<XSetting> settings =
-            xsettings_source(tiny::theme.get_variant());
+            xsettings_source(variant.value_or(tiny::theme.get_variant()));
     if (wm_xsettings) { // the programs get the change, the owner stays
         wm_xsettings->set(settings);
         return;

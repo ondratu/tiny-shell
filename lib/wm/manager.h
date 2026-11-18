@@ -188,10 +188,15 @@ class Manager : public tiny::Object {
      * (XSETTINGS): `make` gives the settings for a variant of the theme and is
      * asked again when the variant changes. Nothing is published when `enable`
      * is false, or when another manager of settings runs (it is not replaced).
+     * `variant` is the one the settings are made for, the one of the theme
+     * when not given: a reload that changes the theme too gives the new one
+     * first, so `set_variant()` after it finds the settings published and the
+     * programs are told once.
      */
     void
     set_xsettings(bool enable,
-                  std::function<std::vector<XSetting>(Variant)> make = nullptr);
+                  std::function<std::vector<XSetting>(Variant)> make = nullptr,
+                  std::optional<Variant> variant = std::nullopt);
 
     //! The manager of the settings, null when there is none
     const XSettings* get_xsettings() const { return wm_xsettings.get(); }

@@ -149,6 +149,17 @@ void apply_keyboard(const tiny::wm::Config& config, const char* program)
 void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
                   const tiny::wm::Config* old, const char* program)
 {
+    // The programs are told the look, the style and the fonts together: this
+    // goes before set_variant(), which then finds it published (a reload that
+    // changes both would publish twice). A change of the theme or the fonts
+    // shows at once (the scale and the fonts of the shell itself wait for a
+    // restart, but the programs can follow).
+    manager.set_xsettings(
+            config.xsettings,
+            [config](tiny::Variant variant) {
+                return tiny::wm::xsettings_of(config, variant);
+            },
+            config.style);
     if (old != nullptr && old->style != config.style) {
         manager.set_variant(config.style);
     }
@@ -223,12 +234,6 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
         // after the clock: it stays at the end
         manager.set_system_tray(config.system_tray);
     }
-    // the programs are told the look; a change of the theme or the fonts
-    // shows at once (the scale and the fonts of the shell itself wait for a
-    // restart, but the programs can follow)
-    manager.set_xsettings(config.xsettings, [config](tiny::Variant variant) {
-        return tiny::wm::xsettings_of(config, variant);
-    });
     if (old == nullptr || old->dock_mode != config.dock_mode) {
         manager.set_dock_mode(config.dock_mode);
     }
