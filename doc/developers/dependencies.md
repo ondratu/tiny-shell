@@ -21,6 +21,9 @@
 - **crypt()** (libcrypt: in the C library of musl and the BSD systems, a library
   of its own with glibc, which comes with its development files). Only
   `tiny-lock-pwcheck` links it, to compare a password with a hash.
+- **Threads** (`-pthread`: the C library on current systems, the flag is for the
+  older glibc). Used by `std::async` in the run dialog only, see
+  [the architecture](architecture.md).
 - Programs of the system that are run, not linked: `xrandr` for the position of
   the secondary monitor and `setxkbmap` for the layouts of the keyboard (the
   compilation of a keymap is `xkbcomp`'s work and is not worth a library of

@@ -23,3 +23,12 @@ for coming back. Not to be mixed with todo.txt (the work) and backlog.md
   and the title.
 - **Back when:** tiny-shell gets a compositor of its own, or an optional build
   feature that is off by default and costs nothing when it is off.
+
+## The frame counter of `_NET_WM_SYNC_REQUEST` (the extended protocol)
+
+- **Why not:** the second counter of `_NET_WM_SYNC_REQUEST_COUNTER` and the
+  `_NET_WM_FRAME_DRAWN` / `_NET_WM_FRAME_TIMINGS` messages tell a compositor
+  when a frame of the client was really drawn on the screen. tiny-shell is
+  not a compositor (see the README); the basic counter is enough to resize at
+  the speed of the client, and the code for the second one would never run.
+- **Back when:** tiny-shell gets a compositor of its own.
