@@ -3,9 +3,11 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <sys/stat.h>
 #include <thread>
 
@@ -242,11 +244,24 @@ struct CompletingDialog {
         dialog.popup();
     }
 
-    void tab() { type_key(entry_of(dialog), XK_Tab); }
+    // The programs are read in a thread, Tab before that does nothing
+    void wait_for_programs()
+    {
+        for (int i = 0; i < 2000 && !dialog.programs_ready(); ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        ASSERT_TRUE(dialog.programs_ready());
+    }
+
+    void tab()
+    {
+        wait_for_programs();
+        type_key(entry_of(dialog), XK_Tab);
+    }
     void type(const std::string& text) { type_text(entry_of(dialog), text); }
 
     tiny::wm::RunDialog dialog;
-    int reads = 0;
+    std::atomic<int> reads = 0; //!< counted in the thread of the reading
 };
 
 } // namespace
@@ -274,16 +289,41 @@ TEST_F(RunDialogTest, more_tabs_walk_through_the_programs)
     EXPECT_EQ(d.dialog.get_text(), "gimp");
 }
 
-TEST_F(RunDialogTest, the_programs_are_read_at_the_first_tab_only)
+TEST_F(RunDialogTest, the_programs_are_read_once_for_every_tab_of_a_showing)
 {
     CompletingDialog d({"gdb", "gimp"});
-    EXPECT_EQ(d.reads, 0); // showing the dialog reads nothing
 
     d.type("g");
     d.tab();
     d.tab();
+    d.dialog.programs_ready(); // asking does not read again
 
     EXPECT_EQ(d.reads, 1);
+}
+
+TEST_F(RunDialogTest, popup_does_not_wait_for_a_slow_reading)
+{
+    tiny::wm::RunDialog dialog;
+    std::promise<void> release;
+    std::shared_future<void> released = release.get_future().share();
+    dialog.list_programs = [released] {
+        released.wait();
+        return std::vector<std::string>{"gdb"};
+    };
+    dialog.realize(root_window());
+
+    dialog.popup(); // returns although the list is not there
+    type_text(entry_of(dialog), "g");
+    type_key(entry_of(dialog), XK_Tab);
+    EXPECT_FALSE(dialog.programs_ready());
+    EXPECT_EQ(dialog.get_text(), "g"); // Tab does nothing yet
+
+    release.set_value();
+    for (int i = 0; i < 2000 && !dialog.programs_ready(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    type_key(entry_of(dialog), XK_Tab);
+    EXPECT_EQ(dialog.get_text(), "gdb ");
 }
 
 TEST_F(RunDialogTest, the_programs_are_read_again_when_the_dialog_is_shown)
@@ -326,10 +366,13 @@ TEST_F(RunDialogTest, tab_takes_the_programs_from_the_path_by_default)
     tiny::wm::RunDialog dialog;
     dialog.realize(root_window());
     dialog.popup();
+    setenv("PATH", saved.c_str(), 1); // the dialog took it when shown
+    for (int i = 0; i < 2000 && !dialog.programs_ready(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
     type_text(entry_of(dialog), "tiny-test-comp");
     type_key(entry_of(dialog), XK_Tab);
 
-    setenv("PATH", saved.c_str(), 1);
     std::filesystem::remove_all(dir);
     EXPECT_EQ(dialog.get_text(), "tiny-test-completed-program ");
 }

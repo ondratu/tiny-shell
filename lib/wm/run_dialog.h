@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <future>
 #include <string>
 #include <vector>
 
@@ -32,19 +33,26 @@ class RunDialog : public tiny::Popover {
     //! The command line typed so far
     const std::string& get_text() const { return entry.get_text(); }
 
-    //! The programs that Tab completes, read at the first Tab after the dialog
-    //! is shown (a program that was installed since is there); `$PATH` when
-    //! not set
+    //! The programs that Tab completes, read in a thread of their own each time
+    //! the dialog is shown (a program that was installed since is there), so a
+    //! slow disk does not stop the event loop; `$PATH` when not set. It runs
+    //! outside of the main thread and must not use X.
     std::function<std::vector<std::string>()> list_programs;
+
+    //! The programs are read: Tab completes. Before that Tab does nothing,
+    //! the user presses it again.
+    bool programs_ready() const;
 
   private:
     void complete();
+    void read_programs();
 
     tiny::Rect screen = {0, 0, 0, 0};
     tiny::Label title;
     tiny::Entry entry;
     CommandCompleter completer;
-    bool programs_known = false; //!< the completer has the programs
+    std::future<std::vector<std::string>> programs; //!< the reading, if any
+    bool programs_taken = false; //!< the completer has what the reading gave
 };
 
 } // namespace tiny::wm

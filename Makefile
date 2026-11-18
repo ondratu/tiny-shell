@@ -114,10 +114,11 @@ endif
 ifeq ($(XINERAMA),1)
 override CXXFLAGS += -DTINY_XINERAMA
 endif
-override CXXFLAGS += -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
+override CXXFLAGS += -pthread -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(WARNINGS) \
     $(HARDENING)
-LDLIBS = $(PKG_LIBS)
+# -pthread: std::async (the run dialog reads PATH in a thread); old glibc needs it
+LDLIBS = $(PKG_LIBS) -pthread
 
 # Two libraries. libtiny-widgets.a is the widget toolkit (lib/*.cc, the
 # pictures in lib/image/ and the vendored libraries): it knows nothing about
