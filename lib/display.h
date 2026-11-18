@@ -135,6 +135,7 @@ class Display {
     const Atom _NET_MOVERESIZE_WINDOW;
     const Atom _NET_RESTACK_WINDOW;
     const Atom _NET_WM_ICON_GEOMETRY;
+    const Atom _XROOTPMAP_ID; //!< the pixmap of the wallpaper of the root
     // Startup notification: the messages of a launcher to the root window and
     // the id of the application on its first window
     const Atom _NET_STARTUP_ID;

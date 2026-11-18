@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <X11/Xatom.h>
+#include <X11/extensions/shape.h>
 
 #include "image/pixmap.h"
 #include "wm/dock.h"
@@ -2224,6 +2225,121 @@ TEST(DockLifeTest, destructor_destroys_the_icons)
     XWindowAttributes attrs;
     EXPECT_EQ(XGetWindowAttributes(tiny::get_display(), dock_window, &attrs),
               0);
+}
+
+// ---- the see-through bar ----
+
+class DockSurfaceTest : public DockTest {
+  protected:
+    //! The rectangles that the server has for the shape of the dock (in
+    //! bands, so not the ones that were given)
+    std::vector<XRectangle> shape()
+    {
+        int count = 0;
+        int ordering = 0;
+        XRectangle* list =
+                XShapeGetRectangles(tiny::get_display(), dock.get_window(),
+                                    ShapeBounding, &count, &ordering);
+        std::vector<XRectangle> result(list, list + count);
+        XFree(list);
+        return result;
+    }
+
+    int top_of_shape()
+    {
+        int top = dock.get_height();
+        for (const XRectangle& r : shape()) {
+            top = std::min<int>(top, r.y);
+        }
+        return top;
+    }
+};
+
+TEST_F(DockSurfaceTest, an_opaque_full_bar_is_the_whole_window)
+{
+    dock.set_surface(100, tiny::wm::DockBar::Full);
+    pump_events();
+
+    const auto rectangles = shape();
+    ASSERT_EQ(rectangles.size(), 1u);
+    EXPECT_EQ(rectangles[0].width, dock.get_width());
+    EXPECT_EQ(rectangles[0].height, dock.get_height());
+}
+
+TEST_F(DockSurfaceTest, the_half_bar_leaves_the_icons_sticking_out_above_it)
+{
+    dock.set_surface(100, tiny::wm::DockBar::Half);
+    pump_events();
+
+    EXPECT_EQ(top_of_shape(), border()) << "the button is above the bar";
+    const auto rectangles = shape();
+    EXPECT_TRUE(std::any_of(rectangles.begin(), rectangles.end(),
+                            [&](const XRectangle& r) {
+                                return r.y == dock.get_height() / 2 &&
+                                       r.width == dock.get_width();
+                            }))
+            << "and the bar is under it, as wide as the dock";
+}
+
+TEST_F(DockSurfaceTest, the_full_bar_gives_the_shape_back)
+{
+    dock.set_surface(100, tiny::wm::DockBar::Half);
+    dock.set_surface(100, tiny::wm::DockBar::Full);
+    pump_events();
+
+    EXPECT_EQ(shape().size(), 1u);
+}
+
+TEST_F(DockSurfaceTest, a_see_through_bar_keeps_the_whole_window)
+{
+    FakeClient c;
+    WmWindow* w = manage(c);
+    add(w);
+    dock.set_surface(50, tiny::wm::DockBar::Full);
+    pump_events();
+
+    EXPECT_EQ(shape().size(), 1u);
+    EXPECT_TRUE(dock.contains(w));
+}
+
+TEST_F(DockSurfaceTest, an_icon_that_comes_is_in_the_shape_of_the_half_bar)
+{
+    dock.set_surface(100, tiny::wm::DockBar::Half);
+    pump_events();
+    FakeClient c;
+    WmWindow* w = manage(c);
+    add(w);
+
+    const auto rectangles = shape();
+    EXPECT_TRUE(std::any_of(
+            rectangles.begin(), rectangles.end(), [&](const XRectangle& r) {
+                return r.y == border() && r.x + r.width >= dock.get_width() / 2;
+            }));
+    EXPECT_EQ(top_of_shape(), border());
+}
+
+TEST_F(DockSurfaceTest, refreshing_the_backdrop_of_a_plain_dock_does_nothing)
+{
+    dock.refresh_backdrop();
+    dock.restyle();
+    pump_events();
+
+    EXPECT_EQ(shape().size(), 1u);
+}
+
+TEST(DockSurfaceBeforeTest, the_surface_set_before_the_dock_is_realized_counts)
+{
+    tiny::wm::Dock dock;
+    dock.set_surface(100, tiny::wm::DockBar::Half);
+    dock.realize(root_window(), 0, 0);
+
+    int count = 0;
+    int ordering = 0;
+    XRectangle* list =
+            XShapeGetRectangles(tiny::get_display(), dock.get_window(),
+                                ShapeBounding, &count, &ordering);
+    XFree(list);
+    EXPECT_GE(count, 2);
 }
 
 } // namespace
