@@ -2318,6 +2318,27 @@ TEST_F(DockSurfaceTest, an_icon_that_comes_is_in_the_shape_of_the_half_bar)
     EXPECT_EQ(top_of_shape(), border());
 }
 
+TEST_F(DockSurfaceTest, the_shape_has_the_button_where_the_server_has_it)
+{
+    FakeClient c;
+    WmWindow* w = manage(c);
+    add(w);
+    dock.set_surface(100, tiny::wm::DockBar::Half);
+    pump_events();
+
+    XWindowAttributes attrs;
+    ASSERT_NE(XGetWindowAttributes(tiny::get_display(),
+                                   dock.get_menu_button().get_window(), &attrs),
+              0);
+    const auto rectangles = shape();
+    EXPECT_TRUE(std::any_of(rectangles.begin(), rectangles.end(),
+                            [&](const XRectangle& r) {
+                                return r.y == attrs.y && r.x == attrs.x &&
+                                       r.width == attrs.width;
+                            }))
+            << "not a pixel to the side";
+}
+
 TEST_F(DockSurfaceTest, refreshing_the_backdrop_of_a_plain_dock_does_nothing)
 {
     dock.refresh_backdrop();
