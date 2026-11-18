@@ -42,12 +42,15 @@ The documentation is in [doc/](doc/) and is published as a web site at
   no desktop icons, and the
   only programs are small ones for the settings, the fonts, the wallpaper and the
   screen lock.
-- Not a compositor. No transparency, shadows or animations.
+- Not a compositor. No shadows or animations, and the windows are never
+  transparent. Only the bar of the dock can be see-through: it shows the
+  wallpaper, nothing else.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not themable to the last pixel. There are two looks, dark and light, each with
   a wallpaper of its own (a hazel tree by day and by night), and the panel and
-  the dock can keep a look of their own in any theme; they can be scaled and
-  configured within reason.
+  the dock can keep a look of their own in any theme (the bar of the dock can
+  also be see-through or half height); they can be scaled and configured within
+  reason.
 
 ## Quick start
 
