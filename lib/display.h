@@ -124,7 +124,8 @@ class Display {
     const Atom _NET_WORKAREA;
     //! A ClientMessage to the root window, to the shell: data[0] is 0 (hide the
     //! numbers of the monitors), 1 (show them while the window data[1] lives,
-    //! tiny-settings does it) or 2 (read `[monitors]` of the files again)
+    //! tiny-settings does it) or 2 (read the configuration files again, like SIGHUP; `tiny-shell
+    //! --reload` sends it)
     const Atom _TINY_SHELL_MONITORS;
     const Atom _NET_DESKTOP_VIEWPORT;
     const Atom _NET_DESKTOP_GEOMETRY;

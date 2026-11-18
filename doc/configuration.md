@@ -456,9 +456,10 @@ tiny-shell starts when it has gone. Another window manager started with its own
 not use the selection (for example twm) have to be stopped first. `--info`
 prints what tiny-shell is and which settings it uses. `--reload` tells the
 tiny-shell that runs on the display to read the configuration files again; it is
-the same as `kill -HUP` of its process (the process is found through
-`_NET_WM_PID` of the window `_NET_SUPPORTING_WM_CHECK`, so it works on the
-computer where tiny-shell runs). What changes at once: the colors (`[theme]
+the same as `kill -HUP` of its process, but it is a message to the window
+manager over X (the window manager is found through
+`_NET_SUPPORTING_WM_CHECK`), so no process is signalled and it works on the
+computer where tiny-shell runs and on another one that has the same display. What changes at once: the colors (`[theme]
 style`), the favorites, the commands, the wallpaper, the clock, the system tray,
 the mode and the bar of the dock, the keyboard, `[xft]` and what the programs are told by XSETTINGS. The
 scale and the font of the shell itself need a restart (a message says so).

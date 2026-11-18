@@ -1119,6 +1119,38 @@ TEST_F(ManagerTest, reload_finds_the_manager_and_signals_it)
     EXPECT_EQ(reloaded, 1);
 }
 
+TEST_F(ManagerTest, reload_does_not_trust_the_process_of_the_window_manager)
+{
+    start();
+    int reloaded = 0;
+    manager->set_reload([&] {
+        ++reloaded;
+        manager->running = false;
+    });
+    // somebody changed _NET_WM_PID of the window of the check to another process
+    const long other_pid = 1;
+    const Atom check = dsp()._NET_SUPPORTING_WM_CHECK;
+    Atom type;
+    int format;
+    unsigned long items;
+    unsigned long after;
+    unsigned char* data = nullptr;
+    ASSERT_EQ(XGetWindowProperty(tiny::get_display(), root_window(), check, 0,
+                                 1, False, XA_WINDOW, &type, &format, &items,
+                                 &after, &data),
+              Success);
+    const ::Window check_window = *reinterpret_cast<::Window*>(data);
+    XFree(data);
+    XChangeProperty(tiny::get_display(), check_window, dsp()._NET_WM_PID,
+                    XA_CARDINAL, 32, PropModeReplace,
+                    reinterpret_cast<const unsigned char*>(&other_pid), 1);
+
+    EXPECT_EQ(tiny::wm::request_reload(tiny::get_display(), root_window()), "");
+    manager->main_loop(); // the manager reloads itself and nobody is killed
+
+    EXPECT_EQ(reloaded, 1);
+}
+
 TEST_F(ManagerTest, reload_says_why_it_can_not_signal)
 {
     // nobody
