@@ -89,10 +89,8 @@ Pixmap make_backdrop(::Display* display, ::Window root, const tiny::Rect& place,
     XSetForeground(display, gc, fallback);
     XFillRectangle(display, pixmap, gc, 0, 0, x_dim(place.width),
                    x_dim(place.height));
-    unsigned width;
-    unsigned height;
-    const Pixmap wallpaper = root_pixmap(display, root);
-    if (wallpaper != None && pixmap_size(display, wallpaper, width, height)) {
+    const Pixmap wallpaper = root_pixmap(display, root); // it is not gone
+    if (wallpaper != None) {
         // what is outside of the wallpaper keeps the fallback
         XCopyArea(display, wallpaper, pixmap, gc, place.x, place.y,
                   x_dim(place.width), x_dim(place.height), 0, 0);

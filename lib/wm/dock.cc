@@ -1071,7 +1071,13 @@ void Dock::refresh_backdrop()
     }
     update_shape();
     if (is_maped) {
-        XClearArea(display, window, 0, 0, 0, 0, True); // the icons repaint too
+        XClearArea(display, window, 0, 0, 0, 0, True);
+        // the icons have the picture of the dock behind them, but clearing the
+        // dock does not repaint them
+        icon.restyle();
+        for (DockIcon* task_icon : icons) {
+            task_icon->restyle();
+        }
     }
 }
 
@@ -1095,12 +1101,14 @@ void Dock::update_shape()
         parts.push_back({icon_x[i], border, icons[i]->get_width(),
                          icons[i]->get_height()});
     }
-    // the button is at the end of the dock
-    parts.push_back({w - border - icon.get_width(), border, icon.get_width(),
-                     icon.get_height()});
+    // the button is at the end of the dock; the server has its place (it keeps
+    // the distance to the right edge), the width of the dock is not the rule
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(display, icon.get_window(), &attrs)) {
+        parts.push_back({attrs.x, attrs.y, attrs.width, attrs.height});
+    }
     for (const Widget* other : {static_cast<const Widget*>(separator.get()),
                                 static_cast<const Widget*>(&mark)}) {
-        XWindowAttributes attrs;
         if (other != nullptr && other->get_maped() &&
             XGetWindowAttributes(display, other->get_window(), &attrs)) {
             parts.push_back({attrs.x, attrs.y, attrs.width, attrs.height});
