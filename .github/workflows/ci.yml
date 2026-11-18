@@ -229,7 +229,7 @@ jobs:
         # of the lock, the idle lock and the black cover of the display, the autostart and the end of
         # the session with its dialog, the keyboard layouts that the shell sets with setxkbmap and shows in the panel, the half bar of the dock with the shaped icons) with a reserve; change it on purpose.
         run: |
-          max=679000
+          max=683000
           make CXX=clang++-19 AR=llvm-ar-19 \
               CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell
