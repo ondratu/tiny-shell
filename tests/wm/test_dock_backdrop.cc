@@ -17,7 +17,7 @@ uint32_t pixel(Pixmap pixmap, int x, int y)
 {
     XImage* image =
             XGetImage(tiny::get_display(), pixmap, x, y, 1, 1, ~0UL, ZPixmap);
-    const uint32_t value = static_cast<uint32_t>(XGetPixel(image, 0, 0));
+    const auto value = static_cast<uint32_t>(XGetPixel(image, 0, 0));
     XDestroyImage(image);
     return value & 0xFFFFFF;
 }

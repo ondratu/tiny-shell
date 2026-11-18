@@ -697,7 +697,8 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         const std::string level(trim(*value));
         if (level == "100" ||
             (!level.empty() && valid_dock_opacity_choice(level))) {
-            config.dock_opacity = std::atoi(level.c_str());
+            config.dock_opacity =
+                    static_cast<int>(std::strtol(level.c_str(), nullptr, 10));
         } else {
             problem("[dock] opacity must be 100, 75, 50, 25 or 0");
         }

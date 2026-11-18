@@ -1096,6 +1096,7 @@ void Dock::update_shape()
     const int w = wanted_width > 0 ? wanted_width : width;
     const int h = wanted_height > 0 ? wanted_height : height;
     std::vector<tiny::Rect> parts;
+    parts.reserve(icons.size() + 3);
     const int border = shell_theme.dock_border;
     for (size_t i = 0; i < icons.size(); ++i) {
         parts.push_back({icon_x[i], border, icons[i]->get_width(),
