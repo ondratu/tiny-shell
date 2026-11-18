@@ -32,6 +32,23 @@ const char* dock_mode_name(DockMode mode)
     return "off";
 }
 
+std::optional<DockBar> parse_dock_bar(const std::string& text)
+{
+    const std::string name = lower(trim(text));
+    if (name == "full") {
+        return DockBar::Full;
+    }
+    if (name == "half") {
+        return DockBar::Half;
+    }
+    return std::nullopt;
+}
+
+const char* dock_bar_name(DockBar bar)
+{
+    return bar == DockBar::Half ? "half" : "full";
+}
+
 bool overlaps(const Rect& a, const Rect& b)
 {
     return a.width > 0 && a.height > 0 && b.width > 0 && b.height > 0 &&
