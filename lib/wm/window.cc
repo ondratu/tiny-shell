@@ -1840,8 +1840,7 @@ void Window::drag_to(int x_root, int y_root)
                             {start_attrs.x, start_attrs.y, start_attrs.width,
                              start_attrs.height},
                             drag_edges, dx, dy, 0, 1, 1);
-    XMoveResizeWindow(dsp, child, r.x, r.y, tiny::x_dim(r.width),
-                      tiny::x_dim(r.height));
+    resize_step(r, static_cast<uint16_t>(drag_edges));
 }
 
 void Window::resize_step(const tiny::Rect& frame, uint16_t mask)
@@ -1874,6 +1873,9 @@ void Window::apply_resize(const tiny::Rect& frame, uint16_t)
 
 void Window::end_drag()
 {
+    if (drag_edges) {
+        finish_resize();
+    }
     drag_edges = 0;
     send_configure_notify();
 }
