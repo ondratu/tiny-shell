@@ -306,7 +306,7 @@ TEST_F(RunDialogTest, tab_does_not_offer_the_programs_of_the_last_showing)
     tiny::wm::RunDialog dialog;
     std::atomic<bool> slow = false;
     std::promise<void> release;
-    std::shared_future<void> released = release.get_future().share();
+    const std::shared_future<void> released = release.get_future().share();
     dialog.list_programs = [&slow, released] {
         if (slow) {
             released.wait();
@@ -336,7 +336,7 @@ TEST_F(RunDialogTest, popup_does_not_wait_for_a_slow_reading)
 {
     tiny::wm::RunDialog dialog;
     std::promise<void> release;
-    std::shared_future<void> released = release.get_future().share();
+    const std::shared_future<void> released = release.get_future().share();
     dialog.list_programs = [released] {
         released.wait();
         return std::vector<std::string>{"gdb"};

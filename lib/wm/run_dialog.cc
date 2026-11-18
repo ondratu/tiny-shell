@@ -1,5 +1,7 @@
 #include <cerrno>
-#include <chrono>
+#include <pthread.h>
+
+#include <atomic>
 #include <cstdlib>
 #include <cstring>
 #include <utility>
@@ -87,31 +89,59 @@ void RunDialog::popover(Object*, const XEvent&, void*)
     unmap();
 }
 
+struct RunDialog::Reading {
+    std::function<std::vector<std::string>()> job;
+    std::vector<std::string> result; //!< read after `done`
+    std::atomic<bool> done{false};
+};
+
+void* RunDialog::read_in_thread(void* arg)
+{
+    auto* ref = static_cast<std::shared_ptr<Reading>*>(arg);
+    const std::shared_ptr<Reading> reading = *ref;
+    delete ref;
+    try {
+        reading->result = reading->job();
+    } catch (...) {
+        reading->result.clear(); // no programs, the user types the name
+    }
+    reading->done.store(true, std::memory_order_release);
+    return nullptr;
+}
+
 bool RunDialog::programs_ready() const
 {
     return programs_taken ||
-           (programs.valid() && programs.wait_for(std::chrono::seconds(0)) ==
-                                        std::future_status::ready);
+           (reading && reading->done.load(std::memory_order_acquire));
 }
 
 void RunDialog::read_programs()
 {
-    if (programs.valid()) {
-        if (programs.wait_for(std::chrono::seconds(0)) !=
-            std::future_status::ready) {
+    if (reading) {
+        if (!reading->done.load(std::memory_order_acquire)) {
             return; // still reading, the list is as fresh as it gets
         }
-        programs = {}; // it was not used, read it again
+        reading.reset(); // it was not used, read it again
     }
     programs_taken = false;
+    auto next = std::make_shared<Reading>();
     if (list_programs) {
-        programs = std::async(std::launch::async, list_programs);
-        return;
+        next->job = list_programs;
+    } else {
+        // the environment is read here, getenv is not for other threads
+        const char* path = getenv("PATH");
+        next->job = [path = std::string(path ? path : "")] {
+            return list_commands(path);
+        };
     }
-    // the environment is read here, getenv is not for other threads
-    const char* path = getenv("PATH");
-    programs = std::async(std::launch::async, list_commands,
-                          std::string(path ? path : ""));
+    pthread_t thread;
+    auto* ref = new std::shared_ptr<Reading>(next);
+    if (pthread_create(&thread, nullptr, read_in_thread, ref) != 0) {
+        delete ref;
+        return; // no thread: no completion, the dialog works
+    }
+    pthread_detach(thread);
+    reading = std::move(next);
 }
 
 void RunDialog::complete()
@@ -120,7 +150,7 @@ void RunDialog::complete()
         if (!programs_ready()) {
             return; // the list of the last showing is not offered
         }
-        completer.set_commands(programs.get());
+        completer.set_commands(std::move(reading->result));
         programs_taken = true;
     }
     const std::string text = entry.get_text();

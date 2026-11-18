@@ -11,7 +11,7 @@
   manager: X events, timers (clock) and child processes. Never block it:
   no sleeping, no waiting for a process, no slow file reading in a handler.
   A slow job (the directories of `PATH` for the run dialog) runs in a thread
-  with `std::async` that does not use X, and the loop asks later if the result
+  (`pthread_create`) that does not use X, and the loop asks later if the result
   is there; it must not wait for it.
 - **Event handlers.** New code connects events with `std::function`
   (a lambda capturing `this`), registered and unregistered by RAII.

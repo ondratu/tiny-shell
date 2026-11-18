@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <future>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -51,7 +51,12 @@ class RunDialog : public tiny::Popover {
     tiny::Label title;
     tiny::Entry entry;
     CommandCompleter completer;
-    std::future<std::vector<std::string>> programs; //!< the reading, if any
+    //! The reading of the programs in a thread of its own (pthread_create, not
+    //! `std::async`: that is 11 kB of the binary); the thread is detached and
+    //! keeps its own reference, so a dialog that goes away does not wait for it
+    struct Reading;
+    static void* read_in_thread(void* arg);
+    std::shared_ptr<Reading> reading;
     bool programs_taken = false; //!< the completer has what the reading gave
 };
 

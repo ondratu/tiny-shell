@@ -802,6 +802,9 @@ class Window {
     AreaFinder find_areas;
 
     FrameExtents gtk_extents; //!< see `get_gtk_frame_extents()`
+    //! The newest size of a resize that waits for the client to draw the
+    //! older one (`_NET_WM_SYNC_REQUEST`), and the edges that move
+    std::optional<std::pair<tiny::Rect, uint16_t>> deferred_resize;
     unsigned long functions = 0;
     unsigned long wm_states = 0;
     ::Window transient_for = None;
@@ -823,15 +826,12 @@ class Window {
 
     std::set<Atom> protocols;
     XSyncCounter sync_counter = None;
+    tiny::Timers* timers = nullptr;
+    tiny::Timers::Id sync_timer = 0; //!< looks at the counter, 0 for none
     SyncGate sync_gate;
     std::set<Atom> properties;
 
     unsigned drag_edges = 0; //!< of `begin_drag`, none: the window is moved
-    //! The newest size of a resize that waits for the client to draw the
-    //! older one (`_NET_WM_SYNC_REQUEST`), and the edges that move
-    std::optional<std::pair<tiny::Rect, uint16_t>> deferred_resize;
-    tiny::Timers* timers = nullptr;
-    tiny::Timers::Id sync_timer = 0; //!< looks at the counter, 0 for none
 
     bool responding = true;
     unsigned expected_unmaps = 0; //!< our unmaps of the client not seen yet
