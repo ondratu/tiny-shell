@@ -71,8 +71,8 @@ struct HostState {
 //! A widget of a plugin in the panel
 struct Entry {
     std::unique_ptr<tiny::Widget> widget;
-    PluginLabel* label = nullptr;   //!< the widget when it is a label
-    PluginButton* button = nullptr; //!< the widget when it is a button
+    PluginLabel* label = nullptr;       //!< the widget when it is a label
+    PluginButton* button = nullptr;     //!< the widget when it is a button
     std::unique_ptr<PluginPopup> popup; //!< made at the first `popup()`
     int click_ref = LUA_NOREF;
 };
@@ -619,7 +619,9 @@ int make_widget_impl(lua_State* L, bool button)
         return fail(L, "the panel is not there");
     }
     if (!lua_istable(L, 1)) {
-        return fail(L, "a table is expected: {text = ..., sample = ..., icon = ...}");
+        return fail(
+                L,
+                "a table is expected: {text = ..., sample = ..., icon = ...}");
     }
     std::string text;
     std::string sample;
@@ -1105,12 +1107,15 @@ const luaL_Reg tiny_functions[] = {{"log", l_log},
 const luaL_Reg timer_methods[] = {{"cancel", l_timer_cancel},
                                   {nullptr, nullptr}};
 
-const luaL_Reg widget_methods[] = {
-        {"set_text", l_widget_set_text},       {"text", l_widget_get_text},
-        {"set_visible", l_widget_set_visible}, {"on_click", l_widget_on_click},
-        {"set_icon", l_widget_set_icon},       {"popup", l_widget_popup},
-        {"close_popup", l_widget_close_popup}, {"destroy", l_widget_destroy},
-        {nullptr, nullptr}};
+const luaL_Reg widget_methods[] = {{"set_text", l_widget_set_text},
+                                   {"text", l_widget_get_text},
+                                   {"set_visible", l_widget_set_visible},
+                                   {"on_click", l_widget_on_click},
+                                   {"set_icon", l_widget_set_icon},
+                                   {"popup", l_widget_popup},
+                                   {"close_popup", l_widget_close_popup},
+                                   {"destroy", l_widget_destroy},
+                                   {nullptr, nullptr}};
 
 void set_text_field(lua_State* L, const char* name, const std::string& value)
 {

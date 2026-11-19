@@ -538,21 +538,21 @@ TEST_F(HostTest, the_name_of_an_icon_is_a_text)
     tree.add("icon", "tiny.panel.label{text = 'x'}:set_icon(5)");
     PluginHost host(services);
     host.apply(tree.find(), config);
-    EXPECT_NE(host.error_of("icon").find("icon is a text"),
-              std::string::npos);
+    EXPECT_NE(host.error_of("icon").find("icon is a text"), std::string::npos);
 }
 
 TEST_F(HostTest, a_window_opens_under_a_widget_and_is_closed_again)
 {
-    tree.add("window",
-             "b = tiny.panel.button{text = 'go', on_click = function()\n"
-             "  b:popup{icon = 'x', title = 'T', subtitle = 'S', value = '9',\n"
-             "    sections = {{heading = 'H', rows = {{icon = 'i', label = 'a', "
-             "value = '1'}, {label = 'b'}}}, {rows = {}}}}\n"
-             "  tiny.log('opened')\n"
-             "  b:close_popup()\n"
-             "  b:popup{title = 'again'}\n"
-             "end}\n");
+    tree.add(
+            "window",
+            "b = tiny.panel.button{text = 'go', on_click = function()\n"
+            "  b:popup{icon = 'x', title = 'T', subtitle = 'S', value = '9',\n"
+            "    sections = {{heading = 'H', rows = {{icon = 'i', label = 'a', "
+            "value = '1'}, {label = 'b'}}}, {rows = {}}}}\n"
+            "  tiny.log('opened')\n"
+            "  b:close_popup()\n"
+            "  b:popup{title = 'again'}\n"
+            "end}\n");
     const auto before = children_of(panel.get_window());
     PluginHost host(services);
     host.apply(tree.find(), config);
@@ -589,15 +589,16 @@ TEST_F(HostTest, a_window_with_a_wrong_description_is_an_error_of_the_plugin)
 
 TEST_F(HostTest, a_window_has_a_limit_of_the_sections_and_rows)
 {
-    tree.add("many", "b = tiny.panel.button{text = 'x'}\n"
-                     "local rows = {}\n"
-                     "for i = 1, 41 do rows[i] = {label = 'r'} end\n"
-                     "local ok, e = pcall(b.popup, b, {sections = {{rows = rows}}})\n"
-                     "tiny.log(tostring(ok), e)\n"
-                     "local s = {}\n"
-                     "for i = 1, 9 do s[i] = {} end\n"
-                     "ok, e = pcall(b.popup, b, {sections = s})\n"
-                     "tiny.log(tostring(ok), e)\n");
+    tree.add("many",
+             "b = tiny.panel.button{text = 'x'}\n"
+             "local rows = {}\n"
+             "for i = 1, 41 do rows[i] = {label = 'r'} end\n"
+             "local ok, e = pcall(b.popup, b, {sections = {{rows = rows}}})\n"
+             "tiny.log(tostring(ok), e)\n"
+             "local s = {}\n"
+             "for i = 1, 9 do s[i] = {} end\n"
+             "ok, e = pcall(b.popup, b, {sections = s})\n"
+             "tiny.log(tostring(ok), e)\n");
     PluginHost host(services);
     host.apply(tree.find(), config);
     EXPECT_TRUE(logged("false too many rows in a section"));
