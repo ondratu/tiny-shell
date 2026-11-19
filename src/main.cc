@@ -246,7 +246,7 @@ void apply_config(tiny::wm::Manager& manager, tiny::plugin::PluginHost& plugins,
             clock_changed;
     // next to the plugins, and the tray after it
     const bool indicator_changed =
-            plugins_restarted ||
+            plugins_restarted || old == nullptr ||
             old->keyboard_indicator != config.keyboard_indicator;
     if (indicator_changed) {
         manager.set_keyboard_indicator(config.keyboard_indicator);

@@ -21,7 +21,7 @@ int panel_text_width(::Display* display, int padding, XftFont* font,
  */
 class PluginLabel : public tiny::Label {
   public:
-    PluginLabel(const std::string& text, const std::string& sample);
+    PluginLabel(const std::string& initial, const std::string& sample);
 
     ~PluginLabel() override;
 };
@@ -29,7 +29,7 @@ class PluginLabel : public tiny::Label {
 //! The text of a plugin in the panel that a click on it is told to the plugin
 class PluginButton : public tiny::LabelButton {
   public:
-    PluginButton(const std::string& text, const std::string& sample);
+    PluginButton(const std::string& initial, const std::string& sample);
 
     ~PluginButton() override;
 };

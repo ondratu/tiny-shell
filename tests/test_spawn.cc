@@ -408,8 +408,15 @@ TEST(SpawnTest, capture_gives_the_program_only_the_standard_descriptors)
         GTEST_SKIP() << "no /proc";
     }
     int fd = -1;
-    // the descriptors of the shell, listed by a program that opens its own
-    const pid_t pid = tiny::spawn_capture({"sh", "-c", "ls /proc/$$/fd"}, &fd);
+    // a descriptor above 2 that is /dev/null would be the one that the child
+    // used to redirect the standard input and error; the shell itself may
+    // have one for the listing, which is not /dev/null
+    const pid_t pid = tiny::spawn_capture(
+            {"sh", "-c",
+             "for f in /proc/$$/fd/*; do n=${f##*/}; "
+             "[ \"$n\" -gt 2 ] && [ \"$(readlink \"$f\")\" = /dev/null ] "
+             "&& echo leaked $n; done; echo done"},
+            &fd);
     ASSERT_GT(pid, 0);
     std::string text;
     EXPECT_TRUE(wait_for([&] {
@@ -420,7 +427,7 @@ TEST(SpawnTest, capture_gives_the_program_only_the_standard_descriptors)
         }
         return n == 0;
     }));
-    EXPECT_EQ(text, "0\n1\n2\n"); // the one of /dev/null is closed
+    EXPECT_EQ(text, "done\n"); // the one of /dev/null is closed
     close(fd);
     waitpid(pid, nullptr, 0);
 }
