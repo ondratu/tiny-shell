@@ -56,6 +56,9 @@ It installs the programs into `bin/` and the contents of `data/` into `share/`.
 No program gets a special mode: where the screen lock needs `tiny-lock-pwcheck`
 to read the hash of the password (no PAM, or a BSD system), run `sudo make
 install-setuid`, see [Screen lock](lock.md#tiny-lock-pwcheck-and-its-rights).
+The caches of icons and desktop files (`gtk-update-icon-cache`,
+`update-desktop-database`) are refreshed only when those tools are installed;
+tiny-shell does not need them.
 The files:
 
 - `share/tiny-shell/icons/white` and `black`: the symbolic icons of the shell.

@@ -191,8 +191,11 @@ install: all
 	# the PNG wallpapers of the older versions are replaced by the JPEG ones
 	rm -f $(DESTDIR)$(DATADIR)/backgrounds/tiny-shell/tiny-shell-*.png
 	cp -R data/. $(DESTDIR)$(DATADIR)/
-	-gtk-update-icon-cache -q -t $(DESTDIR)$(DATADIR)/icons/hicolor 2>/dev/null
-	-update-desktop-database -q $(DESTDIR)$(DATADIR)/applications 2>/dev/null
+	# the caches are optional: only where the tools are installed
+	@if command -v gtk-update-icon-cache >/dev/null 2>&1; then \
+	    gtk-update-icon-cache -q -t $(DESTDIR)$(DATADIR)/icons/hicolor || true; fi
+	@if command -v update-desktop-database >/dev/null 2>&1; then \
+	    update-desktop-database -q $(DESTDIR)$(DATADIR)/applications || true; fi
 
 # tiny-lock-pwcheck is the only program that needs rights, and only where the
 # system has no unix_chkpwd of its own (see doc/install.md). `make install` does
