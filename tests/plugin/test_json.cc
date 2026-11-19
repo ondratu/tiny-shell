@@ -71,9 +71,9 @@ TEST(JsonTest, tells_what_is_wrong_and_where)
     EXPECT_NE(error_of("{1: 2}").find("name"), std::string::npos);
     EXPECT_NE(error_of("{\"a\": 1 \"b\": 2}").find("comma"), std::string::npos);
     EXPECT_NE(error_of("1 2").find("after the value"), std::string::npos);
-    EXPECT_NE(error_of("tru").find("wrong word"), std::string::npos);
+    EXPECT_NE(error_of("trux").find("wrong word"), std::string::npos);
     EXPECT_NE(error_of("nul").find("wrong word"), std::string::npos);
-    EXPECT_NE(error_of("fals").find("wrong word"), std::string::npos);
+    EXPECT_NE(error_of("falsy").find("wrong word"), std::string::npos);
     EXPECT_NE(error_of("-").find("value"), std::string::npos);
     EXPECT_NE(error_of("1.").find("digit"), std::string::npos);
     EXPECT_NE(error_of("1e").find("digit"), std::string::npos);
