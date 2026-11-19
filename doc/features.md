@@ -78,7 +78,8 @@ comparison with other window managers is in the [comparison](comparison.md).
   put on one side of the primary one, and the number of every monitor can be
   shown in its corner (see [Configuration](configuration.md#multiple-monitors)).
 - **Settings:** `tiny-settings`, a small form with the sections Appearance,
-  Fonts, Desktop, Displays, Power, Security, Applications and Session that changes the font, the
+  Fonts, Desktop, Displays, Keyboard, Power, Applications, Session, Security and
+  Plugins, each with an icon, that changes the font, the
   rendering of text (antialiasing, hinting, subpixel order), the scale, the
   wallpaper, the mode of the dock, the format of the clock, the monitors, the
   time to switch the display off, the time to lock the screen after that and the
@@ -132,8 +133,9 @@ comparison with other window managers is in the [comparison](comparison.md).
   `~/.local/share/tiny-shell/plugins` and in the data directories of the
   system, a plugin of the user replaces a system one), each one is switched on
   and off alone and can have settings, which `tiny-settings` shows in the
-  section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD) and a
-  weather with a forecast are included; see [Plugins](plugins.md). Optional at
+  section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD; an icon that follows the
+  charge, with a bolt while it charges) and a weather (the symbol and the
+  temperature, a click opens the details and the forecast) are included; see [Plugins](plugins.md). Optional at
   build time (`make LUA=no`).
 - **Other:** one `poll()` event loop for X events, signals and timers (finished
   children are collected by a `SIGCHLD` handler), commands of Restart and

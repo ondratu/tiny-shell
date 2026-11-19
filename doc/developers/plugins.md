@@ -140,24 +140,77 @@ call that asked for it. The programs of a plugin that is stopped are killed.
 
 ```lua
 local label = tiny.panel.label{text = "12:00", sample = "00:00 AM"}
-local button = tiny.panel.button{text = "Go", on_click = function() ... end}
+local button = tiny.panel.button{
+    icon = "battery-good", text = "85%", sample = "100%",
+    on_click = function() ... end,
+}
 ```
 
 | | |
 | --- | --- |
 | `text` | what it shows |
 | `sample` | the longest text that it will show. The panel gives the widget the width of the wider of `text` and `sample`, so the other widgets do not move when the text changes. A longer text is cut. |
+| `icon` | the name of a symbolic icon that is drawn before the text in the color of the text, see [Icons](#icons). The widget keeps room for an icon when it is made with one, so changing it later does not move the others. |
+| `icon_under` | an icon that is drawn first and dimmed, see [Icons](#icons) |
 | `on_click` | a function called on a click (a button only) |
 | `w:set_text(text)` | changes the text |
 | `w:text()` | the text now |
+| `w:set_icon(name, under)` | changes the icons; `nil` for none |
 | `w:set_visible(bool)` | hides and shows it; a hidden widget leaves its place empty, so create a widget only when there is something to show |
 | `w:on_click(fn)` | replaces the function of the click (a button only) |
+| `w:popup(window)` | opens a window under the widget, see [Windows](#windows) |
+| `w:close_popup()` | closes it |
 | `w:destroy()` | takes it out of the panel; also from its own click |
 
 The widgets are added at the right of the panel, next to the clock, in the order
 of the ids of the plugins and of the calls. They follow the theme. A plugin can
 make widgets when it runs and later, from a timer or a program that ended. When
 there is no panel the plugins are not started.
+
+### Icons
+
+The names are the symbolic icons of the shell: the files
+`share/tiny-shell/icons/white/<name>-symbolic.svg` (`data/tiny-shell/icons` in
+the repository), without `-symbolic.svg`. They follow the names of freedesktop.org
+that GNOME uses, so `battery-good`, `weather-clear`, `network-wireless-signal-ok`,
+`audio-volume-medium`, `bluetooth-active`, `cpu`, `memory` and the like are there.
+An icon that does not exist is not drawn.
+
+A level (the battery, the signal of the wifi, the volume) is a symbol that is
+drawn whole and dimmed, and the part that is full over it. The icons are made
+for it: `battery-full` under `battery-good`, `network-wireless-signal-excellent`
+under `network-wireless-signal-ok`, `audio-volume-high` under `audio-volume-low`.
+Give the full symbol as `icon_under` and the level as `icon`; for "no signal" give
+only `icon_under`. The batteries that charge have their own icons with the bolt:
+`battery-full-charging`, `battery-good-charging`, `battery-low-charging` and
+`battery-empty-charging`; they need no `icon_under`.
+
+### Windows
+
+A click on a button can open a window with the details, like the weather of GNOME
+Shell does. It opens under the widget, inside of the panel, and a click anywhere
+else closes it. The window only shows information; every field is optional.
+
+```lua
+button:popup{
+    icon = "weather-clear",          -- a big icon at the left of the header
+    title = "Prague",
+    subtitle = "Clear sky",          -- under the title, dimmed
+    value = "9°C",                   -- big, at the right
+    sections = {
+        {heading = "Today", rows = {
+            {label = "Wind", value = "16 km/h"},
+            {icon = "weather-showers", label = "Friday", value = "3° / 8°"},
+        }},
+    },
+}
+```
+
+A section has a `heading` and `rows`; a row has a `label` at the left, a `value`
+at the right and an `icon` (the label of the rows of a section moves right when one
+of them has an icon). There are at most 8 sections of 40 rows. Calling `popup`
+again changes the window that is open, so a plugin can show new values when a
+program has answered.
 
 ### Settings that change
 
@@ -245,7 +298,7 @@ start()
 
 ## A plugin with a widget
 
-`examples/plugins/hello-panel/` puts a button in the panel that counts the clicks.
+`examples/plugins/hello-panel/` puts a button with an icon in the panel that counts the clicks and opens a window with the last one.
 
 ```lua
 local clicks = 0
@@ -263,12 +316,29 @@ local function shown()
     return text
 end
 
+-- `sample` is the longest text of the button: the panel gives it that much
+-- room, so the other widgets do not move when the text changes. `icon` is
+-- a symbolic icon of the shell (the list is in data/tiny-shell/icons).
 button = tiny.panel.button{
     text = shown(),
     sample = "A long greeting 00:00:00",
+    icon = "emblem-shared",
     on_click = function()
         clicks = clicks + 1
         button:set_text(shown())
+        -- the window under the button: a header and lines of details
+        button:popup{
+            icon = "emblem-shared",
+            title = "Hello, panel",
+            subtitle = "A plugin that counts clicks",
+            value = tostring(clicks),
+            sections = {
+                {heading = "The last click", rows = {
+                    {label = "Time", value = os.date("%H:%M:%S")},
+                    {label = "Clicks so far", value = tostring(clicks)},
+                }},
+            },
+        }
     end,
 }
 
@@ -277,7 +347,8 @@ tiny.on_config(function()
 end)
 ```
 
-Its `plugin.ini` has two settings, `text` and `format` (a choice of `clicks` and
+A click on the button changes the text and opens a window under it. Its
+`plugin.ini` has two settings, `text` and `format` (a choice of `clicks` and
 `time`); see the file.
 
 ## Trying a plugin

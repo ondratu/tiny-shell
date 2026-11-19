@@ -18,8 +18,10 @@ their icons.
 ## Settings
 
 `build/tiny-settings` (made by `make`) has a panel at the left with the sections
-and the fields of the chosen section. The sections are in the order of the
-settings of GNOME:
+and the fields of the chosen section. Every section has an icon before its name,
+so it is easy to find. The sections go from what you see to what the system
+does: Appearance, Fonts, Desktop, Displays, Keyboard, Power, Applications,
+Session, Security and Plugins. Ctrl+Page Down and Ctrl+Page Up go through them.
 
 - **Appearance:** the style of the theme (Dark or Light), the style of the panel,
   of the dock and of the launcher (Follow the theme, Light or Dark: each of them can keep its
@@ -31,23 +33,11 @@ settings of GNOME:
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
 - **Desktop:** the mode of the dock (Auto-hide, On, Off) and the format of the
   clock.
-- **Power:** Display off, the time without input after which the display is
-  switched off: Unchanged (the X server keeps its setting), Never, 5, 10, 15, 30
-  or 60 minutes (`[display] off_after`), and DPMS, Yes or No (`[display] dpms`,
-  see [the power saving of the display](configuration.md#the-power-saving-of-the-display));
-  both are read after `tiny-shell --reload`. A short note under each field
-  says what it does. Other things about power (the battery) will come here.
-- **Security:** Lock style (Follow the theme, Light or Dark, like the panel), Lock after, the time from the moment the display is switched off
-  to the lock of the screen: Never, Immediately, 1, 2, 5, 10 or 30 minutes
-  (`[lock] delay`; read after `tiny-shell --reload`), like Automatic Screen Lock
-  of GNOME.
-- **Applications:** the terminal.
-- **Session:** Autostart (start the programs of `~/.config/autostart` with the
-  session), Programs (the list of those programs, marked as System or User, with
-  a switch for each, see [Switching programs on and off](session.md#switching-programs-on-and-off))
-  and Confirm (off by default: a dialog with a countdown before Logout,
-  Restart and Shutdown; the programs are asked to close either way), see
-  [The session](session.md).
+- **Displays:** the primary and the secondary monitor (a choice of the monitors
+  that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
+  one is (Keep, Right, Left, Above or Below the primary one). While this section
+  is shown, the number of every monitor is on its screen, over all the windows,
+  and Save applies the monitors at once.
 - **Keyboard:** Layouts (a list of all the layouts and variants of the system,
   like `Czech (QWERTY)`: Space or a click chooses one, the letters that are typed
   find a name, up to four; they are numbered in the order of switching and the
@@ -58,11 +48,26 @@ settings of GNOME:
   to look at), see
   [The keyboard](configuration.md#the-keyboard). Save sets the keyboard at
   once; without a layout chosen the keyboard stays as the system has it.
-- **Displays:** the primary and the secondary monitor (a choice of the monitors
-  that the system has, like `1: DP-1 1920x1080`, or Auto), where the secondary
-  one is (Keep, Right, Left, Above or Below the primary one). While this section
-  is shown, the number of every monitor is on its screen, over all the windows,
-  and Save applies the monitors at once.
+- **Power:** Display off, the time without input after which the display is
+  switched off: Unchanged (the X server keeps its setting), Never, 5, 10, 15, 30
+  or 60 minutes (`[display] off_after`), and DPMS, Yes or No (`[display] dpms`,
+  see [the power saving of the display](configuration.md#the-power-saving-of-the-display));
+  both are read after `tiny-shell --reload`. A short note under each field
+  says what it does. Other things about power (what happens on a low charge)
+  will come here.
+- **Applications:** the terminal.
+- **Session:** Autostart (start the programs of `~/.config/autostart` with the
+  session), Programs (the list of those programs, marked as System or User, with
+  a switch for each, see [Switching programs on and off](session.md#switching-programs-on-and-off))
+  and Confirm (off by default: a dialog with a countdown before Logout,
+  Restart and Shutdown; the programs are asked to close either way), see
+  [The session](session.md).
+- **Security:** Lock style (Follow the theme, Light or Dark, like the panel), Lock after, the time from the moment the display is switched off
+  to the lock of the screen: Never, Immediately, 1, 2, 5, 10 or 30 minutes
+  (`[lock] delay`; read after `tiny-shell --reload`), like Automatic Screen Lock
+  of GNOME.
+- **Plugins:** the list of the plugins (System, User or User replacing a system one), a switch for
+  each, and the settings of a plugin when it has some; see [Plugins](plugins.md).
 
 A click on a section, or Ctrl+Page Down and Ctrl+Page Up, shows it. The form
 shows the values in use now (the global file and the one of the user together).

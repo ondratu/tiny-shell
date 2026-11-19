@@ -454,7 +454,7 @@ plugin; their names and values are described by the plugin. `tiny-settings`
 ```ini
 [plugin.battery]
 enabled = yes
-prefix = Battery
+percent = no
 interval = 60
 
 [plugin.weather]
