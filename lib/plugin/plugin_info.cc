@@ -1,13 +1,12 @@
 #include "plugin/plugin_info.h"
 
+#include <dirent.h>
 #include <sys/stat.h>
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <map>
 #include <set>
 
@@ -17,22 +16,32 @@
 
 namespace tiny::plugin {
 
-namespace fs = std::filesystem;
-
 namespace {
 
 constexpr size_t max_metadata = 64 * 1024;
 
-std::optional<std::string> read_small_file(const fs::path& path)
+std::optional<std::string> read_small_file(const std::string& path)
 {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) {
+    FILE* in = fopen(path.c_str(), "r");
+    if (in == nullptr) {
         return std::nullopt;
     }
     std::string text(max_metadata, '\0');
-    in.read(text.data(), static_cast<std::streamsize>(text.size()));
-    text.resize(static_cast<size_t>(in.gcount()));
+    text.resize(fread(text.data(), 1, text.size(), in));
+    fclose(in);
     return text;
+}
+
+bool is_directory(const std::string& path)
+{
+    struct stat info = {};
+    return stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+}
+
+bool file_exists(const std::string& path)
+{
+    struct stat info = {};
+    return stat(path.c_str(), &info) == 0;
 }
 
 bool plain_text(const std::string& text)
@@ -210,7 +219,7 @@ PluginInfo parse_plugin_info(const std::string& id, const std::string& dir,
             fail(why);
         }
     }
-    if (!fs::exists(fs::path(dir) / "plugin.lua")) {
+    if (!file_exists(dir + "/plugin.lua")) {
         fail("plugin.lua is missing");
     }
     return info;
@@ -234,25 +243,49 @@ PluginDirs plugin_dirs(const char* data_home, const char* data_dirs,
     return dirs;
 }
 
+bool list_directory(const std::string& path, std::vector<std::string>& names,
+                    int* error)
+{
+    DIR* directory = opendir(path.c_str());
+    if (directory == nullptr) {
+        if (error != nullptr) {
+            *error = errno;
+        }
+        return false;
+    }
+    names.clear();
+    while (const dirent* entry = readdir(directory)) {
+        const std::string name = entry->d_name;
+        if (name != "." && name != "..") {
+            names.push_back(name);
+        }
+    }
+    closedir(directory);
+    std::sort(names.begin(), names.end());
+    return true;
+}
+
 namespace {
 
 //! The plugins in a directory, the ones with a wrong id are skipped
 std::vector<PluginInfo> read_dir(const std::string& dir, Origin origin)
 {
     std::vector<PluginInfo> found;
-    std::error_code ignore;
-    for (fs::directory_iterator it(dir, ignore), end; !ignore && it != end;
-         it.increment(ignore)) {
-        const std::string id = it->path().filename().string();
-        if (!wm::valid_plugin_id(id) || !fs::is_directory(it->path(), ignore)) {
+    std::vector<std::string> names;
+    if (!list_directory(dir, names)) {
+        return found;
+    }
+    for (const std::string& id : names) {
+        const std::string where = dir + "/" + id;
+        if (!wm::valid_plugin_id(id) || !is_directory(where)) {
             continue;
         }
-        const fs::path ini = it->path() / "plugin.ini";
-        const bool has_ini = fs::exists(ini, ignore);
-        if (!has_ini && !fs::exists(it->path() / "plugin.lua", ignore)) {
+        const std::string ini = where + "/plugin.ini";
+        const bool has_ini = file_exists(ini);
+        if (!has_ini && !file_exists(where + "/plugin.lua")) {
             continue; // not a plugin
         }
-        PluginInfo info = parse_plugin_info(id, it->path().string(), origin,
+        PluginInfo info = parse_plugin_info(id, where, origin,
                                             read_small_file(ini).value_or(""));
         if (!has_ini) {
             info.problem = "plugin.ini is missing";

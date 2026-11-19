@@ -2,6 +2,9 @@
 
 #include "plugin/host.h"
 
+#include <algorithm>
+#include <cstdio>
+
 namespace tiny::plugin {
 
 // The build without Lua: the plugins are found and listed, but nothing runs.
@@ -17,30 +20,25 @@ PluginHost::PluginHost(HostServices services):
 
 PluginHost::~PluginHost() = default;
 
-bool PluginHost::available()
+bool PluginHost::apply(const std::vector<PluginInfo>&, const wm::Config& config,
+                       bool)
 {
-    return false;
-}
-
-bool PluginHost::apply(const std::vector<PluginInfo>& found,
-                       const wm::Config& config, bool)
-{
-    if (impl->told) {
+    // the user switched a plugin on (the ones that run by default are not
+    // asked about: the shell does not even look for them without Lua)
+    const bool wanted = std::any_of(
+            config.plugins.begin(), config.plugins.end(), [](const auto& item) {
+                return item.second.enabled.value_or(false);
+            });
+    if (impl->told || !wanted) {
         return false;
     }
-    for (const PluginInfo& info : found) {
-        if (plugin_enabled(info, config)) {
-            impl->told = true;
-            const std::string line =
-                    "tiny-shell: plugins are switched on, but this build has "
-                    "no Lua (see LUA in the Makefile)";
-            if (impl->services.log) {
-                impl->services.log(line);
-            } else {
-                fprintf(stderr, "%s\n", line.c_str());
-            }
-            return false;
-        }
+    impl->told = true;
+    const std::string line = "tiny-shell: plugins are switched on, but this "
+                             "build has no Lua (see LUA in the Makefile)";
+    if (impl->services.log) {
+        impl->services.log(line);
+    } else {
+        fprintf(stderr, "%s\n", line.c_str());
     }
     return false;
 }

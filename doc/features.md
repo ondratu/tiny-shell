@@ -125,8 +125,16 @@ comparison with other window managers is in the [comparison](comparison.md).
 - **Actions:** the menu items and the shortcuts run actions by name (`logout`,
   `run-dialog`, `launcher`, `next-window`, `show-desktop`, `window-menu`,
   `exec:<command>`...),
-  and the panel has slots for small widgets of plugins; this is what the planned
-  Lua plugins will use.
+  and the panel has slots for small widgets of plugins (see Plugins).
+- **Plugins:** small programs in Lua that add to the panel: a text or a button
+  with a timer, a program that runs in the background, a file that is read, JSON
+  from a web service. They are found like the extensions of GNOME Shell (in
+  `~/.local/share/tiny-shell/plugins` and in the data directories of the
+  system, a plugin of the user replaces a system one), each one is switched on
+  and off alone and can have settings, which `tiny-settings` shows in the
+  section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD) and a
+  weather with a forecast are included; see [Plugins](plugins.md). Optional at
+  build time (`make LUA=no`).
 - **Other:** one `poll()` event loop for X events, signals and timers (finished
   children are collected by a `SIGCHLD` handler), commands of Restart and
   Shutdown, a configuration file (scale, commands, favorites of the dock),

@@ -647,6 +647,7 @@ TEST_F(HostTest, without_lua_nothing_runs_and_the_user_is_told_once)
 {
     EXPECT_FALSE(PluginHost::available());
     tree.add("hello", "tiny.log('ran')");
+    config.plugins["hello"].enabled = true; // the user switched it on
     PluginHost host(services);
     host.apply(tree.find(), config);
     host.apply(tree.find(), config);
@@ -657,9 +658,11 @@ TEST_F(HostTest, without_lua_nothing_runs_and_the_user_is_told_once)
     host.stop();
 }
 
-TEST_F(HostTest, without_lua_a_switched_off_plugin_is_not_mentioned)
+TEST_F(HostTest, without_lua_a_plugin_that_nobody_switched_on_is_not_mentioned)
 {
-    tree.add("off", "", "[plugin]\nenabled = no\n");
+    tree.add("quiet", "", "[plugin]\nenabled = yes\n");
+    config.plugins["other"].enabled = false;
+    config.plugins["third"].values["a"] = "b"; // only settings
     PluginHost host(services);
     host.apply(tree.find(), config);
     EXPECT_TRUE(lines.empty());
