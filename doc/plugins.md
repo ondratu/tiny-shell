@@ -9,8 +9,8 @@ Two plugins come with tiny-shell:
 
 | Plugin | What it does | Switched on |
 | ------ | ------------ | ----------- |
-| **Battery** | The charge of the battery and whether it charges (`Bat 85% +`), and a `!` when it is low. Linux, FreeBSD and OpenBSD; a computer without a battery shows nothing. | yes |
-| **Weather** | The weather in a town, from [open-meteo.com](https://open-meteo.com/) (free, no account; needs `curl`). A click shows the forecast for the next day, and the next one. | no, it needs a town first |
+| **Battery** | A battery with the percentage next to it. The icon follows the charge (full, good, low, empty) and has a bolt while the battery charges. A click shows the state in words. Linux, FreeBSD and OpenBSD; a computer without a battery shows nothing. | yes |
+| **Weather** | The symbol of the weather and the temperature, from [open-meteo.com](https://open-meteo.com/) (free, no account; needs `curl`). A click opens a window like the one of GNOME: the town, the weather now, the feeling, the humidity, the wind, the pressure and the forecast for the next five days. Nothing changes by itself. | no, it needs a town first |
 
 How to write your own is in [Writing plugins](developers/plugins.md).
 
@@ -42,9 +42,9 @@ once, without a restart.
 
 A plugin that has settings shows them as a list: a choice goes through its
 values with a click or the arrows, a text is typed, a number is typed and must be
-in the range that the plugin says. The Battery has the text before the charge,
-how often to look, and the charge that is low; the Weather has the town, the
-units (Celsius or Fahrenheit) and how often to update.
+in the range that the plugin says. The Battery has whether to show the
+percentage and how often to look; the Weather has the town, the units (Celsius
+or Fahrenheit) and how often to update.
 
 The values are saved in your `tiny-shell.ini` in the section of the plugin:
 

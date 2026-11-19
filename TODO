@@ -212,7 +212,8 @@ next steps:
   - The interface: `tiny.bind(keys, action)` and `tiny.action(name, fn)` (the
     ActionRegistry; after key bindings), window events (`on_manage`, `on_focus`,
     `on_title`) with read-only window information, widgets that open a
-    popover (a list, a slider, a switch), a widget that is as wide as its text
+    window with controls (a list, a slider, a switch; the window that only
+    shows information is there), a widget that is as wide as its text
     (the panel does not move a widget when a child changes its size yet) or
     gives its place back when hidden, `tiny.http` without curl, and a generic
     D-Bus binding (`tiny.dbus.call`, `get_property`, `subscribe`; after the D-Bus
