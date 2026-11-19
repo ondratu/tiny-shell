@@ -463,6 +463,7 @@ int main(int argc, char** argv)
         services.panel = &manager.get_panel();
         services.timers = &manager.get_timers();
         services.watches = &manager.get_fd_watch();
+        services.icons = &manager.get_icons();
         services.theme = [] {
             return tiny::theme.get_variant() == tiny::Variant::Light ? "light"
                                                                      : "dark";

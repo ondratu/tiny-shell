@@ -511,6 +511,99 @@ TEST_F(HostTest, a_button_tells_its_click_to_the_plugin)
     EXPECT_FALSE(logged("clicked"));
 }
 
+TEST_F(HostTest, a_widget_with_an_icon_is_wider_and_can_change_it)
+{
+    tree.add("icons",
+             "a = tiny.panel.label{text = '1', sample = '1'}\n"
+             "b = tiny.panel.label{text = '1', sample = '1', icon = 'x', "
+             "icon_under = 'y'}\n"
+             "b:set_icon('z')\n"
+             "b:set_icon(nil)\n"
+             "tiny.log('widths', a ~= nil, b ~= nil)\n");
+    const auto before = children_of(panel.get_window());
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("plugin icons: widths true true"));
+    const auto after = children_of(panel.get_window());
+    ASSERT_EQ(after.size(), before.size() + 2);
+    XWindowAttributes plain;
+    XWindowAttributes iconic;
+    XGetWindowAttributes(tiny::get_display(), after[after.size() - 2], &plain);
+    XGetWindowAttributes(tiny::get_display(), after[after.size() - 1], &iconic);
+    EXPECT_GT(iconic.width, plain.width);
+}
+
+TEST_F(HostTest, the_name_of_an_icon_is_a_text)
+{
+    tree.add("icon", "tiny.panel.label{text = 'x'}:set_icon(5)");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_NE(host.error_of("icon").find("icon is a text"),
+              std::string::npos);
+}
+
+TEST_F(HostTest, a_window_opens_under_a_widget_and_is_closed_again)
+{
+    tree.add("window",
+             "b = tiny.panel.button{text = 'go', on_click = function()\n"
+             "  b:popup{icon = 'x', title = 'T', subtitle = 'S', value = '9',\n"
+             "    sections = {{heading = 'H', rows = {{icon = 'i', label = 'a', "
+             "value = '1'}, {label = 'b'}}}, {rows = {}}}}\n"
+             "  tiny.log('opened')\n"
+             "  b:close_popup()\n"
+             "  b:popup{title = 'again'}\n"
+             "end}\n");
+    const auto before = children_of(panel.get_window());
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    const auto after = children_of(panel.get_window());
+    ASSERT_EQ(after.size(), before.size() + 1);
+    send(after.back(), make_event(EnterNotify));
+    send(after.back(), make_event(ButtonRelease));
+    EXPECT_TRUE(logged("opened"));
+    EXPECT_EQ(host.running(), std::vector<std::string>{"window"});
+    EXPECT_TRUE(host.error_of("window").empty());
+}
+
+TEST_F(HostTest, a_window_with_a_wrong_description_is_an_error_of_the_plugin)
+{
+    const std::vector<std::pair<std::string, std::string>> wrong = {
+            {"b:popup(5)", "a table is expected"},
+            {"b:popup{title = {}}", "title must be a text"},
+            {"b:popup{sections = 3}", "sections must be a table"},
+            {"b:popup{sections = {5}}", "a section must be a table"},
+            {"b:popup{sections = {{rows = 5}}}", "rows must be a table"},
+            {"b:popup{sections = {{rows = {5}}}}", "a row must be a table"},
+            {"b:popup{sections = {{rows = {{label = {}}}}}}",
+             "label must be a text"},
+    };
+    for (const auto& [code, message] : wrong) {
+        PluginTree own;
+        own.add("bad", "b = tiny.panel.button{text = 'x'}\n" + code);
+        PluginHost host(services);
+        host.apply(own.find(), config);
+        EXPECT_NE(host.error_of("bad").find(message), std::string::npos)
+                << code << ": " << host.error_of("bad");
+    }
+}
+
+TEST_F(HostTest, a_window_has_a_limit_of_the_sections_and_rows)
+{
+    tree.add("many", "b = tiny.panel.button{text = 'x'}\n"
+                     "local rows = {}\n"
+                     "for i = 1, 41 do rows[i] = {label = 'r'} end\n"
+                     "local ok, e = pcall(b.popup, b, {sections = {{rows = rows}}})\n"
+                     "tiny.log(tostring(ok), e)\n"
+                     "local s = {}\n"
+                     "for i = 1, 9 do s[i] = {} end\n"
+                     "ok, e = pcall(b.popup, b, {sections = s})\n"
+                     "tiny.log(tostring(ok), e)\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("false too many rows in a section"));
+    EXPECT_TRUE(logged("false too many sections"));
+}
+
 TEST_F(HostTest, a_label_cannot_be_clicked)
 {
     tree.add("label", "tiny.panel.label{text = 'x'}:on_click(function() end)");
