@@ -15,17 +15,24 @@ ENV DEBIAN_FRONTEND=noninteractive
 # added; that one is only for clang-tidy 22. libstdc++-14-dev is there because
 # the runners of GitHub have it, Clang uses the newest libstdc++ and the size
 # of the binary depends on it.
-RUN printf 'Acquire::Retries "5";\n' > /etc/apt/apt.conf.d/80-retries \
- && apt-get update \
- && apt-get install -y --no-install-recommends \
-        ca-certificates wget gnupg \
-        build-essential pkg-config git gh ccache cppcheck \
-        libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev \
-        libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev \
-        clang-19 llvm-19 libclang-rt-19-dev libstdc++-14-dev \
- && wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc --tries=5 --retry-connrefused --waitretry=10 \
-        https://apt.llvm.org/llvm-snapshot.gpg.key \
- && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" > /etc/apt/sources.list.d/llvm.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends clang-tidy-22 \
+# apt-get update succeeds when an index could not be downloaded, so it is told
+# to fail, and the whole step is repeated: the mirrors are sometimes down.
+RUN printf 'Acquire::Retries "5";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/apt.conf.d/80-retries \
+ && for try in 1 2 3 4 5; do \
+        { apt-get update \
+          && apt-get install -y --no-install-recommends \
+            ca-certificates wget gnupg \
+            build-essential pkg-config git gh ccache cppcheck \
+            libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev \
+            libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev \
+            clang-19 llvm-19 libclang-rt-19-dev libstdc++-14-dev \
+          && wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc --tries=5 --retry-connrefused --waitretry=10 \
+            https://apt.llvm.org/llvm-snapshot.gpg.key \
+          && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" > /etc/apt/sources.list.d/llvm.list \
+          && apt-get update \
+          && apt-get install -y --no-install-recommends clang-tidy-22; \
+        } && break; \
+        echo "apt failed (try $try of 5)" >&2; sleep $((try * 20)); \
+    done \
+ && command -v clang-tidy-22 \
  && rm -rf /var/lib/apt/lists/*
