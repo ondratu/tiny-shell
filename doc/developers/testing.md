@@ -30,10 +30,11 @@ make asan        # all the tests with AddressSanitizer and UBSan
 ```
 
 The same checks run in GitHub Actions (`.github/workflows/ci.yml`) with GCC,
-Clang, on Alpine (musl) and NetBSD, plus pre-commit, clang-tidy, cppcheck,
+Clang, on Alpine (musl, arm64), plus pre-commit, clang-tidy, cppcheck,
 the sanitizers, a coverage minimum and a binary size limit (`make release`
 builds the small programs). A
-change should pass all of them; the NetBSD job is best effort.
+change should pass all of them; FreeBSD, OpenBSD and NetBSD run weekly in
+`bsd.yml` (best effort, `tools/ci-bsd.sh` runs there).
 
 Most jobs run in a container image with all the tools (`.github/ci/Dockerfile`),
 so they do not install the system on every run and a down mirror of a package
