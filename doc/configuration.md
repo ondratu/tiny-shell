@@ -443,6 +443,31 @@ belong to the session, so set them in `~/.config/tiny-shell/environment` (see
 The launcher starts a program with the `PATH` of tiny-shell, so put
 `~/.local/bin` and the like to `PATH` in the session too.
 
+## Plugins
+
+Each plugin has a section `[plugin.<id>]` (the id is the name of its directory,
+for example `[plugin.weather]`). `enabled` switches it: `yes` or `no`; without it
+the plugin follows its own default. The other keys are the settings of the
+plugin; their names and values are described by the plugin. `tiny-settings`
+(Plugins) writes these sections; see [Plugins](plugins.md).
+
+```ini
+[plugin.battery]
+enabled = yes
+prefix = Battery
+interval = 60
+
+[plugin.weather]
+enabled = yes
+location = Prague
+units = imperial
+```
+
+A plugin that is switched on or off, or has a setting changed, is started or
+stopped when the files are read again, without a restart of the shell. A value
+that is not valid for the setting (not one of the choices, out of the range) is
+ignored and the default is used. `tiny-shell --info` does not list the plugins.
+
 ## Command line
 
 ```
@@ -460,7 +485,7 @@ the same as `kill -HUP` of its process, but it is a message to the window
 manager over X (the window manager is found through
 `_NET_SUPPORTING_WM_CHECK`), so no process is signalled and it works on the
 computer where tiny-shell runs and on another one that has the same display. What changes at once: the colors (`[theme]
-style`), the favorites, the commands, the wallpaper, the clock, the system tray,
+style`), the favorites, the commands, the wallpaper, the clock, the plugins, the system tray,
 the mode and the bar of the dock, the keyboard, `[xft]` and what the programs are told by XSETTINGS. The
 scale and the font of the shell itself need a restart (a message says so).
 `SIGTERM` and `SIGINT` end tiny-shell.

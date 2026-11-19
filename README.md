@@ -12,8 +12,9 @@ as it can give.
 
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
-> dialog, an application launcher, a clock, a screen lock and the power saving
-> of the display. More pictures are in the [screenshots](doc/screenshots.md).
+> dialog, an application launcher, a clock, a screen lock, the power saving
+> of the display and Lua plugins of the panel (a battery and a weather come
+> with it). More pictures are in the [screenshots](doc/screenshots.md).
 
 ![The desktop of tiny-shell](doc/static/screenshots/desktop-day.png)
 
@@ -28,12 +29,13 @@ The documentation is in [doc/](doc/) and is published as a web site at
 | [Using the shell](doc/usage.md) | the panel, the dock, the launcher, the window menu, the keys |
 | [Configuration](doc/configuration.md) | the ini file, XSETTINGS, the tray, monitors, the command line |
 | [Applications](doc/applications.md) | `tiny-settings`, `tiny-fonts`, `tiny-about`, `tiny-wallpaper` |
+| [Plugins](doc/plugins.md) | Lua plugins of the panel (the battery, the weather), where they are, how to switch them on and set them |
 | [The session](doc/session.md) | starting a session, the autostart programs and their switches, logout that lets programs save their work |
 | [Screen lock](doc/lock.md) | `tiny-lock`: the password of the system, locking when idle, PAM, fingerprints, systems without PAM |
 | [Features](doc/features.md) | everything that is implemented |
 | [Comparison](doc/comparison.md) | tiny-shell next to Openbox, Blackbox, Fluxbox, LXDE, Xfce and GNOME |
 | [Roadmap](doc/roadmap.md) | what is planned |
-| [For developers](doc/developers/index.md) | the rules, the architecture, the tests |
+| [For developers](doc/developers/index.md) | the rules, the architecture, the tests, [how to write a plugin](doc/developers/plugins.md) |
 
 ## What it is not
 
@@ -61,6 +63,9 @@ make                      # build/tiny-shell and the other programs
 tools/run-xephyr.sh       # try it in a nested X server, the safest way
 sudo make install         # into /usr/local
 ```
+
+Lua 5.3 or newer (`liblua5.4-dev`) is used for the [plugins](doc/plugins.md) when
+it is found; `make LUA=no` builds without it.
 
 To use it as your window manager, choose "Tiny Shell" on the login screen of a
 display manager, or end your `~/.xinitrc` with `exec tiny-shell-session`. More is

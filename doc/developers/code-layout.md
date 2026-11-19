@@ -9,8 +9,8 @@ Two static libraries are built from `lib/`:
 
 | Library | Directories | Namespace | What it is |
 | ------- | ----------- | --------- | ---------- |
-| `libtiny-widgets.a` | `lib/*.cc`, `lib/image/`, the vendored libraries | `tiny`, `tiny::image` | the widget toolkit; it includes nothing from `wm/`, `xdg/` and `app/` (`make layers` checks it, and the tests of the widgets link only this library) |
-| `libtiny-shell.a` | `lib/wm/`, `lib/xdg/`, `lib/app/` | `tiny::wm`, `tiny::xdg`, `tiny::app` | the window manager and the shell, the freedesktop.org files, and the logic of the programs |
+| `libtiny-widgets.a` | `lib/*.cc`, `lib/image/`, the vendored libraries | `tiny`, `tiny::image` | the widget toolkit; it includes nothing from `wm/`, `xdg/`, `app/` and `plugin/` (`make layers` checks it, and the tests of the widgets link only this library) |
+| `libtiny-shell.a` | `lib/wm/`, `lib/xdg/`, `lib/app/`, `lib/plugin/` | `tiny::wm`, `tiny::xdg`, `tiny::app`, `tiny::plugin` | the window manager and the shell, the freedesktop.org files, the logic of the programs, and the Lua plugins (see [Writing plugins](plugins.md)) |
 
 ## Programs
 
