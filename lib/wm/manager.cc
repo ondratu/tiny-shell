@@ -1106,16 +1106,20 @@ bool Manager::wait_for_event()
 {
     // A client that floods the queue must not delay the signal.
     for (bool wait = XPending(display) == 0;; wait = true) {
-        struct pollfd fds[2] = {{ConnectionNumber(display), POLLIN, 0},
-                                {quit_pipe[0], POLLIN, 0}};
-        if (poll(fds, 2, wait ? next_timeout_ms() : 0) < 0 && errno != EINTR) {
+        std::vector<pollfd> fds = {{ConnectionNumber(display), POLLIN, 0},
+                                   {quit_pipe[0], POLLIN, 0}};
+        std::vector<tiny::FdWatch::Id> watched;
+        watches.prepare(fds, watched);
+        if (poll(fds.data(), fds.size(), wait ? next_timeout_ms() : 0) < 0 &&
+            errno != EINTR) {
             return false;
         }
         check_pings();
         check_startup();
         timers.run_due();
+        watches.dispatch(fds, watched, 2);
         if (!running) {
-            return false; // a timer asked to end the loop
+            return false; // a timer or a watch asked to end the loop
         }
         if (fds[1].revents & POLLIN) {
             char drain[16];

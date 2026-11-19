@@ -349,3 +349,54 @@ TEST(SpawnTest, only_the_last_children_are_remembered)
     }
     EXPECT_FALSE(tiny::child_ended(first, nullptr)); // pushed out of the ring
 }
+
+TEST(SpawnTest, capture_gives_the_output_of_the_program)
+{
+    int fd = -1;
+    const pid_t pid = tiny::spawn_capture({"sh", "-c", "printf hello"}, &fd);
+    ASSERT_GT(pid, 0);
+    ASSERT_GE(fd, 0);
+    std::string text;
+    EXPECT_TRUE(wait_for([&] {
+        char buffer[64];
+        const ssize_t n = read(fd, buffer, sizeof(buffer));
+        if (n > 0) {
+            text.append(buffer, static_cast<size_t>(n));
+        }
+        return n == 0; // the end of the file
+    }));
+    EXPECT_EQ(text, "hello");
+    close(fd);
+    waitpid(pid, nullptr, 0);
+}
+
+TEST(SpawnTest, capture_has_no_input_and_no_error_output)
+{
+    int fd = -1;
+    const pid_t pid = tiny::spawn_capture(
+            {"sh", "-c", "echo error >&2; cat; echo end"}, &fd);
+    ASSERT_GT(pid, 0);
+    std::string text;
+    EXPECT_TRUE(wait_for([&] {
+        char buffer[64];
+        const ssize_t n = read(fd, buffer, sizeof(buffer));
+        if (n > 0) {
+            text.append(buffer, static_cast<size_t>(n));
+        }
+        return n == 0;
+    }));
+    EXPECT_EQ(text, "end\n"); // cat read /dev/null, the error is not here
+    close(fd);
+    waitpid(pid, nullptr, 0);
+}
+
+TEST(SpawnTest, capture_of_a_missing_program_fails_and_opens_nothing)
+{
+    int fd = -2;
+    errno = 0;
+    EXPECT_EQ(tiny::spawn_capture({"/nonexistent/tiny-program"}, &fd), -1);
+    EXPECT_EQ(errno, ENOENT);
+    EXPECT_EQ(fd, -2);
+    EXPECT_EQ(tiny::spawn_capture({"true"}, nullptr), -1);
+    EXPECT_EQ(errno, EINVAL);
+}
