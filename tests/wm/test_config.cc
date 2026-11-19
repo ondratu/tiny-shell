@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -1272,4 +1273,72 @@ TEST(ConfigTest, the_choices_of_the_styles_have_the_values_of_the_file)
     EXPECT_TRUE(tiny::wm::valid_style_choice(""));
     EXPECT_TRUE(tiny::wm::valid_style_choice("light"));
     EXPECT_FALSE(tiny::wm::valid_style_choice("dark"));
+}
+
+TEST(ConfigTest, a_plugin_has_its_own_section_with_the_state_and_the_values)
+{
+    const Config c = parse_config(
+            {{"a", "[plugin.weather]\nenabled = yes\nlocation = Prague\n"
+                   "[plugin.battery]\nenabled = no\n[plugin.mixer_2]\nunits = "
+                   "x\n"}});
+    ASSERT_EQ(c.plugins.size(), 3u);
+    EXPECT_EQ(c.plugins.at("weather").enabled, std::optional<bool>(true));
+    EXPECT_EQ(c.plugins.at("weather").values.at("location"), "Prague");
+    EXPECT_EQ(c.plugins.at("weather").values.count("enabled"), 0u);
+    EXPECT_EQ(c.plugins.at("battery").enabled, std::optional<bool>(false));
+    EXPECT_FALSE(c.plugins.at("mixer_2").enabled.has_value());
+    EXPECT_TRUE(parse_config({}).plugins.empty());
+}
+
+TEST(ConfigTest, the_files_of_a_plugin_are_layered_by_key)
+{
+    const Config c = parse_config(
+            {{"system", "[plugin.weather]\nenabled = yes\nunits = metric\n"},
+             {"user", "[plugin.weather]\nunits = imperial\n"}});
+    EXPECT_EQ(c.plugins.at("weather").enabled, std::optional<bool>(true));
+    EXPECT_EQ(c.plugins.at("weather").values.at("units"), "imperial");
+}
+
+TEST(ConfigTest, a_wrong_section_or_state_of_a_plugin_is_told)
+{
+    std::vector<std::string> problems;
+    const Config c =
+            parse_config({{"a", "[plugin.Bad Id]\nx = 1\n[plugin.]\nx = 1\n"
+                                "[plugin.ok]\nenabled = maybe\n"}},
+                         &problems);
+    EXPECT_EQ(c.plugins.count("Bad Id"), 0u);
+    EXPECT_EQ(c.plugins.count(""), 0u);
+    EXPECT_FALSE(c.plugins.at("ok").enabled.has_value());
+    ASSERT_EQ(problems.size(), 3u);
+    EXPECT_NE(problems[2].find("enabled must be yes or no"), std::string::npos);
+}
+
+TEST(ConfigTest, the_id_of_a_plugin_is_a_plain_name)
+{
+    using tiny::wm::valid_plugin_id;
+    EXPECT_TRUE(valid_plugin_id("battery"));
+    EXPECT_TRUE(valid_plugin_id("a-b_c9"));
+    EXPECT_FALSE(valid_plugin_id(""));
+    EXPECT_FALSE(valid_plugin_id("Battery"));
+    EXPECT_FALSE(valid_plugin_id("../x"));
+    EXPECT_FALSE(valid_plugin_id("a b"));
+    EXPECT_FALSE(valid_plugin_id(std::string(65, 'a')));
+    EXPECT_TRUE(valid_plugin_id(std::string(64, 'a')));
+}
+
+TEST(ConfigTest, the_values_of_a_plugin_are_written_to_its_section)
+{
+    const auto file = std::filesystem::temp_directory_path() /
+                      ("plugin-save-" + std::to_string(getpid()) + ".ini");
+    std::filesystem::remove(file);
+    ASSERT_TRUE(tiny::wm::save_values(
+            file.string(), {{"plugin.weather", "enabled", "yes"},
+                            {"plugin.weather", "location", "Prague"}}));
+    std::ifstream in(file);
+    const std::string text((std::istreambuf_iterator<char>(in)),
+                           std::istreambuf_iterator<char>());
+    std::filesystem::remove(file);
+    const Config c = parse_config({{"saved", text}});
+    EXPECT_EQ(c.plugins.at("weather").values.at("location"), "Prague");
+    EXPECT_EQ(c.plugins.at("weather").enabled, std::optional<bool>(true));
 }

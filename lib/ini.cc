@@ -74,6 +74,28 @@ void Ini::set(const std::string& section, const std::string& key,
     values[{section, key}] = std::move(value);
 }
 
+std::vector<std::string> Ini::sections() const
+{
+    std::vector<std::string> names;
+    for (const auto& entry : values) {
+        if (names.empty() || names.back() != entry.first.first) {
+            names.push_back(entry.first.first);
+        }
+    }
+    return names;
+}
+
+std::vector<std::pair<std::string, std::string>>
+Ini::items(const std::string& section) const
+{
+    std::vector<std::pair<std::string, std::string>> found;
+    for (auto it = values.lower_bound({section, std::string()});
+         it != values.end() && it->first.first == section; ++it) {
+        found.emplace_back(it->first.second, it->second);
+    }
+    return found;
+}
+
 std::string Ini::dump() const
 {
     std::string text;

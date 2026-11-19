@@ -13,6 +13,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include "ini.h"
@@ -46,6 +47,15 @@ std::optional<std::string> read_file(const std::string& file)
 }
 
 } // namespace
+
+bool valid_plugin_id(const std::string& text)
+{
+    return !text.empty() && text.size() <= 64 &&
+           std::all_of(text.begin(), text.end(), [](char c) {
+               return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+                      c == '-' || c == '_';
+           });
+}
 
 std::optional<double> parse_scale(const std::string& text)
 {
@@ -414,7 +424,7 @@ std::vector<std::string> split_ids(std::string_view list)
 void apply(const Ini& ini, const std::string& name, Config& config,
            std::vector<std::string>* problems)
 {
-    const auto problem = [&](const char* what) {
+    const auto problem = [&](const std::string& what) {
         if (problems) {
             problems->push_back(name + ": " + what);
         }
@@ -687,6 +697,29 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     }
     if (const auto value = ini.get("dock", "favorites")) {
         config.favorites = split_ids(*value);
+    }
+    constexpr std::string_view plugin_prefix = "plugin.";
+    for (const std::string& section : ini.sections()) {
+        if (section.compare(0, plugin_prefix.size(), plugin_prefix) != 0) {
+            continue;
+        }
+        const std::string id = section.substr(plugin_prefix.size());
+        if (!valid_plugin_id(id)) {
+            problem("[" + section +
+                    "] is not the section of a plugin: the id "
+                    "has lowercase letters, digits, - and _");
+            continue;
+        }
+        PluginConfig& plugin = config.plugins[id];
+        for (const auto& [key, value] : ini.items(section)) {
+            if (key != "enabled") {
+                plugin.values[key] = value;
+            } else if (value == "yes" || value == "no") {
+                plugin.enabled = value == "yes";
+            } else {
+                problem("[" + section + "] enabled must be yes or no");
+            }
+        }
     }
 }
 

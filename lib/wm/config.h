@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -70,8 +71,34 @@ namespace tiny::wm {
  * [dock]
  * mode = autohide
  * favorites = firefox.desktop;org.gnome.Nautilus.desktop
+ *
+ * [plugin.weather]
+ * enabled = yes
+ * location = Prague
  * ```
  */
+//! The settings of one plugin: the section `[plugin.<id>]`
+struct PluginConfig {
+    //! `enabled`: switched on or off by the user; nothing leaves it to the
+    //! default of the plugin
+    std::optional<bool> enabled;
+    //! The other keys: the values of the settings of the plugin, as text
+    std::map<std::string, std::string> values;
+
+    bool operator==(const PluginConfig& other) const
+    {
+        return enabled == other.enabled && values == other.values;
+    }
+    bool operator!=(const PluginConfig& other) const
+    {
+        return !(*this == other);
+    }
+};
+
+//! Whether the text can be the id of a plugin (the name of its directory):
+//! lowercase letters, digits, `-` and `_`, at most 64 of them
+bool valid_plugin_id(const std::string& text);
+
 struct Config {
     double scale = 1;                                //!< [theme] scale, (0, 16]
     std::string reboot_command = "systemctl reboot"; //!< [commands]
@@ -156,6 +183,8 @@ struct Config {
     DockMode dock_mode = DockMode::AutoHide;
     //! [dock] favorites: ids of desktop files, `;` between them
     std::vector<std::string> favorites;
+    //! [plugin.<id>]: what the user set for a plugin, by its id
+    std::map<std::string, PluginConfig> plugins;
 };
 
 //! The ways the programs draw text, that `[xft]` sets (`Xft.*` of X resources)
