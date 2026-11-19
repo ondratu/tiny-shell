@@ -221,6 +221,11 @@ variant_of_xsettings(const std::vector<XSetting>& settings)
     return std::nullopt;
 }
 
+static int ignore_error(::Display* /*display*/, XErrorEvent* /*error*/)
+{
+    return 0;
+}
+
 std::optional<Variant> running_variant(::Display* display, int screen)
 {
     const Atom selection =
@@ -235,9 +240,15 @@ std::optional<Variant> running_variant(::Display* display, int screen)
     unsigned long count = 0;
     unsigned long after = 0;
     unsigned char* data = nullptr;
+    // the owner can be gone between the two requests (BadWindow), and then
+    // nobody tells the variant
+    XSync(display, False); // the older errors are not ours to ignore
+    const XErrorHandler old_handler = XSetErrorHandler(ignore_error);
     const int status =
             XGetWindowProperty(display, owner, property, 0, 1 << 16, False,
                                property, &type, &format, &count, &after, &data);
+    XSync(display, False);
+    XSetErrorHandler(old_handler);
     std::vector<unsigned char> bytes;
     if (status == Success && data != nullptr && format == 8) {
         bytes.assign(data, data + count);
