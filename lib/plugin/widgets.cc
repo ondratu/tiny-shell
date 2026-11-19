@@ -27,24 +27,25 @@ int panel_text_width(::Display* display, int padding, XftFont* font,
            2 * padding;
 }
 
-PluginLabel::PluginLabel(const std::string& text, const std::string& sample):
-    tiny::Label(1, wm::shell_theme.panel, text)
+PluginLabel::PluginLabel(const std::string& initial, const std::string& sample):
+    tiny::Label(1, wm::shell_theme.panel, initial)
 {
     name = "plugin_label";
     resize(panel_text_width(display, get_padding(), get_style().get_font(),
-                            text, sample),
+                            initial, sample),
            wm::shell_theme.panel);
 }
 
 PluginLabel::~PluginLabel() = default;
 
-PluginButton::PluginButton(const std::string& text, const std::string& sample):
-    tiny::LabelButton(1, wm::shell_theme.panel, text)
+PluginButton::PluginButton(const std::string& initial,
+                           const std::string& sample):
+    tiny::LabelButton(1, wm::shell_theme.panel, initial)
 {
     name = "plugin_button";
     set_border(0);
     resize(panel_text_width(display, get_padding(), get_style().get_font(),
-                            text, sample),
+                            initial, sample),
            wm::shell_theme.panel);
 }
 
