@@ -1,6 +1,7 @@
 #include "wm_helpers.h"
 
 #include <poll.h>
+#include <sys/stat.h>
 
 #include <chrono>
 
@@ -166,6 +167,16 @@ TEST_F(HostTest, a_plugin_that_runs_too_long_is_stopped)
     EXPECT_NE(host.error_of("loop").find("too long"), std::string::npos);
 }
 
+TEST_F(HostTest, a_pcall_does_not_keep_a_plugin_running_for_ever)
+{
+    tree.add("swallow",
+             "while true do pcall(function() while true do end end) end");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(host.running().empty());
+    EXPECT_NE(host.error_of("swallow").find("too long"), std::string::npos);
+}
+
 TEST_F(HostTest, a_plugin_has_no_files_and_no_programs_of_its_own)
 {
     tree.add("sandbox",
@@ -204,6 +215,23 @@ TEST_F(HostTest, timers_call_the_functions_and_can_be_cancelled)
     EXPECT_FALSE(logged("never"));
     loop.run_until([] { return false; }, 100ms);
     EXPECT_TRUE(loop.timers.empty());
+}
+
+TEST_F(HostTest, a_delay_that_is_not_a_number_or_too_long_is_made_safe)
+{
+    tree.add("delays",
+             "tiny.after(0/0, function() tiny.log('nan fired') end)\n"
+             "tiny.after(math.huge, function() tiny.log('huge fired') end)\n"
+             "tiny.after(1e300, function() tiny.log('big fired') end)\n"
+             "tiny.exec({'true'}, function(r)\n"
+             "  tiny.log('exec', r.ok, r.timed_out)\n"
+             "end, {timeout = 1e300})\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(loop.run_until(
+            [&] { return logged("nan fired") && logged("exec true false"); }));
+    EXPECT_FALSE(logged("huge fired"));
+    EXPECT_FALSE(logged("big fired"));
 }
 
 TEST_F(HostTest, an_error_in_a_function_is_logged_and_the_plugin_goes_on)
@@ -314,6 +342,22 @@ TEST_F(HostTest, reads_files_and_finds_programs)
     EXPECT_TRUE(logged("plugin files: nil /nonexistent/tiny-file: No such "
                        "file or directory"));
     EXPECT_TRUE(logged("plugin files: true /bin/sh nil nil"));
+}
+
+TEST_F(HostTest, read_file_tells_a_directory_and_does_not_wait_for_a_fifo)
+{
+    const std::string fifo = (tree.path / "fifo").string();
+    ASSERT_EQ(mkfifo(fifo.c_str(), 0600), 0);
+    tree.add("special", "tiny.log('dir', tiny.read_file('" +
+                                tree.path.string() +
+                                "'))\n"
+                                "tiny.log('fifo', tiny.read_file('" +
+                                fifo + "'))\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("plugin special: dir nil " + tree.path.string() +
+                       ": Is a directory"));
+    EXPECT_TRUE(logged("plugin special: fifo "));
 }
 
 TEST_F(HostTest, lists_a_directory_and_knows_the_platform)

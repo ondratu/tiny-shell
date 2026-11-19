@@ -2,6 +2,7 @@
 
 #include "plugin/host.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -43,6 +44,9 @@ constexpr const char* timer_meta = "tiny.timer";
 constexpr auto time_limit = 2s;
 constexpr int hook_every = 100000; //!< VM instructions between the checks
 constexpr int shortest_timer_ms = 10;
+//! The longest delay of a timer or a program (30 days): a longer one, or one
+//! that is not a number, would overflow the clock
+constexpr long long longest_delay_ms = 30LL * 24 * 3600 * 1000;
 constexpr size_t default_file_limit = size_t{1024} * 1024;
 
 struct Plugin;
@@ -136,6 +140,9 @@ void time_hook(lua_State* L, lua_Debug*)
 {
     const Plugin& plugin = self(L);
     if (std::chrono::steady_clock::now() - plugin.call_start > time_limit) {
+        // From now on every instruction raises the error, so a `pcall` around
+        // a loop does not swallow it for good (`call()` sets the pace again)
+        lua_sethook(L, time_hook, LUA_MASKCOUNT, 1);
         luaL_error(L, "the plugin runs for too long (more than %d seconds)",
                    static_cast<int>(std::chrono::seconds(time_limit).count()));
     }
@@ -161,6 +168,7 @@ bool call(Plugin& plugin, int nargs, int nresults)
     lua_insert(L, base);
     if (plugin.depth++ == 0) {
         plugin.call_start = std::chrono::steady_clock::now();
+        lua_sethook(L, time_hook, LUA_MASKCOUNT, hook_every);
     }
     const int status = lua_pcall(L, nargs, nresults, base);
     --plugin.depth;
@@ -188,16 +196,39 @@ bool call_ref(Plugin& plugin, int ref, int nargs_pushed = 0)
 
 // ---- helpers of the functions ----
 
-//! The strings of the table at `index`, for a program to run
-std::vector<std::string> string_list(lua_State* L, int index)
+// Raising an error in Lua jumps over the C++ objects that are alive (Lua is C),
+// so the functions below that make objects (strings, vectors) never raise
+// one: they push the message and return false (or -1 from a function of Lua),
+// and the registered function, where nothing is alive, raises it.
+
+//! Push an error and return -1, the result of a function that failed
+int fail(lua_State* L, const char* message)
 {
-    luaL_checktype(L, index, LUA_TTABLE);
-    std::vector<std::string> list;
+    lua_pushstring(L, message);
+    return -1;
+}
+
+//! Raise the error that `fail()` pushed, or return the number of results
+int finish(lua_State* L, int result)
+{
+    return result < 0 ? lua_error(L) : result;
+}
+
+//! The strings of the table at `index`, for a program to run; false and the
+//! error pushed when the table is not right
+bool string_list(lua_State* L, int index, std::vector<std::string>& list)
+{
+    if (!lua_istable(L, index)) {
+        fail(L, "the program and its arguments are a table of strings");
+        return false;
+    }
     const auto size = luaL_len(L, index);
     for (lua_Integer i = 1; i <= size; ++i) {
         lua_rawgeti(L, index, i);
         if (lua_type(L, -1) != LUA_TSTRING) {
-            luaL_error(L, "the program and its arguments are strings");
+            lua_pop(L, 1);
+            fail(L, "the program and its arguments are strings");
+            return false;
         }
         size_t length = 0;
         const char* text = lua_tolstring(L, -1, &length);
@@ -205,24 +236,41 @@ std::vector<std::string> string_list(lua_State* L, int index)
         lua_pop(L, 1);
     }
     if (list.empty() || list.front().empty()) {
-        luaL_error(L, "the name of the program is missing");
+        fail(L, "the name of the program is missing");
+        return false;
     }
-    return list;
+    return true;
 }
 
-//! The text field `name` of the table at `index`, or `fallback`
-std::string field_string(lua_State* L, int index, const char* name,
-                         const std::string& fallback = "")
+//! The text field `name` of the table at `index` goes to `value` (it is not
+//! changed when there is none); false and the error pushed for another type
+bool field_string(lua_State* L, int index, const char* name, std::string& value)
 {
     lua_getfield(L, index, name);
-    std::string value = fallback;
+    bool good = true;
     if (lua_type(L, -1) == LUA_TSTRING || lua_type(L, -1) == LUA_TNUMBER) {
         value = lua_tostring(L, -1); // a number is converted in a copy
     } else if (!lua_isnil(L, -1)) {
-        luaL_error(L, "%s must be a text", name);
+        good = false;
     }
     lua_pop(L, 1);
-    return value;
+    if (!good) {
+        lua_pushfstring(L, "%s must be a text", name);
+    }
+    return good;
+}
+
+//! A delay in milliseconds that a plugin asked for, from `lowest` to
+//! `longest_delay_ms`; what is not a number is the lowest
+std::chrono::milliseconds delay_of(lua_Number value, long long lowest)
+{
+    if (!(value >= static_cast<lua_Number>(lowest))) { // also NaN
+        return std::chrono::milliseconds(lowest);
+    }
+    if (value > static_cast<lua_Number>(longest_delay_ms)) {
+        return std::chrono::milliseconds(longest_delay_ms);
+    }
+    return std::chrono::milliseconds(static_cast<long long>(value));
 }
 
 // ---- tiny.log, tiny.setting, tiny.config, tiny.theme ----
@@ -275,8 +323,10 @@ int l_setting(lua_State* L)
 
 int l_config(lua_State* L)
 {
-    const std::string section = luaL_checkstring(L, 1);
-    const std::string key = luaL_checkstring(L, 2);
+    luaL_checkstring(L, 1); // both before any object is made
+    luaL_checkstring(L, 2);
+    const std::string section = lua_tostring(L, 1);
+    const std::string key = lua_tostring(L, 2);
     const auto& raw = self(L).host->config.raw;
     const auto it = raw.find({section, key});
     if (it == raw.end()) {
@@ -318,24 +368,38 @@ int l_read_file(lua_State* L)
     const lua_Integer asked =
             luaL_optinteger(L, 2, static_cast<lua_Integer>(default_file_limit));
     const size_t limit = asked < 0 ? 0 : static_cast<size_t>(asked);
-    FILE* in = fopen(path, "r");
+    // not blocking: a FIFO without a writer must not stop the shell
+    const int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    FILE* in = fd >= 0 ? fdopen(fd, "r") : nullptr;
     if (in == nullptr) {
         const int error = errno;
+        if (fd >= 0) {
+            close(fd);
+        }
         lua_pushnil(L);
         lua_pushfstring(L, "%s: %s", path, strerror(error));
         return 2;
     }
     std::string text;
     char buffer[4096];
+    int read_error = 0;           // a directory, EIO...
     while (text.size() < limit) { // /sys and /proc files have no size
         const size_t want = std::min(sizeof(buffer), limit - text.size());
         const size_t got = fread(buffer, 1, want, in);
+        if (got < want && ferror(in) != 0) {
+            read_error = errno;
+        }
         text.append(buffer, got);
         if (got < want) {
             break;
         }
     }
     fclose(in);
+    if (read_error != 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "%s: %s", path, strerror(read_error));
+        return 2;
+    }
     lua_pushlstring(L, text.data(), text.size());
     return 1;
 }
@@ -390,9 +454,12 @@ int l_which(lua_State* L)
     return 1;
 }
 
-int l_launch(lua_State* L)
+int launch_impl(lua_State* L)
 {
-    const std::vector<std::string> argv = string_list(L, 1);
+    std::vector<std::string> argv;
+    if (!string_list(L, 1, argv)) {
+        return -1;
+    }
     if (spawn(argv) < 0) {
         const int error = errno;
         lua_pushboolean(L, 0);
@@ -401,6 +468,11 @@ int l_launch(lua_State* L)
     }
     lua_pushboolean(L, 1);
     return 1;
+}
+
+int l_launch(lua_State* L)
+{
+    return finish(L, launch_impl(L));
 }
 
 //! The function `ref` is called with `result` later, from the loop
@@ -424,18 +496,21 @@ void push_result(lua_State* L, const RunResult& result,
     }
 }
 
-int l_exec(lua_State* L)
+int exec_impl(lua_State* L)
 {
     Plugin& plugin = self(L);
-    const std::vector<std::string> argv = string_list(L, 1);
-    luaL_checktype(L, 2, LUA_TFUNCTION);
+    if (!lua_isfunction(L, 2)) {
+        return fail(L, "the second argument is a function");
+    }
+    std::vector<std::string> argv;
+    if (!string_list(L, 1, argv)) {
+        return -1;
+    }
     Runner::Options options;
     if (lua_istable(L, 3)) {
         lua_getfield(L, 3, "timeout");
         if (lua_isnumber(L, -1)) {
-            const lua_Number ms = lua_tonumber(L, -1);
-            options.timeout = std::chrono::milliseconds(
-                    ms < 1 ? 1 : static_cast<long long>(ms));
+            options.timeout = delay_of(lua_tonumber(L, -1), 1);
         }
         lua_pop(L, 1);
     }
@@ -466,6 +541,11 @@ int l_exec(lua_State* L)
     return 0;
 }
 
+int l_exec(lua_State* L)
+{
+    return finish(L, exec_impl(L));
+}
+
 // ---- timers ----
 
 //! The timer of a function; `every` is repeated
@@ -474,9 +554,7 @@ int start_timer(lua_State* L, bool every)
     Plugin& plugin = self(L);
     const lua_Number asked = luaL_checknumber(L, 1);
     luaL_checktype(L, 2, LUA_TFUNCTION);
-    const auto delay = std::chrono::milliseconds(
-            asked < shortest_timer_ms ? shortest_timer_ms
-                                      : static_cast<long long>(asked));
+    const auto delay = delay_of(asked, shortest_timer_ms);
     lua_pushvalue(L, 2);
     const int ref = luaL_ref(L, LUA_REGISTRYINDEX);
     Plugin* const p = &plugin;
@@ -532,16 +610,22 @@ Entry* check_entry(lua_State* L, int index)
     return *static_cast<Entry**>(luaL_checkudata(L, index, widget_meta));
 }
 
-int make_widget(lua_State* L, bool button)
+int make_widget_impl(lua_State* L, bool button)
 {
     Plugin& plugin = self(L);
     wm::Panel* const panel = plugin.host->services.panel;
     if (panel == nullptr || !panel->get_realized()) {
-        return luaL_error(L, "the panel is not there");
+        return fail(L, "the panel is not there");
     }
-    luaL_checktype(L, 1, LUA_TTABLE);
-    const std::string text = field_string(L, 1, "text");
-    const std::string sample = field_string(L, 1, "sample");
+    if (!lua_istable(L, 1)) {
+        return fail(L, "a table is expected: {text = ..., sample = ...}");
+    }
+    std::string text;
+    std::string sample;
+    if (!field_string(L, 1, "text", text) ||
+        !field_string(L, 1, "sample", sample)) {
+        return -1;
+    }
 
     auto entry = std::make_unique<Entry>();
     Entry* const raw = entry.get();
@@ -580,12 +664,12 @@ int make_widget(lua_State* L, bool button)
 
 int l_label(lua_State* L)
 {
-    return make_widget(L, false);
+    return finish(L, make_widget_impl(L, false));
 }
 
 int l_button(lua_State* L)
 {
-    return make_widget(L, true);
+    return finish(L, make_widget_impl(L, true));
 }
 
 int l_widget_set_text(lua_State* L)
@@ -731,10 +815,13 @@ int l_json_decode(lua_State* L)
 // ---- require ----
 
 //! `require("name")` loads `name.lua` of the directory of the plugin
-int l_require(lua_State* L)
+int require_impl(lua_State* L)
 {
     Plugin& plugin = self(L);
-    const std::string name = luaL_checkstring(L, 1);
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        return fail(L, "the name of a module is a string");
+    }
+    const std::string name = lua_tostring(L, 1);
     const auto word = [](char c) {
         return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
                (c >= '0' && c <= '9') || c == '_';
@@ -745,10 +832,11 @@ int l_require(lua_State* L)
                       std::all_of(name.begin(), name.end(),
                                   [&](char c) { return word(c) || c == '.'; });
     if (!good) {
-        return luaL_error(L,
-                          "the name of a module has letters, digits, _ and "
-                          "dots: %s",
-                          name.c_str());
+        lua_pushfstring(L,
+                        "the name of a module has letters, digits, _ and "
+                        "dots: %s",
+                        name.c_str());
+        return -1;
     }
     lua_getfield(L, LUA_REGISTRYINDEX, "tiny.loaded");
     lua_getfield(L, -1, name.c_str());
@@ -757,20 +845,21 @@ int l_require(lua_State* L)
     }
     lua_pop(L, 1);
     if (!plugin.loading.insert(name).second) {
-        return luaL_error(L, "the module %s requires itself", name.c_str());
+        lua_pushfstring(L, "the module %s requires itself", name.c_str());
+        return -1;
     }
     std::string file = name;
     std::replace(file.begin(), file.end(), '.', '/');
     const std::string path = plugin.info.dir + "/" + file + ".lua";
     if (luaL_loadfile(L, path.c_str()) != LUA_OK) {
         plugin.loading.erase(name);
-        return lua_error(L);
+        return -1; // the message of Lua is on the stack
     }
     lua_pushstring(L, name.c_str());
     const int status = lua_pcall(L, 1, 1, 0);
     plugin.loading.erase(name); // also after an error, which goes on
     if (status != LUA_OK) {
-        return lua_error(L);
+        return -1;
     }
     if (lua_isnil(L, -1)) { // a module that returns nothing is `true`
         lua_pop(L, 1);
@@ -779,6 +868,11 @@ int l_require(lua_State* L)
     lua_pushvalue(L, -1);
     lua_setfield(L, -3, name.c_str());
     return 1;
+}
+
+int l_require(lua_State* L)
+{
+    return finish(L, require_impl(L));
 }
 
 // ---- the state of a plugin ----
@@ -807,7 +901,8 @@ void remove_function(lua_State* L, const char* table, const char* name)
 
 void open_libraries(lua_State* L)
 {
-    const luaL_Reg libraries[] = {{LUA_GNAME, luaopen_base},
+    // "_G" and not LUA_GNAME: Lua 5.3 does not have the macro
+    const luaL_Reg libraries[] = {{"_G", luaopen_base},
                                   {LUA_TABLIBNAME, luaopen_table},
                                   {LUA_STRLIBNAME, luaopen_string},
                                   {LUA_MATHLIBNAME, luaopen_math},
