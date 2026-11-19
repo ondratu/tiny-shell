@@ -701,6 +701,9 @@ void apply(const Ini& ini, const std::string& name, Config& config,
     constexpr std::string_view plugin_prefix = "plugin.";
     for (const std::string& section : ini.sections()) {
         if (section.compare(0, plugin_prefix.size(), plugin_prefix) != 0) {
+            for (const auto& [key, value] : ini.items(section)) {
+                config.raw[{section, key}] = value;
+            }
             continue;
         }
         const std::string id = section.substr(plugin_prefix.size());

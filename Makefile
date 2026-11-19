@@ -84,6 +84,25 @@ ifneq ($(UNIX_CHKPWD),)
 CHKPWD_CXXFLAGS = -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
 endif
 
+# Lua runs the plugins of the panel (lib/plugin/): LUA=auto (the default) uses
+# Lua 5.3 or newer when pkg-config finds it, yes insists on it, no builds a
+# shell without plugins. The names of the package differ between the systems
+# (lua5.4 Debian, lua-5.4 FreeBSD, OpenBSD and pkgsrc, lua54 Alpine).
+LUA ?= auto
+ifneq ($(LUA),no)
+LUA_PKG := $(firstword $(foreach p,lua5.4 lua-5.4 lua54 lua5.3 lua-5.3 lua53 lua, \
+    $(shell pkg-config --atleast-version=5.3 $(p) 2>/dev/null && echo $(p))))
+ifneq (,$(LUA_PKG))
+LUA_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags $(LUA_PKG)))
+LUA_LIBS := $(shell pkg-config --libs $(LUA_PKG))
+LUA_DEFS := -DTINY_HAVE_LUA
+else ifeq ($(LUA),yes)
+$(error LUA=yes, but Lua 5.3 or newer was not found by pkg-config (liblua5.4-dev, lua-devel, lua54))
+else
+$(info Lua was not found: tiny-shell is built without plugins, LUA=no hides this notice)
+endif
+endif
+
 # crypt() of tiny-lock-pwcheck is in libc (musl, BSD) or in libcrypt (glibc);
 # CRYPT_LIBS is what the linker needs on this system
 CRYPT_LIBS := $(shell printf '\043include <unistd.h>\n\043if __has_include(<crypt.h>)\n\043include <crypt.h>\n\043endif\nint main() { return crypt("a", "ab") == 0; }\n' | \
@@ -115,10 +134,10 @@ ifeq ($(XINERAMA),1)
 override CXXFLAGS += -DTINY_XINERAMA
 endif
 override CXXFLAGS += -pthread -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
-    $(SYS_CFLAGS) $(WARNINGS) \
+    $(SYS_CFLAGS) $(LUA_CFLAGS) $(LUA_DEFS) $(WARNINGS) \
     $(HARDENING)
 # -pthread: std::async (the run dialog reads PATH in a thread); old glibc needs it
-LDLIBS = $(PKG_LIBS) -pthread
+LDLIBS = $(PKG_LIBS) $(LUA_LIBS) -pthread
 
 # Two libraries. libtiny-widgets.a is the widget toolkit (lib/*.cc, the
 # pictures in lib/image/ and the vendored libraries): it knows nothing about
@@ -234,6 +253,7 @@ help:
 	@echo "make clean      remove the build directories"
 	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 (no RandR / Xinerama),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
+	@echo "           LUA=auto|yes|no (Lua 5.3 or newer for the plugins of the panel)"
 	@echo "           PAM=auto|yes|no (libpam for tiny-lock-auth), UNIX_CHKPWD=/path (the helper of PAM)"
 
 examples: $(EXAMPLES)
@@ -417,7 +437,8 @@ format:
 # Static analysis with clang-tidy (checks in .clang-tidy); runs in parallel.
 # CLANG_TIDY picks the tool, e.g. make lint CLANG_TIDY=clang-tidy-22.
 CLANG_TIDY ?= tools/run-tool.sh clang-tidy
-LINT_FLAGS = -std=c++17 -I./lib -isystem ./lib/third_party $(SYS_CFLAGS)
+LINT_FLAGS = -std=c++17 -I./lib -isystem ./lib/third_party $(SYS_CFLAGS) \
+    $(LUA_CFLAGS) $(LUA_DEFS)
 LINT_SRC = $(LIB_SRC) $(wildcard src/*.cc examples/*.cc)
 # The path-sensitive analyzer (clang-analyzer-*) takes over 90 % of the time,
 # and by far the most on the googletest macros, so it runs only on the library
