@@ -117,6 +117,9 @@ local function forecast(mine)
 end
 
 local function update()
+    -- also when there is nothing to ask: an answer that is on its way is old
+    generation = generation + 1
+    local mine = generation
     local location = tiny.setting("location")
     if location == "" then
         return problem("Set a location")
@@ -124,8 +127,6 @@ local function update()
     if not tiny.which("curl") then
         return problem("No curl")
     end
-    generation = generation + 1
-    local mine = generation
     if place_for == location and place then
         return forecast(mine)
     end

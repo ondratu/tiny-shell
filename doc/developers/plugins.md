@@ -26,14 +26,19 @@ in `data/tiny-shell/plugins/`, the two examples below in `examples/plugins/`.
 
 ```ini
 [plugin]
-name = Weather                  ; shown in the list
+; shown in the list
+name = Weather
 description = The weather and the forecast
-version = 1.2                   ; compared as numbers: 1.10 is newer than 1.9
+; compared as numbers: 1.10 is newer than 1.9
+version = 1.2
 author = A Name
 url = https://example.org/weather
-api = 1                         ; the level of the interface that it needs
-enabled = no                    ; does it run before the user chooses? (default no)
-settings = location;units       ; the settings, in the order of the dialog
+; the level of the interface that it needs
+api = 1
+; does it run before the user chooses? (default no)
+enabled = no
+; the settings, in the order of the dialog
+settings = location;units
 
 [setting.location]
 type = text
@@ -47,6 +52,9 @@ label = Units
 choices = metric=Celsius;imperial=Fahrenheit
 default = metric
 ```
+
+A comment is a whole line that starts with `;` or `#`; a comment after a value
+would be a part of the value (as in the ini file of the shell).
 
 A setting is one of four types. The `default` is used until the user sets it;
 a value that is not valid (not one of the choices, out of the range) is ignored
