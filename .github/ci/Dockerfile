@@ -12,7 +12,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Clang 19 is the one of Ubuntu (the jobs used it before, and the size limit
 # is measured with it), so it is installed before the repository of LLVM is
-# added; that one is only for clang-tidy 22.
+# added; that one is only for clang-tidy 22. libstdc++-14-dev is there because
+# the runners of GitHub have it, Clang uses the newest libstdc++ and the size
+# of the binary depends on it.
 RUN printf 'Acquire::Retries "5";\n' > /etc/apt/apt.conf.d/80-retries \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -20,7 +22,7 @@ RUN printf 'Acquire::Retries "5";\n' > /etc/apt/apt.conf.d/80-retries \
         build-essential pkg-config git gh ccache cppcheck \
         libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev \
         libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev \
-        clang-19 llvm-19 libclang-rt-19-dev \
+        clang-19 llvm-19 libclang-rt-19-dev libstdc++-14-dev \
  && wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc --tries=5 --retry-connrefused --waitretry=10 \
         https://apt.llvm.org/llvm-snapshot.gpg.key \
  && echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" > /etc/apt/sources.list.d/llvm.list \

@@ -127,14 +127,19 @@ jobs:
     # char is unsigned, so it finds what the x86 jobs cannot.
     name: Alpine (musl), Clang, arm64
     runs-on: ubuntu-24.04-arm
-    container:
-      image: ghcr.io/ondratu/tiny-shell-ci:alpine-3.22
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - run: make CXX=clang++ all check examples
+      # not "container:": the JavaScript actions do not run in Alpine on arm64
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and test in the image
+        run: >
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e STRICT
+          -v "$PWD":/work -w /work ghcr.io/ondratu/tiny-shell-ci:alpine-3.22
+          make CXX=clang++ all check examples
 
   coverage:
     needs: pre-commit

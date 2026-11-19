@@ -1,10 +1,11 @@
 # The image of the Alpine (musl) CI job, see Dockerfile and ci-image.yml.
-# nodejs is for the JavaScript actions (checkout) that run in the container.
+# The job runs it with docker run: GitHub does not run JavaScript actions in
+# Alpine containers on arm64.
 FROM alpine:3.22
 
 LABEL org.opencontainers.image.source="https://github.com/ondratu/tiny-shell"
 LABEL org.opencontainers.image.description="Alpine tools of the tiny-shell CI"
 
-RUN apk add --no-cache git make pkgconf clang g++ nodejs \
+RUN apk add --no-cache git make pkgconf clang g++ \
         libx11-dev libxext-dev libxft-dev libxrender-dev libxrandr-dev libxinerama-dev \
         fontconfig-dev linux-pam-dev gtest-dev xvfb xvfb-run xauth font-dejavu
