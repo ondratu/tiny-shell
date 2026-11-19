@@ -182,9 +182,17 @@ jobs:
           github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh pr comment ${{ github.event.pull_request.number }}
-          --edit-last --create-if-none --body-file coverage.md
+        run: |
+          # gh api, not gh pr comment: the gh of the image is older
+          repo=${{ github.repository }}
+          pr=${{ github.event.pull_request.number }}
+          id=$(gh api "repos/$repo/issues/$pr/comments" --paginate --jq \
+              '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("### Test coverage"))) | .id' | tail -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$repo/issues/comments/$id" -F body=@coverage.md > /dev/null
+          else
+            gh api -X POST "repos/$repo/issues/$pr/comments" -F body=@coverage.md > /dev/null
+          fi
       - name: The coverage must not go below the threshold
         # A ratchet: raise the number when the coverage grows, never lower it.
         run: |
