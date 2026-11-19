@@ -48,6 +48,13 @@ class Ini {
      */
     std::string dump() const;
 
+    //! The names of the sections that have a key, in the order of the names
+    std::vector<std::string> sections() const;
+
+    //! The keys and the values of a section, in the order of the keys
+    std::vector<std::pair<std::string, std::string>>
+    items(const std::string& section) const;
+
     bool empty() const { return values.empty(); }
 
   private:

@@ -170,3 +170,16 @@ TEST(IniTest, the_dump_is_read_back_the_same)
     EXPECT_EQ(again.get("t", "k"), "x = y");
     EXPECT_EQ(again.get("", "a"), "1");
 }
+
+TEST(IniTest, lists_the_sections_and_the_items_of_a_section)
+{
+    tiny::Ini ini;
+    ini.parse("top = 1\n[b]\nz = 2\na = 3\n[a.x]\nk = v\n");
+    EXPECT_EQ(ini.sections(), (std::vector<std::string>{"", "a.x", "b"}));
+    const auto items = ini.items("b");
+    ASSERT_EQ(items.size(), 2u);
+    EXPECT_EQ(items[0], (std::pair<std::string, std::string>{"a", "3"}));
+    EXPECT_EQ(items[1], (std::pair<std::string, std::string>{"z", "2"}));
+    EXPECT_TRUE(ini.items("missing").empty());
+    EXPECT_TRUE(tiny::Ini().sections().empty());
+}
