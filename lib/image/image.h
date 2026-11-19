@@ -62,6 +62,14 @@ std::optional<Image> load_image(const std::string& path, int size);
 Image tint(const Image& image, uint32_t rgb);
 
 /**
+ * @short Lay a picture with an alpha channel over a plain color.
+ *
+ * `image` is premultiplied, the result is opaque (alpha 0xFF): what a program
+ * that draws with `XPutImage` needs for an icon on a known background.
+ */
+Image over(const Image& image, uint32_t background_rgb);
+
+/**
  * @short Scale the picture to exactly `width` x `height` pixels.
  *
  * The aspect ratio is not kept. Up it uses a bilinear filter, down the
