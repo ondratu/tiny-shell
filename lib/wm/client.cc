@@ -723,8 +723,7 @@ void Client::on_maximize_click(tiny::Object*, const XEvent&, void*)
 void Client::on_move_resize_begin(tiny::Object*, const XEvent& e, void*)
 {
     set_maximized(false);
-    deferred_resize.reset();
-    sync_reset();
+    abandon_resize();
     start_event = e;
     XGetWindowAttributes(display, window, &start_attrs);
     long int supplied;

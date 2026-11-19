@@ -1171,6 +1171,26 @@ TEST_F(WindowTest, the_end_of_a_resize_stops_watching_the_counter)
     EXPECT_TRUE(timers.empty());
 }
 
+TEST_F(WindowTest, a_new_resize_forgets_the_size_that_waited_in_the_old_one)
+{
+    client.set_sync_counter();
+    tiny::Timers timers;
+    auto window = manage();
+    window->set_timers(&timers);
+    const int width = attributes_of(client.window).width;
+    window->begin_drag(tiny::Position::Right, 100, 100);
+    window->drag_to(150, 100);
+    window->drag_to(180, 100); // waits, the end never came
+    ASSERT_FALSE(timers.empty());
+
+    window->begin_drag(tiny::Position::Right, 100, 100);
+
+    EXPECT_TRUE(timers.empty());
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+    window->end_drag(); // nothing of the old resize is shown
+    EXPECT_EQ(attributes_of(client.window).width, width + 50);
+}
+
 TEST_F(WindowTest, a_window_that_goes_away_stops_watching_the_counter)
 {
     client.set_sync_counter();

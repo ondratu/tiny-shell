@@ -655,6 +655,10 @@ class Window {
     //! later
     void finish_resize();
 
+    //! A new resize starts (or the old one is dropped): the size that waited
+    //! is forgotten and the watching of the counter stops
+    void abandon_resize();
+
     //! The timers of the event loop, to show the size that waits for the
     //! client as soon as it has drawn (without them it waits for the next
     //! motion of the pointer); they must live longer than the window
