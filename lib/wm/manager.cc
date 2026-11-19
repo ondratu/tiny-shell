@@ -1110,7 +1110,8 @@ bool Manager::wait_for_event()
                                    {quit_pipe[0], POLLIN, 0}};
         std::vector<tiny::FdWatch::Id> watched;
         watches.prepare(fds, watched);
-        if (poll(fds.data(), fds.size(), wait ? next_timeout_ms() : 0) < 0 &&
+        if (poll(fds.data(), static_cast<nfds_t>(fds.size()),
+                 wait ? next_timeout_ms() : 0) < 0 &&
             errno != EINTR) {
             return false;
         }

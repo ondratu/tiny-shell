@@ -26,7 +26,7 @@ int round(FdWatch& watches)
     std::vector<pollfd> fds;
     std::vector<FdWatch::Id> ids;
     watches.prepare(fds, ids);
-    poll(fds.data(), fds.size(), 100);
+    poll(fds.data(), static_cast<nfds_t>(fds.size()), 100);
     return watches.dispatch(fds, ids, 0);
 }
 
