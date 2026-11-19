@@ -69,7 +69,8 @@ class Runner {
         pid_t pid = -1;
         int fd = -1;
         FdWatch::Id watch = 0;
-        Timers::Id timer = 0;
+        Timers::Id timer = 0; //!< the time limit
+        Timers::Id retry = 0; //!< the next look at the status of the program
         bool eof = false;
         Options options;
         RunResult result;

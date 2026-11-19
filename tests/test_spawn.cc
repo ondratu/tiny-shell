@@ -400,3 +400,28 @@ TEST(SpawnTest, capture_of_a_missing_program_fails_and_opens_nothing)
     EXPECT_EQ(tiny::spawn_capture({"true"}, nullptr), -1);
     EXPECT_EQ(errno, EINVAL);
 }
+
+#ifdef __linux__
+TEST(SpawnTest, capture_gives_the_program_only_the_standard_descriptors)
+{
+    if (access("/proc/self/fd", R_OK) != 0) {
+        GTEST_SKIP() << "no /proc";
+    }
+    int fd = -1;
+    // the descriptors of the shell, listed by a program that opens its own
+    const pid_t pid = tiny::spawn_capture({"sh", "-c", "ls /proc/$$/fd"}, &fd);
+    ASSERT_GT(pid, 0);
+    std::string text;
+    EXPECT_TRUE(wait_for([&] {
+        char buffer[64];
+        const ssize_t n = read(fd, buffer, sizeof(buffer));
+        if (n > 0) {
+            text.append(buffer, static_cast<size_t>(n));
+        }
+        return n == 0;
+    }));
+    EXPECT_EQ(text, "0\n1\n2\n"); // the one of /dev/null is closed
+    close(fd);
+    waitpid(pid, nullptr, 0);
+}
+#endif

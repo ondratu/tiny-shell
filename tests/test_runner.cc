@@ -170,3 +170,41 @@ TEST(RunnerTest, cancel_kills_the_programs_and_calls_nothing)
     EXPECT_TRUE(loop.watches.empty());
     EXPECT_TRUE(loop.timers.empty());
 }
+
+TEST(RunnerTest, a_program_that_floods_its_output_does_not_hold_the_loop)
+{
+    Loop loop;
+    Runner runner(loop.timers, loop.watches);
+    std::optional<RunResult> got;
+    Runner::Options options;
+    options.timeout = 100ms;
+    options.max_output = 1000;
+    const auto start = Timers::Clock::now();
+    ASSERT_TRUE(
+            runner.run({"yes"}, [&](const RunResult& r) { got = r; }, options));
+    ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_TRUE(result.timed_out);
+    EXPECT_TRUE(result.truncated);
+    // the time limit runs between the reads, it is not kept waiting
+    EXPECT_LT(Timers::Clock::now() - start, 800ms);
+}
+
+TEST(RunnerTest, a_program_that_closed_its_output_leaves_no_timer_behind)
+{
+    Loop loop;
+    bool called = false;
+    {
+        Runner runner(loop.timers, loop.watches);
+        // the end of the output is seen while the program still runs: the
+        // status is asked for again later, by a timer
+        ASSERT_TRUE(runner.run({"sh", "-c", "exec >&-; sleep 30"},
+                               [&](const RunResult&) { called = true; }));
+        ASSERT_TRUE(loop.run_until([&] { return loop.watches.empty(); }));
+        ASSERT_FALSE(loop.timers.empty());
+    } // the destructor must take the timers with it
+    EXPECT_TRUE(loop.timers.empty());
+    // nothing of the runner that is gone is called (see also the sanitizers)
+    loop.timers.run_due(Timers::Clock::now() + 1h);
+    EXPECT_FALSE(called);
+}

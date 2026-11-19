@@ -48,6 +48,9 @@ void on_sigchld(int)
         if (null >= 0) {
             dup2(null, STDIN_FILENO);
             dup2(null, STDERR_FILENO);
+            if (null > STDERR_FILENO) {
+                close(null); // the program does not get one more descriptor
+            }
         }
         dup2(output, STDOUT_FILENO);
     }
