@@ -50,6 +50,10 @@ class ScriptFile {
               std::to_string(++counter)))
     {
         std::ofstream(path) << "#!/bin/sh\n" << body << "\n";
+        // on the BSDs a file takes the group of the directory, and chmod
+        // drops the setgid bit of a group the user is not in
+        static_cast<void>(
+                chown(path.c_str(), static_cast<uid_t>(-1), getegid()));
         chmod(path.c_str(), static_cast<mode_t>(mode));
     }
     ~ScriptFile() { std::filesystem::remove(path); }

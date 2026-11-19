@@ -50,7 +50,8 @@ TEST(LockCheckTest, the_wrong_status_is_the_one_of_the_checker)
 
 TEST(LockCheckTest, the_password_is_followed_by_a_zero_when_asked)
 {
-    const std::string body = "head -c 7 | od -An -c | grep -q '\\\\0'";
+    const std::string body =
+            "dd bs=1 count=7 2>/dev/null | od -An -c | grep -q '\\\\0'";
     EXPECT_EQ(tiny::app::run_checker(script(body, 1, true), "secret").verdict,
               Verdict::Right);
     EXPECT_EQ(tiny::app::run_checker(script(body, 1, false), "secret").verdict,
@@ -146,6 +147,9 @@ TEST(LockCheckTest, privileges_are_told_from_the_mode_of_the_file)
     const auto file = std::filesystem::temp_directory_path() /
                       ("tiny-lock-mode-" + std::to_string(getpid()));
     std::ofstream(file) << "#!/bin/sh\n";
+    // on the BSDs a file takes the group of the directory, and chmod drops
+    // the setgid bit of a group the user is not in
+    static_cast<void>(chown(file.c_str(), static_cast<uid_t>(-1), getegid()));
     chmod(file.c_str(), 0755);
     EXPECT_TRUE(tiny::app::can_run(file));
     EXPECT_FALSE(tiny::app::has_privileges(file));
