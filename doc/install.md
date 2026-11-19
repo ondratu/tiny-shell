@@ -13,7 +13,8 @@ How to build, install and try tiny-shell, and on which systems it runs.
 | Wayland       | Not planned, X11 on Xorg only |
 
 tiny-shell needs nothing from the system but the X libraries: no D-Bus, no
-systemd, no GLib and no GPU features.
+systemd, no GLib and no GPU features. Lua is used for the [plugins](plugins.md)
+when it is installed, and is not needed without them.
 
 ## Building
 
@@ -39,6 +40,14 @@ The names of the packages on other systems:
 | ------ | -------- |
 | Fedora | `gcc-c++ make pkgconf libX11-devel libXft-devel libXrender-devel libXext-devel libXrandr-devel libXinerama-devel fontconfig-devel` |
 | Alpine | `build-base pkgconf libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev fontconfig-dev` |
+
+Lua 5.3 or newer is optional too, and used by default when `pkg-config` finds it:
+with `liblua5.4-dev` (Debian and Ubuntu), `lua-devel` (Fedora), `lua5.4-dev`
+(Alpine), `lua54` (FreeBSD and `lang/lua54` of pkgsrc on NetBSD) or `lua-5.4`
+(OpenBSD) installed, `make` builds the [plugins](plugins.md) of the panel
+(`make LUA=no` does not, `make LUA=yes` insists on Lua). Without Lua the
+shell is built without plugins and the build says so. The plugin code is about
+80 kB of the program; Lua itself is a shared library of the system.
 
 PAM is optional: with `libpam0g-dev` (Debian and Ubuntu), `pam-devel` (Fedora) or
 `linux-pam-dev` (Alpine) installed, `make` builds the screen lock with it
@@ -77,6 +86,8 @@ The files:
 - `bin/tiny-shell-session`, the script that starts a session, and
   `share/xsessions/tiny-shell.desktop`, which puts "Tiny Shell" in the list of
   sessions of the display managers (see the section below).
+- `share/tiny-shell/plugins`: the plugins that come with the shell (the battery
+  and the weather), see [Plugins](plugins.md).
 - `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark
   style.

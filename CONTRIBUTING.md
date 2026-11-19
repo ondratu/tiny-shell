@@ -13,6 +13,7 @@ The details are in the developer documentation, in [doc/developers/](doc/develop
 - [Architecture](doc/developers/architecture.md): layers, the event loop,
   actions, themes, design principles
 - [Dependencies](doc/developers/dependencies.md): what may be linked
+- [Writing plugins](doc/developers/plugins.md): the Lua plugins of the panel
 - [User interface guidelines](doc/developers/ui-guidelines.md)
 - [Development setup and tests](doc/developers/testing.md): building, tests,
   coverage, CI, the web site
@@ -34,7 +35,10 @@ messages, issues and documentation.
    anything about tiny-shell. Do not invent private protocols when a
    standard one exists.
 4. **Works on embedded systems with Xorg.** No D-Bus, systemd, GLib or GPU
-   features are required. Everything extra is optional and off by default.
+   features are required. Everything extra is optional: a feature that needs a
+   library is a make variable and can be built without it (`PAM`, `LUA`); a
+   library that most systems have may be used by default when it is found
+   (`LUA=auto`), and the feature that needs it is compiled out when it is not.
 5. **Correct before featureful.** A window manager that behaves properly with
    ordinary applications matters more than a new widget.
 

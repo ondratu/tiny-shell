@@ -12,7 +12,10 @@
   no sleeping, no waiting for a process, no slow file reading in a handler.
   A slow job (the directories of `PATH` for the run dialog) runs in a thread
   (`pthread_create`) that does not use X, and the loop asks later if the result
-  is there; it must not wait for it.
+  is there; it must not wait for it. A program whose output is needed is run by
+  `tiny::Runner`: the descriptor of its output is in the loop (`FdWatch`, next to
+  `Timers`) and a function gets the result when the program ends or the time is
+  up. This is how the plugins run programs.
 - **Event handlers.** New code connects events with `std::function`
   (a lambda capturing `this`), registered and unregistered by RAII.
   Do not add new casts between unrelated pointer-to-member types.
@@ -30,6 +33,14 @@
   registered by name in the `ActionRegistry` of the manager ("logout",
   "run-dialog", "theme-toggle"); do not connect a new menu item to a private
   handler of the manager. A plugin gets a panel slot from `Panel::add_applet()`.
+- **Plugins are isolated and optional.** A plugin is Lua code with a Lua state of
+  its own; the module `tiny` is the only way it reaches the shell
+  (`lib/plugin/host.cc`), and every function of it either returns at once or
+  calls back later from the loop. The directories of the plugins, the
+  `plugin.ini` and the settings are read without Lua (`plugin_info.*`), so
+  `tiny-settings` lists and sets plugins without linking Lua into its logic, and a
+  shell built without Lua still knows what is installed. See
+  [Writing plugins](plugins.md).
 - **Two looks, same sizes.** The theme has the variants `Dark` (the default)
   and `Light`; a color belongs to `Style::colorize()`, never to a constructor
   or a widget, so that the variant can change while the shell runs

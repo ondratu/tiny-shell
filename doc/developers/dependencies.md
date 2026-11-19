@@ -10,7 +10,16 @@
   that are on every Xorg system.
 - Everything else needs a discussion first and must be **optional at build
   time** (a make variable, with the feature compiled out when it is off).
-  Lua for scripting is the planned example.
+- Optional at build time, now: **Lua** (5.3 or newer; the make variable
+  `LUA=auto|yes|no`; `auto`, the default, uses it when `pkg-config` finds `lua5.4`,
+  `lua-5.4`, `lua54`, `lua5.3`... and prints a notice when it does not). It runs the
+  [plugins](plugins.md) of the panel and is linked by `tiny-shell`, and by the tools
+  and the tests that link the shell library, as a shared library of the system
+  (no Lua is vendored). Without it `lib/plugin/host_stub.cc` is built instead of
+  `host.cc`, the plugins are listed in `tiny-settings` but nothing runs, and the
+  program is smaller. Lua is on by default because the plugins are what gives the
+  panel a battery or a weather, and it costs no more than a shared library that
+  nothing needs at run time when no plugin is switched on.
 - Optional at build time, now: **libpam** (the make variable `PAM=auto|yes|no`;
   `auto` uses it when `<security/pam_appl.h>` and `-lpam` are found, there is no
   `pkg-config` file on every system). Only `tiny-lock-auth` of the

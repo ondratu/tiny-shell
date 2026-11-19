@@ -4,7 +4,7 @@
 
 ```sh
 sudo apt install build-essential pkg-config \
-    libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr libpam0g-dev
+    libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev libfontconfig-dev xvfb libgtest-dev xserver-xephyr libpam0g-dev liblua5.4-dev
 make                  # build (no debugging information)
 make DEBUG=1          # build with -Og -g, for gdb, and with TINY_LOG() messages
 make check            # unit tests (run against Xvfb)
@@ -21,6 +21,11 @@ sudo apt install pre-commit clang-format clang-tidy cppcheck
 pre-commit install --install-hooks
 pre-commit install --hook-type pre-push
 ```
+
+Lua 5.3 or newer (`liblua5.4-dev`) is used when it is found, and the tests of
+the plugins run real Lua; `make LUA=no check` runs the tests of a build without it
+(`LUA=yes` fails when Lua is missing, so a CI job can't silently skip it). Both
+builds must pass.
 
 Before sending a change, build without warnings and run `make check`. When
 you work on memory handling, also build with the sanitizers:
