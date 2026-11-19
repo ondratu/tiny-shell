@@ -21,21 +21,22 @@ fi
 case $os in
 freebsd)
     $as_root pkg install -y gmake pkgconf googletest xorg-vfbserver xauth \
-        libX11 libXft libXrender libXext libXrandr libXinerama fontconfig dejavu
+        libX11 libXft libXrender libXext libXrandr libXinerama fontconfig dejavu \
+        lua54
     export PKG_CONFIG_PATH=/usr/local/libdata/pkgconfig:/usr/local/lib/pkgconfig
     make=gmake
     ;;
 openbsd)
     # X11 (with Xft and Xvfb) is a part of the base system
     # pkg-config is in the base system too
-    $as_root pkg_add gmake gtest
+    $as_root pkg_add gmake gtest lua%5.4
     export PATH=/usr/X11R6/bin:"$PATH"
     export PKG_CONFIG_PATH=/usr/X11R6/lib/pkgconfig:/usr/local/lib/pkgconfig
     make=gmake
     ;;
 netbsd)
-    # X11 (with Xft and Xvfb) is a part of the base system, the rest comes
-    # from pkgsrc
+    # X11 (with Xft and Xvfb) and Lua are a part of the base system, the rest
+    # comes from pkgsrc
     export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/X11R7/bin:"$PATH"
     export PKG_CONFIG_PATH=/usr/X11R7/lib/pkgconfig:/usr/pkg/lib/pkgconfig
     $as_root pkgin -y install gmake pkgconf googletest
@@ -53,6 +54,8 @@ Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
 xvfb=$!
 sleep 2
 rc=0
-DISPLAY=:99 STRICT=${STRICT:-1} "$make" XVFB_RUN= all check examples || rc=$?
+# LUA=yes: the plugins are built and tested on every system, a missing Lua
+# is an error and not a build that skips them
+DISPLAY=:99 STRICT=${STRICT:-1} "$make" LUA=yes XVFB_RUN= all check examples || rc=$?
 kill $xvfb
 exit $rc

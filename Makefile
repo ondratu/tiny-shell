@@ -85,19 +85,28 @@ CHKPWD_CXXFLAGS = -DTINY_UNIX_CHKPWD='"$(UNIX_CHKPWD)"'
 endif
 
 # Lua runs the plugins of the panel (lib/plugin/): LUA=auto (the default) uses
-# Lua 5.3 or newer when pkg-config finds it, yes insists on it, no builds a
-# shell without plugins. The names of the package differ between the systems
-# (lua5.4 Debian, lua-5.4 FreeBSD, OpenBSD and pkgsrc, lua54 Alpine).
+# Lua 5.3 or newer when it is found, yes insists on it, no builds a shell
+# without plugins. pkg-config knows it under different names (lua5.4 Debian
+# and OpenBSD, lua-5.4 FreeBSD, lua54 Alpine); NetBSD has Lua in the base
+# system without a pkg-config file, so a small program is compiled and linked
+# when pkg-config finds nothing.
 LUA ?= auto
 ifneq ($(LUA),no)
 LUA_PKG := $(firstword $(foreach p,lua5.4 lua-5.4 lua54 lua5.3 lua-5.3 lua53 lua, \
     $(shell pkg-config --atleast-version=5.3 $(p) 2>/dev/null && echo $(p))))
+ifeq (,$(LUA_PKG))
+LUA_BASE := $(shell printf 'extern "C" {\n\043include <lua.h>\n\043include <lauxlib.h>\n}\n\043if LUA_VERSION_NUM < 503\n\043error old\n\043endif\nint main() { return luaL_newstate() == 0; }\n' | \
+    $(CXX) -x c++ - -llua -lm -o /dev/null 2>/dev/null && echo 1)
+endif
 ifneq (,$(LUA_PKG))
 LUA_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags $(LUA_PKG)))
 LUA_LIBS := $(shell pkg-config --libs $(LUA_PKG))
 LUA_DEFS := -DTINY_HAVE_LUA
+else ifeq ($(LUA_BASE),1)
+LUA_LIBS := -llua -lm
+LUA_DEFS := -DTINY_HAVE_LUA
 else ifeq ($(LUA),yes)
-$(error LUA=yes, but Lua 5.3 or newer was not found by pkg-config (liblua5.4-dev, lua-devel, lua54))
+$(error LUA=yes, but Lua 5.3 or newer was not found (liblua5.4-dev, lua-devel, lua54))
 else
 $(info Lua was not found: tiny-shell is built without plugins, LUA=no hides this notice)
 endif

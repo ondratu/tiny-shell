@@ -8,4 +8,4 @@ LABEL org.opencontainers.image.description="Alpine tools of the tiny-shell CI"
 
 RUN apk add --no-cache git make pkgconf clang g++ \
         libx11-dev libxext-dev libxft-dev libxrender-dev libxrandr-dev libxinerama-dev \
-        fontconfig-dev linux-pam-dev gtest-dev xvfb xvfb-run xauth font-dejavu
+        fontconfig-dev linux-pam-dev lua5.4-dev gtest-dev xvfb xvfb-run xauth font-dejavu
