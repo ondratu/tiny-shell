@@ -1342,3 +1342,14 @@ TEST(ConfigTest, the_values_of_a_plugin_are_written_to_its_section)
     EXPECT_EQ(c.plugins.at("weather").values.at("location"), "Prague");
     EXPECT_EQ(c.plugins.at("weather").enabled, std::optional<bool>(true));
 }
+
+TEST(ConfigTest, the_raw_values_are_what_the_files_say_without_the_plugins)
+{
+    const Config c = parse_config(
+            {{"system", "[theme]\nstyle = dark\nscale = 2\n"},
+             {"user", "[theme]\nstyle = light\n[plugin.x]\na = 1\n"}});
+    EXPECT_EQ(c.raw.at({"theme", "style"}), "light");
+    EXPECT_EQ(c.raw.at({"theme", "scale"}), "2");
+    EXPECT_EQ(c.raw.size(), 2u);
+    EXPECT_TRUE(parse_config({}).raw.empty());
+}

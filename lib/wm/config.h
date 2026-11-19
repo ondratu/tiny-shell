@@ -4,6 +4,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "style.h"
@@ -185,6 +186,10 @@ struct Config {
     std::vector<std::string> favorites;
     //! [plugin.<id>]: what the user set for a plugin, by its id
     std::map<std::string, PluginConfig> plugins;
+    //! Every key of the files as it is written, `{section, key}` to the text
+    //! (the sections of the plugins are in `plugins`, not here): what a plugin
+    //! reads of the shell
+    std::map<std::pair<std::string, std::string>, std::string> raw;
 };
 
 //! The ways the programs draw text, that `[xft]` sets (`Xft.*` of X resources)
