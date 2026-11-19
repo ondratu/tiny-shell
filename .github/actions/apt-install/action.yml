@@ -16,7 +16,9 @@ runs:
       env:
         PACKAGES: ${{ inputs.packages }}
       run: |
-        echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries > /dev/null
+        # apt-get update succeeds when an index could not be downloaded
+        printf 'Acquire::Retries "5";\nAPT::Update::Error-Mode "any";\n' |
+          sudo tee /etc/apt/apt.conf.d/80-retries > /dev/null
         for try in 1 2 3; do
           # shellcheck disable=SC2086 # a list of names
           sudo apt-get update && sudo apt-get install -y $PACKAGES && exit 0
