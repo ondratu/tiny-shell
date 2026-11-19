@@ -27,9 +27,8 @@ freebsd)
     ;;
 openbsd)
     # X11 (with Xft and Xvfb) is a part of the base system
-    $as_root pkg_add gmake pkgconf googletest
-    # where does the package keep gtest (for pkg-config)?
-    pkg_info -L googletest | grep -E '\.pc$|libgtest' >&2
+    # pkg-config is in the base system too
+    $as_root pkg_add gmake gtest
     export PATH=/usr/X11R6/bin:"$PATH"
     export PKG_CONFIG_PATH=/usr/X11R6/lib/pkgconfig:/usr/local/lib/pkgconfig
     make=gmake
