@@ -1,39 +1,67 @@
 -- The weather in the panel, from the free service open-meteo.com (no key, no
--- account). It asks twice at most: for the place of the town by its name (once
--- for a name) and for the weather of that place. A click shows the forecast
--- for the next day, and the next one, and then the weather now again.
+-- account): the symbol and the temperature. A click opens a window with the
+-- weather now (the feeling, the humidity, the wind, the pressure) and the
+-- forecast for the next days. Nothing changes by itself.
 --
--- The programs are started with tiny.exec: the shell never waits for the
--- network.
+-- It asks twice at most: for the place of the town by its name (once for a
+-- name) and for the weather of that place. The programs are started with
+-- tiny.exec: the shell never waits for the network.
+
+local FORECAST_DAYS = 5 -- the days after today that the window shows
 
 local widget
-local view = 0        -- 0 is now, 1 and 2 are the next days
 local place          -- {name =, latitude =, longitude =} of `place_for`
 local place_for = nil
 local weather        -- the answer of the service
-local message = "..." -- what is shown while there is no weather
+local message = "..." -- what is said while there is no weather
 local timer
 local generation = 0 -- a late answer for an old setting is dropped
 
-local WORDS = {
-    [0] = "Clear", [1] = "Clear", [2] = "Cloudy", [3] = "Overcast",
-    [45] = "Fog", [48] = "Fog",
-    [51] = "Drizzle", [53] = "Drizzle", [55] = "Drizzle",
-    [56] = "Drizzle", [57] = "Drizzle",
-    [61] = "Rain", [63] = "Rain", [65] = "Rain", [66] = "Rain", [67] = "Rain",
-    [71] = "Snow", [73] = "Snow", [75] = "Snow", [77] = "Snow",
-    [80] = "Showers", [81] = "Showers", [82] = "Showers",
-    [85] = "Snow", [86] = "Snow",
-    [95] = "Storm", [96] = "Storm", [99] = "Storm",
+-- the code of the weather (WMO) -> {the name of the icon, the words}
+local KINDS = {
+    [0] = {"weather-clear", "Clear sky"},
+    [1] = {"weather-few-clouds", "Mainly clear"},
+    [2] = {"weather-few-clouds", "Partly cloudy"},
+    [3] = {"weather-overcast", "Overcast"},
+    [45] = {"weather-fog", "Fog"}, [48] = {"weather-fog", "Freezing fog"},
+    [51] = {"weather-showers", "Light drizzle"}, [53] = {"weather-showers", "Drizzle"},
+    [55] = {"weather-showers", "Heavy drizzle"},
+    [56] = {"weather-showers", "Freezing drizzle"}, [57] = {"weather-showers", "Freezing drizzle"},
+    [61] = {"weather-showers", "Light rain"}, [63] = {"weather-showers", "Rain"},
+    [65] = {"weather-showers", "Heavy rain"},
+    [66] = {"weather-showers", "Freezing rain"}, [67] = {"weather-showers", "Freezing rain"},
+    [71] = {"weather-snow", "Light snow"}, [73] = {"weather-snow", "Snow"},
+    [75] = {"weather-snow", "Heavy snow"}, [77] = {"weather-snow", "Snow grains"},
+    [80] = {"weather-showers", "Rain showers"}, [81] = {"weather-showers", "Rain showers"},
+    [82] = {"weather-showers", "Violent showers"},
+    [85] = {"weather-snow", "Snow showers"}, [86] = {"weather-snow", "Snow showers"},
+    [95] = {"weather-storm", "Thunderstorm"}, [96] = {"weather-storm", "Thunderstorm with hail"},
+    [99] = {"weather-storm", "Thunderstorm with hail"},
 }
 
-local function word(code)
-    return WORDS[code] or "?"
+local function kind(code, night)
+    local found = KINDS[code] or {"weather-overcast", "Unknown"}
+    local icon = found[1]
+    if night and (icon == "weather-clear" or icon == "weather-few-clouds") then
+        icon = icon .. "-night"
+    end
+    return icon, found[2]
+end
+
+local function imperial()
+    return tiny.setting("units") == "imperial"
+end
+
+local function round(value)
+    return math.floor(value + 0.5)
 end
 
 local function degrees(value)
-    local unit = tiny.setting("units") == "imperial" and "F" or "C"
-    return string.format("%d°%s", math.floor(value + 0.5), unit)
+    return string.format("%d°", round(value))
+end
+
+local function with_unit(value)
+    return degrees(value) .. (imperial() and "F" or "C")
 end
 
 local function weekday(date)
@@ -41,27 +69,70 @@ local function weekday(date)
     if not year then
         return "?"
     end
-    return os.date("%a", os.time{year = year, month = month, day = day, hour = 12})
+    return os.date("%A", os.time{year = year, month = month, day = day, hour = 12})
 end
 
-local function text()
-    if not weather then
-        return message
-    end
-    if view == 0 then
-        local now = weather.current
-        return degrees(now.temperature_2m) .. " " .. word(now.weather_code)
-    end
-    local daily = weather.daily
-    local low, high = daily.temperature_2m_min[view + 1], daily.temperature_2m_max[view + 1]
-    return string.format("%s %d/%s %s", weekday(daily.time[view + 1]),
-        math.floor(low + 0.5), degrees(high), word(daily.weather_code[view + 1]))
+local function number(value, digits)
+    return value and string.format("%." .. digits .. "f", value) or "-"
 end
 
+local function now_icon()
+    local current = weather.current
+    return kind(current.weather_code, current.is_day == 0)
+end
+
+-- the panel: the symbol and the temperature
 local function redraw()
-    local shown = text()
-    if widget then
-        widget:set_text(shown)
+    if not widget then
+        return
+    end
+    if not weather then
+        widget:set_icon("weather-overcast")
+        widget:set_text("")
+        return
+    end
+    widget:set_icon((now_icon()))
+    widget:set_text(degrees(weather.current.temperature_2m))
+end
+
+-- the window: the weather now, the details of today, the next days
+local function details()
+    local current, daily = weather.current, weather.daily
+    local icon, words = now_icon()
+    local rows = {
+        {label = "Feels like", value = with_unit(current.apparent_temperature)},
+        {label = "Humidity", value = number(current.relative_humidity_2m, 0) .. " %"},
+        {label = "Wind", value = number(current.wind_speed_10m, 0) .. (imperial() and " mph" or " km/h")},
+        {label = "Pressure", value = number(current.pressure_msl, 0) .. " hPa"},
+        {label = "Precipitation", value = number(current.precipitation, 1) .. (imperial() and " in" or " mm")},
+        {label = "Low / high", value = degrees(daily.temperature_2m_min[1]) .. " / " .. degrees(daily.temperature_2m_max[1])},
+    }
+    local days = {}
+    for i = 2, FORECAST_DAYS + 1 do
+        if daily.time[i] then
+            local day_icon = kind(daily.weather_code[i])
+            days[#days + 1] = {
+                icon = day_icon,
+                label = weekday(daily.time[i]),
+                value = degrees(daily.temperature_2m_min[i]) .. " / " .. degrees(daily.temperature_2m_max[i]),
+            }
+        end
+    end
+    return {
+        icon = icon, title = place.name, subtitle = words,
+        value = with_unit(current.temperature_2m),
+        sections = {
+            {heading = "Today", rows = rows},
+            {heading = "Forecast", rows = days},
+        },
+    }
+end
+
+local function open_window()
+    if weather then
+        widget:popup(details())
+    else
+        widget:popup{icon = "weather-overcast", title = "Weather", subtitle = message}
     end
 end
 
@@ -97,11 +168,14 @@ end
 local function forecast(mine)
     local url = string.format(
         "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
-        .. "&current=temperature_2m,weather_code"
+        .. "&current=temperature_2m,apparent_temperature,relative_humidity_2m,"
+        .. "precipitation,weather_code,pressure_msl,wind_speed_10m,is_day"
         .. "&daily=weather_code,temperature_2m_max,temperature_2m_min"
-        .. "&forecast_days=3&timezone=auto&temperature_unit=%s",
-        place.latitude, place.longitude,
-        tiny.setting("units") == "imperial" and "fahrenheit" or "celsius")
+        .. "&forecast_days=%d&timezone=auto&temperature_unit=%s"
+        .. "&wind_speed_unit=%s&precipitation_unit=%s",
+        place.latitude, place.longitude, FORECAST_DAYS + 1,
+        imperial() and "fahrenheit" or "celsius",
+        imperial() and "mph" or "kmh", imperial() and "inch" or "mm")
     fetch(url, function(result)
         if mine ~= generation then
             return
@@ -157,14 +231,9 @@ local function start()
 end
 
 widget = tiny.panel.button{
-    text = message,
-    sample = "Wed -99/-99°F Overcast",
-    on_click = function()
-        if weather then
-            view = (view + 1) % 3
-            redraw()
-        end
-    end,
+    text = "", sample = "-99°",
+    icon = "weather-overcast",
+    on_click = open_window,
 }
 
 local function settings()
