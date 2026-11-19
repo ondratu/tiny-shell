@@ -5,6 +5,7 @@
 -- info = {percent = 0..100, state = "charging" | "discharging" | "full"}
 
 local widget
+local current -- the last info, nil without a battery
 local interval = tiny.setting("interval")
 
 local function trim(text)
@@ -88,35 +89,58 @@ local readers = {
 }
 local read = readers[tiny.platform]
 
-local function text_of(info)
-    local words = {}
-    local prefix = tiny.setting("prefix")
-    if prefix ~= "" then
-        words[#words + 1] = prefix
-    end
-    words[#words + 1] = info.percent .. "%"
+local function level_icon(info)
+    local p = info.percent
+    local level = p >= 85 and "full" or p >= 50 and "good" or p >= 15 and "low" or "empty"
     if info.state == "charging" then
-        words[#words + 1] = "+"
+        return "battery-" .. level .. "-charging"
     end
-    local low = tiny.setting("low")
-    if info.state ~= "charging" and low > 0 and info.percent < low then
-        words[#words + 1] = "!"
+    return "battery-" .. level
+end
+
+local function text_of(info)
+    return tiny.setting("percent") and info.percent .. "%" or ""
+end
+
+local descriptions = {
+    charging = "Charging",
+    discharging = "On battery",
+    full = "Fully charged",
+}
+
+-- The window that a click opens: the state in words and the number
+local function open_details()
+    if not current then
+        return
     end
-    return table.concat(words, " ")
+    widget:popup{
+        icon = level_icon(current),
+        title = descriptions[current.state] or "Battery",
+        subtitle = current.state == "discharging" and current.percent < 15 and "Connect the charger" or "",
+        value = current.percent .. "%",
+    }
 end
 
 local function show(info)
+    current = info
     if not info then
         if widget then
+            widget:close_popup()
             widget:set_visible(false)
         end
         return
     end
+    local icon = level_icon(info)
+    local under = info.state ~= "charging" and "battery-full" or nil
     local text = text_of(info)
     if not widget then
         -- made when there is a battery, as wide as the widest text
-        widget = tiny.panel.label{text = text, sample = text_of({percent = 100, state = "charging"}) .. " !"}
+        widget = tiny.panel.button{
+            text = text, sample = tiny.setting("percent") and "100%" or "",
+            icon = icon, icon_under = under, on_click = open_details,
+        }
     else
+        widget:set_icon(icon, under)
         widget:set_text(text)
         widget:set_visible(true)
     end
