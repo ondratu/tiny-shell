@@ -150,15 +150,15 @@ local button = tiny.panel.button{
 | --- | --- |
 | `text` | what it shows |
 | `sample` | the longest text that it will show. The panel gives the widget the width of the wider of `text` and `sample`, so the other widgets do not move when the text changes. A longer text is cut. |
-| `icon` | the name of a symbolic icon that is drawn before the text in the color of the text, see [Icons](#icons). The widget keeps room for an icon when it is made with one, so changing it later does not move the others. |
-| `icon_under` | an icon that is drawn first and dimmed, see [Icons](#icons) |
+| `icon` | the name of a symbolic icon that is drawn before the text in the color of the text, see Icons below. The widget keeps room for an icon when it is made with one, so changing it later does not move the others. |
+| `icon_under` | an icon that is drawn first and dimmed, see Icons below |
 | `on_click` | a function called on a click (a button only) |
 | `w:set_text(text)` | changes the text |
 | `w:text()` | the text now |
 | `w:set_icon(name, under)` | changes the icons; `nil` for none. Only for a widget that was made with an `icon` (it may be `""`), because only then the widget has room for it; else it is an error |
 | `w:set_visible(bool)` | hides and shows it; a hidden widget leaves its place empty, so create a widget only when there is something to show |
 | `w:on_click(fn)` | replaces the function of the click (a button only) |
-| `w:popup(window)` | opens a window under the widget, see [Windows](#windows) |
+| `w:popup(window)` | opens a window under the widget, see Windows below |
 | `w:popup_open()` | `true` while the window of this widget is open |
 | `w:close_popup()` | closes it |
 | `w:destroy()` | takes it out of the panel; also from its own click |
