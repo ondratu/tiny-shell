@@ -237,8 +237,12 @@ void apply_config(tiny::wm::Manager& manager, tiny::plugin::PluginHost& plugins,
     }
     // the plugins are next to the clock; the ones that start again go to the
     // end, so what is after them is made again
+    // (a shell without Lua does not look for them)
     const bool plugins_restarted =
-            plugins.apply(installed_plugins(), config, clock_changed) ||
+            plugins.apply(tiny::plugin::PluginHost::available()
+                                  ? installed_plugins()
+                                  : std::vector<tiny::plugin::PluginInfo>{},
+                          config, clock_changed) ||
             clock_changed;
     // next to the plugins, and the tray after it
     const bool indicator_changed =

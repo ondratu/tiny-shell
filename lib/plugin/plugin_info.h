@@ -130,6 +130,14 @@ PluginDirs plugin_dirs(const char* data_home, const char* data_dirs,
  */
 std::vector<PluginInfo> find_plugins(const PluginDirs& dirs);
 
+/**
+ * @short The names in a directory, sorted (without `.` and `..`).
+ *
+ * Returns false and sets `error` to errno when the directory can't be read.
+ */
+bool list_directory(const std::string& path, std::vector<std::string>& names,
+                    int* error = nullptr);
+
 //! -1, 0 or 1 when the version `a` is older, the same or newer than `b`.
 //! The numbers between dots are compared as numbers (1.10 is newer than 1.9),
 //! a text after a number is ignored.

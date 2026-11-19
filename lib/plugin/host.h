@@ -47,8 +47,16 @@ class PluginHost {
     PluginHost(const PluginHost&) = delete;
     PluginHost& operator=(const PluginHost&) = delete;
 
-    //! Whether this build can run plugins
-    static bool available();
+    //! Whether this build can run plugins. A constant, so a build without Lua
+    //! leaves out what only the plugins need.
+    static constexpr bool available()
+    {
+#ifdef TINY_HAVE_LUA
+        return true;
+#else
+        return false;
+#endif
+    }
 
     /**
      * @short Make the running plugins what the configuration wants.

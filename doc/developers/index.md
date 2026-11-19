@@ -11,12 +11,13 @@ version for GitHub is [CONTRIBUTING.md](https://github.com/ondratu/tiny-shell/bl
 | [Layout of the sources](code-layout.md) | what is in `lib/`, `src/`, `data/`, `tests/` |
 | [Architecture](architecture.md) | layers, the event loop, actions, themes, design principles |
 | [Dependencies](dependencies.md) | what may be linked and how a new dependency gets in |
+| [Writing plugins](plugins.md) | the Lua plugins of the panel: `plugin.ini`, the module `tiny`, two examples |
 | [The screen lock](screen-lock.md) | the four programs of the lock, the rights of each, the protocol |
 | [User interface guidelines](ui-guidelines.md) | how menus, buttons and the pointer behave |
 | [Development setup and tests](testing.md) | building, the tests, coverage, CI |
 
-The reference documentation of the widget toolkit and of the Lua plugins of the
-panel will be added here when the plugins exist (see the [roadmap](../roadmap.md)).
+The reference documentation of the widget toolkit will be added here later (see
+the [roadmap](../roadmap.md)).
 
 ## Language
 

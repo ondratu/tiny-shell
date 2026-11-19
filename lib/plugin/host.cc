@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <map>
 #include <memory>
 #include <set>
@@ -348,18 +347,13 @@ int l_read_file(lua_State* L)
 int l_list_dir(lua_State* L)
 {
     const char* path = luaL_checkstring(L, 1);
-    std::error_code error;
     std::vector<std::string> names;
-    for (std::filesystem::directory_iterator it(path, error), end;
-         !error && it != end; it.increment(error)) {
-        names.push_back(it->path().filename().string());
-    }
-    if (error) {
+    int error = 0;
+    if (!list_directory(path, names, &error)) {
         lua_pushnil(L);
-        lua_pushfstring(L, "%s: %s", path, error.message().c_str());
+        lua_pushfstring(L, "%s: %s", path, strerror(error));
         return 2;
     }
-    std::sort(names.begin(), names.end());
     lua_createtable(L, static_cast<int>(names.size()), 0);
     lua_Integer index = 1;
     for (const std::string& name : names) {
@@ -980,11 +974,6 @@ PluginHost::PluginHost(HostServices services): impl(std::make_unique<Impl>())
 PluginHost::~PluginHost()
 {
     stop();
-}
-
-bool PluginHost::available()
-{
-    return true;
 }
 
 void PluginHost::stop()

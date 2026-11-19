@@ -28,7 +28,7 @@ what is planned.
   work.
 - A tiny widget toolkit (`lib/`, the library `libtiny-widgets.a`), made of plain
   X windows and Xft text, loosely inspired by GTK. It exists to serve the shell,
-  the settings and the font viewer (and later the Lua plugins of the panel), not
+  the settings and the font viewer and the Lua plugins of the panel, not
   to be reused: it knows nothing about window management.
 
 ## What it is not
