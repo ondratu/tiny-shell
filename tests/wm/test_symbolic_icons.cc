@@ -59,11 +59,12 @@ TEST_F(SymbolicIconsTest, renders_the_icon_as_a_picture_without_the_screen)
 {
     SymbolicIcons icons(display(), root_window(), {root.string()});
 
-    const auto picture = icons.render("start-here", 12, 0x336699);
+    const auto picture = icons.render("start-here", 12, 0x336699)
+                                 .value_or(tiny::image::Image());
 
-    ASSERT_TRUE(picture);
-    EXPECT_EQ(picture->width, 12);
-    EXPECT_EQ(picture->at(6, 6), 0xFF336699u);
+    ASSERT_TRUE(picture.valid());
+    EXPECT_EQ(picture.width, 12);
+    EXPECT_EQ(picture.at(6, 6), 0xFF336699u);
     EXPECT_FALSE(icons.render("window-close", 12, 0));
 }
 
