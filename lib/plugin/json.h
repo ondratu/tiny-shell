@@ -30,8 +30,9 @@ constexpr int json_max_depth = 64;
 /**
  * @short Read a text of JSON (RFC 8259).
  *
- * The text is one value with blanks around it. Strings must be UTF-8 and the
- * escapes (`\uXXXX` with surrogate pairs too) are decoded. Returns nothing,
+ * The text is one value with blanks around it. The bytes of a string are kept
+ * as they are (they are not checked to be UTF-8) and the escapes (`\uXXXX`
+ * with surrogate pairs too) are decoded. Returns nothing,
  * and tells why in `error` (with the position), when the text is wrong,
  * too deep, or has anything after the value.
  */

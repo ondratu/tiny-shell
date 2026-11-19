@@ -227,11 +227,11 @@ class Manager : public tiny::Object {
             std::vector<std::string> ids,
             std::function<void(const std::vector<std::string>&)> changed = {});
 
-    //! Timers of the main loop (a clock, delays); they run in the loop, so
-    //! the functions must be short
     //! The panel, for the widgets of the plugins
     Panel& get_panel() { return wm_panel; }
 
+    //! Timers of the main loop (a clock, delays); they run in the loop, so
+    //! the functions must be short
     tiny::Timers& get_timers() { return timers; }
 
     //! The descriptors the loop waits for besides the display (a program that
