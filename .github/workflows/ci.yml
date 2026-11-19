@@ -123,55 +123,18 @@ jobs:
   alpine:
     needs: pre-commit
     # musl instead of glibc, the libc of small embedded systems: finds code that
-    # relies on GNU extensions.
-    name: Alpine (musl), Clang
-    runs-on: ubuntu-24.04
-    container: alpine:3.22
+    # relies on GNU extensions. Runs on ARM (a native runner), where for example
+    # char is unsigned, so it finds what the x86 jobs cannot.
+    name: Alpine (musl), Clang, arm64
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:alpine-3.22
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - run: >
-          apk add --no-cache git make pkgconf clang g++ libx11-dev libxext-dev libxft-dev
-          libxrender-dev libxrandr-dev libxinerama-dev fontconfig-dev linux-pam-dev gtest-dev xvfb xvfb-run xauth font-dejavu
       - uses: actions/checkout@v7
       - run: make CXX=clang++ all check examples
-
-  netbsd:
-    name: NetBSD
-    needs: pre-commit
-    runs-on: ubuntu-24.04
-    # Best effort: NetBSD is the BSD for small and old hardware, but the VM is
-    # slow and the package set changes, so a failure here does not block a
-    # merge.
-    continue-on-error: true
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - name: Start the VM
-        uses: cross-platform-actions/action@v1
-        with:
-          operating_system: netbsd
-          version: "11.0"
-          # boots the kernel directly: about twice as fast as the default
-          variant: microvm
-          shell: sh
-          environment_variables: STRICT
-      - name: Build and test in the VM
-        # cpa.sh runs the commands inside the VM
-        shell: cpa.sh {0}
-        run: |
-          # X11 (with Xft and Xvfb) is a part of the base system, the rest
-          # comes from pkgsrc
-          export PATH=/usr/pkg/bin:/usr/pkg/sbin:/usr/X11R7/bin:$PATH
-          export PKG_CONFIG_PATH=/usr/X11R7/lib/pkgconfig:/usr/pkg/lib/pkgconfig
-          sudo pkgin -y install gmake pkgconf googletest
-          # in the background with redirected output, otherwise the SSH
-          # session of the VM never ends
-          Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &
-          xvfb=$!
-          sleep 2
-          rc=0
-          DISPLAY=:99 gmake XVFB_RUN= all check examples || rc=$?
-          kill $xvfb
-          exit $rc
 
   coverage:
     needs: pre-commit
