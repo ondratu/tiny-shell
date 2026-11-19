@@ -28,6 +28,16 @@ pid_t spawn(const std::vector<std::string>& argv,
             const std::string& directory = "",
             const std::vector<std::string>& environment = {});
 
+/**
+ * @short Start the program like `spawn()` and read what it writes.
+ *
+ * The standard output of the program is a pipe; `*output` is the end that
+ * reads it (it does not block and is closed on `exec`; the caller closes it).
+ * The standard input and the standard error are `/dev/null`. Returns the pid
+ * of the child, or -1 and sets errno (nothing is opened then).
+ */
+pid_t spawn_capture(const std::vector<std::string>& argv, int* output);
+
 /// Run a shell command line (pipes, variables, ~) with `/bin/sh -c`.
 pid_t spawn_shell(const std::string& command);
 

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "display_power.h"
+#include "fd_watch.h"
 #include "object.h"
 #include "timers.h"
 #include "wm/window.h"
@@ -229,6 +230,10 @@ class Manager : public tiny::Object {
     //! Timers of the main loop (a clock, delays); they run in the loop, so
     //! the functions must be short
     tiny::Timers& get_timers() { return timers; }
+
+    //! The descriptors the loop waits for besides the display (a program that
+    //! a plugin runs, for example)
+    tiny::FdWatch& get_fd_watch() { return watches; }
 
     /**
      * @short What the menus and the keys ask for, by name.
@@ -776,6 +781,7 @@ class Manager : public tiny::Object {
     } reframed = {None, 0, 0};
 
     tiny::Timers timers;
+    tiny::FdWatch watches;
     ActionRegistry actions;
 
     std::vector<std::string> favorites; //!< ids of desktop files

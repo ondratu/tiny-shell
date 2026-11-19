@@ -39,9 +39,18 @@ void on_sigchld(int)
 [[noreturn]] void exec_child(const std::vector<std::string>& argv,
                              const std::string& directory,
                              const std::vector<std::string>& environment,
-                             int report)
+                             int report, int output)
 {
     setsid();
+
+    if (output >= 0) { // the standard output goes to the pipe, nothing else
+        const int null = open("/dev/null", O_RDWR);
+        if (null >= 0) {
+            dup2(null, STDIN_FILENO);
+            dup2(null, STDERR_FILENO);
+        }
+        dup2(output, STDOUT_FILENO);
+    }
 
     // exec keeps the mask of blocked signals
     sigset_t none;
@@ -77,8 +86,14 @@ void on_sigchld(int)
 
 } // namespace
 
-pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
-            const std::vector<std::string>& environment)
+namespace {
+
+//! `spawn()`; with `output` not null the standard output of the program is a
+//! pipe and `*output` is the end that reads it
+pid_t spawn_with_output(const std::vector<std::string>& argv,
+                        const std::string& directory,
+                        const std::vector<std::string>& environment,
+                        int* output)
 {
     if (argv.empty() || argv[0].empty()) {
         errno = EINVAL;
@@ -89,18 +104,35 @@ pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
     if (pipe2(report, O_CLOEXEC) < 0) {
         return -1;
     }
+    int data[2] = {-1, -1};
+    if (output != nullptr && pipe2(data, O_CLOEXEC) < 0) {
+        const int saved = errno;
+        close(report[0]);
+        close(report[1]);
+        errno = saved;
+        return -1;
+    }
 
     const pid_t pid = fork();
     if (pid == 0) {
         close(report[0]);
-        exec_child(argv, directory, environment, report[1]);
+        if (data[0] >= 0) {
+            close(data[0]);
+        }
+        exec_child(argv, directory, environment, report[1], data[1]);
     }
 
     const int fork_errno = errno;
     close(report[1]);
+    if (data[1] >= 0) {
+        close(data[1]);
+    }
 
     if (pid < 0) {
         close(report[0]);
+        if (data[0] >= 0) {
+            close(data[0]);
+        }
         errno = fork_errno;
         return -1;
     }
@@ -115,10 +147,34 @@ pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
     if (got == static_cast<ssize_t>(sizeof(error))) {
         // SIGCHLD handler may have collected it already
         waitpid(pid, nullptr, 0);
+        if (data[0] >= 0) {
+            close(data[0]);
+        }
         errno = error;
         return -1;
     }
+    if (output != nullptr) {
+        fcntl(data[0], F_SETFL, fcntl(data[0], F_GETFL) | O_NONBLOCK);
+        *output = data[0];
+    }
     return pid;
+}
+
+} // namespace
+
+pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
+            const std::vector<std::string>& environment)
+{
+    return spawn_with_output(argv, directory, environment, nullptr);
+}
+
+pid_t spawn_capture(const std::vector<std::string>& argv, int* output)
+{
+    if (output == nullptr) {
+        errno = EINVAL;
+        return -1;
+    }
+    return spawn_with_output(argv, "", {}, output);
 }
 
 pid_t spawn_shell(const std::string& command)
