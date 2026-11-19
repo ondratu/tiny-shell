@@ -22,11 +22,11 @@ bool PluginHost::available()
     return false;
 }
 
-void PluginHost::apply(const std::vector<PluginInfo>& found,
-                       const wm::Config& config)
+bool PluginHost::apply(const std::vector<PluginInfo>& found,
+                       const wm::Config& config, bool)
 {
     if (impl->told) {
-        return;
+        return false;
     }
     for (const PluginInfo& info : found) {
         if (plugin_enabled(info, config)) {
@@ -39,9 +39,10 @@ void PluginHost::apply(const std::vector<PluginInfo>& found,
             } else {
                 fprintf(stderr, "%s\n", line.c_str());
             }
-            return;
+            return false;
         }
     }
+    return false;
 }
 
 void PluginHost::stop() {}

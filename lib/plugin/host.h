@@ -59,8 +59,16 @@ class PluginHost {
      * started again, so the widgets stay in the order of the ids; otherwise
      * the plugins that asked for it are told that the configuration changed.
      * A plugin that fails to start is logged and left stopped.
+     *
+     * `restart` starts them again whatever changed: the caller changed the
+     * panel and the widgets of the plugins have to be added after it.
+     *
+     * Returns true when the plugins were started again (the widgets of the
+     * plugins are new and at the end of the panel), so the caller can put
+     * what must stay after them there again.
      */
-    void apply(const std::vector<PluginInfo>& found, const wm::Config& config);
+    bool apply(const std::vector<PluginInfo>& found, const wm::Config& config,
+               bool restart = false);
 
     //! Stop all the plugins; their widgets are removed from the panel
     void stop();

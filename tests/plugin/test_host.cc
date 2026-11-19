@@ -316,6 +316,27 @@ TEST_F(HostTest, reads_files_and_finds_programs)
     EXPECT_TRUE(logged("plugin files: true /bin/sh nil nil"));
 }
 
+TEST_F(HostTest, lists_a_directory_and_knows_the_platform)
+{
+    std::filesystem::create_directories(tree.path / "d" / "sub");
+    std::ofstream(tree.path / "d" / "b.txt") << "x";
+    std::ofstream(tree.path / "d" / "a.txt") << "x";
+    tree.add("dirs",
+             "local names = tiny.list_dir('" + (tree.path / "d").string() +
+                     "')\n"
+                     "tiny.log(#names, names[1], names[2], names[3])\n"
+                     "tiny.log(tiny.list_dir('/nonexistent/tiny-dir'))\n"
+                     "tiny.log(tiny.platform)\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("plugin dirs: 3 a.txt b.txt sub"));
+    EXPECT_TRUE(logged("plugin dirs: nil /nonexistent/tiny-dir: "));
+#if defined(__linux__)
+    EXPECT_TRUE(logged("plugin dirs: linux"));
+#endif
+    EXPECT_FALSE(logged("plugin dirs: unknown"));
+}
+
 TEST_F(HostTest, decodes_json)
 {
     tree.add("json",
@@ -481,8 +502,8 @@ TEST_F(HostTest, the_same_configuration_does_not_start_the_plugins_again)
 {
     tree.add("count", "tiny.log('started')");
     PluginHost host(services);
-    host.apply(tree.find(), config);
-    host.apply(tree.find(), config);
+    EXPECT_TRUE(host.apply(tree.find(), config));
+    EXPECT_FALSE(host.apply(tree.find(), config)); // nothing was restarted
     EXPECT_EQ(std::count_if(lines.begin(), lines.end(),
                             [](const std::string& line) {
                                 return line.find("started") !=
@@ -529,7 +550,7 @@ TEST_F(HostTest, a_plugin_with_on_config_is_told_and_goes_on)
     config.plugins["live"].values["words"] = "y";
     theme = "light";
     config.raw[{"theme", "style"}] = "light";
-    host.apply(tree.find(), config);
+    EXPECT_FALSE(host.apply(tree.find(), config)); // told, not started again
     EXPECT_TRUE(logged("plugin live: config y light light"));
     EXPECT_EQ(std::count_if(lines.begin(), lines.end(),
                             [](const std::string& line) {
