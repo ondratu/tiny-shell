@@ -9,6 +9,11 @@
 
 namespace tiny {
 
+//! The number of descriptors for `poll()`: its type is an unsigned int on the
+//! BSD systems and an unsigned long on Linux, so a plain cast is useless on
+//! one of them
+nfds_t poll_count(const std::vector<pollfd>& fds);
+
 /**
  * @short File descriptors of the event loop that are read when they are ready.
  *

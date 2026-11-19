@@ -4,6 +4,15 @@
 
 namespace tiny {
 
+nfds_t poll_count(const std::vector<pollfd>& fds)
+{
+    nfds_t count = 0;
+    for (size_t i = 0; i < fds.size(); ++i) {
+        ++count; // no conversion of the size, so no cast
+    }
+    return count;
+}
+
 FdWatch::Id FdWatch::add(int fd, std::function<void()> function)
 {
     const Id id = next_id++;
