@@ -125,7 +125,7 @@ TEST(PluginListTest, a_plugin_that_is_removed_is_not_written)
 
 TEST(PluginListTest, removes_the_directory_of_a_plugin)
 {
-    TempDir dir;
+    const TempDir dir;
     fs::create_directories(dir.path / "gone" / "lib");
     std::ofstream(dir.path / "gone" / "plugin.lua") << "x";
     fs::create_directories(dir.path / "stays");
@@ -139,8 +139,8 @@ TEST(PluginListTest, removes_the_directory_of_a_plugin)
 
 TEST(PluginListTest, a_link_is_removed_and_not_what_it_points_to)
 {
-    TempDir dir;
-    TempDir other;
+    const TempDir dir;
+    const TempDir other;
     std::ofstream(other.path / "plugin.lua") << "x";
     fs::create_directory_symlink(other.path, dir.path / "linked");
     EXPECT_TRUE(remove_plugin_directory(dir.path.string(), "linked"));
@@ -150,8 +150,8 @@ TEST(PluginListTest, a_link_is_removed_and_not_what_it_points_to)
 
 TEST(PluginListTest, nothing_outside_of_the_directory_is_removed)
 {
-    TempDir dir;
-    TempDir other;
+    const TempDir dir;
+    const TempDir other;
     std::string error;
     EXPECT_FALSE(remove_plugin_directory(dir.path.string(), "../x", &error));
     EXPECT_NE(error.find("wrong plugin"), std::string::npos);
@@ -170,7 +170,7 @@ TEST(PluginListTest, a_directory_that_can_not_be_deleted_is_an_error)
     if (geteuid() == 0) {
         GTEST_SKIP() << "root can delete everything";
     }
-    TempDir dir;
+    const TempDir dir;
     fs::create_directories(dir.path / "locked" / "inner");
     std::ofstream(dir.path / "locked" / "inner" / "f") << "x";
     fs::permissions(dir.path / "locked" / "inner", fs::perms::none);

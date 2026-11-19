@@ -468,8 +468,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
                 *target = *value;
             } else {
                 problem((std::string("[xft] ") + xft_key(option) +
-                         " is not one of the values of the option")
-                                .c_str());
+                         " is not one of the values of the option"));
             }
         }
     }
@@ -487,8 +486,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
         if (const auto value = ini.get(section, "style")) {
             if (!look_from_name(std::string(trim(*value)), *target)) {
                 problem((std::string("[") + section +
-                         "] style must be auto, light or dark")
-                                .c_str());
+                         "] style must be auto, light or dark"));
             }
         }
     }
@@ -570,8 +568,7 @@ void apply(const Ini& ini, const std::string& name, Config& config,
                 *target = *value;
             } else {
                 problem((std::string("[lock] ") + key +
-                         " must be a path of a program")
-                                .c_str());
+                         " must be a path of a program"));
             }
         }
     }

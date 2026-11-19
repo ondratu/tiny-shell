@@ -120,7 +120,7 @@ void Runner::on_timeout(unsigned long id)
     waitpid(job.pid, nullptr, 0); // it was killed, so this does not wait
     discard(job);
     const Done done = std::move(job.done);
-    RunResult result = std::move(job.result);
+    const RunResult result = std::move(job.result);
     jobs.erase(it);
     if (done) {
         done(result);
@@ -152,7 +152,7 @@ void Runner::finish(unsigned long id)
     }
     discard(job);
     const Done done = std::move(job.done);
-    RunResult result = std::move(job.result);
+    const RunResult result = std::move(job.result);
     jobs.erase(it);
     if (done) {
         done(result);

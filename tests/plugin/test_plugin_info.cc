@@ -102,7 +102,7 @@ TEST(PluginInfoTest, reads_the_metadata_and_the_settings)
 
 TEST(PluginInfoTest, a_missing_lua_file_is_a_problem)
 {
-    TempDir dir;
+    const TempDir dir;
     const std::string where = dir.plugin("a", "[plugin]\nname = A\n", false);
     EXPECT_EQ(parse_plugin_info("a", where, Origin::User, "[plugin]\n").problem,
               "plugin.lua is missing");
@@ -113,7 +113,7 @@ TEST(PluginInfoTest, a_missing_lua_file_is_a_problem)
 
 TEST(PluginInfoTest, the_defaults_of_a_plugin_that_says_little)
 {
-    TempDir dir;
+    const TempDir dir;
     const PluginInfo info =
             parse_plugin_info("quiet", dir.plugin("quiet", "[plugin]\n"),
                               Origin::User, "[plugin]\n");
@@ -265,8 +265,8 @@ TEST(PluginInfoTest, the_directories_follow_the_xdg_variables)
 
 TEST(PluginInfoTest, finds_the_plugins_of_the_directories_by_their_ids)
 {
-    TempDir system;
-    TempDir user;
+    const TempDir system;
+    const TempDir user;
     system.plugin("zeta", "[plugin]\nname = Zeta\n");
     system.plugin("alpha", "[plugin]\nname = Alpha\nversion = 1.0\n");
     user.plugin("mine", "[plugin]\nname = Mine\n");
@@ -292,8 +292,8 @@ TEST(PluginInfoTest, finds_the_plugins_of_the_directories_by_their_ids)
 
 TEST(PluginInfoTest, a_plugin_of_the_user_replaces_the_system_one)
 {
-    TempDir system;
-    TempDir user;
+    const TempDir system;
+    const TempDir user;
     system.plugin("clock", "[plugin]\nname = Clock\nversion = 1.0\n");
     user.plugin("clock", "[plugin]\nname = My clock\nversion = 1.5\n");
     PluginDirs dirs;
@@ -309,8 +309,8 @@ TEST(PluginInfoTest, a_plugin_of_the_user_replaces_the_system_one)
 
 TEST(PluginInfoTest, the_first_system_directory_wins_over_the_next_ones)
 {
-    TempDir first;
-    TempDir second;
+    const TempDir first;
+    const TempDir second;
     first.plugin("clock", "[plugin]\nname = First\n");
     second.plugin("clock", "[plugin]\nname = Second\n");
     PluginDirs dirs;
@@ -323,7 +323,7 @@ TEST(PluginInfoTest, the_first_system_directory_wins_over_the_next_ones)
 
 TEST(PluginInfoTest, a_plugin_without_its_metadata_is_listed_with_a_problem)
 {
-    TempDir user;
+    const TempDir user;
     user.plugin("lonely", "", true); // plugin.lua only
     PluginDirs dirs;
     dirs.user = user.path.string();

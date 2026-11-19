@@ -37,7 +37,7 @@ class Runner {
 
     struct Options {
         std::chrono::milliseconds timeout{30000};
-        size_t max_output = 1024 * 1024; //!< bytes kept from the output
+        size_t max_output = size_t{1024} * 1024; //!< bytes kept from the output
     };
 
     Runner(Timers& timers, FdWatch& watches);

@@ -53,10 +53,11 @@ TEST(RunnerTest, collects_the_output_and_the_status)
                            [&](const RunResult& r) { got = r; }));
     EXPECT_EQ(runner.running(), 1u);
     ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
-    EXPECT_TRUE(got->ok);
-    EXPECT_EQ(got->status, 0);
-    EXPECT_EQ(got->output, "a b");
-    EXPECT_FALSE(got->timed_out);
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_TRUE(result.ok);
+    EXPECT_EQ(result.status, 0);
+    EXPECT_EQ(result.output, "a b");
+    EXPECT_FALSE(result.timed_out);
     EXPECT_EQ(runner.running(), 0u);
     EXPECT_TRUE(loop.watches.empty());
     EXPECT_TRUE(loop.timers.empty());
@@ -70,9 +71,10 @@ TEST(RunnerTest, a_failure_is_not_ok)
     ASSERT_TRUE(runner.run({"sh", "-c", "echo oops; exit 3"},
                            [&](const RunResult& r) { got = r; }));
     ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
-    EXPECT_FALSE(got->ok);
-    EXPECT_EQ(got->status, 3);
-    EXPECT_EQ(got->output, "oops\n");
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.status, 3);
+    EXPECT_EQ(result.output, "oops\n");
 }
 
 TEST(RunnerTest, a_signal_is_a_status_of_minus_one)
@@ -83,8 +85,9 @@ TEST(RunnerTest, a_signal_is_a_status_of_minus_one)
     ASSERT_TRUE(runner.run({"sh", "-c", "kill -9 $$"},
                            [&](const RunResult& r) { got = r; }));
     ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
-    EXPECT_FALSE(got->ok);
-    EXPECT_EQ(got->status, -1);
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.status, -1);
 }
 
 TEST(RunnerTest, a_program_that_does_not_exist_is_not_started)
@@ -112,9 +115,10 @@ TEST(RunnerTest, a_program_that_is_too_slow_is_killed)
             {"sh", "-c", "echo start; sleep 30"},
             [&](const RunResult& r) { got = r; }, options));
     ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
-    EXPECT_TRUE(got->timed_out);
-    EXPECT_FALSE(got->ok);
-    EXPECT_EQ(got->output, "start\n");
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_TRUE(result.timed_out);
+    EXPECT_FALSE(result.ok);
+    EXPECT_EQ(result.output, "start\n");
     EXPECT_TRUE(loop.watches.empty());
 }
 
@@ -129,9 +133,10 @@ TEST(RunnerTest, the_output_is_cut_at_the_limit)
             {"sh", "-c", "printf '0123456789abcdef'"},
             [&](const RunResult& r) { got = r; }, options));
     ASSERT_TRUE(loop.run_until([&] { return got.has_value(); }));
-    EXPECT_EQ(got->output, "0123456789");
-    EXPECT_TRUE(got->truncated);
-    EXPECT_TRUE(got->ok); // it ended well, only the output is not all here
+    const RunResult result = got.value_or(RunResult{});
+    EXPECT_EQ(result.output, "0123456789");
+    EXPECT_TRUE(result.truncated);
+    EXPECT_TRUE(result.ok); // it ended well, only the output is not all here
 }
 
 TEST(RunnerTest, a_function_may_start_another_program)

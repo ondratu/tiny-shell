@@ -2591,7 +2591,6 @@ TEST(SettingsFormKeyboardTest, a_wrong_indicator_is_a_problem)
 
 namespace {
 
-using tiny::plugin::SettingChoice;
 using tiny::plugin::SettingSpec;
 using tiny::plugin::SettingType;
 

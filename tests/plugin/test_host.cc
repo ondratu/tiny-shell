@@ -331,7 +331,7 @@ TEST_F(HostTest, lists_a_directory_and_knows_the_platform)
     host.apply(tree.find(), config);
     EXPECT_TRUE(logged("plugin dirs: 3 a.txt b.txt sub"));
     EXPECT_TRUE(logged("plugin dirs: nil /nonexistent/tiny-dir: "));
-#if defined(__linux__)
+#ifdef __linux__
     EXPECT_TRUE(logged("plugin dirs: linux"));
 #endif
     EXPECT_FALSE(logged("plugin dirs: unknown"));
@@ -389,19 +389,30 @@ TEST_F(HostTest, require_loads_modules_of_the_plugin_only)
                      "tiny.log(pcall(require, 'a/b'))\n"
                      "tiny.log(pcall(require, 'nothing'))\n"
                      "tiny.log(require('lib.deep'))\n"
-                     "tiny.log(pcall(require, 'loop'))\n");
+                     "tiny.log(pcall(require, 'loop'))\n"
+                     "tiny.log(pcall(require, 'broken'))\n"
+                     "tiny.log(pcall(require, 'broken'))\n");
     std::ofstream(tree.path / "mods" / "util.lua")
             << "return {twice = function(x) return x * 2 end}";
     std::filesystem::create_directories(tree.path / "mods" / "lib");
     std::ofstream(tree.path / "mods" / "lib" / "deep.lua")
             << "return 'deep ' .. ...";
     std::ofstream(tree.path / "mods" / "loop.lua") << "require('loop')";
+    std::ofstream(tree.path / "mods" / "broken.lua")
+            << "error('broken module')";
     PluginHost host(services);
     host.apply(tree.find(), config);
     EXPECT_TRUE(logged("plugin mods: 8 true"));
     EXPECT_TRUE(logged("plugin mods: false the name of a module"));
     EXPECT_TRUE(logged("plugin mods: deep lib.deep"));
     EXPECT_TRUE(logged("requires itself"));
+    // a module that fails fails the same way every time, not as a loop
+    EXPECT_EQ(std::count_if(lines.begin(), lines.end(),
+                            [](const std::string& line) {
+                                return line.find("broken module") !=
+                                       std::string::npos;
+                            }),
+              2);
     EXPECT_TRUE(logged("cannot open")) << "a module that is not there";
 }
 
