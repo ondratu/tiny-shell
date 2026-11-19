@@ -1,14 +1,18 @@
 # Every job builds with STRICT=1 (warnings are errors) and runs the tests
-# under Xvfb (make check). The same commands work locally, see doc/developers/testing.md.
+# under Xvfb (make check). The same commands work locally, see
+# doc/developers/testing.md. Most jobs run in the image built by ci-image.yml
+# (.github/ci/Dockerfile), so they do not install the system on every run.
 name: CI
 
 on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+  packages: read # the image of the jobs, see ci-image.yml
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,8 +21,6 @@ concurrency:
 env:
   STRICT: 1
   DEBIAN_FRONTEND: noninteractive
-  DEPS: build-essential pkg-config libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev
-        libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev
 
 jobs:
   pre-commit:
@@ -41,66 +43,60 @@ jobs:
     name: clang-tidy 22 (checks)
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - name: Install clang-tidy 22 and the dependencies
-        run: |
-          wget -qO- --tries=5 --retry-connrefused --waitretry=10 https://apt.llvm.org/llvm-snapshot.gpg.key |
-              sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" |
-              sudo tee /etc/apt/sources.list.d/llvm.list
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: clang-tidy-22 ${{ env.DEPS }}
       - run: make lint-fast CLANG_TIDY=clang-tidy-22
 
   analyze:
     name: clang-tidy 22 (analyzer)
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - name: Install clang-tidy 22 and the dependencies
-        run: |
-          wget -qO- --tries=5 --retry-connrefused --waitretry=10 https://apt.llvm.org/llvm-snapshot.gpg.key |
-              sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" |
-              sudo tee /etc/apt/sources.list.d/llvm.list
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: clang-tidy-22 ${{ env.DEPS }}
       - run: make lint-analyze CLANG_TIDY=clang-tidy-22
 
   cppcheck:
     name: cppcheck
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: cppcheck ${{ env.DEPS }}
       - run: make cppcheck
 
   build:
     name: ${{ matrix.name }}
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: GCC
             cxx: g++
-            packages: ""
           - name: Clang 19 (the oldest we support)
             cxx: clang++-19
-            packages: clang-19
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: ${{ env.DEPS }} ccache ${{ matrix.packages }}
       - uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: build-${{ matrix.cxx }}
@@ -112,11 +108,13 @@ jobs:
     name: ASan + UBSan
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: ${{ env.DEPS }} ccache clang-19 llvm-19
       - uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: asan
@@ -178,14 +176,17 @@ jobs:
   coverage:
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: read
+      packages: read
       pull-requests: write # to comment the table on a pull request
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: ${{ env.DEPS }}
       - name: Measure (gcov needs GCC)
         run: make CXX=g++ coverage | tee coverage.txt
       - name: Make the table
@@ -230,11 +231,13 @@ jobs:
     name: Binary size
     needs: pre-commit
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/apt-install
-        with:
-          packages: ${{ env.DEPS }} clang-19
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
         # size with -flto (550 kB of code, with the monitors, XSETTINGS, the reload, the
