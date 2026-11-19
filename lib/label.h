@@ -51,7 +51,7 @@ class Label : public Widget {
     int text_width() const;
 
   protected:
-    void on_expose(const XEvent& e, void* data);
+    virtual void on_expose(const XEvent& e, void* data);
 
   private:
     XftFont* current_font() const;

@@ -230,6 +230,9 @@ class Manager : public tiny::Object {
     //! The panel, for the widgets of the plugins
     Panel& get_panel() { return wm_panel; }
 
+    //! The symbolic icons that the shell draws (and the plugins)
+    SymbolicIcons& get_icons() { return wm_icons; }
+
     //! Timers of the main loop (a clock, delays); they run in the loop, so
     //! the functions must be short
     tiny::Timers& get_timers() { return timers; }

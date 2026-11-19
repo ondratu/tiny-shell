@@ -18,6 +18,8 @@ struct HostServices {
     wm::Panel* panel = nullptr; //!< where the widgets go; must be realized
     Timers* timers = nullptr;
     FdWatch* watches = nullptr;
+    //! The symbolic icons for the widgets; null: the widgets have no icons
+    wm::SymbolicIcons* icons = nullptr;
     //! The style of the theme in use: "dark" or "light"
     std::function<std::string()> theme;
     //! A line for the log; empty for the standard error

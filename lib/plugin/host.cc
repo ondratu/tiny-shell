@@ -71,8 +71,9 @@ struct HostState {
 //! A widget of a plugin in the panel
 struct Entry {
     std::unique_ptr<tiny::Widget> widget;
-    tiny::Label* label = nullptr;   //!< the widget when it is a label
+    PluginLabel* label = nullptr;   //!< the widget when it is a label
     PluginButton* button = nullptr; //!< the widget when it is a button
+    std::unique_ptr<PluginPopup> popup; //!< made at the first `popup()`
     int click_ref = LUA_NOREF;
 };
 
@@ -618,19 +619,24 @@ int make_widget_impl(lua_State* L, bool button)
         return fail(L, "the panel is not there");
     }
     if (!lua_istable(L, 1)) {
-        return fail(L, "a table is expected: {text = ..., sample = ...}");
+        return fail(L, "a table is expected: {text = ..., sample = ..., icon = ...}");
     }
     std::string text;
     std::string sample;
+    ItemIcon icon;
     if (!field_string(L, 1, "text", text) ||
-        !field_string(L, 1, "sample", sample)) {
+        !field_string(L, 1, "sample", sample) ||
+        !field_string(L, 1, "icon", icon.name) ||
+        !field_string(L, 1, "icon_under", icon.under)) {
         return -1;
     }
+    icon.icons = plugin.host->services.icons;
+    icon.room = !icon.name.empty() || !icon.under.empty();
 
     auto entry = std::make_unique<Entry>();
     Entry* const raw = entry.get();
     if (button) {
-        auto widget = std::make_unique<PluginButton>(text, sample);
+        auto widget = std::make_unique<PluginButton>(text, sample, icon);
         raw->button = widget.get();
         raw->widget = std::move(widget);
         Plugin* const p = &plugin;
@@ -640,7 +646,7 @@ int make_widget_impl(lua_State* L, bool button)
             }
         });
     } else {
-        auto widget = std::make_unique<PluginLabel>(text, sample);
+        auto widget = std::make_unique<PluginLabel>(text, sample, icon);
         raw->label = widget.get();
         raw->widget = std::move(widget);
     }
@@ -729,6 +735,164 @@ int l_widget_on_click(lua_State* L)
     return 0;
 }
 
+int l_widget_set_icon_impl(lua_State* L)
+{
+    Entry* entry = check_entry(L, 1);
+    std::string name;
+    std::string under;
+    for (int i = 2; i <= 3; ++i) {
+        if (!lua_isnoneornil(L, i) && lua_type(L, i) != LUA_TSTRING) {
+            return fail(L, "the name of an icon is a text or nil");
+        }
+    }
+    if (lua_isstring(L, 2) != 0) {
+        name = lua_tostring(L, 2);
+    }
+    if (lua_isstring(L, 3) != 0) {
+        under = lua_tostring(L, 3);
+    }
+    if (entry->label != nullptr) {
+        entry->label->set_icon(name, under);
+    } else if (entry->button != nullptr) {
+        entry->button->set_icon(name, under);
+    }
+    return 0;
+}
+
+int l_widget_set_icon(lua_State* L)
+{
+    return finish(L, l_widget_set_icon_impl(L));
+}
+
+constexpr int popup_max_sections = 8;
+constexpr int popup_max_rows = 40;
+
+// The readers below leave the message on the top of the stack when they
+// return false (the rest of the stack is dropped by the error)
+
+bool read_row(lua_State* L, int index, PopupRow& row)
+{
+    if (!lua_istable(L, index)) {
+        fail(L, "a row must be a table {icon, label, value}");
+        return false;
+    }
+    return field_string(L, index, "icon", row.icon) &&
+           field_string(L, index, "label", row.label) &&
+           field_string(L, index, "value", row.value);
+}
+
+bool read_section(lua_State* L, int index, PopupSection& section)
+{
+    if (!lua_istable(L, index)) {
+        fail(L, "a section must be a table {heading, rows}");
+        return false;
+    }
+    if (!field_string(L, index, "heading", section.heading)) {
+        return false;
+    }
+    lua_getfield(L, index, "rows");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return true;
+    }
+    if (!lua_istable(L, -1)) {
+        fail(L, "rows must be a table");
+        return false;
+    }
+    const lua_Integer count = static_cast<lua_Integer>(lua_rawlen(L, -1));
+    if (count > popup_max_rows) {
+        fail(L, "too many rows in a section");
+        return false;
+    }
+    for (lua_Integer i = 1; i <= count; ++i) {
+        lua_rawgeti(L, -1, i);
+        PopupRow row;
+        if (!read_row(L, lua_gettop(L), row)) {
+            return false;
+        }
+        section.rows.push_back(std::move(row));
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    return true;
+}
+
+bool read_popup(lua_State* L, int index, PopupContent& content)
+{
+    if (!lua_istable(L, index)) {
+        fail(L, "a table is expected: {title = ..., sections = ...}");
+        return false;
+    }
+    if (!field_string(L, index, "icon", content.icon) ||
+        !field_string(L, index, "title", content.title) ||
+        !field_string(L, index, "subtitle", content.subtitle) ||
+        !field_string(L, index, "value", content.value)) {
+        return false;
+    }
+    lua_getfield(L, index, "sections");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return true;
+    }
+    if (!lua_istable(L, -1)) {
+        fail(L, "sections must be a table");
+        return false;
+    }
+    const lua_Integer count = static_cast<lua_Integer>(lua_rawlen(L, -1));
+    if (count > popup_max_sections) {
+        fail(L, "too many sections");
+        return false;
+    }
+    for (lua_Integer i = 1; i <= count; ++i) {
+        lua_rawgeti(L, -1, i);
+        PopupSection section;
+        if (!read_section(L, lua_gettop(L), section)) {
+            return false;
+        }
+        content.sections.push_back(std::move(section));
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    return true;
+}
+
+int l_widget_popup_impl(lua_State* L)
+{
+    Plugin& plugin = self(L);
+    Entry* entry = check_entry(L, 1);
+    wm::Panel* const panel = plugin.host->services.panel;
+    if (entry->widget == nullptr || panel == nullptr) {
+        return fail(L, "the widget was destroyed");
+    }
+    PopupContent content;
+    if (!read_popup(L, 2, content)) {
+        return -1;
+    }
+    if (entry->popup == nullptr) {
+        entry->popup =
+                std::make_unique<PluginPopup>(plugin.host->services.icons);
+        entry->popup->realize(panel->get_parent_window());
+        entry->popup->set_events();
+    }
+    entry->popup->open(content, entry->widget->get_window(),
+                       panel->get_window());
+    return 0;
+}
+
+int l_widget_popup(lua_State* L)
+{
+    return finish(L, l_widget_popup_impl(L));
+}
+
+int l_widget_close_popup(lua_State* L)
+{
+    Entry* entry = check_entry(L, 1);
+    if (entry->popup != nullptr) {
+        entry->popup->unmap();
+    }
+    return 0;
+}
+
 //! Take the widget out of the panel. It may be destroyed from its own click,
 //! so it is deleted a moment later.
 void remove_widget(Plugin& plugin, Entry& entry)
@@ -742,6 +906,7 @@ void remove_widget(Plugin& plugin, Entry& entry)
     entry.click_ref = LUA_NOREF;
     entry.label = nullptr;
     entry.button = nullptr;
+    entry.popup.reset();
     plugin.graveyard.push_back(std::move(entry.widget));
     Plugin* const p = &plugin;
     auto id = std::make_shared<Timers::Id>(0);
@@ -943,7 +1108,9 @@ const luaL_Reg timer_methods[] = {{"cancel", l_timer_cancel},
 const luaL_Reg widget_methods[] = {
         {"set_text", l_widget_set_text},       {"text", l_widget_get_text},
         {"set_visible", l_widget_set_visible}, {"on_click", l_widget_on_click},
-        {"destroy", l_widget_destroy},         {nullptr, nullptr}};
+        {"set_icon", l_widget_set_icon},       {"popup", l_widget_popup},
+        {"close_popup", l_widget_close_popup}, {"destroy", l_widget_destroy},
+        {nullptr, nullptr}};
 
 void set_text_field(lua_State* L, const char* name, const std::string& value)
 {
