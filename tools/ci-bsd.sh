@@ -4,8 +4,19 @@
 set -u
 os=${1:?usage: ci-bsd.sh freebsd|openbsd|netbsd}
 
-as_root=sudo
-command -v doas > /dev/null 2>&1 && as_root=doas
+# the way to the privileges differs: root already, sudo or doas
+as_root=
+if [ "$(id -u)" -ne 0 ]; then
+    if sudo -n true > /dev/null 2>&1; then
+        as_root=sudo
+    elif doas -n true > /dev/null 2>&1; then
+        as_root=doas
+    else
+        echo "no way to be root: $(id)" >&2
+        ls -l /etc/doas.conf /etc/sudoers /usr/local/etc/sudoers 2>&1 >&2
+        exit 2
+    fi
+fi
 
 case $os in
 freebsd)
