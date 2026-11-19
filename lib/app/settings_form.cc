@@ -97,7 +97,8 @@ constexpr SettingsForm::Field fields[] = {
         SettingsForm::Field::KeyboardLayouts,
         SettingsForm::Field::KeyboardSwitch,
         SettingsForm::Field::KeyboardShortcuts,
-        SettingsForm::Field::KeyboardIndicator};
+        SettingsForm::Field::KeyboardIndicator,
+        SettingsForm::Field::Plugins};
 
 } // namespace
 
@@ -150,7 +151,8 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(),
             TextField(initial.keyboard_switch),
             TextField(),
-            TextField(initial.keyboard_indicator)},
+            TextField(initial.keyboard_indicator),
+            TextField()},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -175,7 +177,8 @@ int SettingsForm::form_height() const
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Applications, Section::Session, Section::Keyboard}) {
+          Section::Applications, Section::Session, Section::Keyboard,
+          Section::Plugins}) {
         const auto rows = static_cast<int>(
                 section_fields(section).size() +
                 (section == Section::Appearance ? thumbnail_rows : 0));
@@ -244,6 +247,8 @@ const char* SettingsForm::section_title(Section section)
             return "Session";
         case Section::Keyboard:
             return "Keyboard";
+        case Section::Plugins:
+            return "Plugins";
         case Section::Applications:
             break;
     }
@@ -277,6 +282,7 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> keyboard = {
             Field::KeyboardLayouts, Field::KeyboardSwitch,
             Field::KeyboardIndicator, Field::KeyboardShortcuts};
+    static const std::vector<Field> plugins = {Field::Plugins};
     switch (section) {
         case Section::Appearance:
             return appearance;
@@ -294,6 +300,8 @@ SettingsForm::section_fields(Section section)
             return session;
         case Section::Keyboard:
             return keyboard;
+        case Section::Plugins:
+            return plugins;
         case Section::Applications:
             break;
     }
@@ -305,7 +313,7 @@ SettingsForm::Section SettingsForm::section_of(Field field)
     for (const Section section :
          {Section::Appearance, Section::Fonts, Section::Desktop,
           Section::Displays, Section::Power, Section::Security,
-          Section::Session, Section::Keyboard}) {
+          Section::Session, Section::Keyboard, Section::Plugins}) {
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;
@@ -358,6 +366,8 @@ const char* SettingsForm::hint(Field field)
             return "Return or Space opens the list of the layouts.";
         case Field::KeyboardShortcuts:
             return "Return or Space shows the keys of the shell.";
+        case Field::Plugins:
+            return "Return or Space opens the list of the plugins.";
         case Field::KeyboardSwitch:
             return "The keyboard changes as soon as you save.";
         case Field::Wallpaper:
@@ -394,6 +404,9 @@ const char* SettingsForm::note(Field field)
                    "on it opens a menu of the layouts.";
         case Field::KeyboardShortcuts:
             return "The keys of the shell and what they do (not editable).";
+        case Field::Plugins:
+            return "Small programs in Lua that add to the panel, like the "
+                   "battery or the weather. Switch them on and set them here.";
         case Field::SessionConfirm:
             return "A dialog with a countdown before Logout, Restart and "
                    "Shutdown. Programs are asked to close either way.";
@@ -438,6 +451,9 @@ void SettingsForm::open_field_list()
         case Field::KeyboardShortcuts:
             open_shortcuts();
             break;
+        case Field::Plugins:
+            open_plugins();
+            break;
         default:
             open_programs();
             break;
@@ -447,7 +463,7 @@ void SettingsForm::open_field_list()
 bool SettingsForm::opens_list(Field field)
 {
     return field == Field::SessionPrograms || field == Field::KeyboardLayouts ||
-           field == Field::KeyboardShortcuts;
+           field == Field::KeyboardShortcuts || field == Field::Plugins;
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -621,6 +637,7 @@ std::string SettingsForm::problem(Field field) const
         case Field::SessionPrograms: // not a text
         case Field::KeyboardLayouts:
         case Field::KeyboardShortcuts:
+        case Field::Plugins:
             return "";
         case Field::KeyboardSwitch:
             return wm::valid_keyboard_switch(value)
@@ -1038,6 +1055,77 @@ void SettingsForm::open_programs()
     first_ = 0;
 }
 
+std::string SettingsForm::plugins_summary() const
+{
+    if (plugins_.empty()) {
+        return "None installed";
+    }
+    const auto on = std::count_if(
+            plugins_.begin(), plugins_.end(),
+            [](const PluginRow& p) { return p.enabled && !p.remove; });
+    return std::to_string(on) + " on, " +
+           std::to_string(static_cast<long>(plugins_.size()) - on) + " off";
+}
+
+void SettingsForm::open_plugins()
+{
+    view_ = View::Plugins;
+    plugins_before_ = plugins_;
+    selected_ = 0;
+    first_ = 0;
+}
+
+//! Show the settings of the selected plugin, as a list
+void SettingsForm::open_plugin_settings()
+{
+    if (selected_ >= plugins_.size() || plugins_[selected_].specs.empty()) {
+        return;
+    }
+    plugin_row_ = selected_;
+    plugin_first_ = first_;
+    plugin_values_before_ = plugins_[plugin_row_].values;
+    view_ = View::PluginSettings;
+    selected_ = 0;
+    first_ = 0;
+    status_.clear();
+    load_plugin_edit();
+}
+
+//! The typed value of the selected setting goes to the field of the cursor
+void SettingsForm::load_plugin_edit()
+{
+    if (view_ == View::PluginSettings && plugin_typed()) {
+        plugin_edit_.set_text(plugins_[plugin_row_].values[selected_]);
+        plugin_edit_.end();
+    }
+}
+
+bool SettingsForm::plugin_typed() const
+{
+    if (view_ != View::PluginSettings || plugin_row_ >= plugins_.size() ||
+        selected_ >= plugins_[plugin_row_].specs.size()) {
+        return false;
+    }
+    const plugin::SettingType type =
+            plugins_[plugin_row_].specs[selected_].type;
+    return type == plugin::SettingType::Text ||
+           type == plugin::SettingType::Number;
+}
+
+std::string SettingsForm::plugin_problem() const
+{
+    if (plugin_row_ >= plugins_.size()) {
+        return "";
+    }
+    const PluginRow& row = plugins_[plugin_row_];
+    for (size_t i = 0; i < row.specs.size() && i < row.values.size(); ++i) {
+        if (!plugin::valid_setting_value(row.specs[i], row.values[i])) {
+            return "The setting " + row.specs[i].label + " is not valid.";
+        }
+    }
+    return "";
+}
+
 void SettingsForm::open_layouts()
 {
     view_ = View::Layouts;
@@ -1073,6 +1161,28 @@ void SettingsForm::close_list(bool keep)
             section_ = Section::Session;
             focus_ = Field::SessionPrograms;
             break;
+        case View::Plugins:
+            if (!keep) {
+                plugins_ = plugins_before_;
+            }
+            section_ = Section::Plugins;
+            focus_ = Field::Plugins;
+            break;
+        case View::PluginSettings:
+            // back to the list of the plugins, where the plugin is selected
+            if (keep && !plugin_problem().empty()) {
+                status_ = "Not kept: " + plugin_problem();
+                return;
+            }
+            if (!keep) {
+                plugins_[plugin_row_].values = plugin_values_before_;
+            }
+            view_ = View::Plugins;
+            selected_ = plugin_row_;
+            first_ = plugin_first_;
+            status_.clear();
+            pressed_ = NoTarget;
+            return;
         case View::Layouts:
             if (!keep) {
                 layouts_ = layouts_before_;
@@ -1099,6 +1209,13 @@ void SettingsForm::close_programs(bool keep)
     }
 }
 
+void SettingsForm::close_plugins(bool keep)
+{
+    if (view_ == View::Plugins) {
+        close_list(keep);
+    }
+}
+
 void SettingsForm::close_layouts(bool keep)
 {
     if (view_ == View::Layouts) {
@@ -1118,6 +1235,10 @@ size_t SettingsForm::list_size() const
     switch (view_) {
         case View::Programs:
             return programs_.size();
+        case View::Plugins:
+            return plugins_.size();
+        case View::PluginSettings:
+            return plugins_[plugin_row_].specs.size();
         case View::Layouts:
             return layouts_.size();
         case View::Shortcuts:
@@ -1137,6 +1258,158 @@ bool SettingsForm::switch_program()
     }
     programs_[selected_].enabled = !programs_[selected_].enabled;
     return true;
+}
+
+//! Switch the selected plugin; false when it can't be switched
+bool SettingsForm::switch_plugin()
+{
+    if (selected_ >= plugins_.size()) {
+        return false;
+    }
+    PluginRow& row = plugins_[selected_];
+    if (!row.reason.empty() || row.remove) {
+        return false;
+    }
+    row.enabled = !row.enabled;
+    return true;
+}
+
+//! Mark the selected plugin to be removed (or take the mark back); only a
+//! plugin of the user can be removed
+bool SettingsForm::remove_plugin()
+{
+    if (selected_ >= plugins_.size() || !plugins_[selected_].user) {
+        return false;
+    }
+    plugins_[selected_].remove = !plugins_[selected_].remove;
+    return true;
+}
+
+//! The next value (or the previous one) of the selected setting that is
+//! chosen; false for a setting that is typed
+bool SettingsForm::plugin_step(int direction)
+{
+    PluginRow& row = plugins_[plugin_row_];
+    if (selected_ >= row.specs.size()) {
+        return false;
+    }
+    const plugin::SettingSpec& spec = row.specs[selected_];
+    std::string& value = row.values[selected_];
+    if (spec.type == plugin::SettingType::Toggle) {
+        value = value == "yes" ? "no" : "yes";
+        status_.clear();
+        return true;
+    }
+    if (spec.type != plugin::SettingType::Choice || spec.choices.empty()) {
+        return false;
+    }
+    const auto n = static_cast<long>(spec.choices.size());
+    const auto found = std::find_if(
+            spec.choices.begin(), spec.choices.end(),
+            [&](const plugin::SettingChoice& c) { return c.value == value; });
+    const long at = found == spec.choices.end()
+                            ? 0
+                            : static_cast<long>(found - spec.choices.begin());
+    value = spec.choices[static_cast<size_t>((at + direction + n) % n)].value;
+    status_.clear();
+    return true;
+}
+
+//! The text of the setting that is typed changed: it is the value
+bool SettingsForm::plugin_edited(bool changed)
+{
+    if (changed) {
+        plugins_[plugin_row_].values[selected_] = plugin_edit_.text();
+        status_.clear();
+    }
+    return changed;
+}
+
+//! The keys of the list of the plugins
+bool SettingsForm::plugins_key(Key pressed)
+{
+    switch (pressed) {
+        case Key::Return:
+            close_list(true);
+            return true;
+        case Key::Escape:
+            close_list(false);
+            return true;
+        case Key::Right: // the arrow of the settings
+            if (selected_ < plugins_.size() &&
+                !plugins_[selected_].specs.empty()) {
+                open_plugin_settings();
+                return true;
+            }
+            return false;
+        case Key::Delete:
+        case Key::Back:
+            return remove_plugin();
+        default:
+            return list_key(pressed);
+    }
+}
+
+//! The keys of the settings of a plugin: the rows that are chosen go through
+//! their values, the ones that are typed have a cursor
+bool SettingsForm::plugin_settings_key(Key pressed)
+{
+    const bool typed = plugin_typed();
+    switch (pressed) {
+        case Key::Return:
+            close_list(true);
+            return true;
+        case Key::Escape:
+            close_list(false);
+            return true;
+        case Key::Tab:
+        case Key::BackTab: {
+            const size_t n = list_size();
+            const bool changed =
+                    select(pressed == Key::Tab ? (selected_ + 1) % n
+                                               : (selected_ + n - 1) % n);
+            load_plugin_edit();
+            return changed || n > 1;
+        }
+        case Key::Up:
+        case Key::Down:
+        case Key::PageUp:
+        case Key::PageDown: {
+            const bool changed = list_key(pressed);
+            load_plugin_edit();
+            return changed;
+        }
+        case Key::Home:
+        case Key::End:
+            if (typed) {
+                return pressed == Key::Home ? plugin_edit_.home()
+                                            : plugin_edit_.end();
+            }
+            {
+                const bool changed = list_key(pressed);
+                load_plugin_edit();
+                return changed;
+            }
+        case Key::Left:
+        case Key::Right:
+            if (typed) {
+                return pressed == Key::Left ? plugin_edit_.left()
+                                            : plugin_edit_.right();
+            }
+            return plugin_step(pressed == Key::Left ? -1 : 1);
+        case Key::Back:
+        case Key::Delete:
+            if (typed) {
+                return plugin_edited(pressed == Key::Back
+                                             ? plugin_edit_.backspace()
+                                             : plugin_edit_.erase());
+            }
+            return false;
+        case Key::NextSection:
+        case Key::PrevSection:
+            return false;
+    }
+    return false;
 }
 
 //! Choose or drop the selected layout. The chosen ones are numbered in the
@@ -1173,6 +1446,10 @@ bool SettingsForm::switch_row()
     switch (view_) {
         case View::Programs:
             return switch_program();
+        case View::Plugins:
+            return switch_plugin();
+        case View::PluginSettings:
+            return plugin_step(1);
         case View::Layouts:
             return switch_layout();
         default:
@@ -1421,6 +1698,10 @@ bool SettingsForm::act(size_t target, int x)
             focus_ = Field::SessionPrograms;
             open_programs();
             return true;
+        case PluginsField:
+            focus_ = Field::Plugins;
+            open_plugins();
+            return true;
         case KeyboardLayoutsField:
             focus_ = Field::KeyboardLayouts;
             open_layouts();
@@ -1441,6 +1722,7 @@ bool SettingsForm::act(size_t target, int x)
         case SectionApplications:
         case SectionSession:
         case SectionKeyboard:
+        case SectionPlugins:
             set_section(static_cast<Section>(target - SectionAppearance));
             return true;
         case CancelButton:
@@ -1473,6 +1755,24 @@ bool SettingsForm::act(size_t target, int x)
             break;
     }
     // a row of the list
+    if (view_ == View::PluginSettings) {
+        select(target - FirstRow);
+        load_plugin_edit();
+        if (!plugin_typed()) {
+            plugin_step(1);
+        }
+        return true;
+    }
+    if (view_ == View::Plugins) {
+        select(target - FirstRow);
+        // a click at the right end, where the settings are named, opens them
+        if (x >= width_ * 2 / 3 && !plugins_[selected_].specs.empty()) {
+            open_plugin_settings();
+            return true;
+        }
+        switch_row();
+        return true;
+    }
     if (view_ != View::Picker) {
         select(target - FirstRow);
         switch_row();
@@ -1564,6 +1864,10 @@ bool SettingsForm::key(Key pressed)
     switch (view_) {
         case View::Picker:
             return picker_key(pressed);
+        case View::Plugins:
+            return plugins_key(pressed);
+        case View::PluginSettings:
+            return plugin_settings_key(pressed);
         case View::Programs:
         case View::Layouts:
         case View::Shortcuts:
@@ -1760,6 +2064,15 @@ bool SettingsForm::type(const std::string& typed)
     }
     if (view_ == View::Programs) {
         return text == " " && switch_program();
+    }
+    if (view_ == View::Plugins) {
+        return text == " " && switch_plugin();
+    }
+    if (view_ == View::PluginSettings) {
+        if (!plugin_typed()) {
+            return text == " " && plugin_step(1);
+        }
+        return plugin_edited(plugin_edit_.insert(text));
     }
     if (view_ == View::Layouts) {
         if (text == " ") { // the names are found by their first words

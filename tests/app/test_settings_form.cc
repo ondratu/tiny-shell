@@ -1393,14 +1393,15 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
     for (const Section next :
          {Section::Desktop, Section::Displays, Section::Power,
           Section::Security, Section::Applications, Section::Session,
-          Section::Keyboard, Section::Appearance, Section::Fonts}) {
+          Section::Keyboard, Section::Plugins, Section::Appearance,
+          Section::Fonts}) {
         EXPECT_TRUE(form.key(Key::NextSection));
         EXPECT_EQ(form.section(), next);
     }
     EXPECT_TRUE(form.key(Key::PrevSection));
     EXPECT_EQ(form.section(), Section::Appearance); // round
     EXPECT_TRUE(form.key(Key::PrevSection));
-    EXPECT_EQ(form.section(), Section::Keyboard);
+    EXPECT_EQ(form.section(), Section::Plugins);
 }
 
 TEST(SettingsFormSectionTest, a_section_puts_the_focus_on_its_first_field)
@@ -2584,4 +2585,339 @@ TEST(SettingsFormKeyboardTest, a_wrong_indicator_is_a_problem)
     focus_on(form, Field::KeyboardIndicator);
 
     EXPECT_FALSE(form.problem().empty());
+}
+
+// ---- The list of the plugins ----
+
+namespace {
+
+using tiny::plugin::SettingChoice;
+using tiny::plugin::SettingSpec;
+using tiny::plugin::SettingType;
+
+SettingSpec spec(const char* key, SettingType type, const char* fallback)
+{
+    SettingSpec s;
+    s.key = key;
+    s.label = key;
+    s.type = type;
+    s.fallback = fallback;
+    return s;
+}
+
+//! Four plugins: a (system, with settings), b (user, no settings), c (system,
+//! broken) and d (user, off)
+SettingsForm make_plugins()
+{
+    SettingsForm form = make();
+    SettingsForm::PluginRow a;
+    a.id = "a";
+    a.name = "Alpha";
+    a.origin = "System";
+    a.enabled = true;
+    SettingSpec units = spec("units", SettingType::Choice, "metric");
+    units.choices = {{"metric", "Celsius"}, {"imperial", "Fahrenheit"}};
+    SettingSpec city = spec("city", SettingType::Text, "Brno");
+    SettingSpec days = spec("days", SettingType::Number, "3");
+    days.min = 1;
+    days.max = 7;
+    SettingSpec loud = spec("loud", SettingType::Toggle, "no");
+    a.specs = {units, city, days, loud};
+    a.values = {"metric", "Brno", "3", "no"};
+    SettingsForm::PluginRow b;
+    b.id = "b";
+    b.name = "Beta";
+    b.user = true;
+    b.origin = "User";
+    b.enabled = true;
+    SettingsForm::PluginRow c;
+    c.id = "c";
+    c.name = "Gamma";
+    c.origin = "System";
+    c.reason = "plugin.lua is missing";
+    SettingsForm::PluginRow d;
+    d.id = "d";
+    d.name = "Delta";
+    d.user = true;
+    d.origin = "User";
+    form.set_plugins({a, b, c, d});
+    return form;
+}
+
+} // namespace
+
+TEST(SettingsFormPluginsTest,
+     the_plugins_have_a_section_with_a_field_that_opens_the_list)
+{
+    SettingsForm form = make_plugins();
+    EXPECT_STREQ(SettingsForm::section_title(SettingsForm::Section::Plugins),
+                 "Plugins");
+    EXPECT_EQ(SettingsForm::section_fields(SettingsForm::Section::Plugins),
+              (std::vector<Field>{Field::Plugins}));
+    EXPECT_EQ(SettingsForm::section_of(Field::Plugins),
+              SettingsForm::Section::Plugins);
+    EXPECT_EQ(form.problem(Field::Plugins), "");
+    EXPECT_NE(*SettingsForm::hint(Field::Plugins), '\0');
+    EXPECT_NE(*SettingsForm::note(Field::Plugins), '\0');
+    focus_on(form, Field::Plugins);
+    EXPECT_TRUE(form.key(Key::Return));
+    EXPECT_EQ(form.view(), View::Plugins);
+}
+
+TEST(SettingsFormPluginsTest, a_click_on_the_field_opens_the_list)
+{
+    SettingsForm form = make_plugins();
+    form.set_section(SettingsForm::Section::Plugins);
+    click(form, form.field_rect(Field::Plugins));
+    EXPECT_EQ(form.view(), View::Plugins);
+}
+
+TEST(SettingsFormPluginsTest, the_summary_counts_the_plugins_that_run)
+{
+    SettingsForm form = make_plugins();
+    EXPECT_EQ(form.plugins_summary(), "2 on, 2 off");
+    EXPECT_EQ(make().plugins_summary(), "None installed");
+    form.open_plugins();
+    form.key(Key::Down);
+    form.key(Key::Delete); // b is removed: it does not run any more
+    EXPECT_EQ(form.plugins_summary(), "1 on, 3 off");
+}
+
+TEST(SettingsFormPluginsTest, space_and_a_click_switch_a_plugin)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_FALSE(form.plugins()[0].enabled);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_TRUE(form.plugins()[0].enabled);
+    click(form, form.row_rect(3)); // d: a click selects and switches
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_TRUE(form.plugins()[3].enabled);
+}
+
+TEST(SettingsFormPluginsTest, a_plugin_with_a_problem_can_not_be_switched_on)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::End);
+    form.key(Key::Up); // c
+    EXPECT_EQ(form.selected(), 2u);
+    EXPECT_FALSE(form.type(" "));
+    EXPECT_FALSE(form.plugins()[2].enabled);
+}
+
+TEST(SettingsFormPluginsTest, delete_marks_a_plugin_of_the_user_for_removal)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    EXPECT_FALSE(form.key(Key::Delete)); // a is of the system
+    EXPECT_FALSE(form.plugins()[0].remove);
+    form.key(Key::Down); // b
+    EXPECT_TRUE(form.key(Key::Delete));
+    EXPECT_TRUE(form.plugins()[1].remove);
+    EXPECT_FALSE(form.type(" ")) << "a plugin that goes is not switched";
+    EXPECT_TRUE(form.key(Key::Back)); // the mark is taken back
+    EXPECT_FALSE(form.plugins()[1].remove);
+}
+
+TEST(SettingsFormPluginsTest, escape_and_cancel_bring_the_switches_back)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.type(" ");
+    form.key(Key::Down);
+    form.key(Key::Delete);
+    form.key(Key::Escape);
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_EQ(form.section(), SettingsForm::Section::Plugins);
+    EXPECT_EQ(form.focus(), Field::Plugins);
+    EXPECT_TRUE(form.plugins()[0].enabled);
+    EXPECT_FALSE(form.plugins()[1].remove);
+
+    form.open_plugins();
+    form.type(" ");
+    click(form, form.cancel_rect());
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_TRUE(form.plugins()[0].enabled);
+}
+
+TEST(SettingsFormPluginsTest, done_keeps_the_switches)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.type(" ");
+    EXPECT_TRUE(form.key(Key::Return)); // Return is Done
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_FALSE(form.plugins()[0].enabled);
+
+    form.open_plugins();
+    form.type(" ");
+    click(form, form.save_rect());
+    EXPECT_EQ(form.view(), View::Form);
+    EXPECT_TRUE(form.plugins()[0].enabled);
+}
+
+TEST(SettingsFormPluginsTest,
+     right_opens_the_settings_of_a_plugin_that_has_them)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.view(), View::PluginSettings);
+    EXPECT_EQ(form.plugin_row().id, "a");
+    EXPECT_EQ(form.selected(), 0u);
+}
+
+TEST(SettingsFormPluginsTest, a_click_at_the_end_of_a_row_opens_the_settings)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    const Rect row = form.row_rect(0);
+    EXPECT_TRUE(click(form, {row.width - 20, row.y, 10, row.height}));
+    EXPECT_EQ(form.view(), View::PluginSettings);
+    EXPECT_TRUE(form.key(Key::Escape));
+    // a plugin without settings is only switched, wherever the click is
+    const Rect other = form.row_rect(1);
+    click(form, {other.width - 20, other.y, 10, other.height});
+    EXPECT_EQ(form.view(), View::Plugins);
+    EXPECT_FALSE(form.plugins()[1].enabled);
+}
+
+TEST(SettingsFormPluginsTest, a_choice_goes_through_its_values)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    EXPECT_FALSE(form.plugin_typed());
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.plugins()[0].values[0], "imperial");
+    EXPECT_TRUE(form.key(Key::Right)); // round
+    EXPECT_EQ(form.plugins()[0].values[0], "metric");
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_EQ(form.plugins()[0].values[0], "imperial");
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.plugins()[0].values[0], "metric");
+    click(form, form.row_rect(0));
+    EXPECT_EQ(form.plugins()[0].values[0], "imperial");
+}
+
+TEST(SettingsFormPluginsTest, a_toggle_switches_with_space_and_arrows)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    form.key(Key::End);
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_TRUE(form.type(" "));
+    EXPECT_EQ(form.plugins()[0].values[3], "yes");
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_EQ(form.plugins()[0].values[3], "no");
+}
+
+TEST(SettingsFormPluginsTest, a_text_is_typed_with_a_cursor)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    form.key(Key::Down);
+    EXPECT_TRUE(form.plugin_typed());
+    EXPECT_EQ(form.plugin_edit().text(), "Brno");
+    EXPECT_EQ(form.plugin_edit().cursor(), 4u);
+    EXPECT_TRUE(form.type("!"));
+    EXPECT_EQ(form.plugins()[0].values[1], "Brno!");
+    EXPECT_TRUE(form.key(Key::Back));
+    EXPECT_TRUE(form.key(Key::Home));
+    EXPECT_TRUE(form.type("Ol "));
+    EXPECT_EQ(form.plugins()[0].values[1], "Ol Brno");
+    EXPECT_TRUE(form.key(Key::End));
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_TRUE(form.key(Key::Delete));
+    EXPECT_EQ(form.plugins()[0].values[1], "Ol Brn");
+    EXPECT_FALSE(form.type("\n")); // a control character is not typed
+    // the text stays when the selection leaves it, and comes back
+    form.key(Key::Down);
+    form.key(Key::Up);
+    EXPECT_EQ(form.plugin_edit().text(), "Ol Brn");
+}
+
+TEST(SettingsFormPluginsTest,
+     a_number_out_of_its_range_is_a_problem_that_keeps_the_list)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    form.key(Key::Down);
+    form.key(Key::Down);
+    EXPECT_TRUE(form.plugin_typed());
+    form.type("0"); // 30
+    EXPECT_NE(form.plugin_problem().find("days"), std::string::npos);
+    form.key(Key::Return);
+    EXPECT_EQ(form.view(), View::PluginSettings) << "it can't be kept";
+    EXPECT_NE(form.status().find("Not kept"), std::string::npos);
+    form.key(Key::Back);
+    EXPECT_EQ(form.plugin_edit().text(), "3");
+    EXPECT_EQ(form.plugin_problem(), "");
+    EXPECT_EQ(form.status(), "");
+    EXPECT_TRUE(form.key(Key::Return));
+    EXPECT_EQ(form.view(), View::Plugins);
+    EXPECT_EQ(form.selected(), 0u) << "the plugin is selected again";
+}
+
+TEST(SettingsFormPluginsTest, escape_in_the_settings_brings_the_values_back)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    form.key(Key::Right);
+    form.key(Key::Down);
+    form.type("x");
+    EXPECT_TRUE(form.key(Key::Escape));
+    EXPECT_EQ(form.view(), View::Plugins);
+    EXPECT_EQ(form.plugins()[0].values,
+              (std::vector<std::string>{"metric", "Brno", "3", "no"}));
+}
+
+TEST(SettingsFormPluginsTest, tab_goes_round_the_settings_and_the_wheel_scrolls)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    EXPECT_TRUE(form.key(Key::Tab));
+    EXPECT_EQ(form.selected(), 1u);
+    EXPECT_TRUE(form.key(Key::BackTab));
+    EXPECT_TRUE(form.key(Key::BackTab));
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_TRUE(form.key(Key::Tab));
+    EXPECT_EQ(form.selected(), 0u);
+    EXPECT_TRUE(form.key(Key::PageDown));
+    EXPECT_EQ(form.selected(), 3u);
+    EXPECT_TRUE(form.key(Key::Home)); // a row that is chosen: the first row
+    EXPECT_EQ(form.selected(), 0u);
+    EXPECT_FALSE(form.key(Key::NextSection));
+    EXPECT_FALSE(form.wheel(1)) << "all the rows fit";
+}
+
+TEST(SettingsFormPluginsTest,
+     the_cancel_button_of_the_settings_goes_back_to_the_list)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Right);
+    form.key(Key::Right);
+    click(form, form.cancel_rect());
+    EXPECT_EQ(form.view(), View::Plugins);
+    EXPECT_EQ(form.plugins()[0].values[0], "metric");
+    form.key(Key::Right);
+    click(form, form.save_rect()); // Done
+    EXPECT_EQ(form.view(), View::Plugins);
+}
+
+TEST(SettingsFormPluginsTest, a_plugin_without_settings_does_not_open_them)
+{
+    SettingsForm form = make_plugins();
+    form.open_plugins();
+    form.key(Key::Down); // b has none
+    EXPECT_FALSE(form.key(Key::Right));
+    EXPECT_EQ(form.view(), View::Plugins);
 }
