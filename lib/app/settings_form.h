@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "plugin/plugin_info.h"
 #include "text_field.h"
 #include "widget.h"
 #include "wm/config.h"
@@ -17,7 +18,7 @@ namespace tiny::app {
 /**
  * @short What the settings program shows and does, without any drawing.
  *
- * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Security, Applications, Session, Keyboard) and the fields of the chosen section: text fields (the font,
+ * The form has a panel at its left with the sections (Appearance, Fonts, Desktop, Displays, Power, Security, Applications, Session, Keyboard, Plugins) and the fields of the chosen section: text fields (the font,
  * its size and style, the scale, the format of the clock, the wallpaper, the
  * terminal), choices (antialiasing, hinting and subpixel order of the text,
  * the placement of the wallpaper, the mode of the dock: the left and right
@@ -39,6 +40,14 @@ namespace tiny::app {
  * form, Cancel (or Escape) brings them back. The owner reads `programs()` when
  * it saves.
  *
+ * The field Plugins of the Plugins section opens a list of the plugins that
+ * are installed: a click or Space switches one on or off, Right (or a click
+ * at the end of the row, where "settings" is written) opens the settings of
+ * the one that is selected (a list of its settings: a click or the arrows go
+ * through the values of a choice, a text is typed), Delete marks a plugin of
+ * the user to be removed. Done (or Return) keeps what was done, Cancel (or
+ * Escape) brings it back. The owner reads `plugins()` when it saves.
+ *
  * The field Layouts of the Keyboard opens a list in the same way: all the
  * layouts and variants of the system, a click or Space chooses one (the
  * layouts are numbered in the order they were chosen, the first one is used
@@ -56,7 +65,15 @@ namespace tiny::app {
  */
 class SettingsForm {
   public:
-    enum class View { Form, Picker, Programs, Layouts, Shortcuts };
+    enum class View {
+        Form,
+        Picker,
+        Programs,
+        Layouts,
+        Shortcuts,
+        Plugins,
+        PluginSettings
+    };
 
     //! The groups of the settings, in the panel at the left
     enum class Section {
@@ -68,7 +85,8 @@ class SettingsForm {
         Security,
         Applications,
         Session,
-        Keyboard
+        Keyboard,
+        Plugins
     };
 
     enum class Field {
@@ -102,7 +120,8 @@ class SettingsForm {
         KeyboardLayouts,   //!< opens the list of the layouts of the keyboard
         KeyboardSwitch,    //!< a choice: the keys that switch the layout
         KeyboardShortcuts, //!< opens the list of the keys of the shell
-        KeyboardIndicator  //!< a choice: yes or no, the layout is in the panel
+        KeyboardIndicator, //!< a choice: yes or no, the layout is in the panel
+        Plugins            //!< opens the list of the plugins
     };
 
     //! What has the keyboard in the list of fonts
@@ -217,6 +236,22 @@ class SettingsForm {
         size_t order = 0; //!< 1 for the first chosen one, 0 when not chosen
     };
 
+    //! A plugin, as the list of the plugins shows it
+    struct PluginRow {
+        std::string id;
+        std::string name;
+        std::string description;
+        std::string version;
+        std::string origin;   //!< "System", "User", "User, replaces 1.0"
+        bool user = false;    //!< it is in the directory of the user: can go
+        bool enabled = false; //!< it runs
+        bool remove = false;  //!< it is deleted when the settings are saved
+        //! Why it can't be switched on (a wrong plugin.ini); empty when it can
+        std::string reason;
+        std::vector<plugin::SettingSpec> specs; //!< its settings
+        std::vector<std::string> values;        //!< the value of each one
+    };
+
     //! The names of the styles of a family
     using StylesFn =
             std::function<std::vector<std::string>(const std::string&)>;
@@ -252,6 +287,30 @@ class SettingsForm {
 
     /// How many start, for the field that opens the list: "3 on, 1 off".
     std::string programs_summary() const;
+
+    /// The plugins that the list shows. Call it before the form is used.
+    void set_plugins(std::vector<PluginRow> plugins)
+    {
+        plugins_ = std::move(plugins);
+    }
+
+    /// The plugins as the user switched them.
+    const std::vector<PluginRow>& plugins() const { return plugins_; }
+
+    /// How many run, for the field that opens the list: "2 on, 1 off".
+    std::string plugins_summary() const;
+
+    /// The plugin whose settings show, and what is wrong with them (empty when
+    /// all the values can be saved).
+    const PluginRow& plugin_row() const { return plugins_[plugin_row_]; }
+    std::string plugin_problem() const;
+
+    /// The text that is typed for the setting that is selected (a text or a
+    /// number); the cursor is in it.
+    const TextField& plugin_edit() const { return plugin_edit_; }
+
+    /// Whether the setting that is selected is typed, not chosen.
+    bool plugin_typed() const;
 
     /// The layouts that the list shows and the ones that are chosen (in the
     /// order of switching); a chosen one that the system does not list is added
@@ -290,7 +349,7 @@ class SettingsForm {
 
     // The sections
 
-    static constexpr size_t section_count = 9;
+    static constexpr size_t section_count = 10;
 
     /// The section that shows.
     Section section() const { return section_; }
@@ -471,6 +530,11 @@ class SettingsForm {
     /// were when the list was opened.
     void close_programs(bool keep);
 
+    /// The list of the plugins; the switches stay (`keep`) or go back to what
+    /// they were when the list was opened.
+    void open_plugins();
+    void close_plugins(bool keep);
+
     /// The list of the layouts (see `set_layouts`) and the list of the
     /// shortcuts, with the same scrolling.
     void open_layouts();
@@ -512,6 +576,7 @@ class SettingsForm {
         KeyboardSwitchField,
         KeyboardShortcutsField,
         KeyboardIndicatorField,
+        PluginsField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -527,6 +592,7 @@ class SettingsForm {
         SectionApplications,
         SectionSession,
         SectionKeyboard,
+        SectionPlugins,
         FirstRow //!< and the rows of the list from here
     };
 
@@ -548,6 +614,14 @@ class SettingsForm {
     bool list_key(Key pressed);
     bool list_view_key(Key pressed);
     bool switch_program();
+    bool switch_plugin();
+    bool remove_plugin();
+    bool plugins_key(Key pressed);
+    bool plugin_settings_key(Key pressed);
+    bool plugin_step(int direction);
+    bool plugin_edited(bool changed);
+    void open_plugin_settings();
+    void load_plugin_edit();
     bool switch_layout();
     bool switch_row();  //!< the row that is selected in the list that shows
     bool find_layout(); //!< select the first name that begins with `find_`
@@ -567,7 +641,7 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 31> fields_;
+    std::array<TextField, 32> fields_;
     //! value and label of the monitors, Auto first
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
@@ -582,6 +656,12 @@ class SettingsForm {
     std::vector<std::string> shown_;
     std::vector<Program> programs_;
     std::vector<Program> programs_before_; //!< when the list was opened
+    std::vector<PluginRow> plugins_;
+    std::vector<PluginRow> plugins_before_; //!< when the list was opened
+    std::vector<std::string> plugin_values_before_; //!< of the settings shown
+    TextField plugin_edit_;
+    size_t plugin_row_ = 0;   //!< the plugin whose settings show
+    size_t plugin_first_ = 0; //!< where the list of plugins was
     std::vector<Layout> layouts_;
     std::vector<Layout> layouts_before_;
     std::vector<wm::KeyboardShortcut> shortcuts_ = wm::keyboard_shortcuts();

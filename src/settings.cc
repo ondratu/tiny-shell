@@ -48,7 +48,9 @@
 #include "display.h"
 #include "spawn.h"
 #include "entry.h"
+#include "plugin/host.h"
 #include "app/app_colors.h"
+#include "app/plugin_list.h"
 #include "app/settings_form.h"
 #include "app/wallpaper.h"
 #include "text.h"
@@ -194,6 +196,7 @@ class SettingsApp : public tiny::XftWindow {
     {
         load_programs();
         load_keyboard();
+        load_plugins(config);
         // the font of the shell, when it can be opened, else any sans
         ui_font = text_font(ui_family);
         if (ui_font == nullptr) {
@@ -341,6 +344,45 @@ class SettingsApp : public tiny::XftWindow {
         form.set_programs(std::move(programs));
     }
 
+    //! The plugins that are installed: the list of the form, and what it
+    //! started with, to write only what the user changed
+    void load_plugins(const tiny::wm::Config& config)
+    {
+        const tiny::plugin::PluginDirs dirs = tiny::plugin::plugin_dirs(
+                getenv("XDG_DATA_HOME"), getenv("XDG_DATA_DIRS"),
+                getenv("HOME"));
+        plugin_user_dir = dirs.user;
+        plugins_initial = tiny::app::plugin_rows(
+                tiny::plugin::find_plugins(dirs), config);
+        form.set_plugins(plugins_initial);
+    }
+
+    //! What the user did in the list of the plugins, for the file
+    void plugin_values(std::vector<tiny::wm::IniValue>& changed)
+    {
+        for (auto& change :
+             tiny::app::plugin_changes(plugins_initial, form.plugins())) {
+            changed.push_back(std::move(change));
+            plugins_changed = true;
+        }
+    }
+
+    //! Delete the plugins of the user that were removed in the list, after the
+    //! file is written; false (and `why`) when a directory can't be deleted
+    bool remove_plugins(std::string& why)
+    {
+        for (const auto& row : form.plugins()) {
+            if (row.remove && row.user) {
+                if (!tiny::app::remove_plugin_directory(plugin_user_dir, row.id,
+                                                        &why)) {
+                    return false;
+                }
+                plugins_changed = true;
+            }
+        }
+        return true;
+    }
+
     //! The layouts of the keyboard: the list of the form, with the ones that
     //! are chosen now
     void load_keyboard()
@@ -410,6 +452,7 @@ class SettingsApp : public tiny::XftWindow {
                 return false;
             }
             std::vector<tiny::wm::IniValue> changed;
+            plugin_values(changed);
             if (v.font != initial.font) {
                 changed.push_back({"theme", "font", v.font});
             }
@@ -536,7 +579,9 @@ class SettingsApp : public tiny::XftWindow {
                                            ? "keep"
                                            : v.monitor_placement});
             }
-            if (changed.empty() || tiny::wm::save_values(file, changed, &why)) {
+            if ((changed.empty() ||
+                 tiny::wm::save_values(file, changed, &why)) &&
+                remove_plugins(why)) {
                 publish_xft(v);
                 // a wallpaper that is removed goes at the next login: the
                 // color of the theme belongs to tiny-shell
@@ -545,8 +590,9 @@ class SettingsApp : public tiny::XftWindow {
                     fprintf(stderr, "%s: can't run %s\n", "tiny-settings",
                             wallpaper_program.c_str());
                 }
-                if (keyboard_changed) {
-                    // the shell sets the keyboard and the panel when it reads the file
+                if (keyboard_changed || plugins_changed) {
+                    // the shell sets the keyboard and the panel, and starts
+                    // and stops the plugins, when it reads the file
                     const std::string problem = tiny::wm::request_reload(
                             display, XDefaultRootWindow(display));
                     if (!problem.empty()) {
@@ -649,6 +695,12 @@ class SettingsApp : public tiny::XftWindow {
                 break;
             case SettingsForm::View::Programs:
                 paint_programs();
+                break;
+            case SettingsForm::View::Plugins:
+                paint_plugins();
+                break;
+            case SettingsForm::View::PluginSettings:
+                paint_plugin_settings();
                 break;
             case SettingsForm::View::Layouts:
                 paint_layouts();
@@ -840,6 +892,136 @@ class SettingsApp : public tiny::XftWindow {
         paint_button(form.save_rect(), "Done", true);
     }
 
+    //! The list of the plugins: a box that is filled when the plugin runs, its
+    //! name and version, and on the right where it comes from
+    void paint_plugins()
+    {
+        text_in(ui_font, text_color, form.search_rect(), 0, "Plugins");
+        const auto& plugins = form.plugins();
+        if (plugins.empty()) {
+            text_in(ui_font, dim, form.row_rect(0), metrics.margin,
+                    "No plugin is installed (see doc/developers/plugins.md)");
+        }
+        const size_t end =
+                std::min(plugins.size(), form.first() + form.visible_rows());
+        const int box = metrics.row_height / 2;
+        for (size_t i = form.first(); i < end; ++i) {
+            const tiny::Rect row = form.row_rect(i);
+            const SettingsForm::PluginRow& plugin = plugins[i];
+            if (i == form.selected()) {
+                fill(selected, row);
+            }
+            const bool fixed = !plugin.reason.empty() || plugin.remove;
+            paint_check(row, plugin.enabled && !plugin.remove, fixed);
+            std::string where = plugin.origin;
+            if (plugin.remove) {
+                where = "Removed when saved";
+            } else if (!plugin.reason.empty()) {
+                where = "Broken";
+            } else if (!plugin.specs.empty()) {
+                where += ", settings";
+            }
+            const int where_width = text_width(ui_font, where);
+            const int name_x = metrics.margin + box + metrics.padding;
+            std::string name = plugin.name;
+            if (!plugin.version.empty()) {
+                name += " " + plugin.version;
+            }
+            text_in(ui_font, fixed ? dim : text_color, row, name_x,
+                    fit(ui_font, name,
+                        std::max(1, width - name_x - where_width -
+                                            2 * metrics.margin)));
+            text_in(ui_font, plugin.remove ? error : dim, row,
+                    width - metrics.margin - where_width, where);
+        }
+        std::string wrong = form.status();
+        std::string note =
+                "Space or a click switches a plugin, Right opens its settings, "
+                "Delete removes one of yours.";
+        if (form.selected() < plugins.size()) {
+            const auto& plugin = plugins[form.selected()];
+            if (!plugin.reason.empty()) {
+                wrong = plugin.reason;
+            } else if (!plugin.description.empty()) {
+                note = plugin.description;
+            }
+        }
+        if (wrong.empty() && !tiny::plugin::PluginHost::available()) {
+            wrong = "This build has no Lua: the plugins do not run.";
+        }
+        paint_message(wrong, note.c_str());
+        paint_button(form.cancel_rect(), "Cancel", true);
+        paint_button(form.save_rect(), "Done", true);
+    }
+
+    //! The name of the value of a setting of a plugin, as it is shown
+    static std::string plugin_value_label(const tiny::plugin::SettingSpec& spec,
+                                          const std::string& value)
+    {
+        if (spec.type == tiny::plugin::SettingType::Toggle) {
+            return value == "yes" ? "Yes" : "No";
+        }
+        for (const auto& choice : spec.choices) {
+            if (choice.value == value) {
+                return choice.label;
+            }
+        }
+        return value;
+    }
+
+    //! The settings of a plugin: the name on the left, the value on the right
+    //! (a choice goes through its values, a text is typed)
+    void paint_plugin_settings()
+    {
+        const auto& plugin = form.plugin_row();
+        text_in(ui_font, text_color, form.search_rect(), 0,
+                plugin.name + " settings");
+        const int value_x = std::max(width / 2, metrics.margin + 150);
+        const size_t end = std::min(plugin.specs.size(),
+                                    form.first() + form.visible_rows());
+        for (size_t i = form.first(); i < end; ++i) {
+            const tiny::Rect row = form.row_rect(i);
+            const auto& spec = plugin.specs[i];
+            const bool current = i == form.selected();
+            if (current) {
+                fill(selected, row);
+            }
+            text_in(ui_font, text_color, row, metrics.margin,
+                    fit(ui_font, spec.label,
+                        std::max(1,
+                                 value_x - metrics.margin - metrics.padding)));
+            const tiny::Rect box = {
+                    value_x, row.y + 2,
+                    std::max(1, width - value_x - metrics.margin),
+                    row.height - 4};
+            const bool typed = spec.type == tiny::plugin::SettingType::Text ||
+                               spec.type == tiny::plugin::SettingType::Number;
+            if (!typed) {
+                paint_choice(box, plugin_value_label(spec, plugin.values[i]),
+                             current);
+                continue;
+            }
+            const bool wrong =
+                    !tiny::plugin::valid_setting_value(spec, plugin.values[i]);
+            if (current) {
+                paint_field(box, form.plugin_edit(), true, wrong);
+            } else {
+                paint_field(box, tiny::TextField(plugin.values[i]), false,
+                            wrong);
+            }
+        }
+        std::string wrong =
+                form.status().empty() ? form.plugin_problem() : form.status();
+        const char* note = "Space, a click or the arrows change a value.";
+        if (form.selected() < plugin.specs.size() &&
+            !plugin.specs[form.selected()].note.empty()) {
+            note = plugin.specs[form.selected()].note.c_str();
+        }
+        paint_message(wrong, note);
+        paint_button(form.cancel_rect(), "Cancel", true);
+        paint_button(form.save_rect(), "Done", wrong.empty());
+    }
+
     //! The panel with the sections, the one that shows is marked
     void paint_sidebar()
     {
@@ -969,7 +1151,8 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::KeyboardLayouts, "Layouts"},
                     {SettingsForm::Field::KeyboardSwitch, "Switch"},
                     {SettingsForm::Field::KeyboardIndicator, "In panel"},
-                    {SettingsForm::Field::KeyboardShortcuts, "Shortcuts"}};
+                    {SettingsForm::Field::KeyboardShortcuts, "Shortcuts"},
+                    {SettingsForm::Field::Plugins, "Plugins"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;
@@ -978,6 +1161,11 @@ class SettingsApp : public tiny::XftWindow {
             const tiny::Rect r = form.field_rect(row.id);
             if (row.id == SettingsForm::Field::SessionPrograms) {
                 paint_list_field(r, form.programs_summary(),
+                                 form.focus() == row.id);
+                continue;
+            }
+            if (row.id == SettingsForm::Field::Plugins) {
+                paint_list_field(r, form.plugins_summary(),
                                  form.focus() == row.id);
                 continue;
             }
@@ -1144,6 +1332,10 @@ class SettingsApp : public tiny::XftWindow {
     std::string initial_layout;
     std::string initial_variant;
     bool keyboard_changed = false; //!< the keyboard settings were changed
+    bool plugins_changed = false;  //!< the plugins were switched or set
+    std::string plugin_user_dir;   //!< where the plugins of the user are
+    //! The plugins as the files say now
+    std::vector<SettingsForm::PluginRow> plugins_initial;
     SettingsForm form;
     std::string ui_family; //!< the family of `ui_font`
     XftFont* ui_font = nullptr;
