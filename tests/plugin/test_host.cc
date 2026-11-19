@@ -614,6 +614,33 @@ TEST_F(HostTest, on_config_can_be_dropped)
     EXPECT_FALSE(logged("called"));
 }
 
+//! The plugins of data/ are what the shell installs: they must be good
+TEST_F(HostTest, the_plugins_of_the_shell_are_good_and_start)
+{
+    PluginDirs dirs;
+    dirs.system = {"data/tiny-shell/plugins"};
+    const auto found = find_plugins(dirs);
+    if (found.empty()) {
+        GTEST_SKIP() << "run from the directory of the sources";
+    }
+    ASSERT_GE(found.size(), 2u);
+    tiny::wm::Config all;
+    for (const PluginInfo& info : found) {
+        EXPECT_EQ(info.problem, "") << info.id;
+        EXPECT_FALSE(info.name.empty());
+        EXPECT_FALSE(info.description.empty()) << info.id;
+        EXPECT_FALSE(info.version.empty()) << info.id;
+        all.plugins[info.id].enabled = true; // also the ones that are off
+    }
+    PluginHost host(services);
+    host.apply(found, all);
+    for (const PluginInfo& info : found) {
+        EXPECT_EQ(host.error_of(info.id), "") << info.id;
+    }
+    EXPECT_EQ(host.running().size(), found.size());
+    host.stop();
+}
+
 #else // no Lua
 
 TEST_F(HostTest, without_lua_nothing_runs_and_the_user_is_told_once)
