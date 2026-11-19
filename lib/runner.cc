@@ -106,7 +106,12 @@ void Runner::on_readable(unsigned long id)
         if (n < 0 && errno == EINTR) {
             continue;
         }
+        // the same number on Linux, two on some systems
+#if EAGAIN != EWOULDBLOCK
         if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+#else
+        if (n < 0 && errno == EAGAIN) {
+#endif
             return; // wait for more
         }
         break; // the end of the file, or an error

@@ -34,8 +34,7 @@ class Loop {
             std::vector<FdWatch::Id> ids;
             watches.prepare(fds, ids);
             const int wait = std::min(timers.timeout_ms(), 50);
-            poll(fds.data(), static_cast<nfds_t>(fds.size()),
-                 wait < 0 ? 50 : wait);
+            poll(fds.data(), tiny::poll_count(fds), wait < 0 ? 50 : wait);
             timers.run_due();
             watches.dispatch(fds, ids, 0);
         }
