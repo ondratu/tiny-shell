@@ -149,7 +149,8 @@ TEST(LockCheckTest, privileges_are_told_from_the_mode_of_the_file)
     std::ofstream(file) << "#!/bin/sh\n";
     // on the BSDs a file takes the group of the directory, and chmod drops
     // the setgid bit of a group the user is not in
-    static_cast<void>(chown(file.c_str(), static_cast<uid_t>(-1), getegid()));
+    [[maybe_unused]] const int chowned =
+            chown(file.c_str(), static_cast<uid_t>(-1), getegid());
     chmod(file.c_str(), 0755);
     EXPECT_TRUE(tiny::app::can_run(file));
     EXPECT_FALSE(tiny::app::has_privileges(file));
