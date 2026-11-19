@@ -286,7 +286,7 @@ std::optional<DesktopEntry> read_desktop_entry(const std::string& path,
 {
     // A directory opens as a file, and reading it is a failure that libstdc++
     // reports as bad() but libc++ (the BSDs) as the end of the file.
-    struct stat st{};
+    struct stat st = {};
     if (stat(path.c_str(), &st) != 0 || S_ISDIR(st.st_mode)) {
         return std::nullopt;
     }
