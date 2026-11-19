@@ -108,8 +108,9 @@ uint32_t dimmed(uint32_t foreground, uint32_t background)
 }
 
 void paint_item(::Display* display, ::Window window, const Style& style,
-                uint8_t state, int height, XftFont* font,
-                const std::string& text, const ItemIcon& icon, int padding)
+                uint8_t state, int width, int height, XftFont* font,
+                const std::string& text, const ItemIcon& icon, int padding,
+                bool center)
 {
     const uint32_t fg = style.get_fg(state);
     const uint32_t bg = style.get_bg(state);
@@ -136,6 +137,9 @@ void paint_item(::Display* display, ::Window window, const Style& style,
     XftDraw* draw =
             XftDrawCreate(display, window, XDefaultVisual(display, screen),
                           XDefaultColormap(display, screen));
+    if (center && !icon.room) {
+        x = std::max(padding, (width - extent(display, font, text)) / 2);
+    }
     text_at(draw, ink, font, x, 0, height, text);
     XftDrawDestroy(draw);
 }
@@ -164,8 +168,8 @@ void PluginLabel::set_icon(const std::string& icon, const std::string& under)
 
 void PluginLabel::on_expose(const XEvent&, void*)
 {
-    paint_item(display, window, get_style(), get_theme_state(), height,
-               get_style().get_font(), get_text(), item, get_padding());
+    paint_item(display, window, get_style(), get_theme_state(), width, height,
+               get_style().get_font(), get_text(), item, get_padding(), false);
 }
 
 PluginButton::PluginButton(const std::string& initial,
@@ -193,8 +197,8 @@ void PluginButton::set_icon(const std::string& icon, const std::string& under)
 
 void PluginButton::on_expose(const XEvent&, void*)
 {
-    paint_item(display, window, get_style(), get_theme_state(), height,
-               get_style().get_font(), get_text(), item, get_padding());
+    paint_item(display, window, get_style(), get_theme_state(), width, height,
+               get_style().get_font(), get_text(), item, get_padding(), true);
 }
 
 // ---- the window of a plugin ----
@@ -288,12 +292,10 @@ void PluginPopup::set_events(long mask)
 void PluginPopup::open(const PopupContent& content, ::Window anchor,
                        ::Window bounds)
 {
-    shown = content;
     XftFont* font = get_style().get_font();
-    if (big_font == nullptr) {
-        big_font = scaled_font(display, font, 2.2);
-        big_font_serial = Display::live_serial();
-    }
+    close_font(); // the font of the style may have changed since the last time
+    big_font = scaled_font(display, font, 2.2);
+    big_font_serial = Display::live_serial();
     XftFont* big = big_font != nullptr ? big_font : font;
 
     XWindowAttributes at;
@@ -311,6 +313,7 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
                               &ignored) == 0) {
         return;
     }
+    shown = content;
     layout = popup_layout(
             shown, font->ascent + font->descent,
             ItemIcon::size_for(wm::shell_theme.panel),
@@ -318,6 +321,9 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
             [&](const std::string& s) { return extent(display, font, s); },
             [&](const std::string& s) { return extent(display, big, s); });
     resize(layout.width, layout.height);
+    // the server tells the size later, popup() needs it now
+    width = layout.width;
+    height = layout.height;
     // under the widget, but inside of the panel
     int left = ax + at.width / 2 - layout.width / 2;
     left = std::max(bx, std::min(left, bx + inside.width - layout.width -

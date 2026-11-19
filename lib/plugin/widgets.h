@@ -41,10 +41,12 @@ struct ItemIcon {
 //! The colors of a text that is not the main one: halfway to the background
 uint32_t dimmed(uint32_t foreground, uint32_t background);
 
-//! Clear the window and draw the icon and then the text, vertically centered
+//! Clear the window and draw the icon and then the text, vertically centered;
+//! `center` puts the text of a widget without an icon in the middle
 void paint_item(::Display* display, ::Window window, const Style& style,
-                uint8_t state, int height, XftFont* font,
-                const std::string& text, const ItemIcon& icon, int padding);
+                uint8_t state, int width, int height, XftFont* font,
+                const std::string& text, const ItemIcon& icon, int padding,
+                bool center);
 
 /**
  * @short The text of a plugin in the panel, with an icon in front of it.

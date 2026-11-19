@@ -533,6 +533,53 @@ TEST_F(HostTest, a_widget_with_an_icon_is_wider_and_can_change_it)
     EXPECT_GT(iconic.width, plain.width);
 }
 
+TEST_F(HostTest, an_icon_can_only_be_set_where_the_widget_has_room_for_it)
+{
+    tree.add("room", "tiny.panel.label{text = 'x'}:set_icon('a')");
+    tree.add("empty", "tiny.panel.label{text = 'x', icon = ''}:set_icon('a')");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_NE(host.error_of("room").find("without an icon"), std::string::npos);
+    EXPECT_TRUE(host.error_of("empty").empty());
+}
+
+TEST_F(HostTest, a_window_stays_inside_of_the_panel_under_its_widget)
+{
+    tree.add("place",
+             "b = tiny.panel.button{text = 'go', on_click = function()\n"
+             "  tiny.log('before', b:popup_open())\n"
+             "  b:popup{title = 'T', value = '9'}\n"
+             "  tiny.log('after', b:popup_open())\n"
+             "end}\n");
+    const auto before = children_of(panel.get_window());
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    const auto after = children_of(panel.get_window());
+    ASSERT_EQ(after.size(), before.size() + 1);
+    XWindowAttributes panel_at;
+    XGetWindowAttributes(tiny::get_display(), panel.get_window(), &panel_at);
+    send(after.back(), make_event(EnterNotify));
+    send(after.back(), make_event(ButtonRelease));
+    EXPECT_TRUE(logged("plugin place: before false"));
+    EXPECT_TRUE(logged("plugin place: after true"));
+    // the window of the plugin is a child of the root: the newest one
+    const auto roots = children_of(root_window());
+    ASSERT_FALSE(roots.empty());
+    bool found = false;
+    for (const ::Window w : roots) {
+        XWindowAttributes at;
+        XGetWindowAttributes(tiny::get_display(), w, &at);
+        if (at.map_state == IsViewable && at.override_redirect != 0 &&
+            at.width >= 240 && at.width < panel_at.width &&
+            at.height < panel_at.width) {
+            EXPECT_GE(at.x, panel_at.x);
+            EXPECT_LE(at.x + at.width, panel_at.x + panel_at.width);
+            found = true;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
 TEST_F(HostTest, the_name_of_an_icon_is_a_text)
 {
     tree.add("icon", "tiny.panel.label{text = 'x'}:set_icon(5)");
