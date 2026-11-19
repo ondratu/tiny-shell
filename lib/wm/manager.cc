@@ -1102,6 +1102,19 @@ void Manager::close_unresponsive_dialog()
     wm_unresponsive.unmap();
 }
 
+namespace {
+
+//! A conversion that is a cast on one system and none on another (the count of
+//! poll() is an unsigned int on the BSD systems and an unsigned long on
+//! Linux), so a plain cast is useless on one of them
+template <class To, class From>
+To narrow(From value)
+{
+    return static_cast<To>(value);
+}
+
+} // namespace
+
 bool Manager::wait_for_event()
 {
     // A client that floods the queue must not delay the signal.
@@ -1110,7 +1123,7 @@ bool Manager::wait_for_event()
                                    {quit_pipe[0], POLLIN, 0}};
         std::vector<tiny::FdWatch::Id> watched;
         watches.prepare(fds, watched);
-        if (poll(fds.data(), static_cast<nfds_t>(fds.size()),
+        if (poll(fds.data(), narrow<nfds_t>(fds.size()),
                  wait ? next_timeout_ms() : 0) < 0 &&
             errno != EINTR) {
             return false;
