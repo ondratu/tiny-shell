@@ -1307,9 +1307,8 @@ bool SettingsForm::plugin_step(int direction)
     const auto found = std::find_if(
             spec.choices.begin(), spec.choices.end(),
             [&](const plugin::SettingChoice& c) { return c.value == value; });
-    const long at = found == spec.choices.end()
-                            ? 0
-                            : static_cast<long>(found - spec.choices.begin());
+    const auto at =
+            found == spec.choices.end() ? 0 : found - spec.choices.begin();
     value = spec.choices[static_cast<size_t>((at + direction + n) % n)].value;
     status_.clear();
     return true;
