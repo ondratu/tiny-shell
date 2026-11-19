@@ -1825,6 +1825,7 @@ void Window::update_wm_icon()
 
 void Window::begin_drag(unsigned edges, int x_root, int y_root)
 {
+    abandon_resize();
     drag_edges = edges;
     start_event = make_pointer_event(x_root, y_root);
     XGetWindowAttributes(dsp, child, &start_attrs);
@@ -1881,17 +1882,22 @@ void Window::watch_sync_counter()
     });
 }
 
-void Window::finish_resize()
+void Window::abandon_resize()
 {
     if (sync_timer != 0 && timers != nullptr) {
         timers->cancel(sync_timer);
     }
     sync_timer = 0;
+    deferred_resize.reset();
+    sync_reset();
+}
+
+void Window::finish_resize()
+{
     if (deferred_resize) { // the last size was waiting for the client
         apply_resize(deferred_resize->first, deferred_resize->second);
-        deferred_resize.reset();
     }
-    sync_reset();
+    abandon_resize();
 }
 
 void Window::apply_resize(const tiny::Rect& frame, uint16_t)
