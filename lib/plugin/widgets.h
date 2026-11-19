@@ -60,7 +60,7 @@ class PluginLabel : public tiny::Label {
 
     ~PluginLabel() override;
 
-    void set_icon(const std::string& name, const std::string& under);
+    void set_icon(const std::string& icon, const std::string& under);
 
   protected:
     void on_expose(const XEvent& e, void* data) override;
@@ -77,7 +77,7 @@ class PluginButton : public tiny::LabelButton {
 
     ~PluginButton() override;
 
-    void set_icon(const std::string& name, const std::string& under);
+    void set_icon(const std::string& icon, const std::string& under);
 
   protected:
     void on_expose(const XEvent& e, void* data) override;

@@ -801,7 +801,7 @@ bool read_section(lua_State* L, int index, PopupSection& section)
         fail(L, "rows must be a table");
         return false;
     }
-    const lua_Integer count = static_cast<lua_Integer>(lua_rawlen(L, -1));
+    const auto count = static_cast<lua_Integer>(lua_rawlen(L, -1));
     if (count > popup_max_rows) {
         fail(L, "too many rows in a section");
         return false;
@@ -840,7 +840,7 @@ bool read_popup(lua_State* L, int index, PopupContent& content)
         fail(L, "sections must be a table");
         return false;
     }
-    const lua_Integer count = static_cast<lua_Integer>(lua_rawlen(L, -1));
+    const auto count = static_cast<lua_Integer>(lua_rawlen(L, -1));
     if (count > popup_max_sections) {
         fail(L, "too many sections");
         return false;
@@ -860,9 +860,9 @@ bool read_popup(lua_State* L, int index, PopupContent& content)
 
 int l_widget_popup_impl(lua_State* L)
 {
-    Plugin& plugin = self(L);
+    const Plugin& plugin = self(L);
     Entry* entry = check_entry(L, 1);
-    wm::Panel* const panel = plugin.host->services.panel;
+    const wm::Panel* const panel = plugin.host->services.panel;
     if (entry->widget == nullptr || panel == nullptr) {
         return fail(L, "the widget was destroyed");
     }
