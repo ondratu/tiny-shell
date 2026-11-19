@@ -136,10 +136,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and test in the image
-        run: >
-          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e STRICT
-          -v "$PWD":/work -w /work ghcr.io/ondratu/tiny-shell-ci:alpine-3.22
-          make CXX=clang++ all check examples
+        # as root (the tests need a user with a name), then the files are
+        # given back to the user of the runner
+        run: |
+          rc=0
+          docker run --rm -e STRICT -v "$PWD":/work -w /work \
+              ghcr.io/ondratu/tiny-shell-ci:alpine-3.22 \
+              sh -c 'make CXX=clang++ all check examples; rc=$?; chown -R "$0" .; exit $rc' \
+              "$(id -u):$(id -g)" || rc=$?
+          exit $rc
 
   coverage:
     needs: pre-commit
