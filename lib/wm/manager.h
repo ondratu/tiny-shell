@@ -229,6 +229,9 @@ class Manager : public tiny::Object {
 
     //! Timers of the main loop (a clock, delays); they run in the loop, so
     //! the functions must be short
+    //! The panel, for the widgets of the plugins
+    Panel& get_panel() { return wm_panel; }
+
     tiny::Timers& get_timers() { return timers; }
 
     //! The descriptors the loop waits for besides the display (a program that

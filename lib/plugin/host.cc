@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <set>
@@ -88,6 +89,22 @@ struct Plugin {
     std::chrono::steady_clock::time_point call_start;
     std::set<std::string> loading; //!< `require` in progress
 };
+
+#if defined(__linux__)
+constexpr const char* platform_name = "linux";
+#elif defined(__FreeBSD__)
+constexpr const char* platform_name = "freebsd";
+#elif defined(__OpenBSD__)
+constexpr const char* platform_name = "openbsd";
+#elif defined(__NetBSD__)
+constexpr const char* platform_name = "netbsd";
+#elif defined(__DragonFly__)
+constexpr const char* platform_name = "dragonfly";
+#elif defined(__APPLE__)
+constexpr const char* platform_name = "macos";
+#else
+constexpr const char* platform_name = "unknown";
+#endif
 
 const char plugin_key = 0; //!< the address is the key of the registry
 
@@ -323,6 +340,32 @@ int l_read_file(lua_State* L)
     }
     fclose(in);
     lua_pushlstring(L, text.data(), text.size());
+    return 1;
+}
+
+//! The names in a directory, sorted; nothing and the reason when it can't be
+//! read
+int l_list_dir(lua_State* L)
+{
+    const char* path = luaL_checkstring(L, 1);
+    std::error_code error;
+    std::vector<std::string> names;
+    for (std::filesystem::directory_iterator it(path, error), end;
+         !error && it != end; it.increment(error)) {
+        names.push_back(it->path().filename().string());
+    }
+    if (error) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "%s: %s", path, error.message().c_str());
+        return 2;
+    }
+    std::sort(names.begin(), names.end());
+    lua_createtable(L, static_cast<int>(names.size()), 0);
+    lua_Integer index = 1;
+    for (const std::string& name : names) {
+        lua_pushlstring(L, name.data(), name.size());
+        lua_rawseti(L, -2, index++);
+    }
     return 1;
 }
 
@@ -792,6 +835,7 @@ const luaL_Reg tiny_functions[] = {{"log", l_log},
                                    {"exec", l_exec},
                                    {"launch", l_launch},
                                    {"read_file", l_read_file},
+                                   {"list_dir", l_list_dir},
                                    {"which", l_which},
                                    {nullptr, nullptr}};
 
@@ -824,6 +868,7 @@ void make_module(Plugin& plugin)
     lua_pushinteger(L, api_level);
     lua_setfield(L, -2, "api");
     set_text_field(L, "version", plugin.host->services.version);
+    set_text_field(L, "platform", platform_name);
 
     lua_createtable(L, 0, 4);
     set_text_field(L, "id", plugin.info.id);
@@ -967,8 +1012,8 @@ std::string PluginHost::error_of(const std::string& id) const
     return it == impl->state.errors.end() ? "" : it->second;
 }
 
-void PluginHost::apply(const std::vector<PluginInfo>& found,
-                       const wm::Config& config)
+bool PluginHost::apply(const std::vector<PluginInfo>& found,
+                       const wm::Config& config, bool force_restart)
 {
     HostState& host = impl->state;
     std::vector<HostState::Attempt> wanted;
@@ -990,7 +1035,7 @@ void PluginHost::apply(const std::vector<PluginInfo>& found,
                                 const HostState::Attempt& b) {
         return a.id == b.id && a.dir == b.dir && a.version == b.version;
     };
-    bool restart = wanted.size() != host.attempts.size() ||
+    bool restart = force_restart || wanted.size() != host.attempts.size() ||
                    !std::equal(wanted.begin(), wanted.end(),
                                host.attempts.begin(), same_plugin);
     const bool changed = host.config.raw != config.raw;
@@ -1029,7 +1074,7 @@ void PluginHost::apply(const std::vector<PluginInfo>& found,
                 host.told_no_panel = true;
                 log_line(host, "tiny-shell: no panel, the plugins do not run");
             }
-            return;
+            return true;
         }
         for (const PluginInfo* info : infos) {
             std::string error;
@@ -1042,7 +1087,7 @@ void PluginHost::apply(const std::vector<PluginInfo>& found,
                                        " did not start: " + error);
             }
         }
-        return;
+        return true;
     }
     host.attempts = wanted;
     for (Plugin* plugin : to_tell) {
@@ -1052,6 +1097,7 @@ void PluginHost::apply(const std::vector<PluginInfo>& found,
                                  : it->second.values;
         call_ref(*plugin, plugin->config_ref);
     }
+    return false;
 }
 
 } // namespace tiny::plugin

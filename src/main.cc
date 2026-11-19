@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "object.h"
+#include "plugin/host.h"
 #include "spawn.h"
 #include "theme.h"
 #include "wm/shell_theme.h"
@@ -144,10 +145,19 @@ void apply_keyboard(const tiny::wm::Config& config, const char* program)
     }
 }
 
+//! The plugins that are installed, in the directories of the system and of the
+//! user
+std::vector<tiny::plugin::PluginInfo> installed_plugins()
+{
+    return tiny::plugin::find_plugins(tiny::plugin::plugin_dirs(
+            getenv("XDG_DATA_HOME"), getenv("XDG_DATA_DIRS"), getenv("HOME")));
+}
+
 //! Give the manager the settings that can change while it runs. `old` is the
 //! settings that it has now, null for a manager that has none yet.
-void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
-                  const tiny::wm::Config* old, const char* program)
+void apply_config(tiny::wm::Manager& manager, tiny::plugin::PluginHost& plugins,
+                  const tiny::wm::Config& config, const tiny::wm::Config* old,
+                  const char* program)
 {
     const bool style_changed = old != nullptr && old->style != config.style;
     // The programs are told the look, the style and the fonts together: this
@@ -225,9 +235,14 @@ void apply_config(tiny::wm::Manager& manager, const tiny::wm::Config& config,
     if (clock_changed) {
         manager.set_clock_format(config.clock_format);
     }
-    // next to the clock, and the tray after it
+    // the plugins are next to the clock; the ones that start again go to the
+    // end, so what is after them is made again
+    const bool plugins_restarted =
+            plugins.apply(installed_plugins(), config, clock_changed) ||
+            clock_changed;
+    // next to the plugins, and the tray after it
     const bool indicator_changed =
-            clock_changed ||
+            plugins_restarted ||
             old->keyboard_indicator != config.keyboard_indicator;
     if (indicator_changed) {
         manager.set_keyboard_indicator(config.keyboard_indicator);
@@ -275,7 +290,8 @@ void start_autostart(::Display* display, ::Window root,
 }
 
 //! SIGHUP and `--reload`: read the files again and apply what changed
-void reload_config(tiny::wm::Manager& manager, tiny::wm::Config& current,
+void reload_config(tiny::wm::Manager& manager,
+                   tiny::plugin::PluginHost& plugins, tiny::wm::Config& current,
                    const char* program)
 {
     const std::vector<std::string> files =
@@ -318,7 +334,7 @@ void reload_config(tiny::wm::Manager& manager, tiny::wm::Config& current,
             fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
         }
     }
-    apply_config(manager, config, &current, program);
+    apply_config(manager, plugins, config, &current, program);
     // what only a restart applies stays as it was, so it is reported again
     const double scale = current.scale;
     const std::string font = current.font;
@@ -438,9 +454,20 @@ int main(int argc, char** argv)
         manager.set_about_command(tiny::sibling_program(argv[0], "tiny-about"));
         manager.set_settings_command(
                 tiny::sibling_program(argv[0], "tiny-settings"));
-        apply_config(manager, config, nullptr, argv[0]);
-        manager.set_reload([&manager, &config, program = argv[0]] {
-            reload_config(manager, config, program);
+        // after the manager: the plugins leave the panel before it goes
+        tiny::plugin::HostServices services;
+        services.panel = &manager.get_panel();
+        services.timers = &manager.get_timers();
+        services.watches = &manager.get_fd_watch();
+        services.theme = [] {
+            return tiny::theme.get_variant() == tiny::Variant::Light ? "light"
+                                                                     : "dark";
+        };
+        services.version = tiny::wm::version_number();
+        tiny::plugin::PluginHost plugins(std::move(services));
+        apply_config(manager, plugins, config, nullptr, argv[0]);
+        manager.set_reload([&manager, &plugins, &config, program = argv[0]] {
+            reload_config(manager, plugins, config, program);
         });
         selection.announce();
         // the panel and its tray are there, so the programs that put an icon
