@@ -7,15 +7,6 @@ Priority says how important an item is for a usable window manager, not when
 it will be done. The order inside a section is the order of work; `after:`
 names a dependency. Every item needs a test (see CONTRIBUTING.md).
 
-## Must
-
-What the rest of the work stands on.
-
-### Repository and quality tooling (what is left)
-
-- Try `tools/run-xephyr.sh` on another machine (never run without a display).
-- Require the CI jobs in the branch protection of `master` (the CI is green,
-  the protection is not set).
 
 ## Should
 
