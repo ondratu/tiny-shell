@@ -35,6 +35,11 @@ the sanitizers, a coverage minimum and a binary size limit (`make release`
 builds the small programs). A
 change should pass all of them; the NetBSD job is best effort.
 
+Most jobs run in a container image with all the tools (`.github/ci/Dockerfile`),
+so they do not install the system on every run and a down mirror of a package
+does not break them. The workflow `ci-image.yml` builds the image when the
+Dockerfile changes and every week; add a package for a job to the Dockerfile.
+
 ## Tests
 
 Tests live in `tests/`, which mirrors `lib/`: the tests of `lib/wm/dock.cc`
