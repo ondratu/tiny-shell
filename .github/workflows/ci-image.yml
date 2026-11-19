@@ -1,5 +1,6 @@
 # Builds the image of the CI jobs (.github/ci/Dockerfile) and publishes it to
 # ghcr.io, so the jobs of ci.yml do not install the system again on every run.
+# Two images: Ubuntu (amd64) and Alpine (arm64, built on a native runner).
 # After the first publish set the visibility of the package to public (the
 # settings of the package on GitHub), otherwise pull requests from forks
 # cannot pull it.
@@ -21,13 +22,16 @@ concurrency:
   group: ci-image-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  IMAGE: ghcr.io/ondratu/tiny-shell-ci:noble
-
 jobs:
   image:
-    name: Build the image
-    runs-on: ubuntu-24.04
+    name: Build the image (${{ matrix.tag }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {tag: noble, dockerfile: Dockerfile, runner: ubuntu-24.04}
+          - {tag: alpine-3.22, dockerfile: Dockerfile.alpine, runner: ubuntu-24.04-arm}
     permissions:
       contents: read
       packages: write
@@ -44,6 +48,7 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .github/ci
+          file: .github/ci/${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.IMAGE }}
+          tags: ghcr.io/ondratu/tiny-shell-ci:${{ matrix.tag }}
           pull: true
