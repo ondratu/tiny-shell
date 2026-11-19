@@ -1,0 +1,43 @@
+# tiny-shell builds and passes its tests on the BSD systems. The virtual
+# machines are slow and the sets of packages change, so this does not run for
+# every pull request: it runs every week and by hand (Actions, "BSD"), and a
+# failure never blocks a merge. The steps are in tools/ci-bsd.sh.
+name: BSD
+
+on:
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  STRICT: 1
+
+jobs:
+  bsd:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: FreeBSD, os: freebsd, version: "15.1"}
+          - {name: OpenBSD, os: openbsd, version: "8.0"}
+          - {name: NetBSD, os: netbsd, version: "11.0"}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start the VM
+        uses: cross-platform-actions/action@v1
+        with:
+          operating_system: ${{ matrix.os }}
+          version: ${{ matrix.version }}
+          shell: sh
+          environment_variables: STRICT
+      - name: Build and test in the VM
+        # cpa.sh runs the commands inside the VM
+        shell: cpa.sh {0}
+        run: tools/ci-bsd.sh ${{ matrix.os }}
