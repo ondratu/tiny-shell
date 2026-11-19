@@ -1,0 +1,26 @@
+# Installs packages with apt. A mirror that is down for a while is a common
+# reason of a red CI that has nothing to do with the change, so the downloads
+# and the whole step are repeated.
+name: Install packages with apt
+description: apt-get update and install with retries
+
+inputs:
+  packages:
+    description: Space separated names of the packages
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries > /dev/null
+        for try in 1 2 3; do
+          # shellcheck disable=SC2086 # a list of names
+          sudo apt-get update && sudo apt-get install -y $PACKAGES && exit 0
+          echo "apt failed (try $try of 3)" >&2
+          sleep $((try * 20))
+        done
+        exit 1
