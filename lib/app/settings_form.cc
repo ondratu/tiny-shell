@@ -174,11 +174,8 @@ int SettingsForm::form_height() const
 {
     // the rows of the longest section, the message of two rows and the buttons
     int longest = 0;
-    for (const Section section :
-         {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Security,
-          Section::Applications, Section::Session, Section::Keyboard,
-          Section::Plugins}) {
+    for (size_t i = 0; i < section_count; ++i) {
+        const auto section = static_cast<Section>(i);
         const auto rows = static_cast<int>(
                 section_fields(section).size() +
                 (section == Section::Appearance ? thumbnail_rows : 0));
@@ -255,6 +252,33 @@ const char* SettingsForm::section_title(Section section)
     return "Applications";
 }
 
+const char* SettingsForm::section_icon(Section section)
+{
+    switch (section) {
+        case Section::Appearance:
+            return "preferences-desktop-appearance";
+        case Section::Fonts:
+            return "preferences-desktop-font";
+        case Section::Desktop:
+            return "user-desktop";
+        case Section::Displays:
+            return "preferences-desktop-display";
+        case Section::Keyboard:
+            return "input-keyboard";
+        case Section::Power:
+            return "battery-full";
+        case Section::Applications:
+            return "view-app-grid";
+        case Section::Session:
+            return "preferences-system-session";
+        case Section::Security:
+            return "system-lock-screen";
+        case Section::Plugins:
+            break;
+    }
+    return "application-x-addon";
+}
+
 const std::vector<SettingsForm::Field>&
 SettingsForm::section_fields(Section section)
 {
@@ -310,10 +334,8 @@ SettingsForm::section_fields(Section section)
 
 SettingsForm::Section SettingsForm::section_of(Field field)
 {
-    for (const Section section :
-         {Section::Appearance, Section::Fonts, Section::Desktop,
-          Section::Displays, Section::Power, Section::Security,
-          Section::Session, Section::Keyboard, Section::Plugins}) {
+    for (size_t i = 0; i < section_count; ++i) {
+        const auto section = static_cast<Section>(i);
         const std::vector<Field>& list = section_fields(section);
         if (std::find(list.begin(), list.end(), field) != list.end()) {
             return section;

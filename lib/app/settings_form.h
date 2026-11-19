@@ -81,11 +81,11 @@ class SettingsForm {
         Fonts,
         Desktop,
         Displays,
+        Keyboard,
         Power,
-        Security,
         Applications,
         Session,
-        Keyboard,
+        Security,
         Plugins
     };
 
@@ -359,6 +359,10 @@ class SettingsForm {
 
     /// The name of a section, as the panel shows it.
     static const char* section_title(Section section);
+
+    //! The name of the symbolic icon that stands before the title of a
+    //! section (see data/tiny-shell/icons)
+    static const char* section_icon(Section section);
 
     /// The fields of a section, from the top.
     static const std::vector<Field>& section_fields(Section section);

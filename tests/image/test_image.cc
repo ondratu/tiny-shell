@@ -369,3 +369,19 @@ TEST(TintTest, keeps_the_alpha_and_changes_the_color)
     EXPECT_EQ(red.at(1, 0), 0x80800000u); // premultiplied: 0xFF * 0x80 / 0xFF
     EXPECT_EQ(red.at(2, 0), 0x00000000u);
 }
+
+TEST(OverTest, an_opaque_pixel_stays_and_an_empty_one_is_the_background)
+{
+    tiny::image::Image icon;
+    icon.width = 3;
+    icon.height = 1;
+    // opaque red, half transparent (premultiplied) red and empty
+    icon.pixels = {0xFFFF0000, 0x80800000, 0x00000000};
+
+    const auto out = tiny::image::over(icon, 0x0000FF);
+
+    ASSERT_TRUE(out.valid());
+    EXPECT_EQ(out.at(0, 0), 0xFFFF0000u);
+    EXPECT_EQ(out.at(1, 0), 0xFF80007Fu);
+    EXPECT_EQ(out.at(2, 0), 0xFF0000FFu);
+}

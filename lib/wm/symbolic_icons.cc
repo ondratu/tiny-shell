@@ -47,6 +47,21 @@ std::string SymbolicIcons::find(std::string_view name) const
     return {};
 }
 
+std::optional<image::Image> SymbolicIcons::render(std::string_view name,
+                                                  int size,
+                                                  unsigned long color) const
+{
+    const std::string file = find(name);
+    if (file.empty()) {
+        return std::nullopt;
+    }
+    const auto loaded = image::load_image(file, size);
+    if (!loaded) {
+        return std::nullopt;
+    }
+    return image::tint(*loaded, static_cast<uint32_t>(color));
+}
+
 const SymbolicIcons::Icon& SymbolicIcons::get(const std::string& name, int size,
                                               unsigned long color)
 {
@@ -56,18 +71,13 @@ const SymbolicIcons::Icon& SymbolicIcons::get(const std::string& name, int size,
         return found->second;
     }
     Icon icon; // also the one that is not there, so the disk is read once
-    const std::string file = find(name);
-    if (!file.empty()) {
-        const auto loaded = image::load_image(file, size);
-        if (loaded) {
-            const image::Image painted =
-                    image::tint(*loaded, static_cast<uint32_t>(color));
-            icon.pixmap = image::create_pixmap(display, root, painted);
-            if (icon.pixmap != None) {
-                icon.picture = image::create_argb_picture(display, icon.pixmap);
-                icon.width = painted.width;
-                icon.height = painted.height;
-            }
+    const auto painted = render(name, size, color);
+    if (painted) {
+        icon.pixmap = image::create_pixmap(display, root, *painted);
+        if (icon.pixmap != None) {
+            icon.picture = image::create_argb_picture(display, icon.pixmap);
+            icon.width = painted->width;
+            icon.height = painted->height;
         }
     }
     return icons.emplace(key, icon).first->second;

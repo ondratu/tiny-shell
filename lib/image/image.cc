@@ -84,6 +84,25 @@ Image tint(const Image& image, uint32_t rgb)
     return result;
 }
 
+Image over(const Image& image, uint32_t background_rgb)
+{
+    Image result;
+    result.width = image.width;
+    result.height = image.height;
+    result.pixels.reserve(image.pixels.size());
+    for (const uint32_t pixel : image.pixels) {
+        const uint32_t rest = 0xFF - (pixel >> 24);
+        uint32_t out = 0xFF000000U;
+        for (const unsigned shift : {16U, 8U, 0U}) {
+            const uint32_t below = background_rgb >> shift & 0xFFU;
+            const uint32_t above = pixel >> shift & 0xFFU;
+            out |= std::min(0xFFU, above + (below * rest + 127) / 255) << shift;
+        }
+        result.pixels.push_back(out);
+    }
+    return result;
+}
+
 namespace {
 
 std::optional<Image> load_png(const std::string& path)

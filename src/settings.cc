@@ -39,8 +39,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <map>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -59,6 +61,7 @@
 #include "wm/config.h"
 #include "wm/keyboard.h"
 #include "wm/reload.h"
+#include "wm/symbolic_icons.h"
 #include "wm/xresources.h"
 #include "x_util.h"
 #include "xdg/application_index.h"
@@ -192,7 +195,9 @@ class SettingsApp : public tiny::XftWindow {
         rule(alloc_rgb(colors.rule)),
         accent(alloc_rgb(colors.accent)),
         selected(alloc_rgb(colors.selected)),
-        error(alloc_rgb(colors.error))
+        error(alloc_rgb(colors.error)),
+        icons(display, DefaultRootWindow(display),
+              tiny::xdg::default_data_dirs())
     {
         load_programs();
         load_keyboard();
@@ -1035,8 +1040,34 @@ class SettingsApp : public tiny::XftWindow {
                 fill(accent,
                      {r.x, r.y, std::max(1, metrics.row_height / 8), r.height});
             }
-            text_in(ui_font, text_color, r, metrics.margin,
+            const int size = std::max(12, metrics.row_height / 2);
+            const int icon_x = r.x + metrics.margin;
+            put_icon(SettingsForm::section_icon(section), size,
+                     {icon_x, r.y, size, r.height}, colors.text,
+                     section == form.section() ? colors.selected
+                                               : colors.sidebar);
+            text_in(ui_font, text_color, r,
+                    metrics.margin + size + metrics.padding,
                     SettingsForm::section_title(section));
+        }
+    }
+
+    //! A symbolic icon in the color of the text over a known background (the
+    //! picture is drawn opaque); nothing when the icon is not installed
+    void put_icon(const std::string& name, int size, const tiny::Rect& r,
+                  uint32_t ink, uint32_t background_rgb)
+    {
+        const auto key = std::make_tuple(name, size, ink, background_rgb);
+        auto found = icon_cache.find(key);
+        if (found == icon_cache.end()) {
+            std::optional<tiny::image::Image> made;
+            if (const auto drawn = icons.render(name, size, ink)) {
+                made = tiny::image::over(*drawn, background_rgb);
+            }
+            found = icon_cache.emplace(key, std::move(made)).first;
+        }
+        if (found->second) {
+            put_picture(*found->second, r);
         }
     }
 
@@ -1349,6 +1380,11 @@ class SettingsApp : public tiny::XftWindow {
     XftColor& accent;
     XftColor& selected;
     XftColor& error;
+    tiny::wm::SymbolicIcons icons;
+    //! The icons made for a name, a size, a color and a background
+    std::map<std::tuple<std::string, int, uint32_t, uint32_t>,
+             std::optional<tiny::image::Image>>
+            icon_cache;
 };
 
 } // namespace

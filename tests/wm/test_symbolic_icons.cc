@@ -55,6 +55,18 @@ TEST_F(SymbolicIconsTest, makes_the_icon_in_the_size_once)
     EXPECT_NE(&icons.get("start-here", 24, 0x00FF00), &icon);
 }
 
+TEST_F(SymbolicIconsTest, renders_the_icon_as_a_picture_without_the_screen)
+{
+    SymbolicIcons icons(display(), root_window(), {root.string()});
+
+    const auto picture = icons.render("start-here", 12, 0x336699);
+
+    ASSERT_TRUE(picture);
+    EXPECT_EQ(picture->width, 12);
+    EXPECT_EQ(picture->at(6, 6), 0xFF336699u);
+    EXPECT_FALSE(icons.render("window-close", 12, 0));
+}
+
 TEST_F(SymbolicIconsTest, a_missing_icon_is_empty_and_is_not_drawn)
 {
     SymbolicIcons icons(display(), root_window(), {root.string()});

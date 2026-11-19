@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <set>
+
 #include <string>
 #include <vector>
 
@@ -1344,6 +1346,35 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
     EXPECT_EQ(count, 31u);
 }
 
+TEST(SettingsFormSectionTest, the_sections_go_from_the_look_to_the_system)
+{
+    using Section = SettingsForm::Section;
+    const std::vector<Section> order = {
+            Section::Appearance,   Section::Fonts,    Section::Desktop,
+            Section::Displays,     Section::Keyboard, Section::Power,
+            Section::Applications, Section::Session,  Section::Security,
+            Section::Plugins};
+    ASSERT_EQ(order.size(), SettingsForm::section_count);
+    for (size_t i = 0; i < order.size(); ++i) {
+        EXPECT_EQ(static_cast<size_t>(order[i]), i) << i;
+    }
+}
+
+TEST(SettingsFormSectionTest, every_section_has_its_own_icon)
+{
+    std::set<std::string> names;
+    for (size_t i = 0; i < SettingsForm::section_count; ++i) {
+        const char* icon = SettingsForm::section_icon(
+                static_cast<SettingsForm::Section>(i));
+        ASSERT_NE(icon, nullptr);
+        EXPECT_NE(*icon, '\0');
+        names.insert(icon);
+    }
+    EXPECT_EQ(names.size(), SettingsForm::section_count);
+    EXPECT_STREQ(SettingsForm::section_icon(SettingsForm::Section::Plugins),
+                 "application-x-addon");
+}
+
 TEST(SettingsFormSectionTest, the_sections_have_names)
 {
     using Section = SettingsForm::Section;
@@ -1391,9 +1422,9 @@ TEST(SettingsFormSectionTest, ctrl_page_down_and_up_go_through_the_sections)
 
     ASSERT_EQ(form.section(), Section::Fonts); // where `make()` starts
     for (const Section next :
-         {Section::Desktop, Section::Displays, Section::Power,
-          Section::Security, Section::Applications, Section::Session,
-          Section::Keyboard, Section::Plugins, Section::Appearance,
+         {Section::Desktop, Section::Displays, Section::Keyboard,
+          Section::Power, Section::Applications, Section::Session,
+          Section::Security, Section::Plugins, Section::Appearance,
           Section::Fonts}) {
         EXPECT_TRUE(form.key(Key::NextSection));
         EXPECT_EQ(form.section(), next);

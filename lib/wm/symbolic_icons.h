@@ -4,7 +4,10 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 
+#include "image/image.h"
+
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -47,6 +50,11 @@ class SymbolicIcons {
 
     //! The path of the file of an icon, empty when there is none
     std::string find(std::string_view name) const;
+
+    //! The icon as a picture that is not on the screen (premultiplied): for a
+    //! program that draws by itself. Nothing when there is no such icon.
+    std::optional<image::Image> render(std::string_view name, int size,
+                                       unsigned long color) const;
 
     //! The icon `size` pixels high or wide (the longer side), in the color
     //! 0xRRGGBB; `picture` is None when there is no such icon
