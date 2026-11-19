@@ -126,7 +126,7 @@ LDLIBS = $(PKG_LIBS) -pthread
 # libtiny-shell.a has the window manager and the shell (lib/wm/), the
 # freedesktop.org files (lib/xdg/) and the logic of the programs (lib/app/).
 WIDGET_SRC = $(filter-out lib/third_party/%,$(wildcard lib/*.cc lib/image/*.cc))
-SHELL_SRC = $(wildcard lib/wm/*.cc lib/xdg/*.cc lib/app/*.cc)
+SHELL_SRC = $(wildcard lib/wm/*.cc lib/xdg/*.cc lib/app/*.cc lib/plugin/*.cc)
 LIB_SRC = $(WIDGET_SRC) $(SHELL_SRC)
 # the vendored libraries are built into the widgets, but not analyzed
 VENDOR_SRC = $(wildcard lib/third_party/*.cc)
@@ -329,7 +329,7 @@ GTEST_CFLAGS := $(subst -I,-isystem ,$(shell pkg-config --cflags gtest))
 # tests/ mirrors lib/: tests/wm/test_dock.cc covers lib/wm/dock.cc
 TEST_WIDGET_SRC = $(wildcard tests/test_*.cc tests/image/test_*.cc)
 TEST_SHELL_SRC = $(wildcard tests/wm/test_*.cc tests/xdg/test_*.cc \
-    tests/app/test_*.cc)
+    tests/app/test_*.cc tests/plugin/test_*.cc)
 TEST_SRC = $(TEST_WIDGET_SRC) $(TEST_SHELL_SRC)
 TESTS = $(TEST_SRC:%.cc=$(BUILD)/%)
 TESTS_WIDGET = $(TEST_WIDGET_SRC:%.cc=$(BUILD)/%)
@@ -355,7 +355,7 @@ $(TESTS_SHELL): %: %.o $(BUILD)/tests/main.o $(LIB)
 
 # The widget toolkit must not include the shell (the layers of doc/developers/architecture.md)
 layers:
-	@! grep -nE '#include "(wm|xdg|app)/' lib/*.h lib/*.cc lib/image/*.h \
+	@! grep -nE '#include "(wm|xdg|app|plugin)/' lib/*.h lib/*.cc lib/image/*.h \
 	    lib/image/*.cc || { echo "layers: the widgets include the shell" >&2; \
 	    exit 1; }
 
