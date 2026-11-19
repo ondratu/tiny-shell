@@ -155,10 +155,11 @@ local button = tiny.panel.button{
 | `on_click` | a function called on a click (a button only) |
 | `w:set_text(text)` | changes the text |
 | `w:text()` | the text now |
-| `w:set_icon(name, under)` | changes the icons; `nil` for none |
+| `w:set_icon(name, under)` | changes the icons; `nil` for none. Only for a widget that was made with an `icon` (it may be `""`), because only then the widget has room for it; else it is an error |
 | `w:set_visible(bool)` | hides and shows it; a hidden widget leaves its place empty, so create a widget only when there is something to show |
 | `w:on_click(fn)` | replaces the function of the click (a button only) |
 | `w:popup(window)` | opens a window under the widget, see [Windows](#windows) |
+| `w:popup_open()` | `true` while the window of this widget is open |
 | `w:close_popup()` | closes it |
 | `w:destroy()` | takes it out of the panel; also from its own click |
 
@@ -209,8 +210,10 @@ button:popup{
 A section has a `heading` and `rows`; a row has a `label` at the left, a `value`
 at the right and an `icon` (the label of the rows of a section moves right when one
 of them has an icon). There are at most 8 sections of 40 rows. Calling `popup`
-again changes the window that is open, so a plugin can show new values when a
-program has answered.
+again changes the window that is open. It also opens it, takes the keyboard focus
+and puts the window over the others, so a plugin that wants to show a late answer
+asks `w:popup_open()` first and calls `popup` only when it is `true`. A button
+with text but without an icon has the text in the middle; a label has it at the left.
 
 ### Settings that change
 

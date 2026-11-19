@@ -52,16 +52,17 @@ local function imperial()
     return tiny.setting("units") == "imperial"
 end
 
+-- a missing value is a JSON null (not a number): shown as a dash
 local function round(value)
     return math.floor(value + 0.5)
 end
 
 local function degrees(value)
-    return string.format("%d°", round(value))
+    return type(value) == "number" and string.format("%d°", round(value)) or "-"
 end
 
 local function with_unit(value)
-    return degrees(value) .. (imperial() and "F" or "C")
+    return degrees(value) .. (type(value) == "number" and (imperial() and "F" or "C") or "")
 end
 
 local function weekday(date)
@@ -73,7 +74,7 @@ local function weekday(date)
 end
 
 local function number(value, digits)
-    return value and string.format("%." .. digits .. "f", value) or "-"
+    return type(value) == "number" and string.format("%." .. digits .. "f", value) or "-"
 end
 
 local function now_icon()
@@ -109,7 +110,7 @@ local function details()
     }
     local days = {}
     for i = 2, FORECAST_DAYS + 1 do
-        if daily.time[i] then
+        if type(daily.time[i]) == "string" then
             local day_icon = kind(daily.weather_code[i])
             days[#days + 1] = {
                 icon = day_icon,
@@ -136,8 +137,8 @@ local function open_window()
     end
 end
 
+-- the last weather stays in the panel when a refresh fails; the window says why
 local function problem(what)
-    weather = nil
     message = what
     redraw()
 end

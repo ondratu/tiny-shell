@@ -136,7 +136,7 @@ local function show(info)
     if not widget then
         -- made when there is a battery, as wide as the widest text
         widget = tiny.panel.button{
-            text = text, sample = tiny.setting("percent") and "100%" or "",
+            text = text, sample = "100%",
             icon = icon, icon_under = under, on_click = open_details,
         }
     else

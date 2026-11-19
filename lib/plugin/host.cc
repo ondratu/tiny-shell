@@ -74,6 +74,7 @@ struct Entry {
     PluginLabel* label = nullptr;       //!< the widget when it is a label
     PluginButton* button = nullptr;     //!< the widget when it is a button
     std::unique_ptr<PluginPopup> popup; //!< made at the first `popup()`
+    bool icon_room = false;             //!< made with an icon
     int click_ref = LUA_NOREF;
 };
 
@@ -633,10 +634,13 @@ int make_widget_impl(lua_State* L, bool button)
         return -1;
     }
     icon.icons = plugin.host->services.icons;
-    icon.room = !icon.name.empty() || !icon.under.empty();
+    lua_getfield(L, 1, "icon");
+    icon.room = !lua_isnil(L, -1) || !icon.under.empty();
+    lua_pop(L, 1);
 
     auto entry = std::make_unique<Entry>();
     Entry* const raw = entry.get();
+    raw->icon_room = icon.room;
     if (button) {
         auto widget = std::make_unique<PluginButton>(text, sample, icon);
         raw->button = widget.get();
@@ -752,6 +756,10 @@ int l_widget_set_icon_impl(lua_State* L)
     }
     if (lua_isstring(L, 3) != 0) {
         under = lua_tostring(L, 3);
+    }
+    if (!entry->icon_room) {
+        return fail(L, "the widget was made without an icon: give `icon` "
+                       "(it may be empty) to tiny.panel.label or button");
     }
     if (entry->label != nullptr) {
         entry->label->set_icon(name, under);
@@ -884,6 +892,13 @@ int l_widget_popup_impl(lua_State* L)
 int l_widget_popup(lua_State* L)
 {
     return finish(L, l_widget_popup_impl(L));
+}
+
+int l_widget_popup_open(lua_State* L)
+{
+    const Entry* entry = check_entry(L, 1);
+    lua_pushboolean(L, entry->popup != nullptr && entry->popup->get_maped());
+    return 1;
 }
 
 int l_widget_close_popup(lua_State* L)
@@ -1114,6 +1129,7 @@ const luaL_Reg widget_methods[] = {{"set_text", l_widget_set_text},
                                    {"set_icon", l_widget_set_icon},
                                    {"popup", l_widget_popup},
                                    {"close_popup", l_widget_close_popup},
+                                   {"popup_open", l_widget_popup_open},
                                    {"destroy", l_widget_destroy},
                                    {nullptr, nullptr}};
 
