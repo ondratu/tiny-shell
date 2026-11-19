@@ -1,0 +1,21 @@
+# The image of the jobs has liblua5.4-dev (.github/ci/Dockerfile), but a pull
+# request that changes the Dockerfile runs its jobs in the image that is
+# published already, which may be older. This installs Lua when it is not
+# there, so the plugins are built and tested by every job (they build with
+# LUA=yes, which fails when Lua is missing). For the containers of the jobs,
+# where the user is root.
+name: Make sure that Lua is installed
+description: Installs liblua5.4-dev when the image does not have it
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        pkg-config --exists lua5.4 && exit 0
+        for try in 1 2 3; do
+          apt-get update && apt-get install -y --no-install-recommends liblua5.4-dev && exit 0
+          echo "apt failed (try $try of 3)" >&2
+          sleep $((try * 20))
+        done
+        exit 1

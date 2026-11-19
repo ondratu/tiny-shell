@@ -50,7 +50,8 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - run: make lint-fast CLANG_TIDY=clang-tidy-22
+      - uses: ./.github/actions/ensure-lua
+      - run: make lint-fast LUA=yes CLANG_TIDY=clang-tidy-22
 
   analyze:
     name: clang-tidy 22 (analyzer)
@@ -63,7 +64,8 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - run: make lint-analyze CLANG_TIDY=clang-tidy-22
+      - uses: ./.github/actions/ensure-lua
+      - run: make lint-analyze LUA=yes CLANG_TIDY=clang-tidy-22
 
   cppcheck:
     name: cppcheck
@@ -76,7 +78,8 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - run: make cppcheck
+      - uses: ./.github/actions/ensure-lua
+      - run: make cppcheck LUA=yes
 
   build:
     name: ${{ matrix.name }}
@@ -97,12 +100,31 @@ jobs:
             cxx: clang++-19
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/ensure-lua
       - uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: build-${{ matrix.cxx }}
       - name: Build and test
         run: |
-          make -j$(nproc) CXX="ccache ${{ matrix.cxx }}" all check examples
+          make -j$(nproc) LUA=yes CXX="ccache ${{ matrix.cxx }}" all check examples
+
+  no-lua:
+    name: Without Lua (LUA=no)
+    # the shell that is built without the plugins: the stub of the host,
+    # nothing that needs Lua is linked
+    needs: pre-commit
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/ondratu/tiny-shell-ci:noble
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: no-lua
+      - run: make -j$(nproc) LUA=no CXX="ccache g++" all check examples
 
   asan:
     name: ASan + UBSan
@@ -115,10 +137,11 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/ensure-lua
       - uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: asan
-      - run: make CXX="ccache clang++-19" asan
+      - run: make LUA=yes CXX="ccache clang++-19" asan
 
   alpine:
     needs: pre-commit
@@ -142,7 +165,7 @@ jobs:
           rc=0
           docker run --rm -e STRICT -v "$PWD":/work -w /work \
               ghcr.io/ondratu/tiny-shell-ci:alpine-3.22 \
-              sh -c 'make CXX=clang++ all check examples; rc=$?; chown -R "$0" .; exit $rc' \
+              sh -c 'pkg-config --exists lua5.4 || apk add --no-cache lua5.4-dev; make LUA=yes CXX=clang++ all check examples; rc=$?; chown -R "$0" .; exit $rc' \
               "$(id -u):$(id -g)" || rc=$?
           exit $rc
 
@@ -160,8 +183,9 @@ jobs:
       pull-requests: write # to comment the table on a pull request
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/ensure-lua
       - name: Measure (gcov needs GCC)
-        run: make CXX=g++ coverage | tee coverage.txt
+        run: make LUA=yes CXX=g++ coverage | tee coverage.txt
       - name: Make the table
         run: |
           {
@@ -219,6 +243,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/ensure-lua
       - name: Build small and measure
         # "Small" is a goal, so it is measured. The limit is the measured
         # size with -flto (550 kB of code, with the monitors, XSETTINGS, the reload, the
@@ -230,10 +255,10 @@ jobs:
         # about applications that do not respond, the window switcher, the timers and the
         # functions of the event handlers, the screen lock: its menu item, its key and the watching
         # of the lock, the idle lock and the black cover of the display, the autostart and the end of
-        # the session with its dialog, the keyboard layouts that the shell sets with setxkbmap and shows in the panel, the half bar of the dock with the shaped icons) with a reserve; change it on purpose.
+        # the session with its dialog, the keyboard layouts that the shell sets with setxkbmap and shows in the panel, the half bar of the dock with the shaped icons, and the Lua plugins: the host, the module tiny, the finding of the plugins, JSON) with a reserve; change it on purpose.
         run: |
-          max=683000
-          make CXX=clang++-19 AR=llvm-ar-19 \
+          max=785000
+          make LUA=yes CXX=clang++-19 AR=llvm-ar-19 \
               CXXFLAGS="-Os -fno-asynchronous-unwind-tables -DNDEBUG -flto -ffunction-sections -fdata-sections" \
               LDFLAGS="-s -flto -Wl,--gc-sections" build/tiny-shell
           size build/tiny-shell | tee size.txt

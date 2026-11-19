@@ -24,7 +24,7 @@ RUN printf 'Acquire::Retries "5";\nAPT::Update::Error-Mode "any";\n' > /etc/apt/
             ca-certificates wget gnupg \
             build-essential pkg-config git gh ccache cppcheck \
             libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev \
-            libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev \
+            libfontconfig-dev xvfb xauth libgtest-dev libpam0g-dev liblua5.4-dev \
             clang-19 llvm-19 libclang-rt-19-dev libstdc++-14-dev \
           && wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc --tries=5 --retry-connrefused --waitretry=10 \
             https://apt.llvm.org/llvm-snapshot.gpg.key \
