@@ -50,7 +50,7 @@ class FdWatch {
 
   private:
     struct Item {
-        int fd;
+        int fd = -1;
         std::function<void()> function;
     };
 

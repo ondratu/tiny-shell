@@ -1010,7 +1010,7 @@ class SettingsApp : public tiny::XftWindow {
                             wrong);
             }
         }
-        std::string wrong =
+        const std::string wrong =
                 form.status().empty() ? form.plugin_problem() : form.status();
         const char* note = "Space, a click or the arrows change a value.";
         if (form.selected() < plugin.specs.size() &&

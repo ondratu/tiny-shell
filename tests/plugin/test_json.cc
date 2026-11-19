@@ -9,6 +9,14 @@ using tiny::plugin::parse_json;
 
 namespace {
 
+//! The value of a text that is right
+Json parsed(const std::string& text)
+{
+    auto value = parse_json(text);
+    EXPECT_TRUE(value.has_value()) << text;
+    return std::move(value).value_or(Json{});
+}
+
 std::string error_of(const std::string& text)
 {
     std::string error;
@@ -20,39 +28,38 @@ std::string error_of(const std::string& text)
 
 TEST(JsonTest, reads_the_simple_values)
 {
-    EXPECT_EQ(parse_json("null")->type, Json::Type::Null);
-    EXPECT_TRUE(parse_json(" true ")->boolean);
-    EXPECT_FALSE(parse_json("false")->boolean);
-    EXPECT_EQ(parse_json("false")->type, Json::Type::Boolean);
-    EXPECT_EQ(parse_json("-12.5e1")->number, -125);
-    EXPECT_EQ(parse_json("0")->number, 0);
-    EXPECT_EQ(parse_json("1E2")->number, 100);
-    EXPECT_EQ(parse_json("\"text\"")->string, "text");
+    EXPECT_EQ(parsed("null").type, Json::Type::Null);
+    EXPECT_TRUE(parsed(" true ").boolean);
+    EXPECT_FALSE(parsed("false").boolean);
+    EXPECT_EQ(parsed("false").type, Json::Type::Boolean);
+    EXPECT_EQ(parsed("-12.5e1").number, -125);
+    EXPECT_EQ(parsed("0").number, 0);
+    EXPECT_EQ(parsed("1E2").number, 100);
+    EXPECT_EQ(parsed(R"("text")").string, "text");
 }
 
 TEST(JsonTest, reads_arrays_and_objects)
 {
-    const auto value = parse_json(
-            "{\"a\": [1, 2, {\"b\": null}], \"c\": {}, \"d\": [], \"a\": 7}");
-    ASSERT_TRUE(value);
-    ASSERT_EQ(value->type, Json::Type::Object);
-    EXPECT_EQ(value->object.at("a").number, 7); // the last one wins
-    EXPECT_EQ(value->object.at("c").type, Json::Type::Object);
-    EXPECT_TRUE(value->object.at("c").object.empty());
-    EXPECT_TRUE(value->object.at("d").array.empty());
-    const auto list = parse_json("[1, 2, {\"b\": null}]");
-    ASSERT_EQ(list->array.size(), 3u);
-    EXPECT_EQ(list->array[2].object.at("b").type, Json::Type::Null);
+    const Json value =
+            parsed(R"({"a": [1, 2, {"b": null}], "c": {}, "d": [], "a": 7})");
+    ASSERT_EQ(value.type, Json::Type::Object);
+    EXPECT_EQ(value.object.at("a").number, 7); // the last one wins
+    EXPECT_EQ(value.object.at("c").type, Json::Type::Object);
+    EXPECT_TRUE(value.object.at("c").object.empty());
+    EXPECT_TRUE(value.object.at("d").array.empty());
+    const Json list = parsed(R"([1, 2, {"b": null}])");
+    ASSERT_EQ(list.array.size(), 3u);
+    EXPECT_EQ(list.array[2].object.at("b").type, Json::Type::Null);
 }
 
 TEST(JsonTest, decodes_the_escapes_of_a_string)
 {
-    EXPECT_EQ(parse_json("\"a\\n\\t\\\"\\\\\\/\\b\\f\\r\"")->string,
+    EXPECT_EQ(parsed("\"a\\n\\t\\\"\\\\\\/\\b\\f\\r\"").string,
               "a\n\t\"\\/\b\f\r");
-    EXPECT_EQ(parse_json("\"\\u00e9\\u20ac\"")->string, "\xC3\xA9\xE2\x82\xAC");
-    EXPECT_EQ(parse_json("\"\\ud83d\\ude00\"")->string, "\xF0\x9F\x98\x80");
-    EXPECT_EQ(parse_json("\"\\u0041\"")->string, "A");
-    EXPECT_EQ(parse_json("\"\xC3\xA9\"")->string, "\xC3\xA9"); // as it is
+    EXPECT_EQ(parsed("\"\\u00e9\\u20ac\"").string, "\xC3\xA9\xE2\x82\xAC");
+    EXPECT_EQ(parsed("\"\\ud83d\\ude00\"").string, "\xF0\x9F\x98\x80");
+    EXPECT_EQ(parsed("\"\\u0041\"").string, "A");
+    EXPECT_EQ(parsed("\"\xC3\xA9\"").string, "\xC3\xA9"); // as it is
 }
 
 TEST(JsonTest, tells_what_is_wrong_and_where)

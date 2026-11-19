@@ -66,6 +66,8 @@ class Parser {
         return true;
     }
 
+    // the depth is limited by json_max_depth
+    // NOLINTNEXTLINE(misc-no-recursion)
     bool read_value(Json& out, int depth)
     {
         if (pos >= text.size()) {
@@ -82,14 +84,23 @@ class Parser {
             case 't':
                 out.type = Json::Type::Boolean;
                 out.boolean = true;
-                return word("true") || fail("wrong word");
+                if (!word("true")) {
+                    return fail("wrong word");
+                }
+                return true;
             case 'f':
                 out.type = Json::Type::Boolean;
                 out.boolean = false;
-                return word("false") || fail("wrong word");
+                if (!word("false")) {
+                    return fail("wrong word");
+                }
+                return true;
             case 'n':
                 out.type = Json::Type::Null;
-                return word("null") || fail("wrong word");
+                if (!word("null")) {
+                    return fail("wrong word");
+                }
+                return true;
             default:
                 return read_number(out);
         }
@@ -259,6 +270,8 @@ class Parser {
         return fail("the string is not closed");
     }
 
+    // the depth is limited by json_max_depth
+    // NOLINTNEXTLINE(misc-no-recursion)
     bool read_array(Json& out, int depth)
     {
         if (depth >= json_max_depth) {
@@ -290,6 +303,8 @@ class Parser {
         }
     }
 
+    // the depth is limited by json_max_depth
+    // NOLINTNEXTLINE(misc-no-recursion)
     bool read_object(Json& out, int depth)
     {
         if (depth >= json_max_depth) {

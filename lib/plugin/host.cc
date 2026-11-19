@@ -43,7 +43,7 @@ constexpr const char* timer_meta = "tiny.timer";
 constexpr auto time_limit = 2s;
 constexpr int hook_every = 100000; //!< VM instructions between the checks
 constexpr int shortest_timer_ms = 10;
-constexpr size_t default_file_limit = 1024 * 1024;
+constexpr size_t default_file_limit = size_t{1024} * 1024;
 
 struct Plugin;
 
@@ -89,7 +89,7 @@ struct Plugin {
     std::set<std::string> loading; //!< `require` in progress
 };
 
-#if defined(__linux__)
+#ifdef __linux__
 constexpr const char* platform_name = "linux";
 #elif defined(__FreeBSD__)
 constexpr const char* platform_name = "freebsd";
@@ -124,7 +124,7 @@ void log_line(HostState& host, const std::string& line)
     }
 }
 
-void log_plugin(Plugin& plugin, const std::string& text)
+void log_plugin(const Plugin& plugin, const std::string& text)
 {
     log_line(*plugin.host,
              "tiny-shell: plugin " + plugin.info.id + ": " + text);
@@ -134,7 +134,7 @@ void log_plugin(Plugin& plugin, const std::string& text)
 
 void time_hook(lua_State* L, lua_Debug*)
 {
-    Plugin& plugin = self(L);
+    const Plugin& plugin = self(L);
     if (std::chrono::steady_clock::now() - plugin.call_start > time_limit) {
         luaL_error(L, "the plugin runs for too long (more than %d seconds)",
                    static_cast<int>(std::chrono::seconds(time_limit).count()));
@@ -193,7 +193,7 @@ std::vector<std::string> string_list(lua_State* L, int index)
 {
     luaL_checktype(L, index, LUA_TTABLE);
     std::vector<std::string> list;
-    const lua_Integer size = static_cast<lua_Integer>(luaL_len(L, index));
+    const auto size = luaL_len(L, index);
     for (lua_Integer i = 1; i <= size; ++i) {
         lua_rawgeti(L, index, i);
         if (lua_type(L, -1) != LUA_TSTRING) {
@@ -216,10 +216,8 @@ std::string field_string(lua_State* L, int index, const char* name,
 {
     lua_getfield(L, index, name);
     std::string value = fallback;
-    if (lua_type(L, -1) == LUA_TSTRING) {
-        value = lua_tostring(L, -1);
-    } else if (lua_type(L, -1) == LUA_TNUMBER) {
-        value = lua_tostring(L, -1); // converts a copy of the value
+    if (lua_type(L, -1) == LUA_TSTRING || lua_type(L, -1) == LUA_TNUMBER) {
+        value = lua_tostring(L, -1); // a number is converted in a copy
     } else if (!lua_isnil(L, -1)) {
         luaL_error(L, "%s must be a text", name);
     }
@@ -245,7 +243,7 @@ int l_log(lua_State* L)
 
 int l_setting(lua_State* L)
 {
-    Plugin& plugin = self(L);
+    const Plugin& plugin = self(L);
     const std::string key = luaL_checkstring(L, 1);
     const SettingSpec* spec = plugin.info.find_setting(key);
     if (spec == nullptr) {
@@ -380,7 +378,9 @@ int l_which(lua_State* L)
     }
     const char* path = getenv("PATH");
     for (const std::string& dir : split(path == nullptr ? "" : path, ':')) {
-        const std::string candidate = dir + "/" + name;
+        std::string candidate = dir;
+        candidate += '/';
+        candidate += name;
         if (access(candidate.c_str(), X_OK) == 0) {
             lua_pushlstring(L, candidate.data(), candidate.size());
             return 1;
@@ -602,11 +602,13 @@ int l_widget_set_text(lua_State* L)
 
 int l_widget_get_text(lua_State* L)
 {
-    Entry* entry = check_entry(L, 1);
-    const std::string text = entry->label != nullptr ? entry->label->get_text()
-                             : entry->button != nullptr
-                                     ? entry->button->get_text()
-                                     : "";
+    const Entry* entry = check_entry(L, 1);
+    std::string text;
+    if (entry->label != nullptr) {
+        text = entry->label->get_text();
+    } else if (entry->button != nullptr) {
+        text = entry->button->get_text();
+    }
     lua_pushlstring(L, text.data(), text.size());
     return 1;
 }
@@ -674,6 +676,8 @@ int l_widget_destroy(lua_State* L)
 
 // ---- tiny.json ----
 
+// the depth of the value is limited by the parser (json_max_depth)
+// NOLINTNEXTLINE(misc-no-recursion)
 void push_json(lua_State* L, const Json& value)
 {
     luaL_checkstack(L, 4, "the JSON is too deep");
@@ -690,13 +694,15 @@ void push_json(lua_State* L, const Json& value)
         case Json::Type::String:
             lua_pushlstring(L, value.string.data(), value.string.size());
             break;
-        case Json::Type::Array:
+        case Json::Type::Array: {
             lua_createtable(L, static_cast<int>(value.array.size()), 0);
-            for (size_t i = 0; i < value.array.size(); ++i) {
-                push_json(L, value.array[i]);
-                lua_rawseti(L, -2, static_cast<lua_Integer>(i + 1));
+            lua_Integer index = 1;
+            for (const Json& item : value.array) {
+                push_json(L, item);
+                lua_rawseti(L, -2, index++);
             }
             break;
+        }
         case Json::Type::Object:
             lua_createtable(L, 0, static_cast<int>(value.object.size()));
             for (const auto& [key, item] : value.object) {
@@ -761,8 +767,11 @@ int l_require(lua_State* L)
         return lua_error(L);
     }
     lua_pushstring(L, name.c_str());
-    lua_call(L, 1, 1);
-    plugin.loading.erase(name);
+    const int status = lua_pcall(L, 1, 1, 0);
+    plugin.loading.erase(name); // also after an error, which goes on
+    if (status != LUA_OK) {
+        return lua_error(L);
+    }
     if (lua_isnil(L, -1)) { // a module that returns nothing is `true`
         lua_pop(L, 1);
         lua_pushboolean(L, 1);
@@ -890,6 +899,17 @@ void make_module(Plugin& plugin)
     lua_setglobal(L, "print");
     lua_pushcfunction(L, l_require);
     lua_setglobal(L, "require");
+}
+
+//! The plugin that runs with the id, or null
+Plugin* find_running(const HostState& host, const std::string& id)
+{
+    for (const auto& plugin : host.running) {
+        if (plugin->info.id == id) {
+            return plugin.get();
+        }
+    }
+    return nullptr;
 }
 
 //! Free what a plugin holds; the plugin is not used after it
@@ -1028,26 +1048,21 @@ bool PluginHost::apply(const std::vector<PluginInfo>& found,
                    !std::equal(wanted.begin(), wanted.end(),
                                host.attempts.begin(), same_plugin);
     const bool changed = host.config.raw != config.raw;
-    std::vector<Plugin*> to_tell;
+    std::vector<std::string> to_tell; //!< ids of the plugins to tell
     if (!restart) {
         for (size_t i = 0; i < wanted.size(); ++i) {
-            Plugin* running = nullptr;
-            for (const auto& plugin : host.running) {
-                if (plugin->info.id == wanted[i].id) {
-                    running = plugin.get();
-                }
-            }
+            const Plugin* const running = find_running(host, wanted[i].id);
             if (wanted[i].values != host.attempts[i].values) {
                 // one that can't follow the change starts again; so does one
                 // that failed, the user may have mended what was wrong
                 if (running == nullptr || running->config_ref == LUA_NOREF) {
                     restart = true;
                 } else {
-                    to_tell.push_back(running);
+                    to_tell.push_back(wanted[i].id);
                 }
             } else if (changed && running != nullptr &&
                        running->config_ref != LUA_NOREF) {
-                to_tell.push_back(running);
+                to_tell.push_back(wanted[i].id);
             }
         }
     }
@@ -1079,8 +1094,9 @@ bool PluginHost::apply(const std::vector<PluginInfo>& found,
         return true;
     }
     host.attempts = wanted;
-    for (Plugin* plugin : to_tell) {
-        const auto it = config.plugins.find(plugin->info.id);
+    for (const std::string& id : to_tell) {
+        Plugin* const plugin = find_running(host, id);
+        const auto it = config.plugins.find(id);
         plugin->values = it == config.plugins.end()
                                  ? std::map<std::string, std::string>{}
                                  : it->second.values;

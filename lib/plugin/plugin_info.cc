@@ -18,7 +18,7 @@ namespace tiny::plugin {
 
 namespace {
 
-constexpr size_t max_metadata = 64 * 1024;
+constexpr size_t max_metadata = size_t{64} * 1024;
 
 std::optional<std::string> read_small_file(const std::string& path)
 {
@@ -276,7 +276,9 @@ std::vector<PluginInfo> read_dir(const std::string& dir, Origin origin)
         return found;
     }
     for (const std::string& id : names) {
-        const std::string where = dir + "/" + id;
+        std::string where = dir;
+        where += '/';
+        where += id;
         if (!wm::valid_plugin_id(id) || !is_directory(where)) {
             continue;
         }
@@ -355,10 +357,10 @@ bool plugin_enabled(const PluginInfo& info, const wm::Config& config)
         return false;
     }
     const auto it = config.plugins.find(info.id);
-    if (it != config.plugins.end() && it->second.enabled) {
-        return *it->second.enabled;
+    if (it == config.plugins.end()) {
+        return info.default_enabled;
     }
-    return info.default_enabled;
+    return it->second.enabled.value_or(info.default_enabled);
 }
 
 bool valid_setting_value(const SettingSpec& spec, const std::string& text)

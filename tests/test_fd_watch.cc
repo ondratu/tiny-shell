@@ -35,8 +35,8 @@ int round(FdWatch& watches)
 TEST(FdWatchTest, calls_the_function_of_a_ready_descriptor)
 {
     FdWatch watches;
-    Pipe quiet;
-    Pipe loud;
+    const Pipe quiet;
+    const Pipe loud;
     int quiet_calls = 0;
     int loud_calls = 0;
     watches.add(quiet.fds[0], [&] { ++quiet_calls; });
@@ -61,7 +61,7 @@ TEST(FdWatchTest, an_empty_set_has_nothing_to_call)
 TEST(FdWatchTest, a_removed_watch_is_not_called)
 {
     FdWatch watches;
-    Pipe pipe;
+    const Pipe pipe;
     int calls = 0;
     const FdWatch::Id id = watches.add(pipe.fds[0], [&] { ++calls; });
     EXPECT_TRUE(watches.remove(id));
@@ -74,8 +74,8 @@ TEST(FdWatchTest, a_removed_watch_is_not_called)
 TEST(FdWatchTest, a_function_may_remove_another_watch_that_is_ready)
 {
     FdWatch watches;
-    Pipe first;
-    Pipe second;
+    const Pipe first;
+    const Pipe second;
     int second_calls = 0;
     FdWatch::Id second_id = 0;
     watches.add(first.fds[0], [&] { watches.remove(second_id); });
@@ -89,7 +89,7 @@ TEST(FdWatchTest, a_function_may_remove_another_watch_that_is_ready)
 TEST(FdWatchTest, a_function_may_remove_itself)
 {
     FdWatch watches;
-    Pipe pipe;
+    const Pipe pipe;
     int calls = 0;
     FdWatch::Id id = 0;
     id = watches.add(pipe.fds[0], [&] {

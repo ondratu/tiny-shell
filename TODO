@@ -41,9 +41,9 @@ names a dependency. Every item needs a test (see CONTRIBUTING.md).
 The ini file is there (see doc/configuration.md); these are the next steps. Unknown
 keys are ignored by the reader, so keys can be added without a new format.
 
-- More keys: `[commands] logout`, `[panel]` (layout; `clock_format` is there),
-  `[plugins]` (the list of the plugins and their own sections, with the optional build of
-  Lua). `[theme] style = dark|light` and `[theme] font` are there.
+- More keys: `[commands] logout`, `[panel]` (layout; `clock_format` is there).
+  `[theme] style = dark|light`, `[theme] font` and the `[plugin.<id>]` sections
+  are there.
 - Key bindings: the actions are in `ActionRegistry` (`lib/wm/action_registry.*`).
   Missing: more actions (`close-window`, `maximize`, `minimize`), and the key
   table of `Manager::set_events` / `on_key_press` / `on_key_release` (now hard
@@ -207,55 +207,27 @@ next steps:
   has "Move to Workspace Left/Right" and "Always on Visible Workspace" (that is
   the sticky state), and the desktops are dynamic (an empty one is always at
   the end).
-- Lua plugins (`make LUA=auto|yes|no`, Lua 5.4; auto is the default, so a
-  system with liblua gets them and one without it builds without). The design:
-  - **A plugin** is a directory `<id>/` with `plugin.ini` (metadata and the
-    schema of its settings) and `plugin.lua` (the code). The directories are
-    searched like the extensions of GNOME Shell: `$XDG_DATA_HOME/tiny-shell/plugins`
-    (`~/.local/share/...`, the user's) and `tiny-shell/plugins` in every
-    directory of `$XDG_DATA_DIRS` (the system's, what `make install` puts there
-    from `data/tiny-shell/plugins`). A plugin of the user wins over a system
-    one of the same id; the list says which it is: system, user, or user that
-    overrides a system one (with both versions).
-  - **State.** `[plugin.<id>] enabled = yes|no` in the file of the user, the
-    other keys of the section are the values of its settings. A plugin that is
-    not mentioned follows `enabled` of its `plugin.ini`. A plugin is switched
-    off and on alone; a change of the file (SIGHUP, `--reload`, tiny-settings)
-    starts and stops it without a restart of the shell.
-  - **Settings.** `plugin.ini` lists them (`settings = units;interval`) and
-    describes each in `[setting.<key>]`: `type` (bool, choice, text, number),
-    `label`, `default`, `choices`, `min`, `max`. A plugin that has no schema is
-    only switched on and off; one that is installed by the user can also be
-    removed. tiny-settings builds the dialog from the schema, so it needs no
-    Lua. The plugin reads its values with `tiny.setting(key)`.
-  - **The module `tiny`** (global in the main chunk, API level 1):
-    `tiny.api`, `tiny.version`, `tiny.plugin` (`id`, `name`, `version`, `dir`),
-    `tiny.setting(key)`, `tiny.config(section, key)` (a read-only value of
-    `tiny-shell.ini`), `tiny.theme()` (`"dark"` or `"light"`), `tiny.log(...)`,
-    `tiny.after(ms, fn)` and `tiny.every(ms, fn)` (a timer with `:cancel()`),
-    `tiny.exec(argv, fn[, options])` (runs a program without a shell and calls
-    `fn(result)` with `ok`, `status`, `stdout` when it ends; it never blocks;
-    `options.timeout` in ms), `tiny.launch(argv)` (a program that is left
-    running), `tiny.read_file(path)`, `tiny.which(name)`, `tiny.json.decode(text)`
-    and the widgets `tiny.panel.label{text=, sample=}` and
-    `tiny.panel.button{text=, sample=}` with `:set_text()`, `:set_visible()`,
-    `:on_click(fn)` and `:destroy()`. `sample` is the longest text the widget
-    shows (it fixes the width, as the clock does). `require("name")` loads
-    `name.lua` from the directory of the plugin only. There is no `io`, no
-    `os.execute` and no Xlib. The plugins are trusted code (they can run any
-    program), so this is not a sandbox, only one way to do each thing.
-  - **Each plugin has its own Lua state.** An error in one is logged and stops
-    that plugin only; the plugin that fails to load is shown as failed in
-    tiny-settings.
-  - Later: `tiny.bind(keys, action)` and `tiny.action(name, fn)` (the
+- Lua plugins, what is left after the first version (see
+  doc/developers/plugins.md for what is there):
+  - The interface: `tiny.bind(keys, action)` and `tiny.action(name, fn)` (the
     ActionRegistry; after key bindings), window events (`on_manage`, `on_focus`,
     `on_title`) with read-only window information, widgets that open a
-    popover (a list, a slider, a switch), a generic D-Bus binding
-    (`tiny.dbus.call`, `get_property`, `subscribe`; after the D-Bus base, see
-    TODO-DBUS.md), `tiny.http` without curl, a plugin that reloads when its
-    files change, and the plugins that were asked for: Claude usage, bluetooth,
-    wifi, volume (a mixer), the load of the CPU and the memory, ethernet and
-    the traffic of the network. The battery and the weather are the first two.
+    popover (a list, a slider, a switch), a widget that is as wide as its text
+    (the panel does not move a widget when a child changes its size yet) or
+    gives its place back when hidden, `tiny.http` without curl, and a generic
+    D-Bus binding (`tiny.dbus.call`, `get_property`, `subscribe`; after the D-Bus
+    base, see TODO-DBUS.md) so a plugin can use UPower, NetworkManager, bluez and
+    MPRIS when there is a bus and read files and run programs when there is not.
+  - A plugin that reloads when its files change (now it needs to be switched off
+    and on, or the version to change), and a "Reload" in the list of
+    tiny-settings; the errors of a plugin in the list (now only the log of the
+    shell has them, the list shows what is wrong in `plugin.ini`).
+  - The plugins that were asked for: Claude usage (no stable public API; as an
+    example plugin only), bluetooth devices with their batteries, wifi, a mixer
+    and the volume, the load of the processor and the free memory, ethernet and
+    the traffic of the network. The battery has no NetBSD reader (`envstat`).
+  - The first two plugins come with the shell; a way to get more (a list of
+    plugins to download, or only a documented place for them).
 - Window snapping to the edges of the screen and to other windows while
   moving; half-screen maximize (Super+Left/Right).
 - A simple animation of minimizing: the window disappears and its frame
