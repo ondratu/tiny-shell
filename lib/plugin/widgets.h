@@ -28,7 +28,7 @@ int panel_text_width(::Display* display, int padding, XftFont* font,
 struct ItemIcon {
     std::string name;
     std::string under;
-    bool room = false;                   //!< the width has the icon in it
+    bool room = false;                  //!< the width has the icon in it
     wm::SymbolicIcons* icons = nullptr; //!< null: no icons at all
 
     //! The size of the icon in a panel as high as `height`
@@ -134,10 +134,11 @@ struct PopupLayout {
  * `line` is the height of a line of the text, `text_width()` the width of a
  * string; `limit` is the widest the window may be.
  */
-PopupLayout popup_layout(const PopupContent& content, int line, int icon_size,
-                         int big_line, int limit,
-                         const std::function<int(const std::string&)>& text_width,
-                         const std::function<int(const std::string&)>& big_width);
+PopupLayout
+popup_layout(const PopupContent& content, int line, int icon_size, int big_line,
+             int limit,
+             const std::function<int(const std::string&)>& text_width,
+             const std::function<int(const std::string&)>& big_width);
 
 /**
  * @short The window of a plugin that opens under a widget of the panel.

@@ -46,8 +46,8 @@ struct Ink {
     XftColor color;
 };
 
-void text_at(XftDraw* draw, const Ink& ink, XftFont* font,
-             int x, int top, int height, const std::string& text)
+void text_at(XftDraw* draw, const Ink& ink, XftFont* font, int x, int top,
+             int height, const std::string& text)
 {
     XftDrawStringUtf8(draw, &ink.color, font, x,
                       top + (height + font->ascent - font->descent) / 2,
@@ -59,9 +59,8 @@ XftFont* scaled_font(::Display* display, const XftFont* base, double factor)
 {
     FcPattern* pattern = FcPatternDuplicate(base->pattern);
     double pixels = 0;
-    if (pattern == nullptr ||
-        FcPatternGetDouble(pattern, FC_PIXEL_SIZE, 0, &pixels) !=
-                FcResultMatch) {
+    if (pattern == nullptr || FcPatternGetDouble(pattern, FC_PIXEL_SIZE, 0,
+                                                 &pixels) != FcResultMatch) {
         if (pattern != nullptr) {
             FcPatternDestroy(pattern);
         }
@@ -134,8 +133,9 @@ void paint_item(::Display* display, ::Window window, const Style& style,
     }
     const Ink ink(display, fg);
     const int screen = XDefaultScreen(display);
-    XftDraw* draw = XftDrawCreate(display, window, XDefaultVisual(display, screen),
-                                  XDefaultColormap(display, screen));
+    XftDraw* draw =
+            XftDrawCreate(display, window, XDefaultVisual(display, screen),
+                          XDefaultColormap(display, screen));
     text_at(draw, ink, font, x, 0, height, text);
     XftDrawDestroy(draw);
 }
@@ -199,10 +199,11 @@ void PluginButton::on_expose(const XEvent&, void*)
 
 // ---- the window of a plugin ----
 
-PopupLayout popup_layout(
-        const PopupContent& content, int line, int icon_size, int big_line,
-        int limit, const std::function<int(const std::string&)>& text_width,
-        const std::function<int(const std::string&)>& big_width)
+PopupLayout
+popup_layout(const PopupContent& content, int line, int icon_size, int big_line,
+             int limit,
+             const std::function<int(const std::string&)>& text_width,
+             const std::function<int(const std::string&)>& big_width)
 {
     const int pad = std::max(10, line * 4 / 5);
     const int gap = pad / 2;
@@ -312,8 +313,8 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
     }
     layout = popup_layout(
             shown, font->ascent + font->descent,
-            ItemIcon::size_for(wm::shell_theme.panel), big->ascent + big->descent,
-            inside.width - 2 * get_border(),
+            ItemIcon::size_for(wm::shell_theme.panel),
+            big->ascent + big->descent, inside.width - 2 * get_border(),
             [&](const std::string& s) { return extent(display, font, s); },
             [&](const std::string& s) { return extent(display, big, s); });
     resize(layout.width, layout.height);
@@ -346,8 +347,9 @@ void PluginPopup::on_expose(const XEvent&, void*)
     XSetWindowBackground(display, window, bg);
     XClearWindow(display, window);
     const int screen = XDefaultScreen(display);
-    XftDraw* draw = XftDrawCreate(display, window, XDefaultVisual(display, screen),
-                                  XDefaultColormap(display, screen));
+    XftDraw* draw =
+            XftDrawCreate(display, window, XDefaultVisual(display, screen),
+                          XDefaultColormap(display, screen));
     const Ink ink(display, fg);
     const Ink faint(display, soft);
 
@@ -364,12 +366,11 @@ void PluginPopup::on_expose(const XEvent&, void*)
         const int block = lines * line + (lines - 1) * 2;
         const int first = top + (layout.header_height - block) / 2;
         text_at(draw, ink, font, x, first, line, shown.title);
-        text_at(draw, faint, font, x, first + line + 2, line,
-                shown.subtitle);
+        text_at(draw, faint, font, x, first + line + 2, line, shown.subtitle);
         if (!shown.value.empty()) {
             const int w = extent(display, big, shown.value);
-            text_at(draw, ink, big, right - w, top,
-                    layout.header_height, shown.value);
+            text_at(draw, ink, big, right - w, top, layout.header_height,
+                    shown.value);
         }
     }
     for (size_t i = 0; i < shown.sections.size(); ++i) {
@@ -394,8 +395,7 @@ void PluginPopup::on_expose(const XEvent&, void*)
             }
             text_at(draw, ink, font, x, at.y, at.height, row.label);
             const int w = extent(display, font, row.value);
-            text_at(draw, faint, font, right - w, at.y, at.height,
-                    row.value);
+            text_at(draw, faint, font, right - w, at.y, at.height, row.value);
         }
     }
     XftDrawDestroy(draw);

@@ -68,14 +68,16 @@ TEST(PopupLayout, the_lines_follow_each_other_in_the_order_of_the_sections)
 {
     PopupContent content;
     content.title = "T";
-    content.sections.push_back({"Today", {{"", "Wind", "5"}, {"", "Rain", "0"}}});
+    content.sections.push_back(
+            {"Today", {{"", "Wind", "5"}, {"", "Rain", "0"}}});
     content.sections.push_back({"", {{"", "Mon", "1"}}});
     const PopupLayout layout = layout_of(content);
     ASSERT_EQ(layout.rows.size(), 2U);
     ASSERT_EQ(layout.rows[0].size(), 2U);
     EXPECT_GT(layout.headings[0].height, 0);
     EXPECT_EQ(layout.headings[1].height, 0); // no heading, no room
-    EXPECT_EQ(layout.rows[0][0].y, layout.headings[0].y + layout.headings[0].height);
+    EXPECT_EQ(layout.rows[0][0].y,
+              layout.headings[0].y + layout.headings[0].height);
     EXPECT_EQ(layout.rows[0][1].y,
               layout.rows[0][0].y + layout.rows[0][0].height);
     EXPECT_GT(layout.rows[1][0].y, layout.rows[0][1].y);
