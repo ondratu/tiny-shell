@@ -5,6 +5,7 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <sys/stat.h>
 
 #include "ini.h"
 
@@ -283,6 +284,12 @@ DesktopEntry parse_desktop_entry(std::string_view text, std::string_view locale)
 std::optional<DesktopEntry> read_desktop_entry(const std::string& path,
                                                std::string_view locale)
 {
+    // A directory opens as a file, and reading it is a failure that libstdc++
+    // reports as bad() but libc++ (the BSDs) as the end of the file.
+    struct stat st{};
+    if (stat(path.c_str(), &st) != 0 || S_ISDIR(st.st_mode)) {
+        return std::nullopt;
+    }
     std::ifstream file(path);
     if (!file) {
         return std::nullopt;
