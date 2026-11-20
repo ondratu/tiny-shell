@@ -119,8 +119,8 @@ end)
 
 `argv` is a list of strings, with the program first (it is searched in `PATH`).
 There is **no shell**: the arguments are not interpreted, so `"*"` and `"$HOME"`
-mean what they say. The standard input of the program is empty and its standard
-error is discarded. `result` is a table:
+mean what they say. The standard input of the program is empty (see `stdin`
+below) and its standard error is discarded. `result` is a table:
 
 | Field | |
 | ----- | - |
@@ -131,8 +131,10 @@ error is discarded. `result` is a table:
 | `timed_out` | `true` when it did not end in 30 seconds and was killed |
 | `error` | why it did not start (`No such file or directory`), only then |
 
-`options` is a table: `{timeout = 5000}` changes the time in milliseconds. A
-program that can't be started is reported the same way, later (`ok = false` and
+`options` is a table: `{timeout = 5000}` changes the time in milliseconds, and
+`{stdin = "text"}` is what the program reads from its standard input (4096 bytes
+at most). Give a password this way: on the command line every user of the system
+sees it in `ps`. A program that can't be started is reported the same way, later (`ok = false` and
 `error`), so the function is never called while the plugin is still in the
 call that asked for it. The programs of a plugin that is stopped are killed.
 
