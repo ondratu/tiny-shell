@@ -494,11 +494,13 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
             selected = row; // the user goes to type
         }
     }
+    // a field that was not there before gets the keys, whatever was lit
+    const bool new_field = !entry_key.empty() && entry_key != field_key;
     if (entry_key != field_key) {
         field.wipe();
         field_key = entry_key;
     }
-    if (again && !lit.empty()) {
+    if (again && !lit.empty() && !new_field) {
         for (const RowRef& row : popup_targets(shown)) {
             if (row_of(row)->key() == lit) {
                 selected = row;
