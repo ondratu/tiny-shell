@@ -259,6 +259,35 @@ TEST_F(HostTest, exec_runs_a_program_and_tells_the_result_later)
     EXPECT_TRUE(logged("ok=false status=2 out=out false"));
 }
 
+TEST_F(HostTest, exec_gives_a_program_the_text_for_its_input)
+{
+    tree.add(
+            "input",
+            "tiny.exec({'cat'}, function(r) tiny.log('got=' .. r.stdout) end,\n"
+            "          {stdin = 'pass word'})\n"
+            "tiny.exec({'cat'}, function(r) tiny.log('none=' .. r.stdout) "
+            "end)\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(loop.run_until(
+            [&] { return logged("got=pass word") && logged("none="); }));
+    EXPECT_FALSE(logged("none=pass"));
+}
+
+TEST_F(HostTest, exec_with_an_input_that_is_not_a_text_or_too_long_is_an_error)
+{
+    tree.add("bad", "local ok = pcall(tiny.exec, {'cat'}, function() end,\n"
+                    "                 {stdin = {}})\n"
+                    "tiny.log('table=' .. tostring(ok))\n"
+                    "tiny.exec({'cat'}, function(r)\n"
+                    "  tiny.log('long=' .. tostring(r.ok), r.error)\n"
+                    "end, {stdin = string.rep('x', 5000)})\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("table=false"));
+    EXPECT_TRUE(loop.run_until([&] { return logged("long=false"); }));
+}
+
 TEST_F(HostTest, exec_that_can_not_start_tells_it_later_too)
 {
     tree.add("missing", "tiny.exec({'/nonexistent/tiny-program'}, function(r)\n"

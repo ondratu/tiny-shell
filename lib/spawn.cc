@@ -14,6 +14,9 @@ namespace tiny {
 
 namespace {
 
+//! The longest text for the standard input: what a pipe takes at once
+constexpr size_t max_input = 4096;
+
 // The statuses of the children that ended, a ring, written by the handler of
 // SIGCHLD
 volatile sig_atomic_t kept_pid[kept_statuses] = {};
@@ -39,7 +42,7 @@ void on_sigchld(int)
 [[noreturn]] void exec_child(const std::vector<std::string>& argv,
                              const std::string& directory,
                              const std::vector<std::string>& environment,
-                             int report, int output)
+                             int report, int output, int input)
 {
     setsid();
 
@@ -53,6 +56,9 @@ void on_sigchld(int)
             }
         }
         dup2(output, STDOUT_FILENO);
+        if (input >= 0) { // the text that was given to the program
+            dup2(input, STDIN_FILENO);
+        }
     }
 
     // exec keeps the mask of blocked signals
@@ -91,20 +97,55 @@ void on_sigchld(int)
 
 namespace {
 
+//! The read end of a pipe that has `text` in it and nothing more coming: the
+//! standard input of a program. The text fits in the pipe, so nothing waits.
+int input_pipe(const std::string& text)
+{
+    int fds[2];
+    if (text.size() > max_input || pipe2(fds, O_CLOEXEC) < 0) {
+        if (text.size() > max_input) {
+            errno = EMSGSIZE;
+        }
+        return -1;
+    }
+    const ssize_t written = write(fds[1], text.data(), text.size());
+    const int saved = errno;
+    close(fds[1]);
+    if (written != static_cast<ssize_t>(text.size())) {
+        close(fds[0]);
+        errno = written < 0 ? saved : EIO;
+        return -1;
+    }
+    return fds[0];
+}
+
 //! `spawn()`; with `output` not null the standard output of the program is a
-//! pipe and `*output` is the end that reads it
+//! pipe and `*output` is the end that reads it; `input` is what the program
+//! reads from its standard input (null: nothing)
 pid_t spawn_with_output(const std::vector<std::string>& argv,
                         const std::string& directory,
                         const std::vector<std::string>& environment,
-                        int* output)
+                        int* output, const std::string* input = nullptr)
 {
     if (argv.empty() || argv[0].empty()) {
         errno = EINVAL;
         return -1;
     }
+    int in = -1;
+    if (input != nullptr && !input->empty()) {
+        in = input_pipe(*input);
+        if (in < 0) {
+            return -1;
+        }
+    }
 
     int report[2];
     if (pipe2(report, O_CLOEXEC) < 0) {
+        const int saved = errno;
+        if (in >= 0) {
+            close(in);
+        }
+        errno = saved;
         return -1;
     }
     int data[2] = {-1, -1};
@@ -112,6 +153,9 @@ pid_t spawn_with_output(const std::vector<std::string>& argv,
         const int saved = errno;
         close(report[0]);
         close(report[1]);
+        if (in >= 0) {
+            close(in);
+        }
         errno = saved;
         return -1;
     }
@@ -122,13 +166,16 @@ pid_t spawn_with_output(const std::vector<std::string>& argv,
         if (data[0] >= 0) {
             close(data[0]);
         }
-        exec_child(argv, directory, environment, report[1], data[1]);
+        exec_child(argv, directory, environment, report[1], data[1], in);
     }
 
     const int fork_errno = errno;
     close(report[1]);
     if (data[1] >= 0) {
         close(data[1]);
+    }
+    if (in >= 0) {
+        close(in);
     }
 
     if (pid < 0) {
@@ -171,13 +218,14 @@ pid_t spawn(const std::vector<std::string>& argv, const std::string& directory,
     return spawn_with_output(argv, directory, environment, nullptr);
 }
 
-pid_t spawn_capture(const std::vector<std::string>& argv, int* output)
+pid_t spawn_capture(const std::vector<std::string>& argv, int* output,
+                    const std::string& input)
 {
     if (output == nullptr) {
         errno = EINVAL;
         return -1;
     }
-    return spawn_with_output(argv, "", {}, output);
+    return spawn_with_output(argv, "", {}, output, &input);
 }
 
 pid_t spawn_shell(const std::string& command)

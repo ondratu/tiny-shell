@@ -515,6 +515,9 @@ int exec_impl(lua_State* L)
             options.timeout = delay_of(lua_tonumber(L, -1), 1);
         }
         lua_pop(L, 1);
+        if (!field_string(L, 3, "stdin", options.input)) {
+            return -1;
+        }
     }
     lua_pushvalue(L, 2);
     const int ref = luaL_ref(L, LUA_REGISTRYINDEX);
