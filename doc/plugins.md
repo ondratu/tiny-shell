@@ -5,14 +5,70 @@ a monitor of the processor. A plugin is a few lines of [Lua](https://www.lua.org
 that tiny-shell runs for you; it can show a text or a button in the panel, ask a
 program of the system for what it needs, and have settings of its own.
 
-Two plugins come with tiny-shell:
+Three plugins come with tiny-shell:
 
 | Plugin | What it does | Switched on |
 | ------ | ------------ | ----------- |
 | **Battery** | A battery with the percentage next to it. The icon follows the charge (full, good, low, empty) and has a bolt while the battery charges. A click shows the state in words. Linux, FreeBSD and OpenBSD; a computer without a battery shows nothing. | yes |
+| **Network** | The connection of the computer: a cable, or the Wi-Fi with the strength of its signal. A click lists every adapter with its addresses and speed and the Wi-Fi networks in range, and lets you connect, disconnect and turn an adapter off. Below is what each system can do. | yes |
 | **Weather** | The symbol of the weather and the temperature, from [open-meteo.com](https://open-meteo.com/) (free, no account; needs `curl`). A click opens a window like the one of GNOME: the town, the weather now, the feeling, the humidity, the wind, the pressure and the forecast for the next five days. Nothing changes by itself. | no, it needs a town first |
 
 How to write your own is in [Writing plugins](developers/plugins.md).
+
+## The network
+
+The icon in the panel shows the connection that the computer uses: a cable, or
+the Wi-Fi as a symbol of waves that fill up with the strength of the signal (the
+whole symbol is drawn dimmed and the strength over it). Without a connection it
+shows a Wi-Fi that is off, or a cable that is out. A computer without a network
+card shows nothing. In the settings of the plugin the name of the Wi-Fi can be
+shown next to the icon.
+
+A click opens a window with **every adapter**, one section for each, like the
+main menu:
+
+- **Ethernet**: connected or not, the speed, the name of the connection, the
+  IPv4 and IPv6 addresses (the link-local ones only when there is no other), and
+  a row to turn the cable off and on.
+- **Wi-Fi**: the network that it is connected to, with the signal, the band
+  (2.4, 5 or 6 GHz), the speed, the security and the addresses; **Disconnect**
+  and a row to turn the Wi-Fi off and on. Below, the **networks in range**, the
+  strongest first, with the strength of the signal, the band, a lock when the
+  network has a password and **Saved** for the ones that the computer knows.
+  A click connects; a network that needs a password asks for it in the window.
+
+The window is scrolled when it is higher than the screen (the wheel, Page Up and
+Page Down, the arrows) and follows the changes of the network while it is open.
+The networks are searched for when the window opens and every 15 seconds while
+it is open; nothing is searched for while it is closed, as that costs power.
+
+What the plugin can do depends on the system:
+
+| System | Looks | Changes |
+| ------ | ----- | ------- |
+| Linux with NetworkManager (`nmcli`) | everything above | connect, disconnect, turn on and off, a new network with a password |
+| Linux without it | state, addresses, speed, and the signal (`ip` is needed, `iw` gives the name of the Wi-Fi) | no |
+| FreeBSD, OpenBSD, NetBSD, DragonFly | state, addresses, speed, the name of the Wi-Fi and its signal where `ifconfig` tells it | no, use the tools of the system |
+
+A row that you may not use is shown dimmed with the reason under it: the
+adapter is not managed by NetworkManager (a static address in the configuration
+of the system), the policy of the system does not allow the change for your user,
+or the system is not one that the plugin can change yet. The addresses are
+always shown.
+
+The password goes to `nmcli` on its standard input, not in its arguments, so it
+is not seen in the list of processes, and it is wiped from the window when the
+window closes. NetworkManager saves the network the way it saves the networks
+that other programs add.
+
+Not there yet: networks with a hidden name, the login of an enterprise network
+(802.1X; a saved one can be connected), VPN, and settings of an address. The
+plugin is made of a part that shows (`view.lua`) and one backend for each kind of
+system (`nm.lua`, `sys.lua`, `bsd.lua`), so another system is another file, see
+[Writing plugins](developers/plugins.md#a-bigger-plugin-the-network).
+
+The settings are **Show the name of the Wi-Fi** (no by default) and **Seconds
+between the checks** (10; the window checks every 3 seconds while it is open).
 
 ## Switching plugins on and off
 

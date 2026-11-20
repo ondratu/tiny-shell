@@ -1,0 +1,8 @@
+*:Home Net:86:5180 MHz:433 Mbit/s:WPA2:wlan0
+ :Home Net:70:2437 MHz:130 Mbit/s:WPA2:wlan0
+ :Cafe\: free:60:2462 MHz:130 Mbit/s::wlan0
+ :Work:72:2462 MHz:260 Mbit/s:WPA2 802.1X:wlan0
+ :Neighbour:40:5500 MHz:1170 Mbit/s:WPA1 WPA2:wlan0
+ :Neighbour:55:2412 MHz:130 Mbit/s:WPA1 WPA2:wlan0
+ ::50:2412 MHz:130 Mbit/s:WPA2:wlan0
+ :Other:20:2412 MHz:130 Mbit/s:WEP:wlan1

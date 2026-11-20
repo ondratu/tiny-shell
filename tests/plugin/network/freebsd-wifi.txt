@@ -1,0 +1,23 @@
+# Written by hand after the documented output of FreeBSD (no card to try it on)
+em0: flags=1008843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST,LOWER_UP> metric 0 mtu 1500
+	ether 52:54:00:24:68:74
+	media: Ethernet autoselect (none)
+	status: no carrier
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether 00:1f:3c:aa:bb:cc
+	inet 192.168.1.20 netmask 0xffffff00 broadcast 192.168.1.255
+	inet6 fe80::21f:3cff:feaa:bbcc%wlan0 prefixlen 64 scopeid 0x3
+	groups: wlan
+	ssid "My Home" channel 36 (5180 MHz 11a) bssid 00:11:22:33:44:55
+	regdomain ETSI country CZ authmode WPA2/802.11i privacy ON deftxkey UNDEF
+	txpower 17 bmiss 7 scanvalid 60 protmode CTS wme roaming MANUAL
+	parent interface: iwn0
+	media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11a
+	status: associated
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+wlan1: flags=8843<UP,BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether 00:1f:3c:aa:bb:dd
+	groups: wlan
+	ssid "" channel 1 (2412 MHz 11g)
+	media: IEEE 802.11 Wireless Ethernet autoselect (autoselect)
+	status: no carrier

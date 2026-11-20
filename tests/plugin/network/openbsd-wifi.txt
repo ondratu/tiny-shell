@@ -1,0 +1,17 @@
+# Written by hand after the documented output of OpenBSD (no card to try it on)
+iwx0: flags=808843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST,AUTOCONF6TEMP,AUTOCONF6,AUTOCONF4> mtu 1500
+	lladdr 00:aa:bb:cc:dd:ee
+	index 2 priority 4 llprio 3
+	groups: wlan egress
+	media: IEEE802.11 autoselect (HT-MCS7 mode 11n)
+	status: active
+	ieee80211: nwid "My Home" chan 6 bssid 00:11:22:33:44:55 79% wpaprotos wpa2 wpaakms psk wpaciphers ccmp wpagroupcipher ccmp
+	inet6 fe80::2aa:bbff:fecc:ddee%iwx0 prefixlen 64 scopeid 0x2
+	inet 192.168.1.20 netmask 0xffffff00 broadcast 192.168.1.255
+iwn0: flags=808802<BROADCAST,SIMPLEX,MULTICAST,AUTOCONF6TEMP,AUTOCONF6,AUTOCONF4> mtu 1500
+	lladdr 00:aa:bb:cc:dd:ef
+	index 3 priority 4 llprio 3
+	groups: wlan
+	media: IEEE802.11 autoselect (OFDM54 mode 11g)
+	status: no network
+	ieee80211: nwid ""

@@ -1,0 +1,8 @@
+Connected to 00:11:22:33:44:55 (on wlan0)
+	SSID: Home Net
+	freq: 5180
+	RX: 1234 bytes (12 packets)
+	TX: 4321 bytes (21 packets)
+	signal: -45 dBm
+	rx bitrate: 433.3 MBit/s VHT-MCS 4 80MHz short GI VHT-NSS 2
+	tx bitrate: 433.3 MBit/s VHT-MCS 4 80MHz short GI VHT-NSS 2

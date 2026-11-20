@@ -457,6 +457,11 @@ enabled = yes
 percent = no
 interval = 60
 
+[plugin.network]
+enabled = yes
+ssid = yes
+interval = 10
+
 [plugin.weather]
 enabled = yes
 location = Prague

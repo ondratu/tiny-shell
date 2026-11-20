@@ -1,0 +1,9 @@
+wlan0:wifi:connected:Home Net
+enp3s0:ethernet:connected:Wired connection 1
+wlan1:wifi:unavailable:
+lo:loopback:connected (externally):lo
+virbr0:bridge:connected (externally):virbr0
+68\:4A\:E9\:33\:94\:F7:bt:disconnected:
+p2p-dev-wlan0:wifi-p2p:disconnected:
+eth9:ethernet:unmanaged:
+eth8:ethernet:connecting (getting IP configuration):Wired connection 2

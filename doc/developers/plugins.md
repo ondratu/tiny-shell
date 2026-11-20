@@ -392,6 +392,41 @@ A click on the button changes the text and opens a window under it. Its
 `plugin.ini` has two settings, `text` and `format` (a choice of `clicks` and
 `time`); see the file.
 
+## A bigger plugin: the network
+
+The plugin `network` (`data/tiny-shell/plugins/network`) is the example of a
+plugin that has more than one file, rows that do something and one part for each
+system. Its files are loaded with `require`:
+
+| File | What it is |
+| ---- | ---------- |
+| `plugin.lua` | The main file: chooses the backend, makes the widget, the timers and the actions of the rows. |
+| `model.lua` | What does not depend on the system: the icons of the signal, the bands, the speed, which adapter is the main one. |
+| `view.lua` | Makes the icon of the panel and the window from a list of adapters. It does not talk to the system, so a test looks at what it makes. |
+| `nm.lua`, `sys.lua`, `bsd.lua` | The backends: Linux with `nmcli`, Linux with `/sys` and `ip`, the BSD systems with `ifconfig`. A backend gives `read(done)` and, when the system lets the user change things, `scan`, `toggle`, `connect` and `disconnect`. |
+| `util.lua` | Small helpers. |
+
+A backend reads the system and calls `done(adapters)`, a list of tables with the
+state, the addresses and the speed of an adapter, what the user may do (`can_toggle`,
+`can_connect`) and why not (`reason`); `model.lua` describes them. A new system is
+a new backend that makes the same tables, and the window needs no change. The
+rows that the user may not use are dimmed (`dim = true`), with the reason in a row
+of their own.
+
+Two things that the plugin does and other plugins may copy: it uses
+`tiny.has_icon` to take the icon of a lock that a theme has and another one
+when it has not, and it shows a late answer (the list of networks that was
+searched for) only when `w:popup_open()` is true, with the `id` of every row
+that can move, so the window keeps the row that is lit and the text typed.
+
+The tests (`tests/plugin/test_network.cc`) copy the files into a plugin of
+their own, replace `plugin.lua` by a script that looks at the model and the
+parsers, and put scripts that print the files of `tests/plugin/network/` in
+place of `nmcli`, `ip` and `iw`, so no network is touched and no card is needed.
+The files with the output of `ifconfig` of FreeBSD, OpenBSD and NetBSD are the
+output of real machines; the ones with a Wi-Fi are written by hand after the
+documented output.
+
 ## Trying a plugin
 
 ```sh
