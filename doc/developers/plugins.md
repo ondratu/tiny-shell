@@ -192,7 +192,7 @@ only `icon_under`. The batteries that charge have their own icons with the bolt:
 
 A click on a button can open a window with the details, like the weather of GNOME
 Shell does. It opens under the widget, inside of the panel, and a click anywhere
-else closes it. The window only shows information; every field is optional.
+else closes it, so does Escape. Every field is optional.
 
 ```lua
 button:popup{
@@ -216,6 +216,41 @@ again changes the window that is open. It also opens it, takes the keyboard focu
 and puts the window over the others, so a plugin that wants to show a late answer
 asks `w:popup_open()` first and calls `popup` only when it is `true`. A button
 with text but without an icon has the text in the middle; a label has it at the left.
+
+A row can have a `badge`, a small icon that is drawn before the `value` (a
+lock for a network that has a password).
+
+**Rows that do something.** A row with `on_click` is lit under the pointer and
+when the arrow keys (or Tab) come to it; a click or Return calls the function. A
+window is not closed by a click on a row: close it with `w:close_popup()` when
+the plugin wants to. A row with `dim = true` is shown weaker and nothing
+happens on it.
+
+```lua
+{icon = "network-wireless-signal-good", label = "Home", value = "WPA2",
+ on_click = function() connect("Home") end}
+```
+
+**A field to type in.** A row with `entry = true` has a field instead of the
+`value`; its `label` says what to type. The field has the keys as soon as the
+window opens (the arrows leave it), `secret = true` shows dots, and Return calls
+`on_submit(text)`. The text is wiped when the window closes. A window has one
+field at most.
+
+```lua
+{label = "Password", entry = true, secret = true, id = "password",
+ on_submit = function(text) connect("Home", text) end}
+```
+
+**Showing the window again.** When a plugin calls `popup` while the window is
+open (an answer that came late), the window keeps what the user was doing: the
+scrolling, the row that is lit and the text in the field. It knows a row by its
+`id`, or by the `label` when there is no `id`; so give a row that can move in the
+list the same `id` every time.
+
+**A window that is too high** (a long list) is as high as the screen has room
+for and is scrolled by the wheel, Page Up and Page Down, and by the arrows that
+move the lit row; a thin bar at the right shows where it is.
 
 ### Settings that change
 

@@ -663,6 +663,133 @@ TEST_F(HostTest, a_window_with_a_wrong_description_is_an_error_of_the_plugin)
     }
 }
 
+namespace {
+
+//! The newest window of a plugin that is open (a child of the root)
+::Window open_window_of_plugin()
+{
+    const auto roots = children_of(root_window());
+    for (auto it = roots.rbegin(); it != roots.rend(); ++it) {
+        XWindowAttributes at;
+        XGetWindowAttributes(tiny::get_display(), *it, &at);
+        if (at.map_state == IsViewable && at.override_redirect != 0 &&
+            at.width >= 240) {
+            return *it;
+        }
+    }
+    return None;
+}
+
+} // namespace
+
+TEST_F(HostTest, the_rows_of_a_window_call_the_functions_of_the_plugin)
+{
+    tree.add("rows",
+             "b = tiny.panel.button{text = 'go', on_click = function()\n"
+             "  b:popup{sections = {{heading = 'H', rows = {\n"
+             "    {label = 'one', value = '1', on_click = function()\n"
+             "      tiny.log('one clicked')\n"
+             "    end},\n"
+             "    {label = 'off', dim = true, on_click = function()\n"
+             "      tiny.log('dim clicked')\n"
+             "    end},\n"
+             "    {label = 'Password', entry = true, secret = true,\n"
+             "     id = 'pw', on_submit = function(text)\n"
+             "      tiny.log('typed ' .. text)\n"
+             "    end},\n"
+             "  }}}}\n"
+             "end}\n");
+    const auto before = children_of(panel.get_window());
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    const auto after = children_of(panel.get_window());
+    ASSERT_EQ(after.size(), before.size() + 1);
+    send(after.back(), make_event(EnterNotify));
+    send(after.back(), make_event(ButtonRelease));
+    const ::Window window = open_window_of_plugin();
+    ASSERT_NE(window, None);
+
+    type_text(window, "s3");
+    type_key(window, XK_Return); // the field has the keys at first
+    EXPECT_TRUE(logged("plugin rows: typed s3"));
+    type_key(window, XK_Up); // from the field to the first row
+    type_key(window, XK_Return);
+    EXPECT_TRUE(logged("one clicked"));
+    EXPECT_FALSE(logged("dim clicked"));
+    EXPECT_TRUE(host.error_of("rows").empty());
+}
+
+TEST_F(HostTest, an_action_may_destroy_its_widget_and_show_the_window_again)
+{
+    tree.add("act", "b = tiny.panel.button{text = 'go', on_click = function()\n"
+                    "  b:popup{sections = {{rows = {\n"
+                    "    {label = 'again', on_click = function()\n"
+                    "      b:popup{title = 'second', sections = {{rows = {\n"
+                    "        {label = 'bye', on_click = function()\n"
+                    "          b:destroy()\n"
+                    "          tiny.log('destroyed')\n"
+                    "        end}}}}}\n"
+                    "    end}}}}}\n"
+                    "end}\n");
+    const auto before = children_of(panel.get_window());
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    const auto after = children_of(panel.get_window());
+    ASSERT_EQ(after.size(), before.size() + 1);
+    send(after.back(), make_event(EnterNotify));
+    send(after.back(), make_event(ButtonRelease));
+    ::Window window = open_window_of_plugin();
+    ASSERT_NE(window, None);
+    type_key(window, XK_Down);
+    type_key(window, XK_Return); // shows the window again
+    window = open_window_of_plugin();
+    ASSERT_NE(window, None);
+    type_key(window, XK_Down);
+    type_key(window, XK_Return); // destroys the widget under the window
+    EXPECT_TRUE(logged("destroyed"));
+    EXPECT_TRUE(host.error_of("act").empty());
+    // the widget is deleted a moment later, not under its own function
+    EXPECT_TRUE(loop.run_until([&] {
+        return children_of(panel.get_window()).size() == before.size();
+    }));
+}
+
+TEST_F(HostTest, a_row_with_a_wrong_action_or_flag_is_an_error_of_the_plugin)
+{
+    const std::vector<std::pair<std::string, std::string>> wrong = {
+            {"{label = 'a', on_click = 5}", "on_click must be a function"},
+            {"{label = 'a', on_submit = 'x'}", "on_submit must be a function"},
+            {"{label = 'a', dim = 'yes'}", "dim must be true or false"},
+            {"{label = 'a', entry = 1}", "entry must be true or false"},
+            {"{label = 'a', secret = {}}", "secret must be true or false"},
+            {"{label = 'a', id = {}}", "id must be a text"},
+            {"{label = 'a', on_click = f, on_submit = f}", "not both"},
+    };
+    for (const auto& [row, message] : wrong) {
+        PluginTree own;
+        own.add("bad", "local f = function() end\n"
+                       "b = tiny.panel.button{text = 'x'}\n"
+                       "b:popup{sections = {{rows = {" +
+                               row + "}}}}\n");
+        PluginHost host(services);
+        host.apply(own.find(), config);
+        EXPECT_NE(host.error_of("bad").find(message), std::string::npos)
+                << row << ": " << host.error_of("bad");
+    }
+}
+
+TEST_F(HostTest, a_window_has_one_entry_at_most)
+{
+    tree.add("two",
+             "b = tiny.panel.button{text = 'x'}\n"
+             "local ok, e = pcall(b.popup, b, {sections = {{rows = {\n"
+             "  {label = 'a', entry = true}, {label = 'b', entry = true}}}}})\n"
+             "tiny.log(tostring(ok), e)\n");
+    PluginHost host(services);
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(logged("false a window has one row with an entry at most"));
+}
+
 TEST_F(HostTest, a_window_has_a_limit_of_the_sections_and_rows)
 {
     tree.add("many",
