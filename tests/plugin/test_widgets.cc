@@ -406,6 +406,17 @@ TEST_F(PopupTest, a_late_answer_keeps_the_lit_row_by_its_id)
     EXPECT_FALSE(popup.selected_row().valid());
 }
 
+TEST_F(PopupTest, a_field_that_appears_in_an_open_window_gets_the_keys)
+{
+    show(many_rows(3));
+    move_to(at(0, 1));
+    ASSERT_EQ(popup.selected_row(), (RowRef{0, 1}));
+    show(two_sections()); // the user clicked a network that needs a password
+    EXPECT_EQ(popup.selected_row(), (RowRef{1, 1}));
+    type_text(popup.get_window(), "pw");
+    EXPECT_EQ(popup.typed(), "pw");
+}
+
 TEST_F(PopupTest, an_action_may_show_the_window_again)
 {
     show(many_rows(3));
