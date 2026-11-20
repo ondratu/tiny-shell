@@ -263,6 +263,8 @@ class PluginPopup : public tiny::Popover {
     void on_key(const XEvent& e);
     void on_press(const XEvent& e);
     void on_motion(const XEvent& e);
+    void paint(int from, int to);
+    void repaint_rows(RowRef a, RowRef b);
     void select(RowRef row);
     void move_selection(int step);
     void scroll_by(int delta);

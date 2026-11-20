@@ -558,9 +558,17 @@ std::string PluginPopup::field_text(size_t* cursor) const
 
 void PluginPopup::on_expose(const XEvent&, void*)
 {
+    paint(0, view_height);
+}
+
+//! Only what is between `from` and `to` (pixels of the window) is cleared and
+//! drawn again, so a change of the lit row does not make the window flash
+void PluginPopup::paint(int from, int to)
+{
     if (!is_maped) {
         return;
     }
+    const bool whole = from <= 0 && to >= view_height;
     const uint8_t state = get_theme_state();
     const Style& style = get_style();
     const uint32_t fg = style.get_fg(state);
@@ -576,16 +584,27 @@ void PluginPopup::on_expose(const XEvent&, void*)
     const int off = -scroll; // the content is moved up by what is scrolled
 
     XSetWindowBackground(display, window, bg);
-    XClearWindow(display, window);
+    if (whole) {
+        XClearWindow(display, window);
+    } else {
+        XClearArea(display, window, 0, from,
+                   static_cast<unsigned>(layout.width),
+                   static_cast<unsigned>(std::max(to - from, 0)), False);
+    }
     const int screen = XDefaultScreen(display);
     XftDraw* draw =
             XftDrawCreate(display, window, XDefaultVisual(display, screen),
                           XDefaultColormap(display, screen));
+    const XRectangle clip = {
+            0, static_cast<short>(from),
+            static_cast<unsigned short>(layout.width),
+            static_cast<unsigned short>(std::max(to - from, 0))};
+    XftDrawSetClipRectangles(draw, 0, 0, &clip, 1);
     const Ink ink(display, fg);
     const Ink faint(display, soft);
     const Ink lit(display, mixed(bg, fg, 16));
 
-    if (layout.header_height > 0) {
+    if (whole && layout.header_height > 0) {
         int x = pad;
         const int top = pad + off;
         if (!shown.icon.empty() && icons != nullptr) {
@@ -607,7 +626,7 @@ void PluginPopup::on_expose(const XEvent&, void*)
     }
     for (size_t i = 0; i < shown.sections.size(); ++i) {
         const PopupSection& section = shown.sections[i];
-        if (!section.heading.empty()) {
+        if (whole && !section.heading.empty()) {
             text_at(draw, faint, font, pad, layout.headings[i].y + off,
                     layout.headings[i].height - gap / 2, section.heading);
         }
@@ -618,8 +637,9 @@ void PluginPopup::on_expose(const XEvent&, void*)
             const PopupRow& row = section.rows[r];
             const PopupLayout::Line& at = layout.rows[i][r];
             const int top = at.y + off;
-            if (top + at.height < 0 || top > view_height) {
-                continue; // scrolled away
+            if (top + at.height <= from || top >= to || top + at.height < 0 ||
+                top > view_height) {
+                continue; // scrolled away, or not what is drawn again
             }
             const bool on = selected ==
                             RowRef{static_cast<int>(i), static_cast<int>(r)};
@@ -652,7 +672,8 @@ void PluginPopup::on_expose(const XEvent&, void*)
             }
         }
     }
-    if (layout.height > view_height) { // where the window is in the content
+    if (whole &&
+        layout.height > view_height) { // where the window is in the content
         const int bar =
                 std::max(2 * pad, view_height * view_height / layout.height);
         const int at = (view_height - bar) * scroll /
@@ -667,8 +688,23 @@ void PluginPopup::select(RowRef row)
     if (row == selected) {
         return;
     }
+    const RowRef before = selected;
     selected = row;
-    on_expose(XEvent(), nullptr);
+    repaint_rows(before, row);
+}
+
+//! Draws two rows again (the one that is not lit now and the one that is)
+void PluginPopup::repaint_rows(RowRef a, RowRef b)
+{
+    for (const RowRef& row : {a, b}) {
+        if (!row.valid()) {
+            continue;
+        }
+        const PopupLayout::Line& at =
+                layout.rows[static_cast<size_t>(row.section)]
+                           [static_cast<size_t>(row.row)];
+        paint(at.y - scroll, at.y - scroll + at.height);
+    }
 }
 
 void PluginPopup::reveal_selected()
@@ -702,9 +738,15 @@ void PluginPopup::move_selection(int step)
                 0, std::min(count - 1,
                             static_cast<int>(found - targets.begin()) + step));
     }
+    const RowRef before = selected;
+    const int old_scroll = scroll;
     selected = targets[static_cast<size_t>(index)];
     reveal_selected();
-    on_expose(XEvent(), nullptr);
+    if (scroll != old_scroll) {
+        on_expose(XEvent(), nullptr);
+    } else {
+        repaint_rows(before, selected);
+    }
 }
 
 void PluginPopup::scroll_by(int delta)
