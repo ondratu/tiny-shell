@@ -544,6 +544,7 @@ int exec_impl(lua_State* L)
                 luaL_unref(p->L, LUA_REGISTRYINDEX, ref);
             },
             options);
+    std::fill(options.input.begin(), options.input.end(), '\0'); // a password
     if (!started) {
         // told later, as when the program had run: the function is never
         // called while the plugin is still in the call that asked for it

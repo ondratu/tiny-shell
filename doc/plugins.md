@@ -61,6 +61,10 @@ is not seen in the list of processes, and it is wiped from the window when the
 window closes. NetworkManager saves the network the way it saves the networks
 that other programs add.
 
+A network is **Saved** when NetworkManager has a connection with the name of the
+network (the name that it gives a connection it makes). A new network that does
+not connect, for example for a wrong password, is not kept.
+
 Not there yet: networks with a hidden name, the login of an enterprise network
 (802.1X; a saved one can be connected), VPN, and settings of an address. The
 plugin is made of a part that shows (`view.lua`) and one backend for each kind of

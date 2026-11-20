@@ -272,15 +272,42 @@ PopupContent many_rows(int count)
 
 TEST_F(PopupTest, the_pointer_lights_a_row_that_can_be_used)
 {
-    show(two_sections());
-    EXPECT_EQ(popup.selected_row(), (RowRef{1, 1})); // the field has the keys
+    PopupContent content = two_sections();
+    content.sections[1].rows.pop_back(); // without the field
+    show(content);
+    EXPECT_FALSE(popup.selected_row().valid());
     move_to(at(0, 0));
     EXPECT_EQ(popup.selected_row(), (RowRef{0, 0}));
     move_to(at(0, 1)); // a row that only shows something
     EXPECT_EQ(popup.selected_row(), (RowRef{0, 0}));
     move_to(at(0, 2)); // a dim one
     EXPECT_EQ(popup.selected_row(), (RowRef{0, 0}));
+    move_to(at(1, 0));
+    EXPECT_EQ(popup.selected_row(), (RowRef{1, 0}));
     EXPECT_TRUE(actions.empty()); // moving does nothing
+}
+
+TEST_F(PopupTest, the_pointer_does_not_take_the_keys_from_a_field)
+{
+    show(two_sections());
+    EXPECT_EQ(popup.selected_row(), (RowRef{1, 1})); // the field has the keys
+    move_to(at(0, 0));
+    EXPECT_EQ(popup.selected_row(), (RowRef{1, 1})); // and keeps them
+    type_text(popup.get_window(), "ok");
+    EXPECT_EQ(popup.typed(), "ok");
+    press(at(0, 0)); // a click leaves it
+    EXPECT_EQ(popup.selected_row(), (RowRef{0, 0}));
+}
+
+TEST_F(PopupTest, return_in_a_field_without_an_action_keeps_the_text)
+{
+    PopupContent content = two_sections();
+    content.sections[1].rows[1].action = -1;
+    show(content);
+    type_text(popup.get_window(), "keep");
+    key(XK_Return);
+    EXPECT_EQ(popup.typed(), "keep");
+    EXPECT_TRUE(actions.empty());
 }
 
 TEST_F(PopupTest, a_click_calls_the_action_of_the_row)
