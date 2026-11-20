@@ -134,8 +134,12 @@ comparison with other window managers is in the [comparison](comparison.md).
   system, a plugin of the user replaces a system one), each one is switched on
   and off alone and can have settings, which `tiny-settings` shows in the
   section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD; an icon that follows the
-  charge, with a bolt while it charges) and a weather (the symbol and the
-  temperature, a click opens the details and the forecast) are included; see [Plugins](plugins.md). Optional at
+  charge, with a bolt while it charges), a network (a cable or the Wi-Fi with the
+  strength of the signal; a click lists the adapters with their addresses and
+  the Wi-Fi networks in range and connects to one, with NetworkManager) and a
+  weather (the symbol and the temperature, a click opens the details and the
+  forecast) are included; see [Plugins](plugins.md). The window of a plugin can
+  have rows that are clicked, a field for a password and a scrolled list. Optional at
   build time (`make LUA=no`).
 - **Other:** one `poll()` event loop for X events, signals and timers (finished
   children are collected by a `SIGCHLD` handler), commands of Restart and

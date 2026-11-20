@@ -18,7 +18,7 @@
   (no Lua is vendored). Without it `lib/plugin/host_stub.cc` is built instead of
   `host.cc`, the plugins are listed in `tiny-settings` but nothing runs, and the
   program is smaller. Lua is on by default because the plugins are what gives the
-  panel a battery or a weather, and it costs no more than a shared library that
+  panel a battery, a network or a weather, and it costs no more than a shared library that
   nothing needs at run time when no plugin is switched on.
 - Optional at build time, now: **libpam** (the make variable `PAM=auto|yes|no`;
   `auto` uses it when `<security/pam_appl.h>` and `-lpam` are found, there is no

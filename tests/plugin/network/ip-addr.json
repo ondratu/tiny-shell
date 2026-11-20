@@ -1,0 +1,4 @@
+[{"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"addr_info":[{"family":"inet","local":"127.0.0.1","prefixlen":8,"scope":"host"},{"family":"inet6","local":"::1","prefixlen":128,"scope":"host"}]},
+{"ifindex":2,"ifname":"enp3s0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"addr_info":[{"family":"inet","local":"192.168.1.23","prefixlen":24,"scope":"global","label":"enp3s0"},{"family":"inet6","local":"2a01:db8::7c1","prefixlen":64,"scope":"global"},{"family":"inet6","local":"fe80::1c2","prefixlen":64,"scope":"link"}]},
+{"ifindex":3,"ifname":"wlan0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"addr_info":[{"family":"inet","local":"10.0.0.15","prefixlen":24,"scope":"global"},{"family":"inet6","local":"fe80::9a","prefixlen":64,"scope":"link"}]},
+{"ifindex":4,"ifname":"down0","flags":["BROADCAST","MULTICAST"],"addr_info":[]}]

@@ -2,6 +2,8 @@
 
 #include <fontconfig/fontconfig.h>
 
+#include <X11/keysym.h>
+
 #include <algorithm>
 
 #include "display.h"
@@ -55,6 +57,45 @@ void text_at(XftDraw* draw, const Ink& ink, XftFont* font, int x, int top,
                       static_cast<int>(text.size()));
 }
 
+//! A filled rectangle (Xft wants unsigned sizes)
+void fill_rect(XftDraw* draw, const XftColor& color, int x, int y, int w, int h)
+{
+    XftDrawRect(draw, &color, x, y, static_cast<unsigned>(std::max(w, 0)),
+                static_cast<unsigned>(std::max(h, 0)));
+}
+
+//! The field of a row: a frame and the text in it, with the cursor when the
+//! field has the keys. The end of the text is what is shown when it is longer
+//! than the field.
+void paint_field(::Display* display, XftDraw* draw, const Ink& ink,
+                 const Ink& faint, XftFont* font, int field_width, int right,
+                 int top, int height, bool focus, std::string text,
+                 size_t cursor)
+{
+    const int fx = right - field_width;
+    const int fy = top + 1;
+    const int fh = height - 2;
+    for (const Rect& edge :
+         {Rect{fx, fy, field_width, 1}, Rect{fx, fy + fh - 1, field_width, 1},
+          Rect{fx, fy, 1, fh}, Rect{fx + field_width - 1, fy, 1, fh}}) {
+        fill_rect(draw, faint.color, edge.x, edge.y, edge.width, edge.height);
+    }
+    while (!text.empty() && extent(display, font, text) > field_width - 8) {
+        size_t drop = 1;
+        while (drop < text.size() &&
+               (static_cast<unsigned char>(text[drop]) & 0xC0U) == 0x80U) {
+            ++drop;
+        }
+        text.erase(0, drop);
+        cursor = cursor > drop ? cursor - drop : 0;
+    }
+    text_at(draw, ink, font, fx + 4, fy, fh, text);
+    if (focus) {
+        const int x = fx + 4 + extent(display, font, text.substr(0, cursor));
+        fill_rect(draw, ink.color, x, fy + 3, 1, fh - 6);
+    }
+}
+
 XftFont* scaled_font(::Display* display, const XftFont* base, double factor)
 {
     FcPattern* pattern = FcPatternDuplicate(base->pattern);
@@ -94,6 +135,19 @@ int ItemIcon::width_for(int height) const
     }
     const int size = size_for(height);
     return size + std::max(3, size / 4);
+}
+
+uint32_t mixed(uint32_t base, uint32_t towards, int percent)
+{
+    uint32_t out = 0;
+    for (const unsigned shift : {16U, 8U, 0U}) {
+        const auto a = static_cast<int>((base >> shift) & 0xFFU);
+        const auto b = static_cast<int>((towards >> shift) & 0xFFU);
+        out |= static_cast<uint32_t>((a * (100 - percent) + b * percent + 50) /
+                                     100)
+               << shift;
+    }
+    return out;
 }
 
 uint32_t dimmed(uint32_t foreground, uint32_t background)
@@ -212,6 +266,7 @@ popup_layout(const PopupContent& content, int line, int icon_size, int big_line,
     const int pad = std::max(10, line * 4 / 5);
     const int gap = pad / 2;
     PopupLayout out;
+    out.field_width = text_width("mmmmmmmmmmmmmmmm");
     int wide = 240;
     int y = pad;
 
@@ -247,9 +302,12 @@ popup_layout(const PopupContent& content, int line, int icon_size, int big_line,
             one.height = std::max(line, icon_size) + gap;
             y += one.height;
             rows.push_back(one);
+            const int badge = row.badge.empty() ? 0 : icon_size + gap;
+            const int value =
+                    row.entry ? out.field_width : text_width(row.value) + badge;
             wide = std::max(wide, 2 * pad + (icons ? icon_size + gap : 0) +
                                           text_width(row.label) + 2 * pad +
-                                          text_width(row.value));
+                                          value);
         }
         out.rows.push_back(std::move(rows));
         y += gap;
@@ -259,18 +317,86 @@ popup_layout(const PopupContent& content, int line, int icon_size, int big_line,
     return out;
 }
 
+std::vector<RowRef> popup_targets(const PopupContent& content)
+{
+    std::vector<RowRef> found;
+    for (size_t s = 0; s < content.sections.size(); ++s) {
+        const auto& rows = content.sections[s].rows;
+        for (size_t r = 0; r < rows.size(); ++r) {
+            if (rows[r].target()) {
+                found.push_back({static_cast<int>(s), static_cast<int>(r)});
+            }
+        }
+    }
+    return found;
+}
+
+RowRef popup_row_at(const PopupLayout& layout, const PopupContent& content,
+                    int y)
+{
+    for (const RowRef& row : popup_targets(content)) {
+        const auto s = static_cast<size_t>(row.section);
+        const auto r = static_cast<size_t>(row.row);
+        if (s >= layout.rows.size() || r >= layout.rows[s].size()) {
+            continue;
+        }
+        const PopupLayout::Line& line = layout.rows[s][r];
+        if (y >= line.y && y < line.y + line.height) {
+            return row;
+        }
+    }
+    return {};
+}
+
+int clamp_scroll(int scroll, int content_height, int view_height)
+{
+    return std::max(0, std::min(scroll, content_height - view_height));
+}
+
+int scroll_to_show(int scroll, int top, int bottom, int view_height)
+{
+    if (top < scroll || bottom - top >= view_height) {
+        return top;
+    }
+    if (bottom > scroll + view_height) {
+        return bottom - view_height;
+    }
+    return scroll;
+}
+
+namespace {
+
+//! The number of characters (not bytes) of a UTF-8 text
+size_t characters(const std::string& text)
+{
+    return static_cast<size_t>(
+            std::count_if(text.begin(), text.end(), [](char c) {
+                return (static_cast<unsigned char>(c) & 0xC0U) != 0x80U;
+            }));
+}
+
+//! The longest text that a field takes, in bytes
+constexpr size_t field_limit = 256;
+
+} // namespace
+
 PluginPopup::PluginPopup(wm::SymbolicIcons* icons_arg):
     tiny::Popover(1, 1), icons(icons_arg)
 {
     name = "plugin_popup";
     set_style_override(&wm::shell_theme.panel_widgets);
+    field.reserve(field_limit);
 }
 
 PluginPopup::~PluginPopup()
 {
     if (event_done) {
         disconnect(Expose);
+        disconnect(KeyPress);
+        disconnect(ButtonPress);
+        disconnect(MotionNotify);
     }
+    field.wipe();
     close_font();
 }
 
@@ -283,10 +409,39 @@ void PluginPopup::close_font()
     big_font = nullptr;
 }
 
+void PluginPopup::realize(::Window root, int x, int y)
+{
+    tiny::Popover::realize(root, x, y);
+    input = std::make_unique<InputMethod>(display, window);
+}
+
 void PluginPopup::set_events(long mask)
 {
-    tiny::Popover::set_events(mask | ExposureMask);
+    tiny::Popover::set_events(mask | ExposureMask | KeyPressMask |
+                              ButtonPressMask | PointerMotionMask);
     connect(Expose, [this](const XEvent& e) { on_expose(e, nullptr); });
+    connect(KeyPress, [this](const XEvent& e) { on_key(e); });
+    connect(ButtonPress, [this](const XEvent& e) { on_press(e); });
+    connect(MotionNotify, [this](const XEvent& e) { on_motion(e); });
+}
+
+void PluginPopup::unmap()
+{
+    field.wipe(); // a password is not kept for the next time
+    field_key.clear();
+    tiny::Popover::unmap();
+}
+
+const PopupRow* PluginPopup::row_of(RowRef row) const
+{
+    if (!row.valid() ||
+        static_cast<size_t>(row.section) >= shown.sections.size()) {
+        return nullptr;
+    }
+    const auto& rows = shown.sections[static_cast<size_t>(row.section)].rows;
+    return static_cast<size_t>(row.row) < rows.size()
+                   ? &rows[static_cast<size_t>(row.row)]
+                   : nullptr;
 }
 
 void PluginPopup::open(const PopupContent& content, ::Window anchor,
@@ -300,6 +455,7 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
 
     XWindowAttributes at;
     XWindowAttributes inside;
+    XWindowAttributes screen;
     int ax = 0;
     int ay = 0;
     int bx = 0;
@@ -307,23 +463,69 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
     ::Window ignored = None;
     if (XGetWindowAttributes(display, anchor, &at) == 0 ||
         XGetWindowAttributes(display, bounds, &inside) == 0 ||
+        XGetWindowAttributes(display, parent, &screen) == 0 ||
         XTranslateCoordinates(display, anchor, parent, 0, 0, &ax, &ay,
                               &ignored) == 0 ||
         XTranslateCoordinates(display, bounds, parent, 0, 0, &bx, &by,
                               &ignored) == 0) {
         return;
     }
+
+    // What stays when a window that is open is shown again (an answer that
+    // came late): the lit row, the text typed in the field and the place
+    const bool again = is_maped;
+    std::string lit;
+    if (again) {
+        if (const PopupRow* row = row_of(selected)) {
+            lit = row->key();
+        }
+    } else {
+        field.wipe();
+        field_key.clear();
+        scroll = 0;
+    }
     shown = content;
+    selected = {};
+    std::string entry_key;
+    for (const RowRef& row : popup_targets(shown)) {
+        const PopupRow* const one = row_of(row);
+        if (one->entry && entry_key.empty()) {
+            entry_key = one->key();
+            selected = row; // the user goes to type
+        }
+    }
+    // a field that was not there before gets the keys, whatever was lit
+    const bool new_field = !entry_key.empty() && entry_key != field_key;
+    if (entry_key != field_key) {
+        field.wipe();
+        field_key = entry_key;
+    }
+    if (again && !lit.empty() && !new_field) {
+        for (const RowRef& row : popup_targets(shown)) {
+            if (row_of(row)->key() == lit) {
+                selected = row;
+            }
+        }
+    }
+
+    line_height = font->ascent + font->descent;
     layout = popup_layout(
-            shown, font->ascent + font->descent,
-            ItemIcon::size_for(wm::shell_theme.panel),
+            shown, line_height, ItemIcon::size_for(wm::shell_theme.panel),
             big->ascent + big->descent, inside.width - 2 * get_border(),
             [&](const std::string& s) { return extent(display, font, s); },
             [&](const std::string& s) { return extent(display, big, s); });
-    resize(layout.width, layout.height);
+    // a window that does not fit under the widget is scrolled
+    const int pad = std::max(10, line_height * 4 / 5);
+    const int room = screen.height - (ay + at.height) - 2 * get_border() - pad;
+    view_height = std::min(layout.height, std::max(room, 4 * line_height));
+    scroll = clamp_scroll(scroll, layout.height, view_height);
+    resize(layout.width, view_height);
     // the server tells the size later, popup() needs it now
     width = layout.width;
-    height = layout.height;
+    height = view_height;
+    if (!again) {
+        reveal_selected();
+    }
     // under the widget, but inside of the panel
     int left = ax + at.width / 2 - layout.width / 2;
     left = std::max(bx, std::min(left, bx + inside.width - layout.width -
@@ -332,11 +534,41 @@ void PluginPopup::open(const PopupContent& content, ::Window anchor,
     on_expose(XEvent(), nullptr);
 }
 
+std::string PluginPopup::field_text(size_t* cursor) const
+{
+    const std::string& text = field.text();
+    const bool secret = std::any_of(
+            shown.sections.begin(), shown.sections.end(),
+            [](const PopupSection& section) {
+                return std::any_of(
+                        section.rows.begin(), section.rows.end(),
+                        [](const PopupRow& r) { return r.entry && r.secret; });
+            });
+    if (!secret) {
+        *cursor = field.cursor();
+        return text;
+    }
+    std::string dots;
+    for (size_t i = 0; i < characters(text); ++i) {
+        dots += "•";
+    }
+    *cursor = characters(text.substr(0, field.cursor())) * 3;
+    return dots;
+}
+
 void PluginPopup::on_expose(const XEvent&, void*)
+{
+    paint(0, view_height);
+}
+
+//! Only what is between `from` and `to` (pixels of the window) is cleared and
+//! drawn again, so a change of the lit row does not make the window flash
+void PluginPopup::paint(int from, int to)
 {
     if (!is_maped) {
         return;
     }
+    const bool whole = from <= 0 && to >= view_height;
     const uint8_t state = get_theme_state();
     const Style& style = get_style();
     const uint32_t fg = style.get_fg(state);
@@ -349,19 +581,32 @@ void PluginPopup::on_expose(const XEvent&, void*)
     const int pad = std::max(10, line * 4 / 5);
     const int gap = pad / 2;
     const int right = layout.width - pad;
+    const int off = -scroll; // the content is moved up by what is scrolled
 
     XSetWindowBackground(display, window, bg);
-    XClearWindow(display, window);
+    if (whole) {
+        XClearWindow(display, window);
+    } else {
+        XClearArea(display, window, 0, from,
+                   static_cast<unsigned>(layout.width),
+                   static_cast<unsigned>(std::max(to - from, 0)), False);
+    }
     const int screen = XDefaultScreen(display);
     XftDraw* draw =
             XftDrawCreate(display, window, XDefaultVisual(display, screen),
                           XDefaultColormap(display, screen));
+    const XRectangle clip = {
+            0, static_cast<short>(from),
+            static_cast<unsigned short>(layout.width),
+            static_cast<unsigned short>(std::max(to - from, 0))};
+    XftDrawSetClipRectangles(draw, 0, 0, &clip, 1);
     const Ink ink(display, fg);
     const Ink faint(display, soft);
+    const Ink lit(display, mixed(bg, fg, 16));
 
-    if (layout.header_height > 0) {
+    if (whole && layout.header_height > 0) {
         int x = pad;
-        const int top = pad;
+        const int top = pad + off;
         if (!shown.icon.empty() && icons != nullptr) {
             const int size = 2 * icon_size;
             icons->draw(window, shown.icon, size, fg, size,
@@ -381,8 +626,8 @@ void PluginPopup::on_expose(const XEvent&, void*)
     }
     for (size_t i = 0; i < shown.sections.size(); ++i) {
         const PopupSection& section = shown.sections[i];
-        if (!section.heading.empty()) {
-            text_at(draw, faint, font, pad, layout.headings[i].y,
+        if (whole && !section.heading.empty()) {
+            text_at(draw, faint, font, pad, layout.headings[i].y + off,
                     layout.headings[i].height - gap / 2, section.heading);
         }
         const bool icons_here =
@@ -391,20 +636,259 @@ void PluginPopup::on_expose(const XEvent&, void*)
         for (size_t r = 0; r < section.rows.size(); ++r) {
             const PopupRow& row = section.rows[r];
             const PopupLayout::Line& at = layout.rows[i][r];
+            const int top = at.y + off;
+            if (top + at.height <= from || top >= to || top + at.height < 0 ||
+                top > view_height) {
+                continue; // scrolled away, or not what is drawn again
+            }
+            const bool on = selected ==
+                            RowRef{static_cast<int>(i), static_cast<int>(r)};
+            if (on) {
+                fill_rect(draw, lit.color, 0, top, layout.width, at.height);
+            }
+            const Ink& main = row.dim ? faint : ink;
             int x = pad;
             if (icons_here) {
                 if (!row.icon.empty() && icons != nullptr) {
-                    icons->draw(window, row.icon, icon_size, fg, icon_size,
-                                at.height, x, at.y);
+                    icons->draw(window, row.icon, icon_size,
+                                row.dim ? soft : fg, icon_size, at.height, x,
+                                top);
                 }
                 x += icon_size + gap;
             }
-            text_at(draw, ink, font, x, at.y, at.height, row.label);
+            text_at(draw, main, font, x, top, at.height, row.label);
+            if (row.entry) {
+                size_t cursor = 0;
+                const std::string typed = field_text(&cursor);
+                paint_field(display, draw, ink, faint, font, layout.field_width,
+                            right, top, at.height, on, typed, cursor);
+                continue;
+            }
             const int w = extent(display, font, row.value);
-            text_at(draw, faint, font, right - w, at.y, at.height, row.value);
+            text_at(draw, faint, font, right - w, top, at.height, row.value);
+            if (!row.badge.empty() && icons != nullptr) {
+                icons->draw(window, row.badge, icon_size, soft, icon_size,
+                            at.height, right - w - gap - icon_size, top);
+            }
         }
     }
+    if (whole &&
+        layout.height > view_height) { // where the window is in the content
+        const int bar =
+                std::max(2 * pad, view_height * view_height / layout.height);
+        const int at = (view_height - bar) * scroll /
+                       std::max(1, layout.height - view_height);
+        fill_rect(draw, faint.color, layout.width - 3, at, 3, bar);
+    }
     XftDrawDestroy(draw);
+}
+
+void PluginPopup::select(RowRef row)
+{
+    if (row == selected) {
+        return;
+    }
+    const RowRef before = selected;
+    selected = row;
+    repaint_rows(before, row);
+}
+
+//! Draws two rows again (the one that is not lit now and the one that is)
+void PluginPopup::repaint_rows(RowRef a, RowRef b)
+{
+    for (const RowRef& row : {a, b}) {
+        if (!row.valid()) {
+            continue;
+        }
+        const PopupLayout::Line& at =
+                layout.rows[static_cast<size_t>(row.section)]
+                           [static_cast<size_t>(row.row)];
+        paint(at.y - scroll, at.y - scroll + at.height);
+    }
+}
+
+void PluginPopup::reveal_selected()
+{
+    if (!selected.valid()) {
+        return;
+    }
+    const PopupLayout::Line& at =
+            layout.rows[static_cast<size_t>(selected.section)]
+                       [static_cast<size_t>(selected.row)];
+    const std::vector<RowRef> targets = popup_targets(shown);
+    // the first and the last of them show what is before and after them
+    const int top = selected == targets.front() ? 0 : at.y;
+    const int bottom =
+            selected == targets.back() ? layout.height : at.y + at.height;
+    scroll = clamp_scroll(scroll_to_show(scroll, top, bottom, view_height),
+                          layout.height, view_height);
+}
+
+void PluginPopup::move_selection(int step)
+{
+    const std::vector<RowRef> targets = popup_targets(shown);
+    if (targets.empty()) {
+        return;
+    }
+    const auto count = static_cast<int>(targets.size());
+    const auto found = std::find(targets.begin(), targets.end(), selected);
+    int index = step > 0 ? 0 : count - 1;
+    if (found != targets.end()) {
+        index = std::max(
+                0, std::min(count - 1,
+                            static_cast<int>(found - targets.begin()) + step));
+    }
+    const RowRef before = selected;
+    const int old_scroll = scroll;
+    selected = targets[static_cast<size_t>(index)];
+    reveal_selected();
+    if (scroll != old_scroll) {
+        on_expose(XEvent(), nullptr);
+    } else {
+        repaint_rows(before, selected);
+    }
+}
+
+void PluginPopup::scroll_by(int delta)
+{
+    const int now = scroll;
+    scroll = clamp_scroll(scroll + delta, layout.height, view_height);
+    if (scroll != now) {
+        on_expose(XEvent(), nullptr);
+    }
+}
+
+void PluginPopup::activate(RowRef row)
+{
+    const PopupRow* const one = row_of(row);
+    if (one == nullptr || !one->target()) {
+        return;
+    }
+    // what is needed is copied: the plugin may show the window again from the
+    // action, which replaces the rows
+    const int number = one->action;
+    if (number < 0) { // a field without a function keeps what was typed
+        return;
+    }
+    std::string text;
+    if (one->entry) {
+        text = field.text();
+        field.wipe();
+    }
+    if (action) {
+        action(number, text);
+    }
+    std::fill(text.begin(), text.end(), '\0'); // not left in memory
+}
+
+void PluginPopup::on_press(const XEvent& e)
+{
+    switch (e.xbutton.button) {
+        case Button4: // wheel up
+            scroll_by(-3 * line_height);
+            break;
+        case Button5: // wheel down
+            scroll_by(3 * line_height);
+            break;
+        case Button1: {
+            const RowRef row =
+                    popup_row_at(layout, shown, e.xbutton.y + scroll);
+            if (row.valid()) {
+                select(row);
+                if (!row_of(row)->entry) {
+                    activate(row);
+                }
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void PluginPopup::on_motion(const XEvent& e)
+{
+    // a hand that brushes the mouse must not take the keys from the field
+    // while a password is typed: only a click or Up and Down leave it
+    const PopupRow* const lit = row_of(selected);
+    if (lit != nullptr && lit->entry) {
+        return;
+    }
+    const RowRef row = popup_row_at(layout, shown, e.xmotion.y + scroll);
+    if (row.valid()) {
+        select(row);
+    }
+}
+
+void PluginPopup::on_key(const XEvent& e)
+{
+    KeySym keysym = NoSymbol;
+    std::string typed;
+    if (input != nullptr) {
+        typed = input->lookup(e.xkey, keysym);
+    } else {
+        keysym = XLookupKeysym(const_cast<XKeyEvent*>(&e.xkey), 0);
+    }
+    const PopupRow* const row = row_of(selected);
+    const bool in_field = row != nullptr && row->entry;
+    bool changed = true;
+    switch (keysym) {
+        case XK_Escape:
+            unmap();
+            return;
+        case XK_Up:
+            move_selection(-1);
+            return;
+        case XK_Down:
+        case XK_Tab:
+            move_selection(1);
+            return;
+        case XK_ISO_Left_Tab:
+            move_selection(-1);
+            return;
+        case XK_Return:
+        case XK_KP_Enter:
+            activate(selected);
+            return;
+        case XK_Prior:
+            scroll_by(-view_height);
+            return;
+        case XK_Next:
+            scroll_by(view_height);
+            return;
+        case XK_BackSpace:
+            changed = in_field && field.backspace();
+            break;
+        case XK_Delete:
+            changed = in_field && field.erase();
+            break;
+        case XK_Left:
+            changed = in_field && field.left();
+            break;
+        case XK_Right:
+            changed = in_field && field.right();
+            break;
+        case XK_Home:
+            changed = in_field && field.home();
+            break;
+        case XK_End:
+            changed = in_field && field.end();
+            break;
+        default: {
+            const bool command = (e.xkey.state & (ControlMask | Mod1Mask)) != 0;
+            const bool printable =
+                    !typed.empty() && !command &&
+                    static_cast<unsigned char>(typed[0]) >= 0x20 &&
+                    typed[0] != 0x7F;
+            changed = in_field && printable &&
+                      field.text().size() + typed.size() <= field_limit &&
+                      field.insert(typed);
+            break;
+        }
+    }
+    if (changed) {
+        on_expose(XEvent(), nullptr);
+    }
 }
 
 } // namespace tiny::plugin

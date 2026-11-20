@@ -390,6 +390,43 @@ TEST(SpawnTest, capture_has_no_input_and_no_error_output)
     waitpid(pid, nullptr, 0);
 }
 
+TEST(SpawnTest, capture_gives_the_program_the_input_that_was_asked_for)
+{
+    int fd = -1;
+    const pid_t pid = tiny::spawn_capture({"cat"}, &fd, "secret\nsecond\n");
+    ASSERT_GT(pid, 0);
+    std::string text;
+    EXPECT_TRUE(wait_for([&] {
+        char buffer[64];
+        const ssize_t n = read(fd, buffer, sizeof(buffer));
+        if (n > 0) {
+            text.append(buffer, static_cast<size_t>(n));
+        }
+        return n == 0;
+    }));
+    EXPECT_EQ(text, "secret\nsecond\n");
+    close(fd);
+    waitpid(pid, nullptr, 0);
+}
+
+TEST(SpawnTest, capture_refuses_an_input_that_does_not_fit_in_a_pipe)
+{
+    int fd = -2;
+    errno = 0;
+    EXPECT_EQ(tiny::spawn_capture({"cat"}, &fd, std::string(5000, 'x')), -1);
+    EXPECT_EQ(errno, EMSGSIZE);
+    EXPECT_EQ(fd, -2);
+}
+
+TEST(SpawnTest, capture_with_input_of_a_missing_program_fails_cleanly)
+{
+    int fd = -2;
+    errno = 0;
+    EXPECT_EQ(tiny::spawn_capture({"/nonexistent/tiny-program"}, &fd, "text"),
+              -1);
+    EXPECT_EQ(errno, ENOENT);
+}
+
 TEST(SpawnTest, capture_of_a_missing_program_fails_and_opens_nothing)
 {
     int fd = -2;

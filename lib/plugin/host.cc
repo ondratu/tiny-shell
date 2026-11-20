@@ -74,7 +74,10 @@ struct Entry {
     PluginLabel* label = nullptr;       //!< the widget when it is a label
     PluginButton* button = nullptr;     //!< the widget when it is a button
     std::unique_ptr<PluginPopup> popup; //!< made at the first `popup()`
-    bool icon_room = false;             //!< made with an icon
+    //! The functions of the rows of the window that is shown, in the registry;
+    //! the number of an action of a row is the place in this list
+    std::vector<int> action_refs;
+    bool icon_room = false; //!< made with an icon
     int click_ref = LUA_NOREF;
 };
 
@@ -347,6 +350,17 @@ int l_theme(lua_State* L)
     return 1;
 }
 
+//! Whether the shell has the symbolic icon: a plugin that wants an icon that
+//! a theme may not have asks first and uses another one
+int l_has_icon(lua_State* L)
+{
+    const std::string name = luaL_checkstring(L, 1);
+    const wm::SymbolicIcons* const icons = self(L).host->services.icons;
+    lua_pushboolean(L, icons != nullptr && !name.empty() &&
+                               !icons->find(name).empty());
+    return 1;
+}
+
 int l_on_config(lua_State* L)
 {
     Plugin& plugin = self(L);
@@ -515,6 +529,9 @@ int exec_impl(lua_State* L)
             options.timeout = delay_of(lua_tonumber(L, -1), 1);
         }
         lua_pop(L, 1);
+        if (!field_string(L, 3, "stdin", options.input)) {
+            return -1;
+        }
     }
     lua_pushvalue(L, 2);
     const int ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -527,6 +544,7 @@ int exec_impl(lua_State* L)
                 luaL_unref(p->L, LUA_REGISTRYINDEX, ref);
             },
             options);
+    std::fill(options.input.begin(), options.input.end(), '\0'); // a password
     if (!started) {
         // told later, as when the program had run: the function is never
         // called while the plugin is still in the call that asked for it
@@ -780,7 +798,49 @@ constexpr int popup_max_rows = 40;
 // The readers below leave the message on the top of the stack when they
 // return false (the rest of the stack is dropped by the error)
 
-bool read_row(lua_State* L, int index, PopupRow& row)
+//! The true or false field `name` of the table at `index` goes to `value`
+bool field_flag(lua_State* L, int index, const char* name, bool& value)
+{
+    lua_getfield(L, index, name);
+    bool good = true;
+    if (lua_type(L, -1) == LUA_TBOOLEAN) {
+        value = lua_toboolean(L, -1) != 0;
+    } else if (!lua_isnil(L, -1)) {
+        good = false;
+    }
+    lua_pop(L, 1);
+    if (!good) {
+        lua_pushfstring(L, "%s must be true or false", name);
+    }
+    return good;
+}
+
+//! The function of `on_click` or `on_submit` of the row at `index` is kept in
+//! the registry (`refs`) and the row gets its number
+bool field_action(lua_State* L, int index, const char* name, PopupRow& row,
+                  std::vector<int>& refs)
+{
+    lua_getfield(L, index, name);
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        return true;
+    }
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        lua_pushfstring(L, "%s must be a function", name);
+        return false;
+    }
+    if (row.action >= 0) {
+        lua_pop(L, 1);
+        fail(L, "a row has on_click or on_submit, not both");
+        return false;
+    }
+    row.action = static_cast<int>(refs.size());
+    refs.push_back(luaL_ref(L, LUA_REGISTRYINDEX)); // takes the function
+    return true;
+}
+
+bool read_row(lua_State* L, int index, PopupRow& row, std::vector<int>& refs)
 {
     if (!lua_istable(L, index)) {
         fail(L, "a row must be a table {icon, label, value}");
@@ -788,10 +848,18 @@ bool read_row(lua_State* L, int index, PopupRow& row)
     }
     return field_string(L, index, "icon", row.icon) &&
            field_string(L, index, "label", row.label) &&
-           field_string(L, index, "value", row.value);
+           field_string(L, index, "value", row.value) &&
+           field_string(L, index, "badge", row.badge) &&
+           field_string(L, index, "id", row.id) &&
+           field_flag(L, index, "entry", row.entry) &&
+           field_flag(L, index, "secret", row.secret) &&
+           field_flag(L, index, "dim", row.dim) &&
+           field_action(L, index, "on_click", row, refs) &&
+           field_action(L, index, "on_submit", row, refs);
 }
 
-bool read_section(lua_State* L, int index, PopupSection& section)
+bool read_section(lua_State* L, int index, PopupSection& section,
+                  std::vector<int>& refs)
 {
     if (!lua_istable(L, index)) {
         fail(L, "a section must be a table {heading, rows}");
@@ -817,7 +885,7 @@ bool read_section(lua_State* L, int index, PopupSection& section)
     for (lua_Integer i = 1; i <= count; ++i) {
         lua_rawgeti(L, -1, i);
         PopupRow row;
-        if (!read_row(L, lua_gettop(L), row)) {
+        if (!read_row(L, lua_gettop(L), row, refs)) {
             return false;
         }
         section.rows.push_back(std::move(row));
@@ -827,7 +895,8 @@ bool read_section(lua_State* L, int index, PopupSection& section)
     return true;
 }
 
-bool read_popup(lua_State* L, int index, PopupContent& content)
+bool read_popup(lua_State* L, int index, PopupContent& content,
+                std::vector<int>& refs)
 {
     if (!lua_istable(L, index)) {
         fail(L, "a table is expected: {title = ..., sections = ...}");
@@ -856,7 +925,7 @@ bool read_popup(lua_State* L, int index, PopupContent& content)
     for (lua_Integer i = 1; i <= count; ++i) {
         lua_rawgeti(L, -1, i);
         PopupSection section;
-        if (!read_section(L, lua_gettop(L), section)) {
+        if (!read_section(L, lua_gettop(L), section, refs)) {
             return false;
         }
         content.sections.push_back(std::move(section));
@@ -875,14 +944,45 @@ int l_widget_popup_impl(lua_State* L)
         return fail(L, "the widget was destroyed");
     }
     PopupContent content;
-    if (!read_popup(L, 2, content)) {
+    std::vector<int> refs;
+    const auto drop = [L, &refs] {
+        for (const int ref : refs) {
+            luaL_unref(L, LUA_REGISTRYINDEX, ref);
+        }
+    };
+    if (!read_popup(L, 2, content, refs)) {
+        drop();
         return -1;
     }
+    int fields = 0;
+    for (const PopupSection& section : content.sections) {
+        fields += static_cast<int>(
+                std::count_if(section.rows.begin(), section.rows.end(),
+                              [](const PopupRow& r) { return r.entry; }));
+    }
+    if (fields > 1) {
+        drop();
+        return fail(L, "a window has one row with an entry at most");
+    }
+    for (const int ref : entry->action_refs) {
+        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+    }
+    entry->action_refs = std::move(refs);
     if (entry->popup == nullptr) {
         entry->popup =
                 std::make_unique<PluginPopup>(plugin.host->services.icons);
         entry->popup->realize(panel->get_parent_window());
         entry->popup->set_events();
+        Plugin* const p = &self(L);
+        Entry* const raw = entry;
+        entry->popup->set_action([p, raw](int number, const std::string& text) {
+            if (number < 0 ||
+                static_cast<size_t>(number) >= raw->action_refs.size()) {
+                return;
+            }
+            lua_pushlstring(p->L, text.data(), text.size());
+            call_ref(*p, raw->action_refs[static_cast<size_t>(number)], 1);
+        });
     }
     entry->popup->open(content, entry->widget->get_window(),
                        panel->get_window());
@@ -923,7 +1023,14 @@ void remove_widget(Plugin& plugin, Entry& entry)
     entry.click_ref = LUA_NOREF;
     entry.label = nullptr;
     entry.button = nullptr;
-    entry.popup.reset();
+    for (const int ref : entry.action_refs) {
+        luaL_unref(plugin.L, LUA_REGISTRYINDEX, ref);
+    }
+    entry.action_refs.clear();
+    if (entry.popup != nullptr) { // it may be the popup that called us
+        entry.popup->unmap();
+        plugin.graveyard.push_back(std::move(entry.popup));
+    }
     plugin.graveyard.push_back(std::move(entry.widget));
     Plugin* const p = &plugin;
     auto id = std::make_shared<Timers::Id>(0);
@@ -1109,6 +1216,7 @@ const luaL_Reg tiny_functions[] = {{"log", l_log},
                                    {"setting", l_setting},
                                    {"config", l_config},
                                    {"theme", l_theme},
+                                   {"has_icon", l_has_icon},
                                    {"on_config", l_on_config},
                                    {"after", l_after},
                                    {"every", l_every},

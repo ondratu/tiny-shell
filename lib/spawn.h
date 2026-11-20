@@ -33,10 +33,14 @@ pid_t spawn(const std::vector<std::string>& argv,
  *
  * The standard output of the program is a pipe; `*output` is the end that
  * reads it (it does not block and is closed on `exec`; the caller closes it).
- * The standard input and the standard error are `/dev/null`. Returns the pid
- * of the child, or -1 and sets errno (nothing is opened then).
+ * The standard error is `/dev/null`; so is the standard input, unless `input`
+ * has a text (at most 4096 bytes), which the program reads from it: a password
+ * does not belong on the command line, where `ps` shows it. Returns the pid
+ * of the child, or -1 and sets errno (nothing is opened then; EMSGSIZE for a
+ * longer `input`).
  */
-pid_t spawn_capture(const std::vector<std::string>& argv, int* output);
+pid_t spawn_capture(const std::vector<std::string>& argv, int* output,
+                    const std::string& input = "");
 
 /// Run a shell command line (pipes, variables, ~) with `/bin/sh -c`.
 pid_t spawn_shell(const std::string& command);

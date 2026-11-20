@@ -85,6 +85,7 @@ Lua state, so globals are not shared between plugins.
 | `tiny.setting(key)` | the value of a setting, typed as in the table above, or `nil` for a key that is not in `plugin.ini` |
 | `tiny.config(section, key)` | what the configuration files of the shell say (`tiny.config("theme", "style")`), as text, or `nil` when the key is not set. Read only. |
 | `tiny.theme()` | `"dark"` or `"light"`, the theme in use |
+| `tiny.has_icon(name)` | `true` when the shell has the symbolic icon (see Icons below), so a plugin can use another one when a theme lacks it |
 | `tiny.on_config(fn)` | `fn()` is called when the shell read its configuration again and something changed: a setting of this plugin, or any other key. `nil` removes it. See below. |
 | `tiny.log(...)` | writes a line to the standard error of the shell, with the name of the plugin. `print` does the same. |
 | `tiny.after(ms, fn)` | calls `fn()` once after `ms` milliseconds (10 at least); returns a timer with `:cancel()` |
@@ -119,8 +120,8 @@ end)
 
 `argv` is a list of strings, with the program first (it is searched in `PATH`).
 There is **no shell**: the arguments are not interpreted, so `"*"` and `"$HOME"`
-mean what they say. The standard input of the program is empty and its standard
-error is discarded. `result` is a table:
+mean what they say. The standard input of the program is empty (see `stdin`
+below) and its standard error is discarded. `result` is a table:
 
 | Field | |
 | ----- | - |
@@ -131,8 +132,10 @@ error is discarded. `result` is a table:
 | `timed_out` | `true` when it did not end in 30 seconds and was killed |
 | `error` | why it did not start (`No such file or directory`), only then |
 
-`options` is a table: `{timeout = 5000}` changes the time in milliseconds. A
-program that can't be started is reported the same way, later (`ok = false` and
+`options` is a table: `{timeout = 5000}` changes the time in milliseconds, and
+`{stdin = "text"}` is what the program reads from its standard input (4096 bytes
+at most). Give a password this way: on the command line every user of the system
+sees it in `ps`. A program that can't be started is reported the same way, later (`ok = false` and
 `error`), so the function is never called while the plugin is still in the
 call that asked for it. The programs of a plugin that is stopped are killed.
 
@@ -190,7 +193,7 @@ only `icon_under`. The batteries that charge have their own icons with the bolt:
 
 A click on a button can open a window with the details, like the weather of GNOME
 Shell does. It opens under the widget, inside of the panel, and a click anywhere
-else closes it. The window only shows information; every field is optional.
+else closes it, so does Escape. Every field is optional.
 
 ```lua
 button:popup{
@@ -214,6 +217,41 @@ again changes the window that is open. It also opens it, takes the keyboard focu
 and puts the window over the others, so a plugin that wants to show a late answer
 asks `w:popup_open()` first and calls `popup` only when it is `true`. A button
 with text but without an icon has the text in the middle; a label has it at the left.
+
+A row can have a `badge`, a small icon that is drawn before the `value` (a
+lock for a network that has a password).
+
+**Rows that do something.** A row with `on_click` is lit under the pointer and
+when the arrow keys (or Tab) come to it; a click or Return calls the function. A
+window is not closed by a click on a row: close it with `w:close_popup()` when
+the plugin wants to. A row with `dim = true` is shown weaker and nothing
+happens on it.
+
+```lua
+{icon = "network-wireless-signal-good", label = "Home", value = "WPA2",
+ on_click = function() connect("Home") end}
+```
+
+**A field to type in.** A row with `entry = true` has a field instead of the
+`value`; its `label` says what to type. The field has the keys as soon as the
+window opens (the arrows leave it), `secret = true` shows dots, and Return calls
+`on_submit(text)`. The text is wiped when the window closes. A window has one
+field at most.
+
+```lua
+{label = "Password", entry = true, secret = true, id = "password",
+ on_submit = function(text) connect("Home", text) end}
+```
+
+**Showing the window again.** When a plugin calls `popup` while the window is
+open (an answer that came late), the window keeps what the user was doing: the
+scrolling, the row that is lit and the text in the field. It knows a row by its
+`id`, or by the `label` when there is no `id`; so give a row that can move in the
+list the same `id` every time.
+
+**A window that is too high** (a long list) is as high as the screen has room
+for and is scrolled by the wheel, Page Up and Page Down, and by the arrows that
+move the lit row; a thin bar at the right shows where it is.
 
 ### Settings that change
 
@@ -353,6 +391,41 @@ end)
 A click on the button changes the text and opens a window under it. Its
 `plugin.ini` has two settings, `text` and `format` (a choice of `clicks` and
 `time`); see the file.
+
+## A bigger plugin: the network
+
+The plugin `network` (`data/tiny-shell/plugins/network`) is the example of a
+plugin that has more than one file, rows that do something and one part for each
+system. Its files are loaded with `require`:
+
+| File | What it is |
+| ---- | ---------- |
+| `plugin.lua` | The main file: chooses the backend, makes the widget, the timers and the actions of the rows. |
+| `model.lua` | What does not depend on the system: the icons of the signal, the bands, the speed, which adapter is the main one. |
+| `view.lua` | Makes the icon of the panel and the window from a list of adapters. It does not talk to the system, so a test looks at what it makes. |
+| `nm.lua`, `sys.lua`, `bsd.lua` | The backends: Linux with `nmcli`, Linux with `/sys` and `ip`, the BSD systems with `ifconfig`. A backend gives `read(done)` and, when the system lets the user change things, `scan`, `toggle`, `connect` and `disconnect`. |
+| `util.lua` | Small helpers. |
+
+A backend reads the system and calls `done(adapters)`, a list of tables with the
+state, the addresses and the speed of an adapter, what the user may do (`can_toggle`,
+`can_connect`) and why not (`reason`); `model.lua` describes them. A new system is
+a new backend that makes the same tables, and the window needs no change. The
+rows that the user may not use are dimmed (`dim = true`), with the reason in a row
+of their own.
+
+Two things that the plugin does and other plugins may copy: it uses
+`tiny.has_icon` to take the icon of a lock that a theme has and another one
+when it has not, and it shows a late answer (the list of networks that was
+searched for) only when `w:popup_open()` is true, with the `id` of every row
+that can move, so the window keeps the row that is lit and the text typed.
+
+The tests (`tests/plugin/test_network.cc`) copy the files into a plugin of
+their own, replace `plugin.lua` by a script that looks at the model and the
+parsers, and put scripts that print the files of `tests/plugin/network/` in
+place of `nmcli`, `ip` and `iw`, so no network is touched and no card is needed.
+The files with the output of `ifconfig` of FreeBSD, OpenBSD and NetBSD are the
+output of real machines; the ones with a Wi-Fi are written by hand after the
+documented output.
 
 ## Trying a plugin
 

@@ -1,0 +1,4 @@
+org.freedesktop.NetworkManager.enable-disable-wifi:no
+org.freedesktop.NetworkManager.network-control:no
+org.freedesktop.NetworkManager.settings.modify.own:no
+org.freedesktop.NetworkManager.settings.modify.system:no
