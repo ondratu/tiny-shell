@@ -350,6 +350,17 @@ int l_theme(lua_State* L)
     return 1;
 }
 
+//! Whether the shell has the symbolic icon: a plugin that wants an icon that
+//! a theme may not have asks first and uses another one
+int l_has_icon(lua_State* L)
+{
+    const std::string name = luaL_checkstring(L, 1);
+    const wm::SymbolicIcons* const icons = self(L).host->services.icons;
+    lua_pushboolean(L, icons != nullptr && !name.empty() &&
+                               !icons->find(name).empty());
+    return 1;
+}
+
 int l_on_config(lua_State* L)
 {
     Plugin& plugin = self(L);
@@ -1204,6 +1215,7 @@ const luaL_Reg tiny_functions[] = {{"log", l_log},
                                    {"setting", l_setting},
                                    {"config", l_config},
                                    {"theme", l_theme},
+                                   {"has_icon", l_has_icon},
                                    {"on_config", l_on_config},
                                    {"after", l_after},
                                    {"every", l_every},
