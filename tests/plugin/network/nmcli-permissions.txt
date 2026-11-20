@@ -1,0 +1,6 @@
+org.freedesktop.NetworkManager.enable-disable-wifi:yes
+org.freedesktop.NetworkManager.network-control:yes
+org.freedesktop.NetworkManager.reload:auth
+org.freedesktop.NetworkManager.settings.modify.own:yes
+org.freedesktop.NetworkManager.settings.modify.system:no
+org.freedesktop.NetworkManager.sleep-wake:no

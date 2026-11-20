@@ -1,0 +1,4 @@
+Wired connection 1:802-3-ethernet
+Home Net:802-11-wireless
+Neighbour:802-11-wireless
+lo:loopback
