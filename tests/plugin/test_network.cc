@@ -563,14 +563,16 @@ end)
     std::ifstream in(calls);
     const std::string written((std::istreambuf_iterator<char>(in)),
                               std::istreambuf_iterator<char>());
-    for (const char* wanted :
-         {"device disconnect enp3s0\n", "device connect enp3s0\n",
-          "radio wifi off\n", "radio wifi on\n", "device disconnect wlan0\n",
-          "-w 30 connection up id Neighbour ifname wlan0\n",
-          "--ask -w 30 device wifi connect NewNet ifname wlan0\nstdin=s3cret "
-          "pass\n",
-          "--ask -w 30 device wifi connect Cafe ifname wlan0\nstdin=\n",
-          "device wifi rescan ifname wlan0\n"}) {
+    const std::string new_net =
+            "--ask -w 30 device wifi connect NewNet ifname wlan0\n";
+    for (const std::string& wanted : std::vector<std::string>{
+                 "device disconnect enp3s0\n", "device connect enp3s0\n",
+                 "radio wifi off\n", "radio wifi on\n",
+                 "device disconnect wlan0\n",
+                 "-w 30 connection up id Neighbour ifname wlan0\n",
+                 new_net + "stdin=s3cret pass\n",
+                 "--ask -w 30 device wifi connect Cafe ifname wlan0\nstdin=\n",
+                 "device wifi rescan ifname wlan0\n"}) {
         EXPECT_NE(written.find(wanted), std::string::npos) << wanted << "\nin\n"
                                                            << written;
     }
