@@ -17,6 +17,8 @@
 using namespace std::chrono_literals;
 using namespace tiny::plugin;
 
+// the header is only for the tests, every one of them has its own copy
+// NOLINTNEXTLINE(cert-dcl59-cpp,misc-anonymous-namespace-in-header)
 namespace {
 
 //! The loop of the shell without the display: timers and watched descriptors
