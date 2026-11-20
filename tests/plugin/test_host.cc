@@ -609,6 +609,28 @@ TEST_F(HostTest, a_window_stays_inside_of_the_panel_under_its_widget)
     EXPECT_TRUE(found);
 }
 
+TEST_F(HostTest, a_plugin_can_ask_whether_an_icon_exists)
+{
+    tree.add("ask",
+             "tiny.log('has', tiny.has_icon('here'), tiny.has_icon('gone'),\n"
+             "         tiny.has_icon(''))\n");
+    {
+        const IconFiles files({"here"});
+        tiny::wm::SymbolicIcons icons(tiny::get_display(), root_window(),
+                                      {files.dir()});
+        services.icons = &icons;
+        PluginHost host(services);
+        host.apply(tree.find(), config);
+        EXPECT_TRUE(logged("plugin ask: has true false false"));
+        host.stop();
+        services.icons = nullptr;
+    }
+    lines.clear();
+    PluginHost without(services); // no icons at all
+    without.apply(tree.find(), config);
+    EXPECT_TRUE(logged("plugin ask: has false false false"));
+}
+
 TEST_F(HostTest, the_name_of_an_icon_is_a_text)
 {
     tree.add("icon", "tiny.panel.label{text = 'x'}:set_icon(5)");

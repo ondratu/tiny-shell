@@ -85,6 +85,7 @@ Lua state, so globals are not shared between plugins.
 | `tiny.setting(key)` | the value of a setting, typed as in the table above, or `nil` for a key that is not in `plugin.ini` |
 | `tiny.config(section, key)` | what the configuration files of the shell say (`tiny.config("theme", "style")`), as text, or `nil` when the key is not set. Read only. |
 | `tiny.theme()` | `"dark"` or `"light"`, the theme in use |
+| `tiny.has_icon(name)` | `true` when the shell has the symbolic icon (see Icons below), so a plugin can use another one when a theme lacks it |
 | `tiny.on_config(fn)` | `fn()` is called when the shell read its configuration again and something changed: a setting of this plugin, or any other key. `nil` removes it. See below. |
 | `tiny.log(...)` | writes a line to the standard error of the shell, with the name of the plugin. `print` does the same. |
 | `tiny.after(ms, fn)` | calls `fn()` once after `ms` milliseconds (10 at least); returns a timer with `:cancel()` |
