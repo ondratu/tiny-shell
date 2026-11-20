@@ -1,6 +1,5 @@
 #include "host_fixture.h"
 
-
 #ifdef TINY_HAVE_LUA
 
 TEST_F(HostTest, is_available_with_lua)

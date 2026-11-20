@@ -69,7 +69,9 @@ bool Runner::run(const std::vector<std::string>& argv, Done done,
     job->pid = pid;
     job->fd = fd;
     job->options = options;
-    job->options.input.clear(); // a password is not kept longer than needed
+    // a password is not kept longer than needed
+    std::fill(job->options.input.begin(), job->options.input.end(), '\0');
+    job->options.input.clear();
     job->done = std::move(done);
     job->watch = watches.add(fd, [this, id] { on_readable(id); });
     job->timer = timers.after(options.timeout, [this, id] { on_timeout(id); });

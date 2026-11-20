@@ -586,6 +586,28 @@ end)
     EXPECT_NE(written.find("stdin=s3cret pass"), std::string::npos);
 }
 
+TEST_F(NetworkTest, a_new_network_that_did_not_connect_is_not_saved)
+{
+    const fs::path root = tree.path / "fake";
+    make_programs(root / "bin");
+    const fs::path calls = root / "calls.txt";
+    const EnvVar path("PATH", (root / "bin").string() + ":" + getenv("PATH"));
+    const EnvVar log("FAKE_CALLS", calls.string());
+    const EnvVar status("FAKE_STATUS", "4");
+    EXPECT_TRUE(run(R"LUA(
+local nm = require("nm")
+nm.connect({name = "wlan0", kind = "wifi"}, {ssid = "NewNet", security = "WPA2"}, "wrong", function(problem)
+    eq(problem, "Could not connect (is the password right?)", "the reason is kept")
+    done()
+end)
+)LUA"));
+    std::ifstream in(calls);
+    const std::string written((std::istreambuf_iterator<char>(in)),
+                              std::istreambuf_iterator<char>());
+    EXPECT_NE(written.find("connection delete id NewNet\n"), std::string::npos)
+            << written;
+}
+
 TEST_F(NetworkTest, a_change_that_failed_says_why)
 {
     const fs::path root = tree.path / "fake";

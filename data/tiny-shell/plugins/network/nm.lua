@@ -283,7 +283,16 @@ function nm.connect(adapter, network, password, done)
         return done("A password is needed")
     end
     local argv = {"--ask", "-w", "30", "device", "wifi", "connect", network.ssid, "ifname", adapter.name}
-    nmcli(argv, finished, 40000, model.is_secured(network.security) and (password .. "\n") or nil)
+    nmcli(argv, function(result)
+        if result.ok then
+            return finished(result)
+        end
+        -- the profile of a network that did not connect (a wrong password) is
+        -- not kept: it would be shown as saved and never ask again
+        nmcli({"connection", "delete", "id", network.ssid}, function()
+            finished(result)
+        end)
+    end, 40000, model.is_secured(network.security) and (password .. "\n") or nil)
 end
 
 return nm

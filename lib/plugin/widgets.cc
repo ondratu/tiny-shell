@@ -725,12 +725,15 @@ void PluginPopup::activate(RowRef row)
     // what is needed is copied: the plugin may show the window again from the
     // action, which replaces the rows
     const int number = one->action;
+    if (number < 0) { // a field without a function keeps what was typed
+        return;
+    }
     std::string text;
     if (one->entry) {
         text = field.text();
         field.wipe();
     }
-    if (number >= 0 && action) {
+    if (action) {
         action(number, text);
     }
     std::fill(text.begin(), text.end(), '\0'); // not left in memory
@@ -763,6 +766,12 @@ void PluginPopup::on_press(const XEvent& e)
 
 void PluginPopup::on_motion(const XEvent& e)
 {
+    // a hand that brushes the mouse must not take the keys from the field
+    // while a password is typed: only a click or Up and Down leave it
+    const PopupRow* const lit = row_of(selected);
+    if (lit != nullptr && lit->entry) {
+        return;
+    }
     const RowRef row = popup_row_at(layout, shown, e.xmotion.y + scroll);
     if (row.valid()) {
         select(row);
