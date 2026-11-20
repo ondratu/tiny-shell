@@ -106,6 +106,28 @@ GLib, sdbus-c++ pulls in sd-bus; none of them fits.
   Play/Pause/Next and the media keys.
 - `org.freedesktop.UPower` (battery), `org.freedesktop.NetworkManager`,
   `org.bluez`: clients for applets. This is a panel, not a window manager.
+- **The network plugin over `org.freedesktop.NetworkManager`.** The plugin
+  `network` (data/tiny-shell/plugins/network, `nm.lua`) talks to NetworkManager
+  through `nmcli` now, with a few things that D-Bus does better and that the
+  move is for:
+  - The password of a new Wi-Fi goes to `nmcli --ask` on its standard input
+    (not in the arguments, where `ps` shows it). Over D-Bus the plugin passes
+    the secret in `AddAndActivateConnection`, and answers
+    `GetSecrets` of a saved network as a **secret agent**
+    (`org.freedesktop.NetworkManager.SecretAgent`), so the shell asks for the
+    password the way GNOME does, also for a network that is already saved.
+  - `StateChanged`, `PropertiesChanged` of the devices and `AccessPointAdded` /
+    `AccessPointRemoved` replace the polling (every 10 seconds, every 3 seconds
+    while the window is open) and the guessing of the end of a scan.
+  - Hidden networks (`hidden = true`), the login of an enterprise network
+    (802.1X: user, password, certificates) and VPN, which `nmcli` does with long
+    lists of arguments, are properties of a connection.
+  - The permissions (`GetPermissions`) are asked for what the user may do
+    instead of the table that `nmcli general permissions` prints.
+  The plugin keeps its backends apart (`view.lua` knows nothing about them), so
+  `nm_dbus.lua` is one more file; `nm.lua` stays for a system with `nmcli` and
+  no D-Bus session. It needs the generic binding for plugins (`tiny.dbus.call`,
+  `get_property`, `subscribe`, a method that is called by the bus for the agent).
 
 ## X11 properties
 
