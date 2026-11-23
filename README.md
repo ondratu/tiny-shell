@@ -13,8 +13,8 @@ as it can give.
 > **Status:** a working prototype. It manages, decorates, moves, resizes,
 > minimizes, maximizes and closes windows, and has a panel, a dock, a run
 > dialog, an application launcher, a clock, a screen lock, the power saving
-> of the display and Lua plugins of the panel (a battery, a weather and a network
-> with Wi-Fi come with it). More pictures are in the [screenshots](doc/screenshots.md).
+> of the display and Lua plugins of the panel (a battery, a weather, a network
+> with Wi-Fi and a monitor of the processor, memory, swap and network come with it). More pictures are in the [screenshots](doc/screenshots.md).
 
 ![The desktop of tiny-shell](doc/static/screenshots/desktop-day.png)
 
@@ -29,7 +29,7 @@ The documentation is in [doc/](doc/) and is published as a web site at
 | [Using the shell](doc/usage.md) | the panel, the dock, the launcher, the window menu, the keys |
 | [Configuration](doc/configuration.md) | the ini file, XSETTINGS, the tray, monitors, the command line |
 | [Applications](doc/applications.md) | `tiny-settings`, `tiny-fonts`, `tiny-about`, `tiny-wallpaper` |
-| [Plugins](doc/plugins.md) | Lua plugins of the panel (the battery, the network, the weather), where they are, how to switch them on and set them |
+| [Plugins](doc/plugins.md) | Lua plugins of the panel (the battery, the network, the system monitor, the weather), where they are, how to switch them on and set them |
 | [The session](doc/session.md) | starting a session, the autostart programs and their switches, logout that lets programs save their work |
 | [Screen lock](doc/lock.md) | `tiny-lock`: the password of the system, locking when idle, PAM, fingerprints, systems without PAM |
 | [Features](doc/features.md) | everything that is implemented |

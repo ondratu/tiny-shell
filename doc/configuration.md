@@ -462,6 +462,13 @@ enabled = yes
 ssid = yes
 interval = 10
 
+[plugin.system-monitor]
+enabled = yes
+swap = no
+network_as = percent
+link = 100
+interval = 5
+
 [plugin.weather]
 enabled = yes
 location = Prague

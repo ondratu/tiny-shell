@@ -159,7 +159,8 @@ local function build(sample)
         widget:destroy()
     end
     widgets = {}
-    -- the panel puts a new widget at the left of the ones that are there
+    -- the first widget of the panel is the one next to the clock and the next
+    -- ones are to its left, so the last one is made first
     for i = #ids, 1, -1 do
         local id = ids[i]
         local network = id == "download" or id == "upload"

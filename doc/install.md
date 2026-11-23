@@ -87,9 +87,10 @@ The files:
   `share/xsessions/tiny-shell.desktop`, which puts "Tiny Shell" in the list of
   sessions of the display managers (see the section below).
 - `share/tiny-shell/plugins`: the plugins that come with the shell (the battery,
-  the network and the weather), see [Plugins](plugins.md). They use programs
+  the network, the system monitor and the weather), see [Plugins](plugins.md). They use programs
   that the system has and are not needed to build: `nmcli` (NetworkManager),
-  `ip` and `iw` on Linux, `ifconfig` on the BSD systems, `curl` for the weather.
+  `ip` and `iw` on Linux, `ifconfig` on the BSD systems, `sysctl`, `top`, `swapctl` and `netstat` of the BSD
+  systems for the system monitor, `curl` for the weather.
 - `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark
   style.
