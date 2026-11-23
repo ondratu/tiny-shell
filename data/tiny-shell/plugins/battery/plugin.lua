@@ -23,7 +23,7 @@ local function read_linux(done)
     if not names then
         return done(nil)
     end
-    local total, count, state = 0, 0, "full"
+    local total, count, state = 0, 0, nil
     for _, name in ipairs(names) do
         local dir = base .. name .. "/"
         local kind = trim(tiny.read_file(dir .. "type"))
@@ -34,7 +34,10 @@ local function read_linux(done)
             local status = trim(tiny.read_file(dir .. "status"))
             if status == "Charging" then
                 state = "charging"
-            elseif status == "Discharging" and state ~= "charging" then
+            elseif status == "Full" or status == "Not charging" then
+                state = state or "full"
+            elseif state ~= "charging" then
+                -- Discharging, Empty, Unknown: not known to be on mains
                 state = "discharging"
             end
         end
@@ -42,7 +45,7 @@ local function read_linux(done)
     if count == 0 then
         return done(nil)
     end
-    done({percent = math.floor(total / count + 0.5), state = state})
+    done({percent = math.floor(total / count + 0.5), state = state or "discharging"})
 end
 
 -- FreeBSD: hw.acpi.battery.life (percent) and .state (1 discharging,
@@ -55,11 +58,12 @@ local function read_freebsd(done)
             if not result.ok or not life or life < 0 then
                 return done(nil)
             end
-            local kind = "full"
-            if state and state & 2 ~= 0 then
+            -- 0 is on mains and full; anything unknown counts as on battery
+            local kind = "discharging"
+            if state == 0 then
+                kind = "full"
+            elseif state and state & 2 ~= 0 then
                 kind = "charging"
-            elseif state and state & 1 ~= 0 then
-                kind = "discharging"
             end
             done({percent = life, state = kind})
         end)
@@ -89,9 +93,11 @@ local readers = {
 }
 local read = readers[tiny.platform]
 
+local HIGH = 85 -- from this charge the icon is full
+
 local function level_icon(info)
     local p = info.percent
-    local level = p >= 85 and "full" or p >= 50 and "good" or p >= 15 and "low" or "empty"
+    local level = p >= HIGH and "full" or p >= 50 and "good" or p >= 15 and "low" or "empty"
     -- the bolt says the computer is on mains: while it charges and when full
     if info.state ~= "discharging" then
         return "battery-" .. level .. "-charging"
@@ -134,7 +140,7 @@ local function show(info)
     local icon = level_icon(info)
     -- the dimmed full battery shows how much is missing; at a high charge
     -- it only makes the icon harder to read
-    local under = info.state == "discharging" and info.percent < 85 and "battery-full" or nil
+    local under = info.state == "discharging" and info.percent < HIGH and "battery-full" or nil
     local text = text_of(info)
     if not widget then
         -- made when there is a battery, as wide as the widest text
