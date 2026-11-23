@@ -89,7 +89,7 @@ The files:
 - `share/tiny-shell/plugins`: the plugins that come with the shell (the battery,
   the network, the system monitor and the weather), see [Plugins](plugins.md). They use programs
   that the system has and are not needed to build: `nmcli` (NetworkManager),
-  `ip` and `iw` on Linux, `ifconfig` on the BSD systems, `sysctl`, `top`, `swapctl` and `netstat` of the BSD
+  `ip` and `iw` on Linux, `ifconfig` on the BSD systems, `sysctl`, `top`, `vmstat`, `swapctl` and `netstat` of the BSD
   systems for the system monitor, `curl` for the weather.
 - `share/backgrounds/tiny-shell`: the wallpapers, the hazel by day and the hazel
   by night (JPEG, 1920x1080), which are the defaults of the light and the dark

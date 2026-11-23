@@ -134,20 +134,19 @@ function model.memory_openbsd(text)
     return {total = total, used = clamp(total - free - (cache or 0), 0, total)}
 end
 
--- NetBSD: the memory of the machine, then the line of top(1):
--- "Memory: 1124M Act, 558M Inact, 6904K Wired, 41M Exec, 1604M File, 20M Free"
--- The pages of files are in Act and Inact too, and they are given back.
+-- NetBSD: the lines of `vmstat -s` (top(1) would do too, but it waits a second
+-- before it prints): the size of a page, the pages that are managed, the free
+-- ones and the cached pages of files, which are given back.
 function model.memory_netbsd(text)
-    local total = model.parse_size((text or ""):match("^%s*(%d+)"))
-    local line = (text or ""):match("Memory:[^\n]*") or ""
-    local active = model.parse_size(line:match("([%d%.]+%a?) Act"))
-    local inactive = model.parse_size(line:match("([%d%.]+%a?) Inact"))
-    local wired = model.parse_size(line:match("([%d%.]+%a?) Wired"))
-    local files = model.parse_size(line:match("([%d%.]+%a?) File")) or 0
-    if not total or total <= 0 or not (active and inactive and wired) then
+    text = text or ""
+    local size = tonumber(text:match("(%d+) bytes per page"))
+    local pages = tonumber(text:match("(%d+) pages managed"))
+    local free = tonumber(text:match("(%d+) pages free[ \t]*\n"))
+    local files = tonumber(text:match("(%d+) cached file pages")) or 0
+    if not (size and pages and free) or pages <= 0 then
         return nil
     end
-    return {total = total, used = clamp(active + inactive + wired - files, 0, total)}
+    return {total = pages * size, used = clamp(pages - free - files, 0, pages) * size}
 end
 
 -- FreeBSD `swapinfo -k`: a line for each device (and "Total" for several)

@@ -442,7 +442,7 @@ and a part that shows:
 | `plugin.lua` | Chooses the reader, makes the buttons that the settings and the system want, remembers the last sample and puts the numbers on the buttons and in the window. |
 | `model.lua` | Makes numbers of the text that the systems print: the parsers, the load of the processor from two samples, the speed from two counters, the text of a percentage and of a speed. It does not talk to the system. |
 | `linux.lua` | Reads `/proc` and `/sys` at once; a network adapter counts when it is a card (`/sys/class/net/<name>/device`). |
-| `bsd.lua` | One `sh -c` script of `sysctl`, `top`, `swapctl`, `swapinfo` and `netstat` for FreeBSD, OpenBSD and NetBSD; a part that fails is only missing in the sample. |
+| `bsd.lua` | One `sh -c` script of `sysctl`, `top`, `vmstat`, `swapctl`, `swapinfo` and `netstat` for FreeBSD, OpenBSD and NetBSD; a part that fails is only missing in the sample. |
 
 Things that other plugins may copy: a sample is read by one function that calls
 `done(sample)`, and a part that the system does not tell (a computer without
@@ -454,7 +454,7 @@ others do not move on every change.
 The tests (`tests/plugin/test_system_monitor.cc`) run the model and the readers
 on the files of `tests/plugin/system-monitor/`, which are the output of real
 Linux, FreeBSD, OpenBSD and NetBSD machines, and put scripts that print them in
-place of `sysctl`, `top`, `swapctl`, `swapinfo` and `netstat`, so any system
+place of `sysctl`, `top`, `vmstat`, `swapctl`, `swapinfo` and `netstat`, so any system
 runs the tests of every system.
 
 ## Trying a plugin

@@ -119,6 +119,7 @@ class SystemMonitorTest : public HostTest {
               "tail -n +2 \"$F/$P-memory.txt\"\n"
               "echo\necho '  PID USERNAME PRI NICE  SIZE   RES STATE   TIME "
               "CPU COMMAND'\n");
+        write("vmstat", "cat \"$F/netbsd-memory.txt\"\n");
         write("swapinfo", "cat \"$F/freebsd-swapinfo.txt\"\n");
         write("swapctl", "cat \"$F/$P-swapctl.txt\"\n");
         write("netstat", "cat \"$F/$P-netstat.txt\"\n");
@@ -255,11 +256,13 @@ eq(model.memory_openbsd("2130575360\nMemory: Real: 1M/2M act/tot"), nil, "no fre
 eq(model.memory_openbsd(nil), nil, "nothing")
 
 local net = model.memory_netbsd(fixture("netbsd-memory.txt"))
-eq(net.total, 2146955264, "NetBSD total")
-eq(net.used, (1124 + 558 - 1604) * MiB + 6904 * 1024, "the pages of files are not used")
-eq(model.memory_netbsd("2146955264\nMemory: 1M Act, 1M Inact, 1M Wired, 1M Exec, 9M File, 1M Free").used, 0,
+eq(net.total, 501357 * 4096, "NetBSD total")
+eq(net.used, (501357 - 54206 - 360951) * 4096, "the cached pages of files are not used")
+eq(model.memory_netbsd("4096 bytes per page\n100 pages managed\n10 pages free\n").used, 90 * 4096,
+   "without the cache of files")
+eq(model.memory_netbsd("4096 bytes per page\n100 pages managed\n10 pages free\n999 cached file pages\n").used, 0,
    "never below zero")
-eq(model.memory_netbsd("1\nMemory: nonsense"), nil, "not top")
+eq(model.memory_netbsd("nonsense"), nil, "not vmstat")
 eq(model.memory_netbsd(nil), nil, "nothing")
 
 local info = model.swap_swapinfo(fixture("freebsd-swapinfo.txt"))
@@ -422,7 +425,7 @@ done()
     const Expected systems[] = {
             {"freebsd", 502060L * 4096, 2097152, 9826867},
             {"openbsd", 2130575360L, 2092467, 49164599},
-            {"netbsd", 2146955264L, 8388608, 8442380},
+            {"netbsd", 501357L * 4096, 8388608, 8442380},
     };
     for (const Expected& want : systems) {
         const EnvVar system("FAKE_BSD", want.system);
@@ -457,6 +460,7 @@ TEST_F(SystemMonitorTest,
     write("sysctl", "echo '1 2 3 4 100'\n");
     write("swapctl", "echo 'no swap devices configured'\n");
     write("top", "exit 1\n");
+    write("vmstat", "exit 1\n");
     write("netstat", "exit 1\n");
     const EnvVar path("PATH", bin.string() + ":" + getenv("PATH"));
     EXPECT_TRUE(run(R"LUA(

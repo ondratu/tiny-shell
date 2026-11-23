@@ -53,7 +53,7 @@ Where the numbers come from:
 | Linux | `/proc/stat` | `/proc/meminfo` (`MemAvailable`) | `/proc/meminfo` | `/proc/net/dev`, only the cards that have a `device` in `/sys/class/net` |
 | FreeBSD | `sysctl kern.cp_time` | `sysctl vm.stats.vm.*` (the free and the inactive pages are not used) | `swapinfo` | `netstat -ibn` |
 | OpenBSD | `sysctl kern.cp_time` | `top` (the free memory and the cache are not used) | `swapctl` | `netstat -ibn` |
-| NetBSD | `sysctl kern.cp_time` | `top` (the pages of files are not used) | `swapctl` | `netstat -ibn` |
+| NetBSD | `sysctl kern.cp_time` | `vmstat -s` (the cached pages of files are not used) | `swapctl` | `netstat -ibn` |
 
 Every system calls "used memory" something a little different, so the number
 may differ from the one that another program shows by a few percent. DragonFly
