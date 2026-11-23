@@ -489,7 +489,8 @@ TEST_F(SystemMonitorTest, the_plugin_makes_a_button_for_each_thing_that_is_on)
 #endif
     install("");
     config.plugins["monitor"].values["swap"] = "no";
-    config.plugins["monitor"].values["network"] = "no";
+    config.plugins["monitor"].values["download"] = "no";
+    config.plugins["monitor"].values["upload"] = "no";
     PluginHost host(services);
     const auto before = panel_children();
     host.apply(tree.find(), config);
