@@ -92,7 +92,8 @@ local read = readers[tiny.platform]
 local function level_icon(info)
     local p = info.percent
     local level = p >= 85 and "full" or p >= 50 and "good" or p >= 15 and "low" or "empty"
-    if info.state == "charging" then
+    -- the bolt says the computer is on mains: while it charges and when full
+    if info.state ~= "discharging" then
         return "battery-" .. level .. "-charging"
     end
     return "battery-" .. level
@@ -105,7 +106,7 @@ end
 local descriptions = {
     charging = "Charging",
     discharging = "On battery",
-    full = "Fully charged",
+    full = "Fully charged, on mains",
 }
 
 -- The window that a click opens: the state in words and the number
@@ -131,7 +132,9 @@ local function show(info)
         return
     end
     local icon = level_icon(info)
-    local under = info.state ~= "charging" and "battery-full" or nil
+    -- the dimmed full battery shows how much is missing; at a high charge
+    -- it only makes the icon harder to read
+    local under = info.state == "discharging" and info.percent < 85 and "battery-full" or nil
     local text = text_of(info)
     if not widget then
         -- made when there is a battery, as wide as the widest text
