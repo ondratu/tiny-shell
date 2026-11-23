@@ -138,7 +138,9 @@ comparison with other window managers is in the [comparison](comparison.md).
   strength of the signal; a click lists the adapters with their addresses and
   the Wi-Fi networks in range and connects to one, with NetworkManager) and a
   weather (the symbol and the temperature, a click opens the details and the
-  forecast) are included; see [Plugins](plugins.md). The window of a plugin can
+  forecast) and a system monitor (the load of the processor, the memory, the
+  swap and the speed of the network, each of them can be switched off; Linux,
+  FreeBSD, OpenBSD and NetBSD) are included; see [Plugins](plugins.md). The window of a plugin can
   have rows that are clicked, a field for a password and a scrolled list. Optional at
   build time (`make LUA=no`).
 - **Other:** one `poll()` event loop for X events, signals and timers (finished

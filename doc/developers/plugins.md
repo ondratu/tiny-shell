@@ -167,7 +167,9 @@ local button = tiny.panel.button{
 | `w:destroy()` | takes it out of the panel; also from its own click |
 
 The widgets are added at the right of the panel, next to the clock, in the order
-of the ids of the plugins and of the calls. They follow the theme. A plugin can
+of the ids of the plugins and of the calls: the first one is next to the clock
+and the next ones are placed to its left (a plugin that makes several widgets
+makes the one that should be the leftmost last). They follow the theme. A plugin can
 make widgets when it runs and later, from a timer or a program that ended. When
 there is no panel the plugins are not started.
 
@@ -426,6 +428,34 @@ place of `nmcli`, `ip` and `iw`, so no network is touched and no card is needed.
 The files with the output of `ifconfig` of FreeBSD, OpenBSD and NetBSD are the
 output of real machines; the ones with a Wi-Fi are written by hand after the
 documented output.
+
+## A plugin for each system: the system monitor
+
+The plugin `system-monitor` (`data/tiny-shell/plugins/system-monitor`) reads
+numbers that every system keeps somewhere else, and shows five small buttons
+(the processor, the memory, the swap, the download and the upload). It is the
+example of a plugin that is made of a model, a reader for each kind of system
+and a part that shows:
+
+| File | What it is |
+| ---- | ---------- |
+| `plugin.lua` | Chooses the reader, makes the buttons that the settings and the system want, remembers the last sample and puts the numbers on the buttons and in the window. |
+| `model.lua` | Makes numbers of the text that the systems print: the parsers, the load of the processor from two samples, the speed from two counters, the text of a percentage and of a speed. It does not talk to the system. |
+| `linux.lua` | Reads `/proc` and `/sys` at once; a network adapter counts when it is a card (`/sys/class/net/<name>/device`). |
+| `bsd.lua` | One `sh -c` script of `sysctl`, `top`, `swapctl`, `swapinfo` and `netstat` for FreeBSD, OpenBSD and NetBSD; a part that fails is only missing in the sample. |
+
+Things that other plugins may copy: a sample is read by one function that calls
+`done(sample)`, and a part that the system does not tell (a computer without
+swap) is `nil`, which only means no button for it; the speed is the difference
+of two samples, so the first sample shows `--`; and the buttons are made again
+only when the set of them changes (a setting, or a swap that appeared), so the
+others do not move on every change.
+
+The tests (`tests/plugin/test_system_monitor.cc`) run the model and the readers
+on the files of `tests/plugin/system-monitor/`, which are the output of real
+Linux, FreeBSD, OpenBSD and NetBSD machines, and put scripts that print them in
+place of `sysctl`, `top`, `swapctl`, `swapinfo` and `netstat`, so any system
+runs the tests of every system.
 
 ## Trying a plugin
 

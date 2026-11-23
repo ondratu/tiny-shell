@@ -5,17 +5,60 @@ a monitor of the processor. A plugin is a few lines of [Lua](https://www.lua.org
 that tiny-shell runs for you; it can show a text or a button in the panel, ask a
 program of the system for what it needs, and have settings of its own.
 
-Three plugins come with tiny-shell:
+Four plugins come with tiny-shell:
 
 | Plugin | What it does | Switched on |
 | ------ | ------------ | ----------- |
 | **Battery** | A battery with the percentage next to it. The icon follows the charge (full, good, low, empty) and has a bolt while the computer is on mains (charging or full). A click shows the state in words. Linux, FreeBSD and OpenBSD; a computer without a battery shows nothing. | yes |
 | **Network** | The connection of the computer: a cable, or the Wi-Fi with the strength of its signal. A click lists every adapter with its addresses and speed and the Wi-Fi networks in range, and lets you connect, disconnect and turn an adapter off. Below is what each system can do. | yes |
+| **System monitor** | The load of the computer: the processor, the memory, the swap and the network, each as a button with an icon and a number that you can switch off alone. A click opens the details. Linux, FreeBSD, OpenBSD and NetBSD. See below. | no |
 | **Weather** | The symbol of the weather and the temperature, from [open-meteo.com](https://open-meteo.com/) (free, no account; needs `curl`). A click opens a window like the one of GNOME: the town, the weather now, the feeling, the humidity, the wind, the pressure and the forecast for the next five days. Nothing changes by itself. | no, it needs a town first |
 
 How to write your own is in [Writing plugins](developers/plugins.md).
 
-## The network
+## The system monitor
+
+Four things of the computer, each one is a button in the panel with an icon and
+a number, and each one can be switched off in the settings of the plugin:
+
+| Button | Shows | The window has |
+| ------ | ----- | -------------- |
+| **Processor** | how much of the time the processors were busy, all of them together, in percent | the time spent in programs, in the system and idle |
+| **Memory** | how much of the memory the programs use, in percent. The cache and the buffers do not count, because the system gives them back when a program asks, as `free` shows it | used, free and the total memory |
+| **Swap** | how much of the swap is in use, in percent. A computer without swap shows no button | used, free and the total swap |
+| **Network** | the **download** (an arrow down) and the **upload** (an arrow up) of all the network cards together, as a speed (`12K`, `1.2M`) or in percent of the speed of the link | the two speeds now and what was received and sent since the plugin started |
+
+The loopback does not count, and neither do the virtual adapters that carry the
+traffic of a real card (a bridge, a tunnel, a VLAN, `docker0`, `virbr0`, a pair
+of `veth`), because their bytes would be counted twice. A computer with no
+network card shows no network buttons. The numbers are read from the counters of
+the system at a pace that you choose (2 seconds by default); the load and the
+speed are the change since the last look, so right after the start the buttons
+show `--` for the length of one check.
+
+The symbol of the swap is the disk, because that is where the swap is; the
+network uses the symbols of receiving and transmitting that GNOME has.
+
+The settings are **Show the processor**, **Show the memory**, **Show the swap**
+and **Show the network** (all of them yes), **Show the network as** (the speed,
+or the percent of the link), **Speed of the link** (in Mbit/s; it is what 100 %
+means when the network is shown in percent, 1000 by default, because the
+plugin does not know how fast the Wi-Fi is) and **Seconds between the checks**
+(1 to 60).
+
+Where the numbers come from:
+
+| System | The processor | The memory | The swap | The network |
+| ------ | ------------- | ---------- | -------- | ----------- |
+| Linux | `/proc/stat` | `/proc/meminfo` (`MemAvailable`) | `/proc/meminfo` | `/proc/net/dev`, only the cards that have a `device` in `/sys/class/net` |
+| FreeBSD | `sysctl kern.cp_time` | `sysctl vm.stats.vm.*` (the free and the inactive pages are not used) | `swapinfo` | `netstat -ibn` |
+| OpenBSD | `sysctl kern.cp_time` | `top` (the free memory and the cache are not used) | `swapctl` | `netstat -ibn` |
+| NetBSD | `sysctl kern.cp_time` | `top` (the pages of files are not used) | `swapctl` | `netstat -ibn` |
+
+Every system calls "used memory" something a little different, so the number
+may differ from the one that another program shows by a few percent. DragonFly
+BSD and macOS are not supported yet; the plugin says so in the log and shows
+nothing.
 
 The icon in the panel shows the connection that the computer uses: a cable, or
 the Wi-Fi as a symbol of waves that fill up with the strength of the signal (the
@@ -103,7 +146,8 @@ once, without a restart.
 A plugin that has settings shows them as a list: a choice goes through its
 values with a click or the arrows, a text is typed, a number is typed and must be
 in the range that the plugin says. The Battery has whether to show the
-percentage and how often to look; the Weather has the town, the units (Celsius
+percentage and how often to look; the System monitor has a switch for each of
+the things that it shows; the Weather has the town, the units (Celsius
 or Fahrenheit) and how often to update.
 
 The values are saved in your `tiny-shell.ini` in the section of the plugin:

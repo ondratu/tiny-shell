@@ -26,8 +26,8 @@ what was left out on purpose, with the reason, is in
   them like GNOME
 - More Lua plugins and what they need: a slider and a switch in the window of a
   widget, key bindings and window events for scripts, a generic D-Bus binding;
-  and plugins for bluetooth, volume and the load of the processor. The plugins of
-  the battery, the network and the weather are done, see [Plugins](plugins.md)
+  and plugins for bluetooth and volume. The plugins of the battery, the network,
+  the load of the computer and the weather are done, see [Plugins](plugins.md)
 - Window snapping to the screen edges and half-screen maximize
 - Screen lock: lock before the computer sleeps (needs logind, see
   TODO-DBUS.md), a switch of the user from the lock screen
