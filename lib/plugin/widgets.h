@@ -71,7 +71,7 @@ class PanelFont {
     ~PanelFont();
 
     //! The smaller font; `base` itself when it can't be made
-    XftFont* get(::Display* display, XftFont* base);
+    XftFont* get(::Display* display, XftFont* from);
 
     //! How much smaller than the font of the panel
     static constexpr double factor = 0.85;

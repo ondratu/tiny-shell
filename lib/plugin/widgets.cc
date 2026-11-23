@@ -131,6 +131,9 @@ void PanelFont::close()
 
 XftFont* PanelFont::get(::Display* display, XftFont* from)
 {
+    if (from == nullptr) {
+        return nullptr;
+    }
     if (from != base || display != opened_on ||
         Display::live_serial() != serial) {
         close();
