@@ -225,8 +225,7 @@ next steps:
     shell has them, the list shows what is wrong in `plugin.ini`).
   - The plugins that were asked for: Claude usage (no stable public API; as an
     example plugin only), bluetooth devices with their batteries, a mixer
-    and the volume, the load of the processor and the free memory, and the
-    traffic of the network. The battery has no NetBSD reader (`envstat`).
+    and the volume. The battery has no NetBSD reader (`envstat`).
   - The network plugin, what is left: it talks to NetworkManager through
     `nmcli`, which has no way to ask for a password but the standard input, no
     signals (the plugin looks every few seconds) and no hidden networks or
@@ -237,7 +236,7 @@ next steps:
     scan that only root may start. The Wi-Fi parsers of FreeBSD and OpenBSD were
     written after the documented output of `ifconfig` and not tried on a card
     (the machines for the tests have only Ethernet). VPN and static addresses.
-  - The first three plugins come with the shell; a way to get more (a list of
+  - The plugins that come with the shell are only a start; a way to get more (a list of
     plugins to download, or only a documented place for them).
 - Window snapping to the edges of the screen and to other windows while
   moving; half-screen maximize (Super+Left/Right).
