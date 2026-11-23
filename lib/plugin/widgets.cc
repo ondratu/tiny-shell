@@ -115,6 +115,33 @@ XftFont* scaled_font(::Display* display, const XftFont* base, double factor)
 
 } // namespace
 
+PanelFont::~PanelFont()
+{
+    close();
+}
+
+void PanelFont::close()
+{
+    // the font of a display that is closed is closed with it
+    if (small != nullptr && Display::live_serial() == serial) {
+        XftFontClose(opened_on, small);
+    }
+    small = nullptr;
+}
+
+XftFont* PanelFont::get(::Display* display, XftFont* from)
+{
+    if (from != base || display != opened_on ||
+        Display::live_serial() != serial) {
+        close();
+        base = from;
+        opened_on = display;
+        serial = Display::live_serial();
+        small = scaled_font(display, from, factor);
+    }
+    return small != nullptr ? small : from;
+}
+
 int panel_text_width(::Display* display, int padding, XftFont* font,
                      const std::string& text, const std::string& sample)
 {
@@ -203,8 +230,9 @@ PluginLabel::PluginLabel(const std::string& initial, const std::string& sample,
     tiny::Label(1, wm::shell_theme.panel, initial), item(std::move(icon))
 {
     name = "plugin_label";
-    resize(panel_text_width(display, get_padding(), get_style().get_font(),
-                            initial, sample) +
+    resize(panel_text_width(display, get_padding(),
+                            font.get(display, get_style().get_font()), initial,
+                            sample) +
                    item.width_for(wm::shell_theme.panel),
            wm::shell_theme.panel);
 }
@@ -223,7 +251,8 @@ void PluginLabel::set_icon(const std::string& icon, const std::string& under)
 void PluginLabel::on_expose(const XEvent&, void*)
 {
     paint_item(display, window, get_style(), get_theme_state(), width, height,
-               get_style().get_font(), get_text(), item, get_padding(), false);
+               font.get(display, get_style().get_font()), get_text(), item,
+               get_padding(), false);
 }
 
 PluginButton::PluginButton(const std::string& initial,
@@ -232,8 +261,9 @@ PluginButton::PluginButton(const std::string& initial,
 {
     name = "plugin_button";
     set_border(0);
-    resize(panel_text_width(display, get_padding(), get_style().get_font(),
-                            initial, sample) +
+    resize(panel_text_width(display, get_padding(),
+                            font.get(display, get_style().get_font()), initial,
+                            sample) +
                    item.width_for(wm::shell_theme.panel),
            wm::shell_theme.panel);
 }
@@ -252,7 +282,8 @@ void PluginButton::set_icon(const std::string& icon, const std::string& under)
 void PluginButton::on_expose(const XEvent&, void*)
 {
     paint_item(display, window, get_style(), get_theme_state(), width, height,
-               get_style().get_font(), get_text(), item, get_padding(), true);
+               font.get(display, get_style().get_font()), get_text(), item,
+               get_padding(), true);
 }
 
 // ---- the window of a plugin ----
