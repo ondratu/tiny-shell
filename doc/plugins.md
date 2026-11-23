@@ -60,6 +60,8 @@ may differ from the one that another program shows by a few percent. DragonFly
 BSD and macOS are not supported yet; the plugin says so in the log and shows
 nothing.
 
+## The network
+
 The icon in the panel shows the connection that the computer uses: a cable, or
 the Wi-Fi as a symbol of waves that fill up with the strength of the signal (the
 whole symbol is drawn dimmed and the strength over it). Without a connection it
