@@ -35,7 +35,7 @@ local built = ""   -- which buttons exist, to know when to make them again
 
 local interval = tiny.setting("interval")
 local tick = 0         -- how many times the timer fired
-local first            -- the first sample: the totals count from it
+local total = {rx = 0, tx = 0} -- the bytes of the network since the start
 local last, last_tick  -- the sample before and when it was read
 local busy = false     -- a reader is still running
 local state = {}       -- the numbers that the buttons show
@@ -116,10 +116,10 @@ local function details(id)
         {icon = "network-receive", label = "Download", value = model.rate_long(state.download)},
         {icon = "network-transmit", label = "Upload", value = model.rate_long(state.upload)},
     }}}
-    if net and first and first.net then
+    if net then
         sections[2] = {heading = "Since the plugin started", rows = {
-            row("Received", model.bytes_text(net.rx - first.net.rx)),
-            row("Sent", model.bytes_text(net.tx - first.net.tx)),
+            row("Received", model.bytes_text(total.rx)),
+            row("Sent", model.bytes_text(total.tx)),
         }}
     end
     return {
@@ -177,16 +177,25 @@ local function build(sample)
     end
 end
 
+-- Takes a new sample: the speeds are the change since the last one, over the
+-- time that the timer says passed (the plugin has no clock that is more exact;
+-- a sample that was late makes a speed a little too high, the next one a little
+-- too low). A speed that can't be told is nil, so the button shows "--" and not
+-- an old number.
 local function absorb(sample)
     local seconds = (tick - (last_tick or tick)) * interval
+    state.cpu, state.download, state.upload = nil, nil, nil
     if last then
-        state.cpu = model.cpu_load(last.cpu, sample.cpu) or state.cpu
-        state.download = sample.net and last.net and model.rate(last.net.rx, sample.net.rx, seconds) or state.download
-        state.upload = sample.net and last.net and model.rate(last.net.tx, sample.net.tx, seconds) or state.upload
+        state.cpu = model.cpu_load(last.cpu, sample.cpu)
+        local delta = model.net_delta(last.net, sample.net)
+        if delta then
+            state.download = model.rate(0, delta.rx, seconds)
+            state.upload = model.rate(0, delta.tx, seconds)
+            total.rx, total.tx = total.rx + delta.rx, total.tx + delta.tx
+        end
     end
     state.memory, state.swap, state.net = sample.memory, sample.swap, sample.net
     last, last_tick = sample, tick
-    first = first or sample
 end
 
 local function update()
