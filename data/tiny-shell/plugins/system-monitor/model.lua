@@ -5,8 +5,9 @@
 --
 -- A processor sample is {user, system, idle, total}: counters that only grow;
 -- the load is the difference of two of them. Memory and swap are
--- {total, used} in bytes, the network is {rx, tx}: the bytes that came and
--- went since the start of the system.
+-- {total, used} in bytes. The network is {rx, tx, adapters}: the bytes that
+-- came and went since the start of the system, all the adapters together and
+-- each of them (adapters = {name = {rx, tx}}).
 
 local model = {}
 
@@ -201,22 +202,28 @@ function model.is_virtual(name)
     return false
 end
 
+-- The counters of one adapter go to the total and to the list of adapters
+local function add_adapter(net, name, rx, tx)
+    net.rx, net.tx = net.rx + rx, net.tx + tx
+    net.adapters[name] = {rx = rx, tx = tx}
+end
+
 -- /proc/net/dev; `accept(name)` says which adapters count. nil without a
 -- table of counters. Also returns the names that were counted.
 function model.net_linux(text, accept)
-    local rx, tx, names = 0, 0, {}
+    local net, names = {rx = 0, tx = 0, adapters = {}}, {}
     for line in (text or ""):gmatch("[^\n]+") do
         local name, rest = line:match("^%s*([^:|]+):(.*)$")
         local n = name and numbers(rest) or {}
         if #n >= 9 and not model.is_virtual(name) and (not accept or accept(name)) then
-            rx, tx = rx + n[1], tx + n[9]
+            add_adapter(net, name, n[1], n[9])
             names[#names + 1] = name
         end
     end
     if #names == 0 then
         return nil, names
     end
-    return {rx = rx, tx = tx}, names
+    return net, names
 end
 
 -- `netstat -ibn` of the BSD systems; the line with <Link> of each adapter
@@ -227,7 +234,7 @@ end
 --   FreeBSD:  ... Ibytes Opkts Oerrs Obytes Coll
 --   OpenBSD, NetBSD:  ... Ibytes Obytes
 function model.net_bsd(text, platform)
-    local rx, tx, names = 0, 0, {}
+    local net, names = {rx = 0, tx = 0, adapters = {}}, {}
     for line in (text or ""):gmatch("[^\n]+") do
         local fields = {}
         for field in line:gmatch("%S+") do
@@ -243,15 +250,36 @@ function model.net_bsd(text, platform)
                 received, sent = tonumber(fields[at - 1]), tonumber(fields[at])
             end
             if received and sent then
-                rx, tx = rx + received, tx + sent
-                names[#names + 1] = (name:gsub("%*$", ""))
+                name = name:gsub("%*$", "")
+                add_adapter(net, name, received, sent)
+                names[#names + 1] = name
             end
         end
     end
     if #names == 0 then
         return nil, names
     end
-    return {rx = rx, tx = tx}, names
+    return net, names
+end
+
+-- How many bytes came and went between two samples of the network. Only the
+-- adapters that are in both samples count: a card that was plugged in with
+-- gigabytes behind it is not a burst of traffic, and one that was unplugged
+-- does not make the traffic negative. An adapter whose counter went back (it
+-- was reset) counts from zero. nil without both samples.
+function model.net_delta(before, after)
+    if not before or not after then
+        return nil
+    end
+    local delta = {rx = 0, tx = 0}
+    for name, now in pairs(after.adapters) do
+        local then_ = before.adapters[name]
+        if then_ then
+            delta.rx = delta.rx + (now.rx >= then_.rx and now.rx - then_.rx or now.rx)
+            delta.tx = delta.tx + (now.tx >= then_.tx and now.tx - then_.tx or now.tx)
+        end
+    end
+    return delta
 end
 
 -- The speed in bytes per second between two counters read `seconds` apart;

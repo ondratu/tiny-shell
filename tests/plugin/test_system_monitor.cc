@@ -330,6 +330,24 @@ eq(counted.tx, 2222, "FreeBSD without an address: upload")
 eq(model.net_bsd("Name Mtu Network Address Ibytes Obytes\nlo0 32768 <Link> 96 96\n", "openbsd"), nil, "only the loopback")
 eq(model.net_bsd(nil, "freebsd"), nil, "nothing")
 
+-- each adapter is kept apart, so the change can be told per adapter
+eq(model.net_linux(fixture("linux-net-dev.txt")).adapters.wlp0s20f3.tx, 3683313698, "the adapters of Linux")
+eq(model.net_bsd(fixture("openbsd-netstat.txt"), "openbsd").adapters.em0.rx, 49164599, "the adapters of OpenBSD")
+local before = {adapters = {eth0 = {rx = 1000, tx = 100}}}
+local delta = model.net_delta(before, {adapters = {eth0 = {rx = 3000, tx = 150}}})
+eq(delta.rx, 2000, "the change of download")
+eq(delta.tx, 50, "the change of upload")
+delta = model.net_delta(before, {adapters = {eth0 = {rx = 3000, tx = 150}, usb0 = {rx = 5e10, tx = 5e10}}})
+eq(delta.rx, 2000, "a card that was plugged in is not a burst of traffic")
+delta = model.net_delta({adapters = {eth0 = {rx = 1000, tx = 100}, usb0 = {rx = 5e10, tx = 5e10}}},
+                        {adapters = {eth0 = {rx = 1500, tx = 100}}})
+eq(delta.rx, 500, "a card that was unplugged is not a negative speed")
+delta = model.net_delta(before, {adapters = {eth0 = {rx = 40, tx = 7}}})
+eq(delta.rx, 40, "a counter that went back counts from zero")
+eq(delta.tx, 7, "also the upload")
+eq(model.net_delta(nil, before), nil, "no first sample")
+eq(model.net_delta(before, nil), nil, "no second sample")
+
 -- the speed
 near(model.rate(1000, 5000, 2), 2000, "bytes per second")
 eq(model.rate(5000, 1000, 2), nil, "a counter that went back (the adapter was reset)")
