@@ -459,4 +459,33 @@ end, "netbsd")
 )LUA"));
 }
 
+TEST_F(SystemMonitorTest, the_plugin_makes_a_button_for_each_thing_that_is_on)
+{
+#if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__OpenBSD__) &&   \
+        !defined(__NetBSD__)
+    GTEST_SKIP() << "no reader for this system";
+#endif
+    install("");
+    config.plugins["monitor"].values["swap"] = "no";
+    config.plugins["monitor"].values["network"] = "no";
+    PluginHost host(services);
+    const auto before = panel_children();
+    host.apply(tree.find(), config);
+    // the processor and the memory are on every system
+    EXPECT_TRUE(loop.run_until([&] { return panel_children() == before + 2; }));
+    EXPECT_EQ(host.error_of("monitor"), "");
+
+    // the second sample: a number instead of "--"
+    config.plugins["monitor"].values["cpu"] = "no";
+    config.plugins["monitor"].values["interval"] = "1";
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(loop.run_until([&] { return panel_children() == before + 1; }));
+    EXPECT_EQ(host.error_of("monitor"), "");
+
+    config.plugins["monitor"].values["memory"] = "no";
+    host.apply(tree.find(), config);
+    EXPECT_TRUE(loop.run_until([&] { return panel_children() == before; }));
+    host.stop();
+}
+
 #endif
