@@ -159,7 +159,9 @@ local function build(sample)
         widget:destroy()
     end
     widgets = {}
-    for _, id in ipairs(ids) do
+    -- the panel puts a new widget at the left of the ones that are there
+    for i = #ids, 1, -1 do
+        local id = ids[i]
         local network = id == "download" or id == "upload"
         widgets[id] = tiny.panel.button{
             icon = ICONS[id], text = "--", sample = network and not percent_mode() and "999M" or "100%",
