@@ -24,7 +24,7 @@ bsd.scripts = {
         .. "echo @net; netstat -ibn\n",
     netbsd = PATH
         .. "echo @cpu; sysctl -n kern.cp_time\n"
-        .. "echo @memory; sysctl -n hw.physmem64; top -b -d1 | grep '^Memory'\n"
+        .. "echo @memory; vmstat -s | grep -E 'bytes per page|pages managed|pages free$|cached file pages'\n"
         .. "echo @swap; swapctl -sk\n"
         .. "echo @net; netstat -ibn\n",
 }

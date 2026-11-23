@@ -1,2 +1,4 @@
-2146955264
-Memory: 1124M Act, 558M Inact, 6904K Wired, 41M Exec, 1604M File, 20M Free
+     4096 bytes per page
+   501357 pages managed
+    54206 pages free
+   360951 cached file pages
