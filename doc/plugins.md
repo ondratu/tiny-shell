@@ -39,12 +39,13 @@ show `--` for the length of one check.
 The symbol of the swap is the disk, because that is where the swap is; the
 network uses the symbols of receiving and transmitting that GNOME has.
 
-The settings are **Show the processor**, **Show the memory**, **Show the swap**
-and **Show the network** (all of them yes), **Show the network as** (the speed,
-or the percent of the link), **Speed of the link** (in Mbit/s; it is what 100 %
-means when the network is shown in percent, 1000 by default, because the
-plugin does not know how fast the Wi-Fi is) and **Seconds between the checks**
-(1 to 60).
+The settings are **Show the processor**, **Show the memory**, **Show the swap**,
+**Show the download** and **Show the upload** (all of them yes; the two speeds
+can be switched off one by one, the window of either shows both),
+**Show the network as** (the speed, or the percent of the link),
+**Speed of the link** (in Mbit/s; it is what 100 % means when the network is
+shown in percent, 1000 by default, because the plugin does not know how fast the
+Wi-Fi is) and **Seconds between the checks** (1 to 60).
 
 Where the numbers come from:
 

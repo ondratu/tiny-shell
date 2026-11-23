@@ -54,7 +54,7 @@ local function wanted(sample)
         elseif id == "swap" then
             on = tiny.setting("swap") and sample.swap
         else
-            on = tiny.setting("network") and sample.net
+            on = tiny.setting(id) and sample.net
         end
         if on then
             ids[#ids + 1] = id
