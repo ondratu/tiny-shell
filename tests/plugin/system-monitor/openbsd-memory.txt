@@ -1,0 +1,2 @@
+2130575360
+Memory: Real: 78M/1288M act/tot Free: 664M Cache: 347M Swap: 0K/2043M

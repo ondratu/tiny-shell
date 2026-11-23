@@ -1,0 +1,8 @@
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 78534890  265199    0    0    0     0          0         0 78534890  265199    0    0    0     0       0          0
+wlp0s20f3: 34552019586 29864721    0    0    0     0          0         0 3683313698 11226040    0  198    0     0       0          0
+virbr0: 57282669  946459    0    0    0     0          0        76 1868185069 1278435    0   21    0     0       0          0
+ vnet5: 3331709   34311    0    0    0     0          0         0 52939318  100162    0    0    0     0       0          0
+ vnet7:  438872    4516    0    0    0     0          0         0 10035993   30189    0    0    0     0       0          0
+ vnet8:  392524    3977    0    0    0     0          0         0 11419820   30291    0    0    0     0       0          0
