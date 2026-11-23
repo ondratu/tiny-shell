@@ -57,6 +57,35 @@ void paint_item(::Display* display, ::Window window, const Style& style,
                 bool center);
 
 /**
+ * @short The font of the text of a plugin in the panel: the font of the panel
+ * made a little smaller, so the numbers do not shout over the clock.
+ *
+ * It is made from the font of the style when it is wanted, and again when the
+ * style has another font (a new theme).
+ */
+class PanelFont {
+  public:
+    PanelFont() = default;
+    PanelFont(const PanelFont&) = delete;
+    PanelFont& operator=(const PanelFont&) = delete;
+    ~PanelFont();
+
+    //! The smaller font; `base` itself when it can't be made
+    XftFont* get(::Display* display, XftFont* base);
+
+    //! How much smaller than the font of the panel
+    static constexpr double factor = 0.85;
+
+  private:
+    void close();
+
+    XftFont* base = nullptr;
+    XftFont* small = nullptr;
+    ::Display* opened_on = nullptr;
+    unsigned serial = 0;
+};
+
+/**
  * @short The text of a plugin in the panel, with an icon in front of it.
  *
  * The width is fixed when the label is made: the wider of the text and of
@@ -77,6 +106,7 @@ class PluginLabel : public tiny::Label {
 
   private:
     ItemIcon item;
+    PanelFont font;
 };
 
 //! The same that a click on it is told to the plugin
@@ -94,6 +124,7 @@ class PluginButton : public tiny::LabelButton {
 
   private:
     ItemIcon item;
+    PanelFont font;
 };
 
 //! One line of the window of a plugin: an icon, a name, a value at the right

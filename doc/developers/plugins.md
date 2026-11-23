@@ -152,7 +152,7 @@ local button = tiny.panel.button{
 | | |
 | --- | --- |
 | `text` | what it shows |
-| `sample` | the longest text that it will show. The panel gives the widget the width of the wider of `text` and `sample`, so the other widgets do not move when the text changes. A longer text is cut. |
+| `sample` | the longest text that it will show. The panel gives the widget the width of the wider of `text` and `sample`, so the other widgets do not move when the text changes. A longer text is cut. The text is drawn in a font a little smaller (85 %) than the font of the panel, so it does not outshout the clock. |
 | `icon` | the name of a symbolic icon that is drawn before the text in the color of the text, see Icons below. The widget keeps room for an icon when it is made with one, so changing it later does not move the others. |
 | `icon_under` | an icon that is drawn first and dimmed, see Icons below |
 | `on_click` | a function called on a click (a button only) |
