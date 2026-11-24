@@ -58,7 +58,7 @@ mode = fill
 reboot = systemctl reboot
 poweroff = systemctl poweroff
 # Runs the applications with Terminal=true, the command follows it; the
-# Terminal item of the main menu starts the program alone (xterm)
+# Terminal item of the main menu and Super + T start the program alone (xterm)
 terminal = xterm -e
 # Super + L and the Lock Screen item of the main menu; see The lock below
 lock = tiny-lock

@@ -4303,6 +4303,50 @@ TEST_F(ManagerTest, super_l_locks_the_screen_and_does_not_open_the_launcher)
     std::filesystem::remove(program);
 }
 
+TEST_F(ManagerTest, super_t_starts_the_terminal_and_does_not_open_the_launcher)
+{
+    const EnvVar data_home("XDG_DATA_HOME", "/nonexistent");
+    const EnvVar data_dirs("XDG_DATA_DIRS", "/nonexistent");
+    start();
+    const auto marker = marker_file("tiny-manager-supert-");
+    const auto program = marker_program(marker);
+    manager->set_terminal({program.string()});
+
+    manager->on_key_press(key(XK_Super_L, 0));
+    manager->on_key_press(key(XK_t, Mod4Mask));
+    manager->on_key_release(key(XK_Super_L, Mod4Mask));
+    XSync(dsp(), False);
+
+    EXPECT_TRUE(wait_for([&] { return std::filesystem::exists(marker); }));
+    EXPECT_TRUE(manager->key_done);
+    EXPECT_EQ(attributes_of(manager->wm_launcher).map_state, IsUnmapped);
+    std::filesystem::remove(marker);
+    std::filesystem::remove(program);
+}
+
+TEST_F(ManagerTest, t_without_super_is_not_the_terminal)
+{
+    start();
+    manager->set_terminal({"/nonexistent/terminal"});
+
+    manager->on_key_press(key(XK_t, 0));
+
+    EXPECT_FALSE(manager->key_done);
+}
+
+TEST_F(ManagerTest, grabs_super_t_for_the_terminal)
+{
+    start();
+
+    const XErrors errors;
+    const FakeClient other;
+    XGrabKey(other.display, XKeysymToKeycode(other.display, XK_t), Mod4Mask,
+             root_window(), True, GrabModeAsync, GrabModeAsync);
+    other.sync();
+
+    EXPECT_EQ(errors.errors(), 1); // BadAccess: already grabbed
+}
+
 TEST_F(ManagerTest, l_without_super_is_not_the_lock)
 {
     start();
