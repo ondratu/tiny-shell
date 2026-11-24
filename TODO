@@ -263,7 +263,10 @@ next steps:
   and `remove:` to the other watchers (pagers), a window that has the id only
   on its group leader or in `WM_CLIENT_LEADER` does not end the sequence, and
   the `_TIME` of the id could be the user time of a window that has none.
-- A configurable cursor theme through `Xcursor`, only if it stays optional.
+- A configurable cursor theme through `Xcursor`, only if it stays optional
+  (the shell uses the plain `left_ptr` shape now, which every system draws as
+  an arrow that points up and left; libX11 takes the theme by itself when
+  libXcursor is there).
 - Appearance for applications (light/dark, font, antialiasing, DPI): tiny-shell
   becomes the settings daemon and publishes one source of truth (the ini
   file) to every channel applications read. The design is below; the open
