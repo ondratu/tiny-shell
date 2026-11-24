@@ -189,7 +189,10 @@ under `network-wireless-signal-ok`, `audio-volume-high` under `audio-volume-low`
 Give the full symbol as `icon_under` and the level as `icon`; for "no signal" give
 only `icon_under`. The batteries that charge have their own icons with the bolt:
 `battery-full-charging`, `battery-good-charging`, `battery-low-charging` and
-`battery-empty-charging`; they need no `icon_under`.
+`battery-empty-charging`; they need no `icon_under`. The battery of the shell
+is one icon only (the level is the name), because a dimmed second battery over
+the first one is a noise in a small panel; a signal of a network is a better
+case for two icons, it is seen at once how much of it is missing.
 
 ### Windows
 
