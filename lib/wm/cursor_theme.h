@@ -40,6 +40,21 @@ std::vector<ResourceChange> cursor_resources(const Config& config);
  */
 void apply_cursor_theme(::Display* display, const std::string& theme, int size);
 
+/**
+ * @short The names of the cursor themes that are installed: the directories
+ * `icons/<name>/cursors` of the data directories and `~/.icons`. Sorted, each
+ * name once.
+ */
+std::vector<std::string>
+installed_cursor_themes(const std::vector<std::string>& data_dirs,
+                        const char* home);
+
+//! The sizes that a form offers; the first one, "", is the one of the system
+XftChoices cursor_size_choices();
+
+//! Is the text "" or a whole number of pixels, 1 to `max_cursor_size`
+bool valid_cursor_size(const std::string& text);
+
 //! Is the program built with libXcursor, so that a theme can be set
 bool has_cursor_themes();
 

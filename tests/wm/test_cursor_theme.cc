@@ -1,4 +1,9 @@
 #include <gtest/gtest.h>
+#include <unistd.h>
+
+#include <filesystem>
+#include <string>
+#include <vector>
 
 #ifdef TINY_XCURSOR
 #include <X11/Xcursor/Xcursor.h>
@@ -50,6 +55,39 @@ TEST(CursorThemeTest, no_resources_without_a_setting)
     const auto changes = cursor_resources(config);
     ASSERT_EQ(changes.size(), 2u);
     EXPECT_EQ(changes[1].value, "48");
+}
+
+TEST(CursorThemeTest, the_sizes_of_the_form_are_right_and_start_with_the_system)
+{
+    const auto sizes = tiny::wm::cursor_size_choices();
+
+    ASSERT_GT(sizes.size(), 1u);
+    EXPECT_STREQ(sizes[0].value, "");
+    for (const auto& size : sizes) {
+        EXPECT_TRUE(tiny::wm::valid_cursor_size(size.value));
+    }
+    EXPECT_FALSE(tiny::wm::valid_cursor_size("0"));
+    EXPECT_FALSE(tiny::wm::valid_cursor_size("257"));
+    EXPECT_FALSE(tiny::wm::valid_cursor_size("12px"));
+}
+
+TEST(CursorThemeTest, the_installed_themes_are_the_directories_with_cursors)
+{
+    namespace fs = std::filesystem;
+    const fs::path root = fs::temp_directory_path() /
+                          ("tiny-cursors-" + std::to_string(getpid()));
+    fs::create_directories(root / "share/icons/Alpha/cursors");
+    fs::create_directories(root / "share/icons/NoCursors/16x16");
+    fs::create_directories(root / "home/.icons/Beta/cursors");
+    fs::create_directories(root / "share/icons/Alpha-copy");
+    fs::create_directories(root / "home/.icons/Alpha/cursors"); // twice
+
+    const auto names = tiny::wm::installed_cursor_themes(
+            {(root / "share").string(), (root / "nothing").string()},
+            (root / "home").c_str());
+
+    EXPECT_EQ(names, (std::vector<std::string>{"Alpha", "Beta"}));
+    fs::remove_all(root);
 }
 
 #ifdef TINY_XCURSOR

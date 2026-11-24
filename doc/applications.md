@@ -28,7 +28,10 @@ Session, Security and Plugins. Ctrl+Page Down and Ctrl+Page Up go through them.
   look in the other theme), the bar of the dock
   (full, half height with the icons sticking out above it, or none), the scale, the wallpaper and how it covers the
   screen (a small picture of the file above the path shows that the path is
-  right).
+  right), and the theme and the size of the mouse pointer (Pointer lists the
+  cursor themes that are installed, the first one is the theme of the system;
+  Save tells the shell, which changes the pointer at once. It needs libXcursor
+  in the shell, see [the mouse pointer](configuration.md#the-mouse-pointer)).
 - **Fonts:** the font (a family or a list of families separated by commas, like
   `DejaVu Sans,sans`), its size and style, and the rendering of text.
 - **Desktop:** the mode of the dock (Auto-hide, On, Off) and the format of the
@@ -110,7 +113,7 @@ without a new login. To remove a wallpaper, clear the row: the plain color of
 the theme is back after the next login.
 
 Save (or Return) writes the values you changed (`[theme] font`, `font_size`,
-`font_style`, `[theme] scale`, `style`, `[panel] style`, `[dock] style`, `bar`, `[launcher] style`, `[lock] style`,
+`font_style`, `[theme] scale`, `cursor_theme`, `cursor_size`, `style`, `[panel] style`, `[dock] style`, `bar`, `[launcher] style`, `[lock] style`,
 `[commands] terminal`, `[xft] antialias`,
 `hinting`, `rgba`, `[wallpaper] file`, `mode`, `[monitors]`, `[keyboard]` ...) to the file of
 the user, so the others still come from the global file, in the way that is
