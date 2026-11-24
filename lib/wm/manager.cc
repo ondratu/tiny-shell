@@ -72,7 +72,7 @@ Manager::Manager(::Display* display_arg, ::Window root_arg):
     XSetWindowBackground(display_arg, root_arg, shell_theme.root_background);
     XSync(display_arg, True);
 
-    arrow_cursor = XCreateFontCursor(display_arg, XC_arrow);
+    arrow_cursor = XCreateFontCursor(display_arg, XC_left_ptr);
     XDefineCursor(display_arg, root_arg, arrow_cursor);
 
     ::Window rv_root;
