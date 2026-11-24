@@ -313,7 +313,7 @@ keeps its colors until it is started again.
 
 A settings daemon that already runs (`gsd-xsettings`, `xsettingsd`) is left
 alone and tiny-shell publishes nothing; the same happens with `[theme] xsettings
-= no`. 
+= no`.
 
 ### The mouse pointer
 
