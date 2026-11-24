@@ -1,5 +1,7 @@
 #include "wm/cursor_theme.h"
 
+#include <algorithm>
+
 #ifdef TINY_XCURSOR
 #include <X11/Xcursor/Xcursor.h>
 #endif
@@ -11,12 +13,9 @@ bool valid_cursor_theme(const std::string& name)
     if (name.empty() || name.size() > 128 || name[0] == '.') {
         return false;
     }
-    for (const char c : name) {
-        if (c == '/' || static_cast<unsigned char>(c) < 0x20 || c == 0x7F) {
-            return false;
-        }
-    }
-    return true;
+    return std::all_of(name.begin(), name.end(), [](char c) {
+        return c != '/' && static_cast<unsigned char>(c) >= 0x20 && c != 0x7F;
+    });
 }
 
 std::vector<ResourceChange> cursor_resources(const std::string& theme, int size)
