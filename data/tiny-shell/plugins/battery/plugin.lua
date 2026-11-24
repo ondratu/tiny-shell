@@ -146,18 +146,15 @@ local function show(info)
         return
     end
     local icon = level_icon(info)
-    -- the dimmed full battery shows how much is missing; at a high charge
-    -- it only makes the icon harder to read
-    local under = info.state == "discharging" and info.percent < HIGH and "battery-full" or nil
     local text = text_of(info)
     if not widget then
         -- made when there is a battery, as wide as the widest text
         widget = tiny.panel.button{
             text = text, sample = "100%",
-            icon = icon, icon_under = under, on_click = open_details,
+            icon = icon, on_click = open_details,
         }
     else
-        widget:set_icon(icon, under)
+        widget:set_icon(icon)
         widget:set_text(text)
         widget:set_visible(true)
     end
