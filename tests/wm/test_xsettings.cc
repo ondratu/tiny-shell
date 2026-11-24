@@ -149,6 +149,26 @@ TEST(XSettingsOfTest, the_theme_name_follows_the_variant)
     EXPECT_EQ(theme(light), "Adwaita");
 }
 
+TEST(XSettingsOfTest, the_cursor_theme_is_told_only_when_it_is_set)
+{
+    tiny::wm::Config config;
+    auto settings = tiny::wm::xsettings_of(config, tiny::Variant::Dark);
+    for (const XSetting& s : settings) {
+        EXPECT_EQ(s.name.find("Gtk/CursorTheme"), std::string::npos);
+    }
+
+    config.cursor_theme = "Bibata";
+    config.cursor_size = 36;
+    settings = tiny::wm::xsettings_of(config, tiny::Variant::Dark);
+
+    std::map<std::string, XSetting> named;
+    for (const XSetting& s : settings) {
+        named[s.name] = s;
+    }
+    EXPECT_EQ(named.at("Gtk/CursorThemeName").text, "Bibata");
+    EXPECT_EQ(named.at("Gtk/CursorThemeSize").number, 36);
+}
+
 namespace {
 
 std::map<std::string, XSetting> by_name(const std::vector<XSetting>& list)

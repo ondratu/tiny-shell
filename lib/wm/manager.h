@@ -329,6 +329,15 @@ class Manager : public tiny::Object {
     //! Drop the sequences that took too long
     void check_startup();
 
+  public:
+    /**
+     * Make the cursors again, after a change of the cursor theme: the one of the
+     * root window, the arrow and the busy one. The frames of the windows get
+     * the new theme when they are made.
+     */
+    void refresh_cursors();
+
+  private:
     //! The cursor of the root window is the "busy" one while something starts
     void update_busy_cursor();
 

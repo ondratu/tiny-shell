@@ -25,6 +25,7 @@
 #include "wm/selection.h"
 #include "wm/session_start.h"
 #include "wm/xsettings.h"
+#include "wm/cursor_theme.h"
 #include "wm/xresources.h"
 #include "xdg/application_index.h"
 #include "xdg/autostart.h"
@@ -126,6 +127,26 @@ void publish_xft(::Display* display, const tiny::wm::Config& config,
                  const char* program)
 {
     const auto resources = tiny::wm::xft_resources(config);
+    if (!resources.empty() &&
+        !tiny::wm::publish_resources(display, resources)) {
+        fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
+    }
+}
+
+//! The cursor theme of [theme]: Xlib draws the cursors that are made from now
+//! on with it, and the programs started after it read it from the resources
+void apply_cursors(::Display* display, const tiny::wm::Config& config,
+                   const char* program)
+{
+    if ((!config.cursor_theme.empty() || config.cursor_size > 0) &&
+        !tiny::wm::has_cursor_themes()) {
+        fprintf(stderr,
+                "%s: built without libXcursor, the cursor theme is not used\n",
+                program);
+    }
+    tiny::wm::apply_cursor_theme(display, config.cursor_theme,
+                                 config.cursor_size);
+    const auto resources = tiny::wm::cursor_resources(config);
     if (!resources.empty() &&
         !tiny::wm::publish_resources(display, resources)) {
         fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
@@ -338,6 +359,19 @@ void reload_config(tiny::wm::Manager& manager,
             fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
         }
     }
+    if (config.cursor_theme != current.cursor_theme ||
+        config.cursor_size != current.cursor_size) {
+        // a theme that is not set any more removes its resources
+        apply_cursors(tiny::get_display(), config, program);
+        if (config.cursor_theme.empty() && config.cursor_size == 0) {
+            const auto removed = tiny::wm::cursor_resources("", 0);
+            if (!tiny::wm::publish_resources(tiny::get_display(), removed)) {
+                fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n",
+                        program);
+            }
+        }
+        manager.refresh_cursors();
+    }
     apply_config(manager, plugins, config, &current, program);
     // what only a restart applies stays as it was, so it is reported again
     const double scale = current.scale;
@@ -399,6 +433,7 @@ int main(int argc, char** argv)
         // first font is opened, so the shell and the programs started from it
         // use it; what is not set is left as the system has it
         publish_xft(display, config, argv[0]);
+        apply_cursors(display, config, argv[0]);
 
         // The theme needs the display (the fonts are opened here)
         tiny::wm::ShellTheme& theme = tiny::wm::shell_theme;

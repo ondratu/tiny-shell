@@ -294,6 +294,12 @@ std::vector<XSetting> xsettings_of(const Config& config, Variant variant)
     if (!config.xft_rgba.empty()) {
         rv.push_back(XSetting::string("Xft/RGBA", config.xft_rgba));
     }
+    if (!config.cursor_theme.empty()) {
+        rv.push_back(XSetting::string("Gtk/CursorThemeName", config.cursor_theme));
+    }
+    if (config.cursor_size > 0) {
+        rv.push_back(XSetting::integer("Gtk/CursorThemeSize", config.cursor_size));
+    }
     std::sort(rv.begin(), rv.end(), [](const XSetting& a, const XSetting& b) {
         return a.name < b.name;
     });

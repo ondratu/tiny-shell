@@ -622,6 +622,51 @@ TEST(ConfigTest, a_wrong_value_of_xsettings_is_refused)
               std::string::npos);
 }
 
+TEST(ConfigTest, the_cursor_theme_is_not_set_by_default)
+{
+    const auto c = parse_config({});
+
+    EXPECT_EQ(c.cursor_theme, "");
+    EXPECT_EQ(c.cursor_size, 0);
+}
+
+TEST(ConfigTest, the_cursor_theme_and_its_size_are_read)
+{
+    const auto c = parse_config(
+            {{"a", "[theme]\ncursor_theme = Adwaita\ncursor_size = 32\n"}});
+
+    EXPECT_EQ(c.cursor_theme, "Adwaita");
+    EXPECT_EQ(c.cursor_size, 32);
+}
+
+TEST(ConfigTest, a_wrong_cursor_theme_or_size_is_refused)
+{
+    std::vector<std::string> problems;
+
+    const auto c = parse_config({{"a", "[theme]\ncursor_theme = ../x\n"
+                                       "cursor_size = big\n"}},
+                                &problems);
+
+    EXPECT_EQ(c.cursor_theme, "");
+    EXPECT_EQ(c.cursor_size, 0);
+    ASSERT_EQ(problems.size(), 2u);
+    EXPECT_NE(problems[0].find("[theme] cursor_theme must be"),
+              std::string::npos);
+    EXPECT_NE(problems[1].find("[theme] cursor_size must be"),
+              std::string::npos);
+}
+
+TEST(ConfigTest, a_cursor_size_out_of_range_is_refused)
+{
+    std::vector<std::string> problems;
+
+    const auto c = parse_config({{"a", "[theme]\ncursor_size = 1000\n"}},
+                                &problems);
+
+    EXPECT_EQ(c.cursor_size, 0);
+    EXPECT_EQ(problems.size(), 1u);
+}
+
 TEST(ConfigTest, the_system_tray_is_on_unless_it_is_turned_off)
 {
     EXPECT_TRUE(parse_config({}).system_tray);

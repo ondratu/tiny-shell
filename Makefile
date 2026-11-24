@@ -61,6 +61,12 @@ XINERAMA ?= $(shell pkg-config --exists xinerama && echo 1 || echo 0)
 ifeq ($(XINERAMA),1)
 PKGS += xinerama
 endif
+# Xcursor makes the cursors follow a theme ([theme] cursor_theme); used when it
+# is installed, XCURSOR=0 builds without it (the cursors of the X server stay)
+XCURSOR ?= $(shell pkg-config --exists xcursor && echo 1 || echo 0)
+ifeq ($(XCURSOR),1)
+PKGS += xcursor
+endif
 PKG_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 PKG_LIBS := $(shell pkg-config --libs $(PKGS))
 
@@ -141,6 +147,9 @@ override CXXFLAGS += -DTINY_RANDR
 endif
 ifeq ($(XINERAMA),1)
 override CXXFLAGS += -DTINY_XINERAMA
+endif
+ifeq ($(XCURSOR),1)
+override CXXFLAGS += -DTINY_XCURSOR
 endif
 override CXXFLAGS += -pthread -MMD -std=c++17 -fno-rtti -I./lib -isystem ./lib/third_party \
     $(SYS_CFLAGS) $(LUA_CFLAGS) $(LUA_DEFS) $(WARNINGS) \
@@ -260,7 +269,7 @@ help:
 	@echo "make cppcheck  second opinion on the sources (cppcheck)"
 	@echo "make format     format the sources with clang-format"
 	@echo "make clean      remove the build directories"
-	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 (no RandR / Xinerama),"
+	@echo "Variables: CXX, CXXFLAGS, BUILD, DEBUG=1 (-Og -g), STRICT=1 (warnings are errors), RANDR=0 / XINERAMA=0 / XCURSOR=0 (no RandR / Xinerama / Xcursor),"
 	@echo "           HARDEN=1 (hardening flags for a release build)"
 	@echo "           LUA=auto|yes|no (Lua 5.3 or newer for the plugins of the panel)"
 	@echo "           PAM=auto|yes|no (libpam for tiny-lock-auth), UNIX_CHKPWD=/path (the helper of PAM)"

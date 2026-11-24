@@ -4324,6 +4324,19 @@ TEST_F(ManagerTest, super_t_starts_the_terminal_and_does_not_open_the_launcher)
     std::filesystem::remove(program);
 }
 
+TEST_F(ManagerTest, refreshing_the_cursors_makes_the_arrow_again)
+{
+    start();
+    const Cursor before = manager->arrow_cursor;
+    ASSERT_NE(before, None);
+
+    manager->refresh_cursors();
+
+    EXPECT_NE(manager->arrow_cursor, None);
+    EXPECT_EQ(manager->busy_cursor, None); // not made when nothing starts
+    XSync(dsp(), False); // a freed cursor would be an error of the server
+}
+
 TEST_F(ManagerTest, t_without_super_is_not_the_terminal)
 {
     start();

@@ -26,6 +26,8 @@ namespace tiny::wm {
  * font_style = Bold
  * style = dark
  * xsettings = yes
+ * cursor_theme = Adwaita
+ * cursor_size = 32
  *
  * [xft]
  * antialias = yes
@@ -146,6 +148,12 @@ struct Config {
     Look launcher_style = Look::Auto;
     //! [theme] xsettings: tell GTK and Qt the look (yes or no)
     bool xsettings = true;
+    //! [theme] cursor_theme: the name of a cursor theme; "" keeps the one of
+    //! the system. Needs libXcursor, else the cursors of the X server stay.
+    std::string cursor_theme;
+    //! [theme] cursor_size: the size of the cursors in pixels; 0 is the size
+    //! of the system
+    int cursor_size = 0;
     //! [wallpaper] file, a PNG or JPEG; "" is no wallpaper (`~/` is the home)
     std::string wallpaper_file;
     //! [wallpaper] file is in a file (empty or not). When it is not, the
