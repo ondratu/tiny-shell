@@ -6510,6 +6510,16 @@ TEST_F(ManagerTest,
     EXPECT_EQ(second, "--style light");
 }
 
+TEST_F(ManagerTest, a_dark_theme_starts_with_a_dark_root_before_any_wallpaper)
+{
+    const VariantGuard guard;
+    tiny::wm::shell_theme.set_variant(tiny::Variant::Dark);
+    start();
+    const int y = manager->screen_height / 2;
+
+    EXPECT_EQ(Image(root_window(), 1, y + 1).at(0, y), 0x2B3540u);
+}
+
 TEST_F(ManagerTest,
        the_variant_changes_the_color_of_the_root_but_not_a_wallpaper)
 {
