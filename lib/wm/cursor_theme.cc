@@ -41,6 +41,7 @@ installed_cursor_themes(const std::vector<std::string>& data_dirs,
                         const char* home)
 {
     std::vector<std::string> bases;
+    bases.reserve(data_dirs.size() + 1);
     for (const std::string& dir : data_dirs) {
         bases.push_back(dir + "/icons");
     }
