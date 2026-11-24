@@ -59,6 +59,7 @@
 #include "text_field.h"
 #include "style.h"
 #include "wm/config.h"
+#include "wm/cursor_theme.h"
 #include "wm/keyboard.h"
 #include "wm/reload.h"
 #include "wm/symbolic_icons.h"
@@ -182,7 +183,10 @@ class SettingsApp : public tiny::XftWindow {
                 config.session_autostart ? "yes" : "no",
                 config.session_confirm ? "yes" : "no",
                 tiny::wm::keyboard_switch_of(keyboard.options),
-                config.keyboard_indicator ? "yes" : "no"},
+                config.keyboard_indicator ? "yes" : "no",
+                config.cursor_theme,
+                config.cursor_size > 0 ? std::to_string(config.cursor_size)
+                                       : ""},
         form(initial, std::move(families), metrics, tiny::xdg::font_styles),
         ui_family(config.font),
         colors(tiny::app::app_colors(
@@ -210,6 +214,8 @@ class SettingsApp : public tiny::XftWindow {
         }
 
         form.set_monitors(monitors);
+        form.set_cursor_themes(tiny::wm::installed_cursor_themes(
+                tiny::xdg::default_data_dirs(), getenv("HOME")));
         form.set_measure([this](const std::string& text) {
             return text_width(ui_font, text);
         });
@@ -566,6 +572,17 @@ class SettingsApp : public tiny::XftWindow {
                 changed.push_back(
                         {"keyboard", "indicator", v.keyboard_indicator});
             }
+            const bool cursor_changed =
+                    v.cursor_theme != initial.cursor_theme ||
+                    v.cursor_size != initial.cursor_size;
+            if (v.cursor_theme != initial.cursor_theme) {
+                changed.push_back({"theme", "cursor_theme", v.cursor_theme});
+            }
+            if (v.cursor_size != initial.cursor_size) {
+                changed.push_back(
+                        {"theme", "cursor_size",
+                         v.cursor_size.empty() ? "0" : v.cursor_size});
+            }
             if (v.primary_monitor != initial.primary_monitor) {
                 changed.push_back({"monitors", "primary",
                                    v.primary_monitor.empty()
@@ -595,7 +612,7 @@ class SettingsApp : public tiny::XftWindow {
                     fprintf(stderr, "%s: can't run %s\n", "tiny-settings",
                             wallpaper_program.c_str());
                 }
-                if (keyboard_changed || plugins_changed) {
+                if (keyboard_changed || plugins_changed || cursor_changed) {
                     // the shell sets the keyboard and the panel, and starts
                     // and stops the plugins, when it reads the file
                     const std::string problem = tiny::wm::request_reload(
@@ -1183,7 +1200,9 @@ class SettingsApp : public tiny::XftWindow {
                     {SettingsForm::Field::KeyboardSwitch, "Switch"},
                     {SettingsForm::Field::KeyboardIndicator, "In panel"},
                     {SettingsForm::Field::KeyboardShortcuts, "Shortcuts"},
-                    {SettingsForm::Field::Plugins, "Plugins"}};
+                    {SettingsForm::Field::Plugins, "Plugins"},
+                    {SettingsForm::Field::CursorTheme, "Pointer"},
+                    {SettingsForm::Field::CursorSize, "Pointer size"}};
         for (const auto& row : rows) {
             if (SettingsForm::section_of(row.id) != form.section()) {
                 continue;

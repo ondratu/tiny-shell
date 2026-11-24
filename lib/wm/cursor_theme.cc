@@ -1,6 +1,10 @@
 #include "wm/cursor_theme.h"
 
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <iterator>
+#include <system_error>
 
 #ifdef TINY_XCURSOR
 #include <X11/Xcursor/Xcursor.h>
@@ -30,6 +34,53 @@ std::vector<ResourceChange> cursor_resources(const Config& config)
         return {};
     }
     return cursor_resources(config.cursor_theme, config.cursor_size);
+}
+
+std::vector<std::string>
+installed_cursor_themes(const std::vector<std::string>& data_dirs,
+                        const char* home)
+{
+    std::vector<std::string> bases;
+    for (const std::string& dir : data_dirs) {
+        bases.push_back(dir + "/icons");
+    }
+    if (home != nullptr && *home != '\0') {
+        bases.push_back(std::string(home) + "/.icons");
+    }
+    std::vector<std::string> rv;
+    for (const std::string& base : bases) {
+        std::error_code ignored;
+        for (const auto& entry :
+             std::filesystem::directory_iterator(base, ignored)) {
+            const std::string name = entry.path().filename().string();
+            if (valid_cursor_theme(name) &&
+                std::filesystem::is_directory(entry.path() / "cursors",
+                                              ignored)) {
+                rv.push_back(name);
+            }
+        }
+    }
+    std::sort(rv.begin(), rv.end());
+    rv.erase(std::unique(rv.begin(), rv.end()), rv.end());
+    return rv;
+}
+
+XftChoices cursor_size_choices()
+{
+    static constexpr XftChoice sizes[] = {
+            {"", "System default"}, {"16", "16"}, {"24", "24"}, {"32", "32"},
+            {"48", "48"},           {"64", "64"}, {"96", "96"}};
+    return {std::begin(sizes), std::end(sizes)};
+}
+
+bool valid_cursor_size(const std::string& text)
+{
+    if (text.empty()) {
+        return true;
+    }
+    char* end = nullptr;
+    const long size = strtol(text.c_str(), &end, 10);
+    return *end == '\0' && size >= 1 && size <= max_cursor_size;
 }
 
 bool has_cursor_themes()

@@ -9,6 +9,7 @@
 #include "ini.h"
 #include "style.h"
 #include "wm/config.h"
+#include "wm/cursor_theme.h"
 #include "xdg/desktop_entry.h"
 
 namespace tiny::app {
@@ -98,7 +99,9 @@ constexpr SettingsForm::Field fields[] = {
         SettingsForm::Field::KeyboardSwitch,
         SettingsForm::Field::KeyboardShortcuts,
         SettingsForm::Field::KeyboardIndicator,
-        SettingsForm::Field::Plugins};
+        SettingsForm::Field::Plugins,
+        SettingsForm::Field::CursorTheme,
+        SettingsForm::Field::CursorSize};
 
 } // namespace
 
@@ -152,7 +155,9 @@ SettingsForm::SettingsForm(const Values& initial,
             TextField(initial.keyboard_switch),
             TextField(),
             TextField(initial.keyboard_indicator),
-            TextField()},
+            TextField(),
+            TextField(initial.cursor_theme),
+            TextField(initial.cursor_size)},
     styles_of_(std::move(styles_of)),
     all_(std::move(families)),
     shown_(all_),
@@ -220,7 +225,9 @@ SettingsForm::Values SettingsForm::values() const
             text(Field::SessionAutostart),
             text(Field::SessionConfirm),
             text(Field::KeyboardSwitch),
-            text(Field::KeyboardIndicator)};
+            text(Field::KeyboardIndicator),
+            text(Field::CursorTheme),
+            text(Field::CursorSize)};
 }
 
 // The sections
@@ -288,7 +295,8 @@ SettingsForm::section_fields(Section section)
     static const std::vector<Field> appearance = {
             Field::Theme,     Field::PanelStyle,    Field::DockStyle,
             Field::DockBar,   Field::LauncherStyle, Field::Scale,
-            Field::Wallpaper, Field::WallpaperMode};
+            Field::Wallpaper, Field::WallpaperMode, Field::CursorTheme,
+            Field::CursorSize};
     static const std::vector<Field> desktop = {Field::Dock, Field::ClockFormat};
     static const std::vector<Field> displays = {Field::PrimaryMonitor,
                                                 Field::SecondaryMonitor,
@@ -360,6 +368,11 @@ const char* SettingsForm::hint(Field field)
         case Field::ClockFormat:
             return "A strftime format, e.g. %A %e %B %R; empty hides the "
                    "clock.";
+        case Field::CursorTheme:
+            return "The pointer of the shell and the programs, from "
+                   "~/.icons and icons/.";
+        case Field::CursorSize:
+            return "In pixels; the pointer changes as soon as you save.";
         case Field::Dock:
             return "Auto-hide: hidden under a window, the bottom edge shows "
                    "it.";
@@ -460,7 +473,9 @@ bool SettingsForm::is_choice(Field field)
            field == Field::MonitorPlacement || field == Field::LockDelay ||
            field == Field::DisplayOff || field == Field::DisplayDpms ||
            field == Field::SessionAutostart || field == Field::SessionConfirm ||
-           field == Field::KeyboardSwitch || field == Field::KeyboardIndicator;
+           field == Field::KeyboardSwitch ||
+           field == Field::KeyboardIndicator || field == Field::CursorTheme ||
+           field == Field::CursorSize;
 }
 
 //! Open the list that the focused field opens
@@ -486,6 +501,11 @@ bool SettingsForm::opens_list(Field field)
 {
     return field == Field::SessionPrograms || field == Field::KeyboardLayouts ||
            field == Field::KeyboardShortcuts || field == Field::Plugins;
+}
+
+void SettingsForm::set_cursor_themes(std::vector<std::string> names)
+{
+    cursor_themes_ = std::move(names);
 }
 
 void SettingsForm::set_monitors(const wm::Monitors& monitors)
@@ -520,6 +540,26 @@ SettingsForm::options_of(Field field) const
         return monitor_options_;
     }
     std::vector<std::pair<std::string, std::string>> options;
+    if (field == Field::CursorTheme) {
+        options.emplace_back("", "System default");
+        for (const std::string& name : cursor_themes_) {
+            options.emplace_back(name, name);
+        }
+    }
+    if (field == Field::CursorTheme || field == Field::CursorSize) {
+        if (field == Field::CursorSize) {
+            for (const wm::XftChoice& c : wm::cursor_size_choices()) {
+                options.emplace_back(c.value, c.label);
+            }
+        }
+        // a value of the file that the list does not have stays choosable
+        const std::string& now = text(field);
+        if (std::none_of(options.begin(), options.end(),
+                         [&](const auto& o) { return o.first == now; })) {
+            options.emplace_back(now, now);
+        }
+        return options;
+    }
     for (const wm::XftChoice& c : choices_of(field)) {
         options.emplace_back(c.value, c.label);
     }
@@ -682,6 +722,15 @@ std::string SettingsForm::problem(Field field) const
                            ? ""
                            : "A monitor is auto, a number or an output name "
                              "without blanks.";
+        case Field::CursorTheme:
+            return value.empty() || wm::valid_cursor_theme(value)
+                           ? ""
+                           : "The name of a cursor theme has no slash.";
+        case Field::CursorSize:
+            return wm::valid_cursor_size(value)
+                           ? ""
+                           : "The size of the pointer is a number of pixels, "
+                             "1 to 256.";
         case Field::ClockFormat:
             return wm::valid_clock_format(value)
                            ? ""
@@ -740,7 +789,9 @@ SettingsForm::Values SettingsForm::clean_values() const
             clean(v.session_autostart),
             clean(v.session_confirm),
             clean(v.keyboard_switch),
-            clean(v.keyboard_indicator)};
+            clean(v.keyboard_indicator),
+            clean(v.cursor_theme),
+            clean(v.cursor_size)};
 }
 
 void SettingsForm::reject(const std::string& message)
@@ -1704,7 +1755,9 @@ bool SettingsForm::act(size_t target, int x)
         case SessionAutostartField:
         case SessionConfirmField:
         case KeyboardSwitchField:
-        case KeyboardIndicatorField: {
+        case KeyboardIndicatorField:
+        case CursorThemeField:
+        case CursorSizeField: {
             focus_ = fields[target - FontField];
             if (is_choice(focus_)) {
                 // the left half goes back, the right half goes on

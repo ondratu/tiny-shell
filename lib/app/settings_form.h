@@ -121,7 +121,9 @@ class SettingsForm {
         KeyboardSwitch,    //!< a choice: the keys that switch the layout
         KeyboardShortcuts, //!< opens the list of the keys of the shell
         KeyboardIndicator, //!< a choice: yes or no, the layout is in the panel
-        Plugins            //!< opens the list of the plugins
+        Plugins,           //!< opens the list of the plugins
+        CursorTheme,       //!< a choice: an installed theme of the pointer
+        CursorSize         //!< a choice: the size of the pointer in pixels
     };
 
     //! What has the keyboard in the list of fonts
@@ -197,6 +199,10 @@ class SettingsForm {
         std::string keyboard_switch{};
         //! The layout in use is shown in the panel (yes, no)
         std::string keyboard_indicator = "no";
+        //! The theme of the pointer and its size ("" is the one of the
+        //! system)
+        std::string cursor_theme{};
+        std::string cursor_size{};
         // NOLINTEND(readability-redundant-member-init)
     };
 
@@ -269,6 +275,10 @@ class SettingsForm {
     /// Auto: "1: HDMI-1 1920x1080". The value of a choice is the name of the
     /// output (the number when it has none). Call it before the form is used.
     void set_monitors(const wm::Monitors& monitors);
+
+    //! The names of the cursor themes that can be chosen (the one in the
+    //! form is offered too, when it is not there)
+    void set_cursor_themes(std::vector<std::string> names);
 
     /// The value that the form uses for the monitor a setting names ("auto",
     /// a number or an output): "" is auto, else the name or the number.
@@ -581,6 +591,8 @@ class SettingsForm {
         KeyboardShortcutsField,
         KeyboardIndicatorField,
         PluginsField,
+        CursorThemeField,
+        CursorSizeField,
         ChooseButton,
         CancelButton,
         SaveButton,
@@ -645,8 +657,9 @@ class SettingsForm {
     int row_pitch(Section section) const; //!< a row, the gap and the note
     int controls_top() const;
 
-    std::array<TextField, 32> fields_;
+    std::array<TextField, 34> fields_;
     //! value and label of the monitors, Auto first
+    std::vector<std::string> cursor_themes_;
     std::vector<std::pair<std::string, std::string>> monitor_options_ = {
             {"", "Auto"}};
     TextField search_;

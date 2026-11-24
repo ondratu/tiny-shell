@@ -1343,7 +1343,7 @@ TEST(SettingsFormSectionTest, every_field_is_in_one_section)
             ++count;
         }
     }
-    EXPECT_EQ(count, 31u);
+    EXPECT_EQ(count, 33u);
 }
 
 TEST(SettingsFormSectionTest, the_sections_go_from_the_look_to_the_system)
@@ -1584,6 +1584,82 @@ TEST(SettingsFormClockDockTest, some_fields_have_a_hint)
     EXPECT_NE(std::string(SettingsForm::hint(Field::ClockFormat)), "");
     EXPECT_NE(std::string(SettingsForm::hint(Field::Dock)), "");
     EXPECT_STREQ(SettingsForm::hint(Field::Size), "");
+}
+
+TEST(SettingsFormCursorTest, the_pointer_is_in_the_appearance_and_is_a_choice)
+{
+    EXPECT_EQ(SettingsForm::section_of(Field::CursorTheme),
+              SettingsForm::Section::Appearance);
+    EXPECT_EQ(SettingsForm::section_of(Field::CursorSize),
+              SettingsForm::Section::Appearance);
+    EXPECT_TRUE(SettingsForm::is_choice(Field::CursorTheme));
+    EXPECT_TRUE(SettingsForm::is_choice(Field::CursorSize));
+}
+
+TEST(SettingsFormCursorTest, the_arrows_go_through_the_installed_themes)
+{
+    SettingsForm form = make();
+    form.set_cursor_themes({"Adwaita", "Bibata"});
+    focus_on(form, Field::CursorTheme);
+
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.text(Field::CursorTheme), "Adwaita");
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.text(Field::CursorTheme), "Bibata");
+    EXPECT_TRUE(form.key(Key::Right)); // round to the system theme
+    EXPECT_EQ(form.text(Field::CursorTheme), "");
+    EXPECT_EQ(form.choice_label(Field::CursorTheme), "System default");
+}
+
+TEST(SettingsFormCursorTest, a_theme_of_the_file_that_is_not_installed_stays)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.cursor_theme = "Gone";
+    SettingsForm form = make(v);
+    form.set_cursor_themes({"Adwaita"});
+    focus_on(form, Field::CursorTheme);
+
+    EXPECT_EQ(form.choice_label(Field::CursorTheme), "Gone");
+    EXPECT_TRUE(form.key(Key::Right)); // from the unknown one to the first
+    EXPECT_EQ(form.text(Field::CursorTheme), "");
+    EXPECT_TRUE(form.problem().empty());
+}
+
+TEST(SettingsFormCursorTest, the_size_is_chosen_from_the_sizes)
+{
+    SettingsForm form = make();
+    focus_on(form, Field::CursorSize);
+
+    EXPECT_TRUE(form.key(Key::Right));
+    EXPECT_EQ(form.text(Field::CursorSize), "16");
+    EXPECT_TRUE(form.key(Key::Left));
+    EXPECT_EQ(form.text(Field::CursorSize), "");
+    EXPECT_EQ(form.choice_label(Field::CursorSize), "System default");
+}
+
+TEST(SettingsFormCursorTest, a_wrong_theme_or_size_cannot_be_saved)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.cursor_theme = "../x";
+    v.cursor_size = "huge";
+
+    const SettingsForm form = make(v);
+
+    EXPECT_FALSE(form.problem(Field::CursorTheme).empty());
+    EXPECT_FALSE(form.problem(Field::CursorSize).empty());
+    EXPECT_TRUE(make(V("Gamma", "xterm -e", "1")).problem().empty());
+}
+
+TEST(SettingsFormCursorTest, the_values_come_back_clean)
+{
+    SettingsForm::Values v = V("Gamma", "xterm -e", "1");
+    v.cursor_theme = " Adwaita ";
+    v.cursor_size = "32";
+
+    const auto clean = make(v).clean_values();
+
+    EXPECT_EQ(clean.cursor_theme, "Adwaita");
+    EXPECT_EQ(clean.cursor_size, "32");
 }
 
 TEST(SettingsFormSectionTest, a_wrong_field_in_the_same_section_gets_the_focus)
