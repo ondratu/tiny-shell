@@ -21,12 +21,14 @@ when it is installed, and is not needed without them.
 Requirements: a C++17 compiler, GNU make, `pkg-config` and the development files
 of `x11`, `xft`, `xrender` and `xext`, and `xrandr` and `xinerama` for several
 monitors (they are used when they are installed; `make RANDR=0 XINERAMA=0`
-builds without them and the whole screen is one monitor).
+builds without them and the whole screen is one monitor), and `xcursor` for the
+cursor theme (`libxcursor-dev`; `make XCURSOR=0` builds without it and the
+pointer has the shapes of the X server).
 
 ```sh
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev \
-    libxinerama-dev libfontconfig-dev
+    libxinerama-dev libxcursor-dev libfontconfig-dev
 
 make                 # build/tiny-shell, tiny-settings, tiny-fonts, tiny-about, tiny-wallpaper, tiny-lock
 make release         # the same, small and stripped, into build-release/
@@ -38,8 +40,8 @@ The names of the packages on other systems:
 
 | System | Packages |
 | ------ | -------- |
-| Fedora | `gcc-c++ make pkgconf libX11-devel libXft-devel libXrender-devel libXext-devel libXrandr-devel libXinerama-devel fontconfig-devel` |
-| Alpine | `build-base pkgconf libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev fontconfig-dev` |
+| Fedora | `gcc-c++ make pkgconf libX11-devel libXft-devel libXrender-devel libXext-devel libXrandr-devel libXinerama-devel libXcursor-devel fontconfig-devel` |
+| Alpine | `build-base pkgconf libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev fontconfig-dev` |
 
 Lua 5.3 or newer is optional too, and used by default when `pkg-config` finds it:
 with `liblua5.4-dev` (Debian and Ubuntu), `lua-devel` (Fedora), `lua5.4-dev`

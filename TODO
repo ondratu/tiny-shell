@@ -263,23 +263,18 @@ next steps:
   and `remove:` to the other watchers (pagers), a window that has the id only
   on its group leader or in `WM_CLIENT_LEADER` does not end the sequence, and
   the `_TIME` of the id could be the user time of a window that has none.
-- A configurable cursor theme through `Xcursor`, only if it stays optional
-  (the shell uses the plain `left_ptr` shape now, which every system draws as
-  an arrow that points up and left; libX11 takes the theme by itself when
-  libXcursor is there).
 - Appearance for applications (light/dark, font, antialiasing, DPI): tiny-shell
   becomes the settings daemon and publishes one source of truth (the ini
   file) to every channel applications read. The design is below; the open
   questions are in "Ideas that are not decided".
   - XSETTINGS manager (`wm/xsettings.*`; the theme name, the font, the DPI and
-    the Xft options are published). Missing: the cursor
-    (`Gtk/CursorThemeName`, `Gtk/CursorThemeSize`, with `Xcursor.*`),
+    the Xft options are published). Missing:
     `Net/IconThemeName`, and a program of ours that runs following a change
     of the style (it would watch `_XSETTINGS_SETTINGS`; they read it at the
     start now).
   - `RESOURCE_MANAGER` property on the root window (`lib/wm/xresources.*`).
     Read by an application at its start only; has no light/dark flag. Output
-    only, the storage is the ini file. Missing: `Xft.dpi` and `Xcursor.*`
+    only, the storage is the ini file. Missing: `Xft.dpi`
     (XSETTINGS has the DPI).
   - Portal `org.freedesktop.appearance` `color-scheme` (0 none, 1 dark,
     2 light; signal `SettingChanged`): the only real standard for dark/light,

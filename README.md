@@ -56,7 +56,7 @@ The documentation is in [doc/](doc/) and is published as a web site at
 ```sh
 sudo apt install build-essential pkg-config \
     libx11-dev libxft-dev libxrender-dev libxext-dev libxrandr-dev \
-    libxinerama-dev libfontconfig-dev
+    libxinerama-dev libxcursor-dev libfontconfig-dev
 
 make                      # build/tiny-shell and the other programs
 tools/run-xephyr.sh       # try it in a nested X server, the safest way

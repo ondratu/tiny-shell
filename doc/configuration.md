@@ -35,6 +35,11 @@ font_style = Bold
 # Tell GTK and Qt programs the theme, the font and the DPI (XSETTINGS, see
 # below): yes (the default) or no
 xsettings = yes
+# The theme of the mouse pointer (a directory of ~/.icons or of icons/ in
+# the data directories, like "Adwaita") and its size in pixels, 0 to 256.
+# Empty and 0 leave what the system says. Needs libXcursor.
+cursor_theme = Adwaita
+cursor_size = 32
 
 [xft]
 # How the programs draw text, put into the X resources Xft.* when tiny-shell
@@ -295,6 +300,8 @@ changes. The settings come from the configuration file:
   `font_size`, like "DejaVu Sans Bold 12"
 - `Xft/DPI`, `Gdk/UnscaledDPI` and `Gdk/WindowScalingFactor`: 96 dpi times
   `[theme] scale`; the whole part of the scale is the factor of the windows
+- `Gtk/CursorThemeName` and `Gtk/CursorThemeSize`: `[theme] cursor_theme` and
+  `cursor_size`, when they are set
 - `Xft/Antialias`, `Xft/Hinting`, `Xft/HintStyle` and `Xft/RGBA` from `[xft]`
   (what is not set is not published)
 
@@ -306,7 +313,25 @@ keeps its colors until it is started again.
 
 A settings daemon that already runs (`gsd-xsettings`, `xsettingsd`) is left
 alone and tiny-shell publishes nothing; the same happens with `[theme] xsettings
-= no`. The cursor theme is not published yet.
+= no`. 
+
+### The mouse pointer
+
+The shell draws the pointer with the shapes of X (the arrow that points up and
+left, the hand, the arrows of the edges, the watch while an application
+starts). When tiny-shell is built with libXcursor (it is used when it is
+installed, `make XCURSOR=0` builds without it), these shapes come from a cursor
+theme: `[theme] cursor_theme` names it and `cursor_size` sets the size, which
+is useful on a screen with a high DPI, where the default one is small. Without
+the two keys the system decides. Without libXcursor the shell writes a message that
+the theme is not used and keeps the cursors of the X server.
+
+The theme is told to the other programs too: through the settings above
+(`Gtk/CursorThemeName` and `Gtk/CursorThemeSize`, which GTK follows at once)
+and through the X resources `Xcursor.theme` and `Xcursor.size`, which Xlib reads
+when a program starts. A reload (`tiny-shell --reload`) changes the
+pointer over the desktop at once; a window gets the new shape when the
+pointer enters its frame again.
 
 ## The system tray
 
