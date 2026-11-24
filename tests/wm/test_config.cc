@@ -660,8 +660,8 @@ TEST(ConfigTest, a_cursor_size_out_of_range_is_refused)
 {
     std::vector<std::string> problems;
 
-    const auto c = parse_config({{"a", "[theme]\ncursor_size = 1000\n"}},
-                                &problems);
+    const auto c =
+            parse_config({{"a", "[theme]\ncursor_size = 1000\n"}}, &problems);
 
     EXPECT_EQ(c.cursor_size, 0);
     EXPECT_EQ(problems.size(), 1u);

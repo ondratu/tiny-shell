@@ -23,7 +23,8 @@ constexpr int max_cursor_size = 256;
  * does). What is not set gives lines to remove, so the programs keep what the
  * system says.
  */
-std::vector<ResourceChange> cursor_resources(const std::string& theme, int size);
+std::vector<ResourceChange> cursor_resources(const std::string& theme,
+                                             int size);
 
 //! The same for `config`
 std::vector<ResourceChange> cursor_resources(const Config& config);

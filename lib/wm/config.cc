@@ -616,7 +616,8 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.cursor_size = static_cast<int>(size);
         } else {
             problem("[theme] cursor_size must be a whole number of pixels, "
-                    "0 to " + std::to_string(max_cursor_size));
+                    "0 to " +
+                    std::to_string(max_cursor_size));
         }
     }
     if (const auto value = ini.get("session", "autostart")) {

@@ -366,8 +366,7 @@ void reload_config(tiny::wm::Manager& manager,
         if (config.cursor_theme.empty() && config.cursor_size == 0) {
             const auto removed = tiny::wm::cursor_resources("", 0);
             if (!tiny::wm::publish_resources(tiny::get_display(), removed)) {
-                fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n",
-                        program);
+                fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
             }
         }
         manager.refresh_cursors();
