@@ -33,7 +33,7 @@ comparison with other window managers is in the [comparison](comparison.md).
     [Using the shell](usage.md#startup-notification)).
   - GTK windows that draw their own title bar (`_GTK_FRAME_EXTENTS`) are placed
     by their visible part, not by their shadow.
-  - XSETTINGS (the theme, the font and the DPI for GTK and Qt, see [Configuration](configuration.md#settings-for-gtk-and-qt-xsettings)),
+  - XSETTINGS (the theme, the font, the DPI and the cursor theme for GTK and Qt, see [Configuration](configuration.md#settings-for-gtk-and-qt-xsettings)),
     `_MOTIF_WM_HINTS` (functions and decorations), Desktop Entry and the Icon
     Theme specification (PNG, SVG, XPM).
 - **Shell:** top panel with the logo, which opens the main menu (About,
