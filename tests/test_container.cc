@@ -161,7 +161,7 @@ TEST(PositionTest, cursor_shape_for_edges)
     EXPECT_EQ(tiny::Position::get_cursor_shape(tiny::Position::Top),
               static_cast<uint32_t>(XC_top_side));
     EXPECT_EQ(tiny::Position::get_cursor_shape(0),
-              static_cast<uint32_t>(XC_arrow));
+              static_cast<uint32_t>(XC_left_ptr));
 }
 
 TEST(PositionTest, cursor_shape_for_all_sides_and_corners)
@@ -179,8 +179,10 @@ TEST(PositionTest, cursor_shape_for_all_sides_and_corners)
             {Position::Bottom | Position::Right, XC_bottom_right_corner},
             {Position::Top | Position::Left, XC_top_left_corner},
             {Position::Bottom | Position::Left, XC_bottom_left_corner},
-            {Position::Left | Position::Right, XC_arrow}, // not implemented yet
-            {Position::Top | Position::Bottom, XC_arrow}, // not implemented yet
+            {Position::Left | Position::Right,
+             XC_left_ptr}, // not implemented yet
+            {Position::Top | Position::Bottom,
+             XC_left_ptr}, // not implemented yet
     };
 
     for (auto c : cases) {

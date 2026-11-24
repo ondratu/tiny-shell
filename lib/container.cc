@@ -32,7 +32,7 @@ uint32_t Position::get_cursor_shape(uint16_t mask)
             // TODO: Top|Bottom
 
         default:
-            return XC_arrow;
+            return XC_left_ptr;
     }
 }
 
