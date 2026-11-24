@@ -1,6 +1,6 @@
 -- The battery in the panel. The charge is read where the system keeps it:
--- /sys/class/power_supply on Linux, sysctl on FreeBSD, apm on OpenBSD. A
--- computer without a battery shows nothing.
+-- /sys/class/power_supply on Linux, sysctl on FreeBSD, apm on OpenBSD,
+-- envstat on NetBSD. A computer without a battery shows nothing.
 --
 -- info = {percent = 0..100, state = "charging" | "discharging" | "full"}
 
@@ -85,11 +85,19 @@ local function read_openbsd(done)
     end)
 end
 
+-- NetBSD: envstat, which lives in /usr/sbin, out of the PATH of a user
+local function read_netbsd(done)
+    tiny.exec({"/usr/sbin/envstat"}, function(result)
+        done(result.ok and require("netbsd").parse(result.stdout) or nil)
+    end)
+end
+
 local readers = {
     linux = read_linux,
     freebsd = read_freebsd,
     dragonfly = read_freebsd,
     openbsd = read_openbsd,
+    netbsd = read_netbsd,
 }
 local read = readers[tiny.platform]
 

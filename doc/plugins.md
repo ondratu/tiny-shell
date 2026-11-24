@@ -9,7 +9,7 @@ Four plugins come with tiny-shell:
 
 | Plugin | What it does | Switched on |
 | ------ | ------------ | ----------- |
-| **Battery** | A battery with the percentage next to it. The icon follows the charge (full, good, low, empty) and has a bolt while the computer is on mains (charging or full). A click shows the state in words. Linux, FreeBSD and OpenBSD; a computer without a battery shows nothing. | yes |
+| **Battery** | A battery with the percentage next to it. The icon follows the charge (full, good, low, empty) and has a bolt while the computer is on mains (charging or full). A click shows the state in words. Linux, FreeBSD, OpenBSD and NetBSD; a computer without a battery shows nothing. | yes |
 | **Network** | The connection of the computer: a cable, or the Wi-Fi with the strength of its signal. A click lists every adapter with its addresses and speed and the Wi-Fi networks in range, and lets you connect, disconnect and turn an adapter off. Below is what each system can do. | yes |
 | **System monitor** | The load of the computer: the processor, the memory, the swap and the network, each as a button with an icon and a number that you can switch off alone. A click opens the details. Linux, FreeBSD, OpenBSD and NetBSD. See below. | no |
 | **Weather** | The symbol of the weather and the temperature, from [open-meteo.com](https://open-meteo.com/) (free, no account; needs `curl`). A click opens a window like the one of GNOME: the town, the weather now, the feeling, the humidity, the wind, the pressure and the forecast for the next five days. Nothing changes by itself. | no, it needs a town first |
