@@ -18,6 +18,7 @@
 
 #include "ini.h"
 #include "text.h"
+#include "wm/cursor_theme.h"
 #include "wm/keyboard.h"
 #include "xdg/application_launch.h"
 #include "xdg/dirs.h"
@@ -594,6 +595,28 @@ void apply(const Ini& ini, const std::string& name, Config& config,
             config.xsettings = *value == "yes";
         } else {
             problem("[theme] xsettings must be yes or no");
+        }
+    }
+    if (const auto value = ini.get("theme", "cursor_theme")) {
+        if (value->empty()) {
+            config.cursor_theme.clear();
+        } else if (valid_cursor_theme(*value)) {
+            config.cursor_theme = *value;
+        } else {
+            problem("[theme] cursor_theme must be the name of a theme of "
+                    "cursors, without a slash");
+        }
+    }
+    if (const auto value = ini.get("theme", "cursor_size")) {
+        const std::string text(trim(*value));
+        char* end = nullptr;
+        const long size = strtol(text.c_str(), &end, 10);
+        if (!text.empty() && *end == '\0' && size >= 0 &&
+            size <= max_cursor_size) {
+            config.cursor_size = static_cast<int>(size);
+        } else {
+            problem("[theme] cursor_size must be a whole number of pixels, "
+                    "0 to " + std::to_string(max_cursor_size));
         }
     }
     if (const auto value = ini.get("session", "autostart")) {

@@ -82,6 +82,8 @@ std::optional<Variant> running_variant(::Display* display, int screen);
  *   `[theme] scale`, the way a GNOME settings daemon writes them (96 dpi at the
  *   scale 1; the whole part of the scale is the factor of the windows, the
  *   rest is the DPI).
+ * - `Gtk/CursorThemeName` and `Gtk/CursorThemeSize`: `[theme] cursor_theme`
+ *   and `cursor_size`, when they are set.
  * - `Xft/Antialias`, `Xft/Hinting`, `Xft/HintStyle` and `Xft/RGBA`: what
  *   `[xft]` sets; what it does not set is left out.
  *

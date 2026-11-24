@@ -1024,6 +1024,22 @@ void Manager::check_startup()
     }
 }
 
+void Manager::refresh_cursors()
+{
+    XUndefineCursor(display, root);
+    for (Cursor* cursor : {&arrow_cursor, &busy_cursor}) {
+        if (*cursor != None) {
+            XFreeCursor(display, *cursor);
+            *cursor = None;
+        }
+    }
+    arrow_cursor = XCreateFontCursor(display, XC_left_ptr);
+    if (cursor_busy) {
+        busy_cursor = XCreateFontCursor(display, XC_watch);
+    }
+    XDefineCursor(display, root, cursor_busy ? busy_cursor : arrow_cursor);
+}
+
 void Manager::update_busy_cursor()
 {
     const bool busy = startup.busy();
