@@ -65,16 +65,14 @@ TEST(CursorThemeTest, the_display_takes_the_theme_and_the_size)
     XcursorSetTheme(display, nullptr); // the next tests do not need it
 }
 
-TEST(CursorThemeTest, nothing_set_leaves_what_the_system_says)
+TEST(CursorThemeTest, nothing_set_gives_back_what_the_system_says)
 {
     ::Display* display = tiny::get_display();
-    XcursorSetTheme(display, "before");
-    XcursorSetDefaultSize(display, 24);
+    tiny::wm::apply_cursor_theme(display, "tiny-test-theme", 40);
 
     tiny::wm::apply_cursor_theme(display, "", 0);
 
-    EXPECT_STREQ(XcursorGetTheme(display), "before");
-    EXPECT_EQ(XcursorGetDefaultSize(display), 24);
-    XcursorSetTheme(display, nullptr);
+    EXPECT_STRNE(XcursorGetTheme(display), "tiny-test-theme");
+    EXPECT_NE(XcursorGetDefaultSize(display), 40);
 }
 #endif

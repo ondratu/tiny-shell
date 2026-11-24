@@ -332,8 +332,8 @@ class Manager : public tiny::Object {
   public:
     /**
      * Make the cursors again, after a change of the cursor theme: the one of the
-     * root window, the arrow and the busy one. The frames of the windows get
-     * the new theme when they are made.
+     * root window, the arrow and the busy one. The cursors on the frames of
+     * the windows are made with them, so the windows that exist keep theirs.
      */
     void refresh_cursors();
 
