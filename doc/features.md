@@ -133,7 +133,7 @@ comparison with other window managers is in the [comparison](comparison.md).
   `~/.local/share/tiny-shell/plugins` and in the data directories of the
   system, a plugin of the user replaces a system one), each one is switched on
   and off alone and can have settings, which `tiny-settings` shows in the
-  section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD; an icon that follows the
+  section Plugins, without Lua. A battery (Linux, FreeBSD, OpenBSD, NetBSD; an icon that follows the
   charge, with a bolt while it is on mains), a network (a cable or the Wi-Fi with the
   strength of the signal; a click lists the adapters with their addresses and
   the Wi-Fi networks in range and connects to one, with NetworkManager) and a
