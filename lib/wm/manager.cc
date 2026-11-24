@@ -2784,7 +2784,8 @@ void Manager::on_mapping_notify(XMappingEvent& e)
     if (e.request == MappingPointer) {
         return;
     }
-    // Tab, F2, ;, L, T and Super can be other keys now; the old ones are released
+    // Tab, F2, ;, L, T and Super can be other keys now; the old ones are
+    // released
     grab_shortcuts(true);
     for (const auto& entry : wm_windows) {
         entry.second->grab_close_key();

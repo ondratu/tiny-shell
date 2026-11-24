@@ -397,10 +397,11 @@ class Manager : public tiny::Object {
     bool is_alt(unsigned int keycode) const;
 
     //! Grab (or release) the keys of the shortcuts of the manager: Alt + Tab,
-    //! Alt + F2, Super + L, Super + T, Super, and Alt + ; on every key that makes a semicolon with
-    //! no modifier in any group of the keyboard (the layout can have it on
-    //! another key; a key that makes it only with Shift or AltGr is left
-    //! alone). The keys of the last grab are released first, so it also
+    //! Alt + F2, Super + L, Super + T, Super, and Alt + ; on every key that
+    //! makes a semicolon with no modifier in any group of the keyboard (the
+    //! layout can have it on another key; a key that makes it only with Shift
+    //! or AltGr is left alone). L and T are found as the Latin letters, so a
+    //! keyboard with no Latin layout loaded has no Super + L and Super + T. The keys of the last grab are released first, so it also
     //! follows a change of the layout.
     void grab_shortcuts(bool grab);
 

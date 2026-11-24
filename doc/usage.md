@@ -28,7 +28,8 @@ its code (`cz`) is left of the clock, and a click on it opens a menu of the layo
 The same list is in `tiny-settings`, in the section Keyboard, where the layouts
 of the keyboard and the keys that switch them are set too (see
 [The keyboard](configuration.md#the-keyboard)). The shortcuts of the shell
-follow a change of the keyboard layout. Alt+; is
+follow a change of the keyboard layout (Super + L and Super + T need a Latin
+layout among the loaded ones). Alt+; is
 taken only from the keys that type a semicolon without Shift or AltGr (in every
 group of the layout), so Alt with the other keys stays for the applications.
 
@@ -68,8 +69,8 @@ The logo at the left of the panel opens a menu with these items, in groups
   for it. Escape, Return, Ctrl+Q and the button Close end it.
 - **Settings** starts `tiny-settings` (the one next to `tiny-shell` when it was
   started with a path, else the one in `PATH`).
-- **Applications** opens the launcher; **Terminal** (or Super + T) starts the terminal of
-  `[commands] terminal` (without the `-e` at its end).
+- **Applications** opens the launcher; **Terminal** (or Super + T) starts the
+  terminal of `[commands] terminal` (without the `-e` at its end).
 - **Force Quit** starts `xkill`: click a window to end its program.
 - **Restart** and **Shutdown** ask the programs to close and run `[commands]
   reboot` and `poweroff` (see [The session](session.md#ending-the-session)).
