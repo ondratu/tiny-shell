@@ -96,6 +96,8 @@ void ShellTheme::set_font_style(const std::string& style)
 void ShellTheme::set_variant(Variant new_variant)
 {
     variant = new_variant;
+    // the color of the screen before (and without) a wallpaper
+    root_background = variant == Variant::Dark ? 0x2B3540 : 0x729FCF;
     toolkit.set_variant(variant);
     button.colorize(variant);
     header.colorize(variant);

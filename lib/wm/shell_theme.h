@@ -64,6 +64,8 @@ class ShellTheme {
         return look_variant(launcher_look, variant);
     }
 
+    //! The color of the root window, which a wallpaper covers; it follows the
+    //! variant, so a dark theme is not light blue until the wallpaper comes
     uint32_t root_background = 0x729FCF;
     int win_header = 25;
     int win_icon = 21; // win_header - 2*header.padding

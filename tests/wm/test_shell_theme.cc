@@ -133,6 +133,15 @@ TEST_F(ShellThemeTest, the_variant_is_set_to_the_toolkit_too)
     EXPECT_EQ(t.dock_mark.normal_bg, 0x729FCFu);
 }
 
+TEST_F(ShellThemeTest, the_color_of_the_root_follows_the_variant)
+{
+    t.set_variant(tiny::Variant::Light);
+    EXPECT_EQ(t.root_background, 0x729FCFu);
+
+    t.set_variant(tiny::Variant::Dark);
+    EXPECT_EQ(t.root_background, 0x2B3540u);
+}
+
 TEST_F(ShellThemeTest, the_title_bar_and_the_buttons_follow_the_variant)
 {
     t.set_variant(tiny::Variant::Light);
