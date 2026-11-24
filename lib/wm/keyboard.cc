@@ -305,6 +305,7 @@ std::vector<KeyboardShortcut> keyboard_shortcuts()
             {"Alt+;", "The windows of the current application"},
             {"Alt+Space", "The menu of the window"},
             {"Alt+F4", "Close the window"},
+            {"Super+T", "Open a terminal"},
             {"Super+L", "Lock the screen"},
             {"F11", "Fullscreen"},
             {"Alt or Super + left button", "Move the window by any point"}};

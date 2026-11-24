@@ -20,6 +20,7 @@ its code (`cz`) is left of the clock, and a click on it opens a menu of the layo
 | Alt+; | the window switcher for the windows of the current application |
 | Alt+Space | the [window menu](#the-window-menu) of the active window |
 | Alt+F4 | close the window |
+| Super + T | open a terminal (the Terminal item of the main menu) |
 | Super + L | lock the screen, see [Screen lock](lock.md) |
 | F11 | fullscreen |
 | Alt + left button, or Super + left button | move a window by any point of it |
@@ -67,7 +68,7 @@ The logo at the left of the panel opens a menu with these items, in groups
   for it. Escape, Return, Ctrl+Q and the button Close end it.
 - **Settings** starts `tiny-settings` (the one next to `tiny-shell` when it was
   started with a path, else the one in `PATH`).
-- **Applications** opens the launcher; **Terminal** starts the terminal of
+- **Applications** opens the launcher; **Terminal** (or Super + T) starts the terminal of
   `[commands] terminal` (without the `-e` at its end).
 - **Force Quit** starts `xkill`: click a window to end its program.
 - **Restart** and **Shutdown** ask the programs to close and run `[commands]

@@ -2734,6 +2734,8 @@ void Manager::grab_shortcuts(bool grab)
     add(key_of(XK_space), Mod1Mask);
     // Super + L, lock the screen
     add(key_of(XK_l), Mod4Mask);
+    // Super + T, a terminal
+    add(key_of(XK_t), Mod4Mask);
     // Super alone opens the launcher, so a shortcut with Super is not passed
     // to an application
     add(key_of(XK_Super_L), 0);
@@ -2782,7 +2784,7 @@ void Manager::on_mapping_notify(XMappingEvent& e)
     if (e.request == MappingPointer) {
         return;
     }
-    // Tab, F2, ; and Super can be other keys now; the old ones are released
+    // Tab, F2, ;, L, T and Super can be other keys now; the old ones are released
     grab_shortcuts(true);
     for (const auto& entry : wm_windows) {
         entry.second->grab_close_key();
@@ -2927,6 +2929,14 @@ void Manager::on_key_press(const XKeyEvent& xkey)
         xkey.state & Mod4Mask) {
         super_down = false;
         actions.run("lock");
+        key_done = true;
+        return;
+    }
+    /* Super + T, a terminal (the same reason as Super + L) */
+    if (xkey.keycode == XKeysymToKeycode(display, XK_t) &&
+        xkey.state & Mod4Mask) {
+        super_down = false;
+        actions.run("terminal");
         key_done = true;
         return;
     }
