@@ -18,6 +18,7 @@
 #include "theme.h"
 #include "wm/shell_theme.h"
 #include "wm/config.h"
+#include "wm/cursor_theme.h"
 #include "wm/keyboard.h"
 #include "wm/manager.h"
 #include "wm/options.h"
@@ -25,7 +26,6 @@
 #include "wm/selection.h"
 #include "wm/session_start.h"
 #include "wm/xsettings.h"
-#include "wm/cursor_theme.h"
 #include "wm/xresources.h"
 #include "xdg/application_index.h"
 #include "xdg/autostart.h"
@@ -135,8 +135,10 @@ void publish_xft(::Display* display, const tiny::wm::Config& config,
 
 //! The cursor theme of [theme]: Xlib draws the cursors that are made from now
 //! on with it, and the programs started after it read it from the resources
+//! `was_set`: the theme was set before, so what is not set now removes its
+//! resources
 void apply_cursors(::Display* display, const tiny::wm::Config& config,
-                   const char* program)
+                   const char* program, bool was_set = false)
 {
     if ((!config.cursor_theme.empty() || config.cursor_size > 0) &&
         !tiny::wm::has_cursor_themes()) {
@@ -144,13 +146,17 @@ void apply_cursors(::Display* display, const tiny::wm::Config& config,
                 "%s: built without libXcursor, the cursor theme is not used\n",
                 program);
     }
-    tiny::wm::apply_cursor_theme(display, config.cursor_theme,
-                                 config.cursor_size);
-    const auto resources = tiny::wm::cursor_resources(config);
+    // the resources go first: a theme that is not set takes them back
+    auto resources = tiny::wm::cursor_resources(config);
+    if (resources.empty() && was_set) {
+        resources = tiny::wm::cursor_resources("", 0);
+    }
     if (!resources.empty() &&
         !tiny::wm::publish_resources(display, resources)) {
         fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
     }
+    tiny::wm::apply_cursor_theme(display, config.cursor_theme,
+                                 config.cursor_size);
 }
 
 //! Set the layouts of the keyboard with `setxkbmap`; nothing when the settings
@@ -361,14 +367,7 @@ void reload_config(tiny::wm::Manager& manager,
     }
     if (config.cursor_theme != current.cursor_theme ||
         config.cursor_size != current.cursor_size) {
-        // a theme that is not set any more removes its resources
-        apply_cursors(tiny::get_display(), config, program);
-        if (config.cursor_theme.empty() && config.cursor_size == 0) {
-            const auto removed = tiny::wm::cursor_resources("", 0);
-            if (!tiny::wm::publish_resources(tiny::get_display(), removed)) {
-                fprintf(stderr, "%s: can't change RESOURCE_MANAGER\n", program);
-            }
-        }
+        apply_cursors(tiny::get_display(), config, program, true);
         manager.refresh_cursors();
     }
     apply_config(manager, plugins, config, &current, program);

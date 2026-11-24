@@ -330,8 +330,8 @@ The theme is told to the other programs too: through the settings above
 (`Gtk/CursorThemeName` and `Gtk/CursorThemeSize`, which GTK follows at once)
 and through the X resources `Xcursor.theme` and `Xcursor.size`, which Xlib reads
 when a program starts. A reload (`tiny-shell --reload`) changes the
-pointer over the desktop at once; a window gets the new shape when the
-pointer enters its frame again.
+pointer over the desktop at once; the frames of the windows that are open keep
+their old shapes (the edges, the hand) until the windows are opened again.
 
 ## The system tray
 

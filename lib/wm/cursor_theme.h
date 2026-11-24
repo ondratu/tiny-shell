@@ -34,7 +34,8 @@ std::vector<ResourceChange> cursor_resources(const Config& config);
  *
  * With libXcursor (`TINY_XCURSOR`) the theme and the size of the display are
  * set, so `XCreateFontCursor()` draws the shapes of the theme. An empty theme
- * and the size 0 leave what the system says. Without libXcursor the core
+ * and the size 0 give back what the system says (the resources
+ * `Xcursor.*`, so publish them first). Without libXcursor the core
  * cursors of the X server stay and this does nothing.
  */
 void apply_cursor_theme(::Display* display, const std::string& theme, int size);

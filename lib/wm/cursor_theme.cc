@@ -47,12 +47,9 @@ void apply_cursor_theme([[maybe_unused]] ::Display* display,
                         [[maybe_unused]] int size)
 {
 #ifdef TINY_XCURSOR
-    if (!theme.empty()) {
-        XcursorSetTheme(display, theme.c_str());
-    }
-    if (size > 0) {
-        XcursorSetDefaultSize(display, size);
-    }
+    // nothing set goes back to what the resources and the system say
+    XcursorSetTheme(display, theme.empty() ? nullptr : theme.c_str());
+    XcursorSetDefaultSize(display, size);
 #endif
 }
 
