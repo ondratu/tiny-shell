@@ -16,50 +16,25 @@ Four plugins come with tiny-shell:
 
 How to write your own is in [Writing plugins](developers/plugins.md).
 
-## The system monitor
+## The battery
 
-Four things of the computer, each one is a button in the panel with an icon and
-a number, and each one can be switched off in the settings of the plugin:
+The icon shows how full the battery is (full, good, low, empty) and the
+percentage can be shown next to it. While the computer is on mains, whether it
+charges or the battery is full, the icon has a bolt. A click opens a window with
+the state in words: *Charging*, *On battery* (with a reminder to connect the
+charger when the charge is low) or *Fully charged, on mains*. A computer without
+a battery shows nothing, and so does a bay with the battery taken out. With
+several batteries the charge is their average.
 
-| Button | Shows | The window has |
-| ------ | ----- | -------------- |
-| **Processor** | how much of the time the processors were busy, all of them together, in percent | the time spent in programs, in the system and idle |
-| **Memory** | how much of the memory the programs use, in percent. The cache and the buffers do not count, because the system gives them back when a program asks, as `free` shows it | used, free and the total memory |
-| **Swap** | how much of the swap is in use, in percent. A computer without swap shows no button | used, free and the total swap |
-| **Network** | the **download** (an arrow down) and the **upload** (an arrow up) of all the network cards together, as a speed (`12K`, `1.2M`) or in percent of the speed of the link | the two speeds now and what was received and sent since the plugin started |
+The plugin reads the charge where the system keeps it, so it needs no extra
+program except on OpenBSD and NetBSD:
 
-The loopback does not count, and neither do the virtual adapters that carry the
-traffic of a real card (a bridge, a tunnel, a VLAN, `docker0`, `virbr0`, a pair
-of `veth`), because their bytes would be counted twice. A computer with no
-network card shows no network buttons. The numbers are read from the counters of
-the system at a pace that you choose (2 seconds by default); the load and the
-speed are the change since the last look, so right after the start the buttons
-show `--` for the length of one check.
-
-The symbol of the swap is the disk, because that is where the swap is; the
-network uses the symbols of receiving and transmitting that GNOME has.
-
-The settings are **Show the processor**, **Show the memory**, **Show the swap**,
-**Show the download** and **Show the upload** (all of them yes; the two speeds
-can be switched off one by one, the window of either shows both),
-**Show the network as** (the speed, or the percent of the link),
-**Speed of the link** (in Mbit/s; it is what 100 % means when the network is
-shown in percent, 1000 by default, because the plugin does not know how fast the
-Wi-Fi is) and **Seconds between the checks** (1 to 60).
-
-Where the numbers come from:
-
-| System | The processor | The memory | The swap | The network |
-| ------ | ------------- | ---------- | -------- | ----------- |
-| Linux | `/proc/stat` | `/proc/meminfo` (`MemAvailable`) | `/proc/meminfo` | `/proc/net/dev`, only the cards that have a `device` in `/sys/class/net` |
-| FreeBSD | `sysctl kern.cp_time` | `sysctl vm.stats.vm.*` (the free and the inactive pages are not used) | `swapinfo` | `netstat -ibn` |
-| OpenBSD | `sysctl kern.cp_time` | `top` (the free memory and the cache are not used) | `swapctl` | `netstat -ibn` |
-| NetBSD | `sysctl kern.cp_time` | `vmstat -s` (the cached pages of files are not used) | `swapctl` | `netstat -ibn` |
-
-Every system calls "used memory" something a little different, so the number
-may differ from the one that another program shows by a few percent. DragonFly
-BSD and macOS are not supported yet; the plugin says so in the log and shows
-nothing.
+| System | Where the charge comes from |
+| ------ | --------------------------- |
+| Linux | `/sys/class/power_supply` (the batteries of the computer, not of a mouse or a pad) |
+| FreeBSD, DragonFly | `sysctl hw.acpi.battery` |
+| OpenBSD | `apm` |
+| NetBSD | `envstat` (the sensors of `acpibat` and `acpiacad`; the charge is a share of the last full capacity, so a worn battery is shown as full when it holds all that it can) |
 
 ## The network
 
@@ -119,6 +94,51 @@ system (`nm.lua`, `sys.lua`, `bsd.lua`), so another system is another file, see
 
 The settings are **Show the name of the Wi-Fi** (no by default) and **Seconds
 between the checks** (10; the window checks every 3 seconds while it is open).
+
+## The system monitor
+
+Four things of the computer, each one is a button in the panel with an icon and
+a number, and each one can be switched off in the settings of the plugin:
+
+| Button | Shows | The window has |
+| ------ | ----- | -------------- |
+| **Processor** | how much of the time the processors were busy, all of them together, in percent | the time spent in programs, in the system and idle |
+| **Memory** | how much of the memory the programs use, in percent. The cache and the buffers do not count, because the system gives them back when a program asks, as `free` shows it | used, free and the total memory |
+| **Swap** | how much of the swap is in use, in percent. A computer without swap shows no button | used, free and the total swap |
+| **Network** | the **download** (an arrow down) and the **upload** (an arrow up) of all the network cards together, as a speed (`12K`, `1.2M`) or in percent of the speed of the link | the two speeds now and what was received and sent since the plugin started |
+
+The loopback does not count, and neither do the virtual adapters that carry the
+traffic of a real card (a bridge, a tunnel, a VLAN, `docker0`, `virbr0`, a pair
+of `veth`), because their bytes would be counted twice. A computer with no
+network card shows no network buttons. The numbers are read from the counters of
+the system at a pace that you choose (2 seconds by default); the load and the
+speed are the change since the last look, so right after the start the buttons
+show `--` for the length of one check.
+
+The symbol of the swap is the disk, because that is where the swap is; the
+network uses the symbols of receiving and transmitting that GNOME has.
+
+The settings are **Show the processor**, **Show the memory**, **Show the swap**,
+**Show the download** and **Show the upload** (all of them yes; the two speeds
+can be switched off one by one, the window of either shows both),
+**Show the network as** (the speed, or the percent of the link),
+**Speed of the link** (in Mbit/s; it is what 100 % means when the network is
+shown in percent, 1000 by default, because the plugin does not know how fast the
+Wi-Fi is) and **Seconds between the checks** (1 to 60).
+
+Where the numbers come from:
+
+| System | The processor | The memory | The swap | The network |
+| ------ | ------------- | ---------- | -------- | ----------- |
+| Linux | `/proc/stat` | `/proc/meminfo` (`MemAvailable`) | `/proc/meminfo` | `/proc/net/dev`, only the cards that have a `device` in `/sys/class/net` |
+| FreeBSD | `sysctl kern.cp_time` | `sysctl vm.stats.vm.*` (the free and the inactive pages are not used) | `swapinfo` | `netstat -ibn` |
+| OpenBSD | `sysctl kern.cp_time` | `top` (the free memory and the cache are not used) | `swapctl` | `netstat -ibn` |
+| NetBSD | `sysctl kern.cp_time` | `vmstat -s` (the cached pages of files are not used) | `swapctl` | `netstat -ibn` |
+
+Every system calls "used memory" something a little different, so the number
+may differ from the one that another program shows by a few percent. DragonFly
+BSD and macOS are not supported yet; the plugin says so in the log and shows
+nothing.
 
 ## Switching plugins on and off
 
