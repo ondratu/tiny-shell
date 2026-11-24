@@ -1,0 +1,11 @@
+                      Current  CritMax  WarnMax  WarnMin  CritMin  Unit
+[acpitz0]
+       temperature:     0.000                                      degC
+[coretemp0]
+  cpu0 temperature:    36.000                                      degC
+[coretemp1]
+  cpu1 temperature:    36.000                                      degC
+[coretemp2]
+  cpu2 temperature:    37.000                                      degC
+[coretemp3]
+  cpu3 temperature:    37.000                                      degC
