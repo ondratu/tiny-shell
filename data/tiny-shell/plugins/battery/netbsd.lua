@@ -13,7 +13,8 @@ function M.parse(text)
     local device, present, percent, on_charge
     local function finish_device()
         if device and device:find("^acpibat") and present and percent then
-            total, count = total + percent, count + 1
+            -- a battery can hold more than its last full capacity says
+            total, count = total + math.min(percent, 100), count + 1
             charging = charging or on_charge
         end
     end

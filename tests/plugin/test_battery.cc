@@ -110,6 +110,15 @@ eq(netbsd.parse(""), nil, "no output")
 )LUA"));
 }
 
+TEST_F(BatteryTest, netbsd_charge_above_the_last_full_capacity_is_one_hundred)
+{
+    EXPECT_TRUE(run(R"LUA(
+local text = fixture("netbsd-mains.txt"):gsub("%(96.20%%%)", "(103.50%%)")
+local info = require("netbsd").parse(text)
+eq(info.percent, 100, "the percentage is capped")
+)LUA"));
+}
+
 TEST_F(BatteryTest, netbsd_averages_two_batteries_and_one_charging_wins)
 {
     EXPECT_TRUE(run(R"LUA(
