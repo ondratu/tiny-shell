@@ -225,7 +225,7 @@ next steps:
     shell has them, the list shows what is wrong in `plugin.ini`).
   - The plugins that were asked for: Claude usage (no stable public API; as an
     example plugin only), bluetooth devices with their batteries, a mixer
-    and the volume. The battery has no NetBSD reader (`envstat`).
+    and the volume.
   - The network plugin, what is left: it talks to NetworkManager through
     `nmcli`, which has no way to ask for a password but the standard input, no
     signals (the plugin looks every few seconds) and no hidden networks or
