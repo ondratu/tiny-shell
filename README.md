@@ -41,16 +41,15 @@ The documentation is in [doc/](doc/) and is published as a web site at
 
 - Not a desktop environment. No full session manager (it only starts the
   programs of the autostart and asks the programs to close when you log out) and
-  no desktop icons, and the
-  only programs are small ones for the settings, the fonts, the wallpaper and the
-  screen lock.
+  no desktop icons. The only programs are small ones for the settings, the
+  fonts, the wallpaper and the screen lock.
 - Not a compositor. No transparency, shadows or animations.
 - Not a Wayland compositor and not planned to be one. X11 on Xorg only.
 - Not themable to the last pixel. There are two looks, dark and light, each with
   a wallpaper of its own (a hazel tree by day and by night), and the panel and
   the dock can keep a look of their own in any theme (the bar of the dock can
-  also be half height or missing, the icons are cut to their shape); they can be scaled and configured within
-  reason.
+  also be half height or missing, the icons are cut to their shape). They can
+  be scaled and configured within reason.
 
 ## Quick start
 

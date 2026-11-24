@@ -372,6 +372,11 @@ starts, so the first wallpaper that you set in `tiny-settings` is drawn at once,
 but it follows a change of the screen after the next login. A file that cannot
 be read is reported on stderr and the plain color stays.
 
+The plain color is the one of the style: blue-grey in the dark style and light
+blue in the light one. The shell paints the screen with it as soon as it starts,
+so a dark session is dark before the picture is drawn, and a session without a
+wallpaper never shows the wrong one.
+
 The decoder of photos is a second copy of `stb_image` in
 `lib/third_party/vendor_photo.cc`, with only PNG and JPEG on: it is linked into
 `tiny-wallpaper` only, so `tiny-shell` does not carry the JPEG code.

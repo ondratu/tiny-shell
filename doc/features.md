@@ -64,8 +64,9 @@ comparison with other window managers is in the [comparison](comparison.md).
   is taken only from the keys that type a semicolon without Shift or AltGr (in
   every group of the layout), so Alt with the other keys, also the ones that
   give `;` with a modifier, stays for the applications. The shortcuts of the
-  shell (Alt+Tab, Alt+F2, Alt+F4, Alt+Space, Alt+;, Super and Super + L or T) follow a change of the
-  keyboard layout.
+  shell (Alt+Tab, Alt+F2, Alt+F4, Alt+Space, Alt+;, Super, Super + L and
+  Super + T) follow a change of the keyboard layout. Super + T starts a
+  terminal.
 - **Keyboard:** `[keyboard]` sets the layouts (up to four, with their variants)
   and the keys that switch them, the shell applies it with `setxkbmap` at the
   start and on `--reload`; the layout in use can be shown in the panel, next
